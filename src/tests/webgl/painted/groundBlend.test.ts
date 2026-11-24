@@ -158,3 +158,44 @@ describe('the water clock', () => {
     expect(calls).toContainEqual(['uniform1f', ['u_waterTime', 1.25]]);
   });
 });
+
+describe('the wave water switch', () => {
+  it('draws the wave water from its sea uniform and uploads nothing per frame', () => {
+    const calls: [string, unknown[]][] = [];
+    const shaders = {
+      createProgram: () => ({ success: true }),
+      getProgram: () => ({ program: {} })
+    } as unknown as Parameters<typeof GroundBlend.create>[1];
+    const blend = GroundBlend.create(recordingGl(calls), shaders, painted)!;
+    const grid = new GameGrid();
+    for (let x = 0; x < 4; x++)
+      applyTileToGrid(grid, tile({ x, y: 0, subType: x < 2 ? 'grass' : 'water' }), []);
+    blend.setGrid(grid);
+    const frame = (sea?: Float32Array) => ({
+      projection: new Float32Array(16),
+      viewOffset: [0, 0] as [number, number],
+      zoom: [1, 1] as [number, number],
+      ambient: [1, 1, 1] as [number, number, number],
+      flicker: 1,
+      fieldLit: false,
+      tone: [1, 1] as [number, number],
+      waterTime: 0,
+      sea,
+      lightTime: 0,
+      lightVersion: 1,
+      litBounds: undefined
+    });
+    blend.setWaterStyle(true);
+    blend.draw(frame(new Float32Array(52)));
+    calls.length = 0;
+    const sea = new Float32Array(52).fill(0.5);
+    blend.draw(frame(sea));
+    expect(calls.filter(([name]) => /^(tex(Sub)?Image2D|bufferData)$/.test(name))).toEqual([]);
+    expect(calls).toContainEqual(['uniform1i', ['u_waterStyle', 1]]);
+    expect(calls).toContainEqual(['uniform4fv', ['u_sea[0]', sea]]);
+    calls.length = 0;
+    blend.setWaterStyle(false);
+    blend.draw(frame(sea));
+    expect(calls).toContainEqual(['uniform1i', ['u_waterStyle', 0]]);
+  });
+});

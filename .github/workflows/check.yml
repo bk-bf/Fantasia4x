@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [dev]
+    branches: [dev, 'test/**']
   push:
-    branches: [dev, 'chain/**']
+    branches: [dev, 'test/**', 'chain/**']
   schedule:
     - cron: '17 3 * * *'
   workflow_dispatch:
@@ -33,8 +33,10 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      actions: read
     outputs:
       base: ${{ steps.scope.outputs.base }}
+      warn: ${{ steps.scope.outputs.warn }}
       check: ${{ steps.scope.outputs.check }}
       coverage: ${{ steps.scope.outputs.coverage }}
       workPins: ${{ steps.scope.outputs.workPins }}
@@ -52,20 +54,37 @@ jobs:
         id: scope
         env:
           BEFORE: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          warn=false
+          green=()
+          base="$(git merge-base HEAD origin/dev)"
+          for t in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/test/); do
+            m="$(git merge-base HEAD "$t")"
+            git merge-base --is-ancestor "$m" origin/dev || { warn=true; base="$m"; break; }
+          done
           case "$GITHUB_EVENT_NAME" in
-            push) [ "$GITHUB_REF_NAME" = dev ] && base="$BEFORE" || base="$(git merge-base HEAD origin/dev)" ;;
-            pull_request) base="$(git rev-parse HEAD^1)" ;;
-            *) base="$(git merge-base HEAD origin/dev)" ;;
+            push)
+              case "$GITHUB_REF_NAME" in
+                dev) base="$BEFORE" ;;
+                test/*) warn=true; git cat-file -e "$BEFORE^{commit}" 2>/dev/null && base="$BEFORE" ;;
+                chain/*) green=(--green-of "$GITHUB_REF_NAME") ;;
+              esac ;;
+            pull_request)
+              base="$(git rev-parse HEAD^1)"
+              [ "$GITHUB_BASE_REF" = dev ] || warn=true ;;
           esac
+          [ "$warn" = true ] && echo "::warning::Warn-only run: this work is on or built on a test branch, so a failing gate is reported and does not fail the run. Bound for dev fails, so this commit cannot be pushed to dev."
           echo "base=$base" >> "$GITHUB_OUTPUT"
-          node tools/ci/ci-scope.mjs --base "$base"
+          echo "warn=$warn" >> "$GITHUB_OUTPUT"
+          node tools/ci/ci-scope.mjs --base "$base" "${green[@]}"
 
       - uses: ./.github/actions/prepare
         if: steps.scope.outputs.check == 'true'
 
       - name: pnpm check and the related tests
         if: steps.scope.outputs.check == 'true'
+        continue-on-error: ${{ steps.scope.outputs.warn == 'true' }}
         env:
           CHECK_BASE: ${{ steps.scope.outputs.base }}
           WARNINGS_NOTES: ${{ runner.temp }}/warnings-notes.jsonl
@@ -80,17 +99,34 @@ jobs:
 
       - name: Architecture seams and component sizes
         if: steps.scope.outputs.check == 'true'
+        continue-on-error: ${{ steps.scope.outputs.warn == 'true' }}
         run: node tools/ci/structure.mjs
 
       - name: Workflow files
         if: steps.scope.outputs.check == 'true'
+        continue-on-error: ${{ steps.scope.outputs.warn == 'true' }}
         run: |
           bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7 "$RUNNER_TEMP"
           "$RUNNER_TEMP/actionlint" -color
 
+  bound:
+    name: Bound for dev
+    needs: precheck
+    continue-on-error: ${{ needs.precheck.outputs.warn == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Measured against dev
+        env:
+          WARN: ${{ needs.precheck.outputs.warn }}
+        run: |
+          [ "$WARN" != true ] || { echo "::error::Measured against a test branch, not dev: run the chain on a branch built on dev to push to dev."; exit 1; }
+
   measure:
     name: 'Measurements: work pins, Rust instruction counts, browser work pins'
     needs: precheck
+    continue-on-error: ${{ needs.precheck.outputs.warn == 'true' }}
     if: (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && (needs.precheck.outputs.workPins == 'true' || needs.precheck.outputs.gungraun == 'true' || needs.precheck.outputs.browser == 'true')
     runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: 90
@@ -166,6 +202,7 @@ jobs:
   coverage:
     name: 'Test coverage: src/lib/game'
     needs: precheck
+    continue-on-error: ${{ needs.precheck.outputs.warn == 'true' }}
     if: (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && needs.precheck.outputs.coverage == 'true'
     runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: 30
@@ -195,6 +232,7 @@ jobs:
   mutants:
     name: 'Mutant pins: tools/mutants/registry.json'
     needs: precheck
+    continue-on-error: ${{ needs.precheck.outputs.warn == 'true' }}
     if: github.event_name == 'schedule' || ((github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && needs.precheck.outputs.mutants == 'true')
     runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: ${{ github.event_name == 'schedule' && 240 || 90 }}
@@ -262,6 +300,7 @@ jobs:
   codspeed:
     name: CodSpeed benchmarks
     needs: precheck
+    continue-on-error: ${{ needs.precheck.outputs.warn == 'true' }}
     if: needs.precheck.outputs.bench == 'true' && (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -315,6 +354,7 @@ jobs:
   tps:
     name: Ticks per second
     needs: precheck
+    continue-on-error: ${{ needs.precheck.outputs.warn == 'true' }}
     if: needs.precheck.outputs.tps == 'true' && (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 30

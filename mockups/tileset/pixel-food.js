@@ -115,30 +115,40 @@ const PIXEL_FOOD = (() => {
   const chopBone = () => layer(-5, 5, SHANK, 'mark', { behind: true });
 
   const BONE = [' zy    ', 'zyyx   ', ' yyyy  ', ' xyyyy ', '   yyyx', '    yxx'];
-  const haunch = (flesh, size) => () => draw({ body: flesh, trim: 'bone' }, layer(0, 9, BONE, 'trim'), layer(5, 0, ellipsoid(size, size * .8, -40)));
-  const drumstick = (flesh, size) => () => draw({ body: flesh, trim: 'bone' }, layer(0, 7, [' zy  ', 'zyyy ', ' yyyx', '  yxx'], 'trim'), layer(3, 0, ellipsoid(size, size * .72, -45)));
-  const RIBS = [
-    '  zy  zy  zy  zy  ',
-    '  yx  yx  yx  yx  ',
-    ' lllllllllllmmmm  ',
-    'llllmmmmmmmmmmmmd ',
-    'lmmmmdmmmdmmmdmmdd',
-    'lmmmmdmmmdmmmdmmdd',
-    'lmmmmdmmmdmmmdmddd',
-    ' ddddddddddddddd  '];
-  const ribs = flesh => () => draw({ body: flesh, trim: 'bone' }, layer(0, 0, RIBS));
+  const FUR = [' ZY ZY ', 'ZYXZYXY', 'YXXYXX '];
+  const FEATHER = ['   ZZ', '  ZYY', ' ZYX ', 'ZYX  ', 'X    '];
+  const FAT_CAP = ['    ZZZZ', '  ZZYYYYY', ' ZYYY    ', 'ZYY      '];
+  const SKEWER = ['                y', '               y ', '              y  ', '             y   ', '            y    ', '           y     ', '          y      ', '         y       ', '        y        ', '       y         ', '      y          ', '     y           ', '    y            ', '   y             ', '  y              ', ' y               ', 'y                '];
+  const haunchLayers = (size, slim, x, y) => [layer(x, y + 9, BONE, 'trim'), layer(x + 5, y, ellipsoid(size * (slim ? 1.2 : 1), size * (slim ? .55 : .8), -40))];
+  const haunch = (flesh, size, marks, wear, slim) => () => draw(Object.assign({ body: flesh, trim: 'bone' }, wear), ...haunchLayers(size, slim, 0, 0), ...(marks || []));
+  const ratPair = () => draw({ body: 'carrion', trim: 'bone', mark: 'wood' }, on(0, 0, SKEWER, 'mark'), ...haunchLayers(4.2, false, 1, 1), ...haunchLayers(4.2, false, 7, -5));
+  const stick = (size, x, y) => [layer(x, y + 7, [' zy  ', 'zyyy ', ' yyyx', '  yxx'], 'trim'), layer(x + 3, y, ellipsoid(size, size * .72, -45))];
+  const drumstick = (flesh, size, marks, wear) => () => draw(Object.assign({ body: flesh, trim: 'bone' }, wear), ...stick(size, 0, 0), ...(marks || []));
+  const brace = flesh => () => draw({ body: flesh, trim: 'bone' }, ...stick(5, 7, 0), ...stick(5, 0, 5));
+  function rack(count, reach) {
+    const w = count * 4 + 2, tips = Array.from({ length: reach }, (_, r) => ('  ' + (r ? 'yx  ' : 'zy  ').repeat(count)).slice(0, w));
+    const seam = Array.from({ length: w }, (_, x) => x % 4 === 1 && x > 1 && x < w - 3 ? 'd' : 'm').join('');
+    return [...tips, ' ' + 'l'.repeat(w - 6) + 'mmmm ', 'llll' + 'm'.repeat(w - 5) + 'd', 'l' + seam.slice(1, -2) + 'dd', 'l' + seam.slice(1, -2) + 'dd', ' ' + 'd'.repeat(w - 3) + '  '];
+  }
+  const ribs = (flesh, count, reach, marks, wear) => () => draw(Object.assign({ body: flesh, trim: 'bone' }, wear), layer(0, 0, rack(count, reach)), ...(marks || []));
   const STRIP = [' lllllllllmm  ', 'llmmmmmmmmmmd ', 'mmmmmmmmmmmdd ', ' mddddddddddd ', '   d    d     '];
   const jerky = (meat, tie) => () => draw({ body: meat, trim: 'cord' },
     layer(4, 0, STRIP), layer(0, 4, STRIP), layer(3, 8, STRIP), ...(tie ? [on(8, 0, ['y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'x'], 'trim')] : []));
   const HAM = ['   zy    ', '  zyyx   ', '   yx    '];
-  const ham = (flesh, rind) => () => draw({ body: rind || flesh, trim: 'bone', mark: 'cord' },
-    layer(9, 0, HAM, 'trim'), layer(8, 2, ellipsoid(3, 3.6, 30)), layer(0, 5, ellipsoid(7, 8, 30)),
-    on(5, 8, ['Y         ', ' Y        ', '  YYYYYYYY'], 'mark'));
+  const hamLayers = () => [layer(9, 0, HAM, 'trim'), layer(8, 2, ellipsoid(3, 3.6, 30)), layer(0, 5, ellipsoid(7, 8, 30)), on(5, 8, ['Y         ', ' Y        ', '  YYYYYYYY'], 'mark')];
+  const HOOK = ['  yyy', ' y   y', ' y', '  y', '  y', '  y'];
+  const hungHam = rind => () => draw({ body: rind, trim: 'bone', mark: 'cord' }, ...shift(hamLayers(), 0, 6), on(8, 0, HOOK, 'mark'));
+  const carvedHam = rind => () => draw({ body: rind, fill: 'tallow', trim: 'bone', mark: 'cord' }, ...hamLayers(),
+    layer(0, 11, ellipsoid(4.2, 4.2), 'fill'), layer(1, 12, ellipsoid(3.2, 3.2).map(r => r.replace(/d/g, 'm')), 'body', { keep: true }));
 
   const LINK = a => ellipsoid(4.6, 3, a);
   const sausages = casing => () => draw({ body: casing, trim: 'cord' },
     layer(0, 0, LINK(60)), layer(3, 8, LINK(20)), layer(11, 9, LINK(-20)), layer(16, 1, LINK(-60)),
     on(4, 8, ['z'], 'trim'), on(12, 10, ['z'], 'trim'), on(18, 9, ['z'], 'trim'));
+  const SPECKS = ['Z   Z', '  Z  ', 'Z   Z'];
+  const salami = casing => () => draw({ body: casing, trim: 'cord', mark: 'tallow' },
+    layer(0, 3, ellipsoid(11, 3.8, -28)), on(6, 8, SPECKS, 'mark'), on(13, 4, SPECKS, 'mark'), on(19, 0, [' yy', 'y  y', ' yy '], 'trim'));
+  const fryLinks = casing => () => draw({ body: casing }, layer(0, 10, ellipsoid(6, 2.8, -20)), layer(4, 5, ellipsoid(6, 2.8, -20)), layer(8, 0, ellipsoid(6, 2.8, -20)));
 
   const chunk = (x, y, part) => layer(x, y, ['lm', 'md'], part || 'trim');
   const stew = (w, fill, chunks, vessel) => () => draw({ body: vessel || 'ash', fill, trim: 'roast', mark: 'topaz' },
@@ -299,25 +309,25 @@ const PIXEL_FOOD = (() => {
     { id: 'crocodile_meat', draw: crocTail },
     { id: 'salted_meat', draw: steak('ham', 'tallow', [on(6, 3, SALT, 'mark'), on(12, 5, SALT, 'mark')]) },
     { id: 'seared_steak', draw: steak('roast', 'ash', [on(6, 3, GRILL), on(10, 3, GRILL)]) },
-    { id: 'rabbit_meat', draw: haunch('flesh', 6) },
-    { id: 'bear_meat', draw: haunch('flesh', 8.5) },
-    { id: 'owlbear_meat', draw: haunch('owlpelt', 8) },
-    { id: 'mammoth_meat', draw: haunch('port', 9.5) },
-    { id: 'rat_meat', draw: haunch('carrion', 4.8) },
+    { id: 'rabbit_meat', draw: haunch('flesh', 6, [], {}, true) },
+    { id: 'bear_meat', draw: haunch('flesh', 8.5, [on(9, 0, FUR, 'mark')], { mark: 'fur' }) },
+    { id: 'owlbear_meat', draw: haunch('owlpelt', 8, [on(15, 0, FEATHER, 'mark')], { mark: 'plume' }) },
+    { id: 'mammoth_meat', draw: haunch('port', 9.5, [on(6, 1, FAT_CAP, 'mark')], { mark: 'tallow' }) },
+    { id: 'rat_meat', draw: ratPair },
     { id: 'chicken_meat', draw: drumstick('trout', 6) },
-    { id: 'fowl_meat', draw: drumstick('ham', 6) },
-    { id: 'hippogriff_meat', draw: drumstick('flesh', 7.5) },
-    { id: 'wolf_meat', draw: ribs('flesh') },
-    { id: 'goat_meat', draw: ribs('ham') },
-    { id: 'sabretooth_meat', draw: ribs('roast') },
-    { id: 'worg_meat', draw: ribs('port') },
+    { id: 'fowl_meat', draw: brace('ham') },
+    { id: 'hippogriff_meat', draw: drumstick('flesh', 7.5, [on(13, 0, FEATHER, 'mark')], { mark: 'plume' }) },
+    { id: 'wolf_meat', draw: ribs('flesh', 4, 2) },
+    { id: 'goat_meat', draw: ribs('ham', 3, 2) },
+    { id: 'sabretooth_meat', draw: ribs('roast', 5, 4) },
+    { id: 'worg_meat', draw: ribs('port', 4, 2, [on(1, 7, ['ZY ZY ZY ZY ZY ', 'YXYXYXYXYXYXYX'], 'mark')], { mark: 'wolfpelt' }) },
     { id: 'dried_meat', draw: jerky('leather') },
     { id: 'smoked_meat', draw: jerky('smoked', true) },
-    { id: 'smoked_ham', draw: ham('smoked') },
-    { id: 'cured_ham', draw: ham('ham') },
-    { id: 'dry_sausage', draw: sausages('salami') },
+    { id: 'smoked_ham', draw: hungHam('smoked') },
+    { id: 'cured_ham', draw: carvedHam('ham') },
+    { id: 'dry_sausage', draw: salami('salami') },
     { id: 'smoked_sausage', draw: sausages('smoked') },
-    { id: 'fresh_sausage', draw: sausages('ham') },
+    { id: 'fresh_sausage', draw: fryLinks('ham') },
     { id: 'hard_cheese', draw: wedge },
     { id: 'smoked_cheese', draw: smokedCheese },
     { id: 'salt_pork', draw: () => draw({ body: 'wood', fill: 'brine', trim: 'salami', mark: 'iron' }, ...GOODS.bands(GOODS.open(14, [14, 16, 16, 16, 16, 16, 16, 14], 1), [1, 6]), on(3, 0, ['lmm', 'mdd'], 'trim'), on(8, 1, ['lm', 'md'], 'trim')) },

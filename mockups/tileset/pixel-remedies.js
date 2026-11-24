@@ -27,6 +27,10 @@ const PIXEL_REMEDIES = (() => {
     [0, 13, ['llllllllllllllllll', 'lmmmmmmmmmmmmmmmmm', 'lmmmmmmmmmmmmmmmmm', 'dddddddddddddddddd'], 'leather']);
 
   const reagentJar = fill => () => draw({ body: 'glass', fill, trim: 'wood' }, ...jar({ level: 2 }));
+  const ichorPhial = () => draw({ body: 'glass', fill: 'blood', trim: 'black', mark: 'red' }, ...flask('round', { stopper: 'wax', level: 1 }));
+  const SEAL = ['  lllmmm  ', ' llmmmmmmd', 'llmmmmmmdd', ' mmmmmmdd ', '   ddd    '];
+  const SPILL = ['z', 'y', 'y', 'x'];
+  const sealedPot = () => draw({ body: 'clay', fill: 'caustic', trim: 'venom', mark: 'red' }, ...shift(crock(10), 0, 2), layer(2, 0, SEAL, 'mark'), on(3, 6, SPILL, 'trim'), on(11, 7, SPILL.slice(1), 'trim'));
   const HEART = [
     '   zy   zy     ',
     '  lllm lmmm    ',
@@ -56,13 +60,23 @@ const PIXEL_REMEDIES = (() => {
   };
   const COATINGS = [['venom_coating', 'tar'], ['caustic_coating', 'caustic'], ['tanglefoot_coating', 'resin'], ['dread_coating', 'arcane']];
   const coatings = COATINGS.flatMap(([id, paste]) => ['', 'greater_', 'grand_'].map((prefix, tier) => ({ id: prefix + id, draw: coating(paste, tier) })));
-  const oil = tier => () => {
-    const pitcher = jug(), body = pitcher[1];
-    const hoops = [1, 6].slice(0, tier).map(r => on(body.x, body.y + r, [body.rows[r]], 'mark'));
-    return draw({ body: 'stone', fill: 'iron', mark: tier > 1 ? 'gold' : 'cord' }, ...pitcher, ...hoops);
-  };
+  const WHETSTONE = ['  lllm', ' lmmmd', 'lmmmd ', 'mmdd  '];
+  const OILS = [
+    () => draw({ body: 'stone', fill: 'iron', mark: 'cord' }, ...jug()),
+    () => draw({ body: 'glass', fill: 'iron', trim: 'wood', mark: 'stone' }, ...flask('round'), layer(13, 13, WHETSTONE, 'mark')),
+    () => draw({ body: 'glass', fill: 'iron', trim: 'gold', mark: 'gold' }, ...flask('bottle', { stopper: 'knob', band: true, label: [6, 3] }))
+  ];
+  const oil = tier => OILS[tier];
 
-  const molten = metal => () => draw({ body: 'clay', fill: metal }, ...crucible(), on(4, 1, ['ZZZ'], 'fill'), layer(-1, 1, ['lm', 'md'], 'body'));
+  const INGOTS = {
+    oxhide: ['ll  ll', ' lmmd ', ' mmmd ', 'md  dd'],
+    bun: [' lm ', 'lmmd', ' dd '],
+    bar: [' llllm', 'lmmmmd', 'mddddd'],
+    pig: ['   lllm', ' llmmmmd', 'lmmmmmdd', 'mmmdddd '],
+    cake: [' llm ', 'lmmmd', 'mmmdd', ' ddd '],
+    nugget: [' lm ', 'lmmd', 'mmd ', ' d  ']
+  };
+  const molten = (metal, solid, ingot) => () => draw({ body: 'clay', fill: metal, mark: solid }, ...crucible(), on(4, 1, ['ZZZ'], 'fill'), layer(-1, 1, ['lm', 'md'], 'body'), layer(13, 8, INGOTS[ingot], 'mark'));
   const RESIN = ['    lllm    ', '  lllmmmmd  ', ' llLmmmmmmd ', 'lllmmmmmmmdd', 'llmmmmmmmddd', ' mmmmmmmdddd', '  ddmmdddd  ', '     md     ', '     d      '];
   const resin = () => draw({ body: 'resin', fill: 'resin' }, layer(0, 0, RESIN.map(r => r.replace('L', 'l'))), on(3, 2, ['Z'], 'fill'));
   const STICK = ['  zy', ' zy ', 'zy  ', 'y   '];
@@ -129,9 +143,9 @@ const PIXEL_REMEDIES = (() => {
     { id: 'honey_salve', draw: honeySalve },
     { id: 'emberbloom_balm', draw: emberBalm },
     { id: 'field_surgeons_kit', draw: surgeonsRoll },
-    { id: 'alpha_ichor', draw: reagentJar('blood') },
+    { id: 'alpha_ichor', draw: ichorPhial },
     { id: 'owlbear_bile', draw: reagentJar('resin') },
-    { id: 'caustic_bile', draw: reagentJar('caustic') },
+    { id: 'caustic_bile', draw: sealedPot },
     { id: 'distilled_spirit', draw: () => draw({ body: 'glass', fill: 'moonstone', trim: 'wood' }, ...flask('bottle', { neck: 2, level: 0 })) },
     { id: 'alpha_heart', draw: heart },
     { id: 'direwolf_hackles', draw: hackles },
@@ -141,12 +155,12 @@ const PIXEL_REMEDIES = (() => {
     { id: 'honing_oil', draw: oil(0) },
     { id: 'keen_edge_oil', draw: oil(1) },
     { id: 'razors_grace', draw: oil(2) },
-    { id: 'molten_copper', draw: molten('flame') },
-    { id: 'molten_tin', draw: molten('moonstone') },
-    { id: 'molten_bronze', draw: molten('bronze') },
-    { id: 'molten_lead', draw: molten('lead') },
-    { id: 'molten_silver', draw: molten('silver') },
-    { id: 'molten_gold', draw: molten('gold') },
+    { id: 'molten_copper', draw: molten('flame', 'copper', 'oxhide') },
+    { id: 'molten_tin', draw: molten('moonstone', 'moonstone', 'bun') },
+    { id: 'molten_bronze', draw: molten('bronze', 'bronze', 'bar') },
+    { id: 'molten_lead', draw: molten('lead', 'lead', 'pig') },
+    { id: 'molten_silver', draw: molten('silver', 'silver', 'cake') },
+    { id: 'molten_gold', draw: molten('gold', 'gold', 'nugget') },
     { id: 'resin', draw: resin },
     { id: 'bone_glue', draw: gluePot('iron', 'bone', true) },
     { id: 'hide_glue', draw: gluePot('clay', 'hide') },

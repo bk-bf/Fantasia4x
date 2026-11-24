@@ -219,17 +219,6 @@
       return sel(s);
     },
   };
-  const sickle = () => {
-    const s = IC(), pts = [[13, 57], [27, 39], ...bez([27, 39], [41, 22], [37, 13], 10).slice(1), ...bez([37, 13], [33, 5], [22, 7], 8).slice(1), ...bez([22, 7], [14, 9], [9, 16], 6).slice(1)];
-    const cx = 22, cy = 24, teeth = [];
-    let L = 0; const acc = [0]; for (let i = 1; i < pts.length; i++) { L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); acc.push(L); }
-    const at = d => { let i = 1; while (i < pts.length - 1 && acc[i] < d) i++; const k = (d - acc[i - 1]) / (acc[i] - acc[i - 1]); return [lerp(pts[i - 1], pts[i], k), [pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]]]; };
-    for (let d = 28; d < L - 4; d += 6.4) { const [p, tv] = at(d), l = Math.hypot(tv[0], tv[1]); let nx = -tv[1] / l, ny = tv[0] / l; if (nx * (cx - p[0]) + ny * (cy - p[1]) < 0) { nx = -nx; ny = -ny; } teeth.push([p, [tv[0] / l, tv[1] / l], [nx, ny]]); }
-    part(s, t => teeth.forEach(([p, tv, nv], i) => poly(t, [[p[0] - tv[0] * 3.8, p[1] - tv[1] * 3.8, 'back'], [p[0] + tv[0] * 3.8, p[1] + tv[1] * 3.8, 'edge'], [p[0] + tv[0] * (1.4 - (i & 1) * 2) + nv[0] * 7.4, p[1] + tv[1] * (1.4 - (i & 1) * 2) + nv[1] * 7.4, 'edge']], (x, y, D) => rp(C.flint, D.edge < 1.1 ? .9 : .42 + (hash(i, 3, 5) - .5) * .2 + (D.back < 2 ? -.16 : 0), x, y, .2))));
-    part(s, t => stroke(t, pts, u => 2.9 - u * 1.3 + (u < .05 ? .5 : 0), woodC(C.wood, 17, { knot: .2, len: L }), { round: 1 }));
-    part(s, t => stroke(t, pts, u => u > .04 && u < .26 ? 3.4 - u * 1.3 : 0, cordC(C.cord, 2.4, L)), { line: 0 });
-    return sel(s);
-  };
   const handaxe = () => {
     const s = IC(), a = [18, 51], b = [48, 13], F = frame(a, b), n = 16, up = [], dn = [];
     const w = t => t < .3 ? 12.5 * Math.sqrt(1 - Math.pow((.3 - t) / .34, 2)) : 12.5 * Math.pow(1 - Math.pow((t - .3) / .7, 1.5), .9);
@@ -259,7 +248,6 @@
     if (spades[id]) return spades[id];
     if (/^(iron|steel)_shovel$/.test(id)) return spades.metal(m);
     if (knives[id]) return knives[id];
-    if (id === 'flint_sickle') return sickle;
     if (id === 'flint_handaxe') return handaxe;
     if (id === 'saw') return saw;
     return null;

@@ -1,3 +1,4 @@
+import type { MapMotion } from './painted/waves.js';
 import {
   WebGLRendererCore,
   type RenderStats,
@@ -13,6 +14,7 @@ import type { FontAtlas } from './types.js';
 import { mapWeather, type PointLight, type Rgb } from './painted/lightGrade.js';
 import {
   ambientWind,
+  weatherRain,
   weatherIsHeavy,
   weatherOverlayKind,
   windVector
@@ -140,6 +142,7 @@ export class WebGLRenderer {
     this.core.setAmbient(light, tint, baseTint);
     const { dx, dy } = windVector(weather?.windDir);
     this.core.setWind(ambientWind(weather), heading(dx, dy), season);
+    this.core.setSeaWeather({ rain: weatherRain(weather?.type) });
     const type = weather?.type;
     if (type === this.weather) return;
     this.weather = type;
@@ -158,8 +161,8 @@ export class WebGLRenderer {
     this.core.setVignette(on);
   }
 
-  setSway(on: boolean): void {
-    this.core.setSway(on);
+  setMotion(motion: MapMotion): void {
+    this.core.setMotion(motion);
   }
 
   setLightVersion(version: number): void {

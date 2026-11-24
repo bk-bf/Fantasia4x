@@ -52,14 +52,6 @@
   const KNAPPED = profile([[-2, 1, 6, 'm'], [-1, 0, 8, 'l'], [0, 0, 9, 'm'], [1, 0, 7, 'd']]);
   const KNIFE = profile([[-1, 0, 9, 'l'], [0, 0, 10, 'm'], [1, 0, 8, 'd']]);
   const CLEAVER = profile([[-4, 1, 9, 'l'], [-3, 0, 9, 'l'], [-2, 0, 9, 'm'], [-1, 0, 9, 'm'], [0, 0, 9, 'm'], [1, 0, 8, 'd']]);
-  const SICKLE = part(-5, [
-    '   llll  ',
-    '  lMMMml ',
-    ' lM    md',
-    ' mM     d',
-    'mM       ',
-    'md       '
-  ]);
   const SCAPULA = profile([[-4, 5, 9, 'l'], [-3, 3, 9, 'l'], [-2, 1, 9, 'm'], [-1, 0, 9, 'm'], [0, 0, 9, 'm'], [1, 1, 9, 'd'], [2, 3, 9, 'd'], [3, 5, 9, 'd']]);
   const DRAW_BLADE = profile([[-1, 0, 12, 'l'], [0, 0, 12, 'm'], [1, 0, 12, 'd']]);
   const DRAW_HANDLE = part(-1, ['l ', 'mm', 'mm', 'md', 'dd', ' d']);
@@ -95,7 +87,6 @@
     { id: 'flint_knife', pieces: () => [[wrapped(5), 'hide'], [KNAPPED, 'flint']] },
     { id: 'copper_knife', pieces: () => [[POMMEL.dot, 'copper'], [wrapped(5), 'cord'], [KNIFE, 'copper']] },
     { id: 'bone_cleaver', pieces: () => [[grip(6), 'wood'], lashing(2), [CLEAVER, 'bone']] },
-    { id: 'flint_sickle', pieces: () => [[grip(6), 'wood'], lashing(2), [haft(2), 'wood'], [SICKLE, 'wood', 'flint']] },
     { id: 'bone_fleshing_scraper', pieces: () => [[haft(11), 'wood'], -2, lashing(2), [SCAPULA, 'bone']] },
     { id: 'iron_fleshing_knife', pieces: () => [[DRAW_HANDLE, 'wood'], [DRAW_BLADE, 'iron'], [DRAW_HANDLE, 'wood']] }
   ];

@@ -17,19 +17,19 @@ const PIXEL_BOWS = (() => {
     '            y            '
   ]);
   const RECURVE_STAVE = transposed([
-    '                       Z',
-    '                       Y',
-    '                      l ',
-    '                  llll  ',
-    '               lLlddy   ',
-    '             lldMd y    ',
-    '            ldd   y     ',
-    '           ld    y      ',
-    '          Md    y       ',
-    '         ML    y        ',
-    '              y         ',
-    '             y          ',
-    '            y           '
+    '                     ll  ',
+    '                      l  ',
+    '                     lmy ',
+    '                 llllmdy ',
+    '              lllmmdd y  ',
+    '           llmmdd    y   ',
+    '         llmdd      y    ',
+    '        lmd        y     ',
+    '       lmd        y      ',
+    '      LM         y       ',
+    '                y        ',
+    '               y         ',
+    '              y          '
   ]);
 
   const WAR_STAVE = transposed([
@@ -65,32 +65,32 @@ const PIXEL_BOWS = (() => {
     '               y              '
   ]);
   const SINEW_STAVE = transposed([
-    '                  MMMMMMM',
-    '              MMMMmmmd y ',
-    '           MMMmmmd    y  ',
-    '         MMmmd       y   ',
-    '       MMmd         y    ',
-    '      Mmd          y     ',
-    '      Zm          y      ',
-    '       Y         y       ',
-    '                y        ',
+    '                  ZZZZZZZ',
+    '              ZZZZYmmmdy ',
+    '           ZZZYmmmddd y  ',
+    '         ZZYmmdd     y   ',
+    '       ZZYmdd       y    ',
+    '      ZYmdd        y     ',
+    '      Zmdd        y      ',
+    '      Zdd        y       ',
+    '      LM        y        ',
     '               y         ',
     '              y          ',
     '             y           '
   ]);
   const HORN_STAVE = transposed([
-    '                       Z',
-    '                       Y',
-    '                   MMmm ',
-    '               MMMmdy   ',
-    '             MMmmd y    ',
-    '           Mmmd   y     ',
-    '          Mmd    y      ',
-    '         Mmd    y       ',
-    '        ZYd    y        ',
-    '         Y    y         ',
-    '             y          ',
-    '            y           '
+    '                     ZZ  ',
+    '                    ZYY  ',
+    '                   Zmmdy ',
+    '              ZZZZZmmdy  ',
+    '          ZZZZmmmmddy    ',
+    '        ZZmmmdddd  y     ',
+    '         Zmd      y      ',
+    '         Zmd     y       ',
+    '        LLM     y        ',
+    '               y         ',
+    '              y          ',
+    '             y           '
   ]);
   const GOBLIN_STAVE = transposed([
     '                   z',
@@ -105,17 +105,16 @@ const PIXEL_BOWS = (() => {
     '           M        '
   ]);
   const HORNBOW_STAVE = transposed([
-    '                  MMMM',
-    '               MMMmmmy',
-    '            MMMmmmd y ',
-    '          MMmmmd   y  ',
-    '        MMmmd     y   ',
-    '       Mmmd      y    ',
-    '      XWWd      y     ',
-    '       XW      y      ',
-    '              y       ',
-    '             y        ',
-    '            y         '
+    '                ZY  ',
+    '               ZYYy ',
+    '             lllmd y',
+    '          lllmmmd y ',
+    '        llmmmdd  y  ',
+    '       lmmdd    y   ',
+    '      lmMM     y    ',
+    '      MMDD    y     ',
+    '             y      ',
+    '            y       '
   ]);
   const RUNE_STAVE = transposed([
     '                    lllllll',
@@ -135,13 +134,13 @@ const PIXEL_BOWS = (() => {
   const strung = (stave, ...inks) => stamp(sketch(), 0, 0, stave, inks);
 
   const selfBow = () => strung(SELF_STAVE, 'ash', 'leather', 'string');
-  const huntingRecurve = () => strung(RECURVE_STAVE, 'wood', 'cord', 'string', 'bone');
+  const huntingRecurve = () => strung(RECURVE_STAVE, 'wood', 'leather', 'string');
   const warBow = () => strung(WAR_STAVE, 'wood', 'leather', 'string');
   const yewLongbow = () => strung(YEW_STAVE, 'ash', 'wood', 'string', 'leather');
-  const sinewBackedBow = () => strung(SINEW_STAVE, 'wood', 'cord', 'string', 'leather');
-  const hornCompositeBow = () => strung(HORN_STAVE, 'horn', 'cord', 'string', 'bone');
+  const sinewBackedBow = () => strung(SINEW_STAVE, 'wood', 'leather', 'string', 'tallow');
+  const hornCompositeBow = () => strung(HORN_STAVE, 'horn', 'leather', 'string', 'bone');
   const goblinPoisonBow = () => strung(GOBLIN_STAVE, 'horn', 'venom', 'bone', 'leather');
-  const warrenHornbow = () => strung(HORNBOW_STAVE, 'horn', 'bone', 'string', 'red');
+  const warrenHornbow = () => strung(HORNBOW_STAVE, 'horn', 'red', 'string', 'bone');
   const runeStrungWarbow = () => strung(RUNE_STAVE, 'runed', 'gleam', 'gold');
 
   return [

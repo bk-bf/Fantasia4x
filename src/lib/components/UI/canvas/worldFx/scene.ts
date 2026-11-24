@@ -2,12 +2,12 @@ import type { Mob, Pawn, PawnOrder } from '$lib/game/core/types';
 import type { WebGLRenderer } from '$lib/webgl/renderer.js';
 import { conditionPriority } from '$lib/game/core/rules/body/conditions';
 import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
-import { bodyHealthShare } from '$lib/game/core/rules/body/bodyHealth';
+import { bloodFrac } from '$lib/components/UI/canvas/healthColors';
 import { PROGRESS_BAR_STATES } from '$lib/components/UI/canvas/selectionCard';
 import { HONEY } from '$lib/pixelArt/fx/glyphs';
 import { RAMP } from '$lib/pixelArt/fx/spr';
 import type { Ramp } from '$lib/pixelArt/palette';
-import type { Box, Pt } from '$lib/pixelArt/fx/effects';
+import { route, type Box, type Pt } from '$lib/pixelArt/fx/effects';
 import { ART_TILE, figureAt, type Figure } from './figure';
 
 export type MarkKind = 'sleep' | 'rest' | 'reel' | 'coin' | 'winded';
@@ -27,8 +27,9 @@ export interface Mark {
 }
 
 export interface Route {
-  from: Pt;
+  pts: Pt[];
   stops: Pt[];
+  even?: boolean;
   col: Ramp;
   attack: boolean;
   boxes: Box[];
@@ -48,7 +49,14 @@ export interface FxWorld {
   renderer: WebGLRenderer | null;
   hidden: (x: number, y: number) => boolean;
   mobsDrawn: boolean;
+  aim: MoveAim | null;
   view: Box;
+}
+
+export interface MoveAim {
+  from: Pt;
+  to: Pt;
+  slots: readonly { x: number; y: number }[];
 }
 
 const PRIO = () => ({
@@ -111,15 +119,8 @@ function addBars(
   if (health !== null) s.bars.push({ x: f.x, y, v: health, ramp, pegs: false });
 }
 
-const shares = new WeakMap<object, number>();
-
-const hurt = (limbs: Pawn['limbs']): number | null => {
-  if (!limbs) return null;
-  let share = shares.get(limbs);
-  if (share === undefined) {
-    share = bodyHealthShare(limbs);
-    shares.set(limbs, share);
-  }
+const bled = (e: { bloodVolume?: number; maxBloodVolume?: number }): number | null => {
+  const share = bloodFrac(e);
   return share < 1 ? share : null;
 };
 
@@ -147,6 +148,15 @@ function orderStop(w: FxWorld, o: PawnOrder, boxes: Box[]): Pt | null {
   return 'x' in o ? ground(o.x, o.y) : null;
 }
 
+const same = (a: Pt, b: Pt) => a[0] === b[0] && a[1] === b[1];
+
+function walked(p: Pawn, from: Pt): Pt[] {
+  const path = p.path ?? [];
+  const pts: Pt[] = [from];
+  for (let i = p.pathIndex ?? 0; i < path.length; i++) pts.push(ground(path[i].x, path[i].y));
+  return pts;
+}
+
 function addRoute(s: Scene, w: FxWorld, p: Pawn, f: Figure): void {
   const orders = [p.draftTarget!, ...(p.manualQueue ?? [])];
   const attack = orders[orders.length - 1].type === 'attack';
@@ -154,8 +164,10 @@ function addRoute(s: Scene, w: FxWorld, p: Pawn, f: Figure): void {
   const stops = orders.map((o) => orderStop(w, o, boxes)).filter((q): q is Pt => q !== null);
   if (stops.length === 0) return;
   const lead = orders[0].type === 'attack';
+  const walk = walked(p, [f.x, f.y - (lead ? 4 : 2)]);
+  const ahead = route(stops, walk[walk.length - 1]).slice(1);
   s.routes.push({
-    from: [f.x, f.y - (lead ? 4 : 2)],
+    pts: [...walk, ...ahead.filter((q, i) => i > 0 || !same(q, walk[walk.length - 1]))],
     stops,
     col: lead ? RAMP.vermilion : HONEY,
     attack,
@@ -205,8 +217,32 @@ function mobMark(m: Mob, prio: ReturnType<typeof PRIO>): MarkKind | null {
   );
 }
 
+const AREA_PAD = 10;
+const AREA_HEAD = 26;
+
+function aimRoute(a: MoveAim): Route {
+  const stops = a.slots.map((t) => ground(t.x, t.y));
+  const xs = stops.map((q) => q[0]);
+  const ys = stops.map((q) => q[1]);
+  const area: Box = [
+    Math.min(...xs) - AREA_PAD,
+    Math.min(...ys) - AREA_HEAD,
+    Math.max(...xs) + AREA_PAD,
+    Math.max(...ys) + AREA_PAD / 2
+  ];
+  return {
+    pts: [ground(a.from[0], a.from[1]), ground(a.to[0], a.to[1])],
+    stops,
+    even: true,
+    col: HONEY,
+    attack: false,
+    boxes: stops.length > 1 ? [area] : []
+  };
+}
+
 export function collectScene(w: FxWorld, on: SceneOn): Scene {
   const s: Scene = { bars: [], marks: [], routes: [] };
+  if (on.draft && w.aim && w.aim.slots.length > 0) s.routes.push(aimRoute(w.aim));
   if (!on.marks && !on.work && !on.health && !on.draft) return s;
   const prio = PRIO();
   for (const p of w.pawns) {
@@ -218,7 +254,7 @@ export function collectScene(w: FxWorld, on: SceneOn): Scene {
     const drafted = on.draft && p.drafted && p.draftTarget;
     const mark = on.marks ? pawnMark(p, prio) : null;
     const working = on.work ? pawnWork(p) : null;
-    const hp = on.health && p.isAlive !== false ? hurt(p.limbs) : null;
+    const hp = on.health && p.isAlive !== false ? bled(p) : null;
     if (!mark && working === null && hp === null && !drafted) continue;
     if (w.hidden(cx, cy)) continue;
     const f = figureAt(w.renderer, cx, cy, rp.x, rp.y);
@@ -235,7 +271,7 @@ export function collectScene(w: FxWorld, on: SceneOn): Scene {
     if (!inView(w.view, cx, cy)) continue;
     const mark = on.marks ? mobMark(m, prio) : null;
     const eat = on.work && (m.eatProgress ?? 0) > 0 ? Math.min(1, m.eatProgress ?? 0) : null;
-    const hp = on.health ? hurt(m.limbs) : null;
+    const hp = on.health ? bled(m) : null;
     if (!mark && eat === null && hp === null) continue;
     if (w.hidden(cx, cy)) continue;
     const f = figureAt(w.renderer, cx, cy, rp.x, rp.y);

@@ -82,36 +82,38 @@ const PIXEL_POLES = (() => {
     'ddd          '
   ]);
   const LUGS = part(-4, ['ll   ', 'lll  ', ' lll ', 'mmmmm', 'mmmmm', 'ddddd', ' ddd ', 'ddd  ', 'dd   ']);
-  const HALBERD_HEAD = part(-5, [
-    '  l         ',
-    '  dl        ',
-    '   dl       ',
-    '   ddll     ',
-    'llllllllll  ',
-    'mmmmmmmmmmmm',
-    'dddddddddd  ',
-    '  dddd      ',
-    '  mmmmm     ',
-    ' mmmmmmm    ',
-    'mmmmmmmmm   ',
-    'lllllllll   ',
-    'l       l   '
-  ]);
-  const RUNE_HALBERD_HEAD = part(-5, [
-    '  l         ',
-    '  dl        ',
-    '   dl       ',
-    '   ddll     ',
-    'llllllllll  ',
-    'mmmmmmmmmmmm',
-    'dddddddddd  ',
-    '  dddd      ',
-    '  mMmmm     ',
-    ' mmmMmmm    ',
-    'mmmmmmmmm   ',
-    'lllllllll   ',
-    'l       l   '
-  ]);
+  const HALBERD_HEAD = PX.patch([
+    '               l',
+    '              ld',
+    '             ld ',
+    '            ld  ',
+    '  l        ld   ',
+    '  ll      ld    ',
+    ' lmm    lmd     ',
+    ' lmmm  lmd      ',
+    'lmmmmmlmdl      ',
+    'lmmmmlmdmml     ',
+    'lmmmlmd  ddml   ',
+    'lmd lmd     dm  ',
+    'ld           dm ',
+    '              d '
+  ], [4, 11]);
+  const RUNE_HALBERD_HEAD = PX.patch([
+    '               l',
+    '              ld',
+    '             ld ',
+    '            ld  ',
+    '  l        ld   ',
+    '  ll      ld    ',
+    ' lmm    lmd     ',
+    ' lmLm  lmd      ',
+    'lmMmLmlmdl      ',
+    'lmmMmlmdmml     ',
+    'lmmmlmd  ddml   ',
+    'lmd lmd     dm  ',
+    'ld           dm ',
+    '              d '
+  ], [4, 11]);
   const GLAIVE_BLADE = profile([[-2, 3, 11, 'l'], [-1, 0, 13, 'l'], [0, 0, 13, 'mmMmm'], [1, 0, 12, 'm'], [2, 0, 10, 'd'], [3, 1, 7, 'd']]);
   const GRAVEN_HEAD = profile([[-1, 0, 9, 'l'], [0, 0, 12, 'mM'], [1, 0, 9, 'd']]);
   const BANNER = [
@@ -145,8 +147,8 @@ const PIXEL_POLES = (() => {
   const framea = () => assemble([[haft(16), 'ash'], [SOCKET, 'iron'], [FRAMEA_HEAD, 'iron']]);
   const steelPike = () => assemble([[haft(17), 'ash'], -1, [LANGET, 'steel'], [NEEDLE, 'steel']]);
   const ironWingedSpear = () => assemble([[haft(11), 'wood'], [SOCKET, 'iron'], [LUGS, 'iron'], [HEAD.leaf(10), 'iron']]);
-  const steelHalberd = () => assemble([[haft(16), 'ash'], [COLLAR, 'steel'], [HALBERD_HEAD, 'steel']]);
-  const runeEtchedHalberd = () => assemble([[haft(16), 'black'], [COLLAR, 'gold'], [RUNE_HALBERD_HEAD, 'runed', 'glow']]);
+  const steelHalberd = () => assemble([[haft(17), 'ash'], [HALBERD_HEAD, 'steel']]);
+  const runeEtchedHalberd = () => assemble([[haft(15), 'black'], [binding(2), 'gold'], [RUNE_HALBERD_HEAD, 'runed', 'glow']]);
   const runeGravenSpear = () => assemble([[haft(13), 'black'], [binding(2), 'gold'], [SOCKET, 'runed'], [GRAVEN_HEAD, 'runed', 'glow']]);
   const runeStandardGlaive = () => hang(assemble([[haft(14), 'black'], [crossbar(2), 'gold'], [GLAIVE_BLADE, 'runed', 'glow']]), 12, 2, BANNER, 'red', 'gold');
 

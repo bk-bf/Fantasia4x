@@ -20,6 +20,19 @@ const PIXEL_STAFFS = (() => {
     '  lmd     ',
     ' lmd      '
   ], [2, 8]);
+  const PRONGS = patch([
+    '     l  l ',
+    '    lm  ml',
+    '   m      m',
+    '   m      d',
+    '   m      d',
+    '   dm   md ',
+    '   lmddd  ',
+    '  lmd     ',
+    ' lmd      '
+  ].map(row => row.slice(0, 10)), [2, 8]);
+  const TOPAZ = [' LM ', 'LZMM', 'MMMD', ' MD '];
+  const BOLT = ['  z', ' z ', 'z  ', ' z ', 'z  '];
   const FORK = patch([
     '   l    l ',
     '  lm   lm ',
@@ -80,6 +93,11 @@ const PIXEL_STAFFS = (() => {
   const clawRod = (wood, shod, gem) => assemble([[BUTT, shod], [capped(2), shod], [pole(10), wood], [CLAW, shod, gem]]);
   const scepter = (metal, glass, gem) => assemble([[BUTT, metal], [haft(4), metal], [band(2), glass], [haft(6), metal], [SCEPTER, glass, gem]]);
   const staff = (wood, head, gem) => assemble([[BUTT, wood], [pole(19), wood], [head, wood, gem]]);
+  function sparking(sk, step, gem) {
+    const [x, y] = PX.diagonal(step, 0);
+    PX.stamp(sk, x + 9, y - 7, BOLT, ['gleam', 'gleam', 'gleam']);
+    return PX.overlay(sk, x + 2, y - 6, TOPAZ, 'wood', gem, 'wood', gem);
+  }
   const attuned = (wood, head, gem) => assemble([[BUTT, 'gold'], [capped(2), 'gold'], [pole(12), wood], [band(2), 'gold'], [pole(2), wood], [head, 'gold', gem]]);
 
   return [
@@ -100,8 +118,8 @@ const PIXEL_STAFFS = (() => {
     { id: 'pyre_staff', draw: () => attuned('ember', FORK, 'ruby') },
     { id: 'frost_staff', draw: () => staff('moonwood', CRESCENT, 'sapphire') },
     { id: 'rime_staff', draw: () => attuned('moonwood', CRESCENT, 'sapphire') },
-    { id: 'spark_staff', draw: () => staff('wood', CLAW, 'topaz') },
-    { id: 'tempest_staff', draw: () => attuned('wood', CLAW, 'topaz') },
+    { id: 'spark_staff', draw: () => sparking(assemble([[BUTT, 'wood'], [pole(17), 'wood'], [PRONGS, 'wood']]), 18, 'topaz') },
+    { id: 'tempest_staff', draw: () => sparking(assemble([[BUTT, 'gold'], [capped(2), 'gold'], [pole(10), 'wood'], [band(2), 'gold'], [pole(2), 'wood'], [PRONGS, 'gold']]), 18, 'topaz') },
     { id: 'manaforge_greatstaff', draw: () => assemble([[BUTT, 'runed'], [pole(8), 'runed'], [runes(2), 'runed', 'glow'], [pole(7), 'runed'], [TRINITY, 'gold', 'ruby', 'topaz', 'sapphire']]) }
   ];
 })();

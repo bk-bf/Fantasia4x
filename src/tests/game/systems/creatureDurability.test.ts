@@ -100,7 +100,7 @@ describe('big-creature durability (naturalArmor + bodyScale)', () => {
     const mammoth = makeCreature('woolly_mammoth');
     const unarmoured = makeCreature('giant_rat');
 
-    const lowAp = makeArmedPawn('flint_dagger');
+    const lowAp = makeArmedPawn('flint_knife');
     const highAp = makeArmedPawn('steel_boar_spear');
 
     const lowThrough =

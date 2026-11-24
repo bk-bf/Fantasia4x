@@ -45,6 +45,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `tileset/weather.mjs` | Paints the rain, fog and snow sheets the weather layer tiles over the map and the main menu, from `src/lib/components/UI/weather/weatherSheets.json`, into `static/tilesets/painted/weather/`. | `pnpm tileset:weather` |
 | `tileset/sway.mjs` | Reads how far each tree, plant and crop in the atlas bends in the wind, and which trees drop leaves, from the art in `tileset/art/`, into `static/tilesets/painted/sway.json`. | `pnpm tileset:sway` |
 | `profile-self.mjs`, `profile-window.mjs` | Read the newest Firefox Profiler recording in `.debug/` and report the simulation's functions in it. | `node tools/profile-self.mjs` |
+| `audio-loudness.mjs` | Measures the integrated loudness (EBU R128) of each ambient bed with ffmpeg; `--write` stores it in `src/lib/audio/bedLoudness.json`, which levels the beds against each other. | `node tools/audio-loudness.mjs [--write]` |
 | `threat-model.mjs` | Rates creature threat from the creature, item and loot data. | `pnpm threat`, `pnpm threat:check` |
 | `runner/` | Registers self-hosted GitHub Actions runners for this repo in `.ci/runners/<n>/` of the checkout it sits in, each as a `gha-fantasia4x@<n>` user unit behind `gate.sh`, which refuses anyone but the owner. CI falls back to them when the `RUNS_ON` repo variable is set. | `tools/runner/setup.sh [count]` on ubuntuserver |
 
@@ -53,7 +54,7 @@ to ubuntuserver through `remote/run.mjs`.
 | Path | What it does |
 |---|---|
 | `dev.sh` | Starts the dev server, on the port in `.devport` when there is one; flags add debug logging, the profiler, HMR, a browser or headless mode. |
-| `launch.sh` | Starts the game from this checkout. |
+| `launch.sh` | Starts the game from this checkout; `./launch.sh <branch>` first switches the checkout detached to `origin/<branch>` and plays it painted in Electron. |
 | `build.sh` | Packages the desktop app for Linux or Windows. |
 | `install.sh` | Sets up a fresh checkout. |
 | `audit.sh` | Runs the long combat audits (`RUN_AUDITS=1`) in the background on the host in `AUDIT_HOST`, `aspect` by default. |

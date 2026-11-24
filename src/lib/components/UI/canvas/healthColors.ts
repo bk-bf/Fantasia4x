@@ -27,3 +27,8 @@ export function painColor(v: number): string {
   if (v >= 30) return DIM;
   return POS;
 }
+
+export function bloodFrac(e: { bloodVolume?: number; maxBloodVolume?: number }): number {
+  if (!e.maxBloodVolume || e.maxBloodVolume <= 0) return 1;
+  return Math.max(0, Math.min(1, (e.bloodVolume ?? e.maxBloodVolume) / e.maxBloodVolume));
+}

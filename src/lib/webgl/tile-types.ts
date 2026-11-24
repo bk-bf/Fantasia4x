@@ -39,6 +39,7 @@ export interface TileData {
   painted?: PaintedSprite;
   scenery?: boolean;
   ground?: number;
+  waterIce?: number;
   tufts?: readonly PaintedSprite[];
   dirty?: boolean;
   lastUpdated?: number;
