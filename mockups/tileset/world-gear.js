@@ -57,7 +57,14 @@ const WORLD_GEAR = (() => {
     return FOUND.get(item.id);
   }
 
+  function seated(figure) {
+    const b = TK.bounds(figure), wide = Math.max(W, b.w + 4), dx = (wide >> 1) - b.x - (b.w >> 1), dy = B - figure.ay, s = new Spr(wide, H, figure.ax + dx, B);
+    TK.each(figure, (x, y, c) => { if (c) s.set(x + dx, y + dy, c, figure.e[y * figure.w + x]); });
+    s.sh = figure.sh;
+    return s;
+  }
   function sprite(def, pose, quantity) {
+    if (def.figure) return seated(def.figure(quantity));
     const sk = PX.outline((def[pose] || def.ground)(quantity)), b = PX.bounds(sk), s = new Spr(W, H, CX, B);
     const dx = CX - b.x - (b.w >> 1), dy = B - b.y - b.h + 1;
     for (const cell of sk.values()) s.set(cell.x + dx, cell.y + dy, cell.rgb);

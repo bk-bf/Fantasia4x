@@ -27,8 +27,9 @@ function castFx(pen, items, T, lvl, env) {
     }
     if (!fr) return;
     if (A.o && A.o.tool === 'torch' && lvl > 1 && fr.s.pts.glow) { const g = ptOf(it, 'glow'); MOTION_FX.flame(pen, g[0], g[1], T, A.seed); }
+    if (st.anim === 'out' && fr.s.pts.daze) MOTION_FX.stars(pen, ...ptOf(it, 'daze'), T + A.seed * 3);
     if (lvl < 3) return;
-    const head = ptOf(it, 'head'), lie = st.anim === 'sleep' || st.anim === 'down' || st.anim === 'rest';
+    const head = ptOf(it, 'head'), lie = st.anim === 'sleep' || st.anim === 'down' || st.anim === 'out' || st.anim === 'rest';
     if (st.anim === 'sleep') MOTION_FX.zzz(pen, it.x + 6, it.y - 12, T + A.seed * 3);
     const em = st.tag && GLYPHS.has(st.tag) ? st.tag : EMOTE[st.anim];
     if (em && (em !== 'alert' || st.since < 1.6)) MOTION_FX.bubble(pen, head[0], head[1] - 2, em, T + A.seed);

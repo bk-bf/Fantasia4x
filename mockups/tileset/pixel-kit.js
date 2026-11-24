@@ -103,13 +103,17 @@ const PX = (() => {
     brine: '#241a08 #4a3612 #6e5326 #9a7a46',
     rot: '#141008 #2e2a14 #4e4a26 #76703a',
     carrion: '#1a0e0a #3e2723 #5e4234 #84664a',
+    putrid: '#1a0c12 #46242c #6b3d3f #8c5f52',
+    mould: '#232c1e #6e8468 #aec4a2 #e2efd8',
+    stench: '#3a3c14 #8a8e3a #c9cf7a #eef0b4',
+    midge: '#0e0c0a #26221c #7c8690 #aab4bc',
     pickle: '#1c200a #545a26 #a8b060 #d8de98',
     jam: '#200610 #5a1430 #a03a5c #d8748e',
     poppy: '#2e1424 #7a4a66 #c88ba8 #f0c8dc',
     poultice: '#18260c #4a7a24 #9ccc65 #d4f0a4',
     tincture: '#1e2618 #66745a #b8c7a8 #e4eedc'
   };
-  const THREADS = new Set(['string', 'venom', 'gleam']);
+  const THREADS = new Set(['string', 'venom', 'gleam', 'stench', 'midge']);
 
   const fail = message => { throw new Error('PX: ' + message); };
   const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));

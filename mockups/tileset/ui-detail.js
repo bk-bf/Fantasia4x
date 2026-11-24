@@ -92,7 +92,7 @@
       for (const v of facings) { const c = el('canvas'), fb = DBX.bake(v); UI.paint(c, fb, fb.w > 70 || fb.h > 90 ? 1 : 2); c.title = v.variant; if (v === e) c.className = 'on'; c.onclick = () => UI.select(key, v.variant); row.append(c); }
       d.append(row);
     }
-    if (e.kind !== 'world') d.append(inScene(o, e, b));
+    if (e.kind !== 'world' && o.cat !== 'condition') d.append(inScene(o, e, b));
     return { all, e, b };
   }
 

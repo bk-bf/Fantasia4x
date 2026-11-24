@@ -54,6 +54,8 @@ const SHEET = (() => {
     { id: 'drink-fb', group: 'Needs', label: 'Drinking · toward and away', w: 136, cast: [P1('pawn', 'miner', loop('drink', { face: 'f' }), [-30, 0]), P1('pawn', 'miner', loop('drink', { face: 'b' }), [30, -2])] },
     { id: 'eat-fb', group: 'Needs', label: 'Eating · toward and away', w: 136, cast: [P1('pawn', 'guard', loop('eat', { face: 'f' }), [-30, 0], { shield: null }), P1('pawn', 'guard', loop('eat', { face: 'b' }), [30, -2], { shield: null })] },
     one('sleep', 'Needs', 'Sleeping', 'pawn', 'farmer', 'sleep'),
+    one('out', 'Needs', 'Unconscious', 'pawn', 'farmer', 'out', { ox: 4 }),
+    { id: 'out-folk', group: 'Needs', label: 'Unconscious · other folk', w: 204, h: 124, cast: [P1('pawn', 'guard', loop('out'), [-62, -38]), P1('pawn', 'smith', loop('out', { flip: 1 }), [2, -38]), P1('pawn', 'mage', loop('out'), [66, -38]), P1('pawn', 'hauler', loop('out', { flip: 1 }), [-62, 0]), P1('pawn', 'goblin', loop('out'), [0, 0]), P1('pawn', 'gnoll', loop('out', { flip: 1 }), [62, 0])] },
     one('tired', 'Needs', 'Tired', 'pawn', 'cook', 'tired', { over: { tool: null } }),
     one('cry', 'Needs', 'Crying', 'pawn', 'weaver', 'cry'),
     { id: 'talk', group: 'Social', label: 'Talking', cast: [P1('pawn', 'weaver', loop('talk'), [-13, 0]), P1('pawn', 'farmer', loop('listen', { flip: 1 }), [13, 0], { tool: null })] },

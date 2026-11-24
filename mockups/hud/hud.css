@@ -26,6 +26,8 @@
   .cond { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   i.bdg { display: inline-block; width: 17px; height: 17px; flex: none; vertical-align: middle; }
   i.bdg canvas { filter: url(#ambient-tint-data); }
+  i.cic { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; flex: none; vertical-align: middle; }
+  i.cic canvas { filter: url(#ambient-tint-data); image-rendering: pixelated; }
   .cond.warn { color: var(--hot); } .cond.cold { color: var(--cold); } .cond.good { color: var(--pos); }
   .limb { margin-top: 3px; }
   .limb-h { display: flex; justify-content: space-between; }
@@ -226,7 +228,7 @@ body[data-skin="vellum"] #hud {
   canvas.skin { filter: url(#ambient-tint) drop-shadow(3px 3px 0 rgb(6 4 3 / .5)); }
   [data-skin] [data-skin] > canvas.skin { filter: url(#ambient-tint-lit); }
   .rail > canvas.skin { filter: url(#ambient-tint) drop-shadow(0 2px 0 rgb(6 4 3 / .55)); }
-  i.ico canvas, i.gly canvas, i.bdg canvas, i.portrait canvas, i.pawnspr canvas, i.bspr canvas, i.bar canvas, .doll { filter: url(#ambient-tint-lit); }
+  i.ico canvas, i.gly canvas, i.bdg canvas, i.cic canvas, i.portrait canvas, i.pawnspr canvas, i.bspr canvas, i.bar canvas, .doll { filter: url(#ambient-tint-lit); }
   .col i.ico canvas { filter: url(#ambient-tint-data); }
   .scrim { filter: url(#ambient-tint); }
   .ribbon canvas.skin { filter: url(#ambient-tint) drop-shadow(2px 2px 0 rgb(6 4 3 / .5)); }

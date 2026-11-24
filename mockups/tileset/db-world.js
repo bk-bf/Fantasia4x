@@ -15,7 +15,7 @@
   X.fromData = objects => {
     prev.call(X, objects);
     for (const o of objects) {
-      if (o.cat !== 'item' || !drawn(o) || mapped(o)) continue;
+      if (o.cat !== 'item' || !(drawn(o) || WORLD_GEAR.of(o)) || mapped(o)) continue;
       for (const [variant, make] of variants(o)) X.reg('item', o.id, variant, make, { inWorld: true });
     }
   };

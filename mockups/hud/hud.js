@@ -5,6 +5,13 @@
   const ico = (name, cls) => `<i class="ico ${cls || ''}" data-i="${name}"></i>`;
   const gly = (name, ramp, cls) => `<i class="gly ${cls || ''}" data-g="${name}"${ramp ? ` data-ramp="${ramp}"` : ''}></i>`;
   const bdg = (g, k) => `<i class="bdg" data-g="${g}" data-k="${k}"></i>`;
+  const cic = id => `<i class="cic" data-c="${id}"></i>`;
+  const conditionIcon = id => {
+    const { w, h, px } = CONDITION_ICONS.icons[id], c = document.createElement('canvas'), g = c.getContext('2d'), im = g.createImageData(w, h);
+    px.forEach((p, i) => { if (p) im.data.set([parseInt(p.slice(1, 3), 16), parseInt(p.slice(3, 5), 16), parseInt(p.slice(5, 7), 16), 255], i * 4); });
+    c.width = w; c.height = h; g.putImageData(im, 0, 0);
+    return c;
+  };
   const bar = (v, ramp, cls) => `<i class="bar ${cls || ''}" data-v="${v}" data-ramp="${ramp}"></i>`;
   const btn = (label, o) => {
     o = o || {};
@@ -13,7 +20,7 @@
   const kv = (k, v, cls) => `<div class="kv ${cls || ''}"><em>${e(k)}</em><span>${v}</span></div>`;
   const meter = ([k, v, ramp, word]) => `<div class="meter"><em>${e(k)}</em>${bar(v, ramp)}<span>${e(word)}</span></div>`;
   const hpClass = p => (p >= .99 ? 'good' : p >= .85 ? 'warn' : 'neg');
-  const cond = ([name, kind, g]) => `<span class="cond ${kind}">${bdg(g, kind)}${e(name)}</span>`;
+  const cond = ([name, kind, c]) => `<span class="cond ${kind}">${cic(c)}${e(name)}</span>`;
   const pills = () => D.sel.pills.map(([k, v, t]) => `<span class="pill ${t || ''}"><em>${k}</em>${v}</span>`).join('');
 
   function columns(state) {
@@ -98,7 +105,7 @@
       body = `<div class="grid g3">
         <section data-skin="well"><h4>Status</h4>${p.status.map(([k, v]) => kv(k, e(v))).join('')}${kv('State', e(p.job), 'hot')}${toggles}</section>
         <section data-skin="well"><h4>Body</h4><div class="pills">${pills()}</div>${limbs}<h5>Carries</h5>${kv(p.carries, '')}</section>
-        <section data-skin="well"><h4>Needs</h4>${p.needs.map(meter).join('')}<h5>Conditions</h5>${p.conditions.map(([n, k, g, d]) => `<div class="crow ${k}">${bdg(g, k)}<b>${e(n)}</b><em>${e(d)}</em></div>`).join('')}</section>
+        <section data-skin="well"><h4>Needs</h4>${p.needs.map(meter).join('')}<h5>Conditions</h5>${p.conditions.map(([n, k, c, d]) => `<div class="crow ${k}">${cic(c)}<b>${e(n)}</b><em>${e(d)}</em></div>`).join('')}</section>
       </div>`;
     }
     return win('pawns', 'Pawns', `<div class="s-sub"><div class="roster">${roster}</div><div class="attrs">${attrs}</div></div>${body}`, { tabs, cls: 'big', tools: btn('Follow', { glyph: 'eye' }) });
@@ -146,7 +153,7 @@
   }
 
   const WIN = HUD.WIN = { pawns: pawnsWin, body: bodyWin, fuel: fuelWin, work: workWin, build: buildWin };
-  HUD.ui = { e, ico, gly, bdg, bar, btn, kv, meter, win, hpClass };
+  HUD.ui = { e, ico, gly, bdg, cic, bar, btn, kv, meter, win, hpClass };
   HUD.html = state => `${columns(state)}${top(state)}${card(state)}${state.wins.includes('fuel') ? '' : verbTag()}${state.wins.some(w => HUD.MODAL.includes(w)) ? '<i class="veil"></i>' : ''}${state.wins.map(w => WIN[w](state)).join('')}`;
 
   const put = (el, c, cls) => { c.className = cls; el.prepend(c); return c; };
@@ -159,6 +166,7 @@
     });
     root.querySelectorAll('i.gly').forEach(el => { el.textContent = ''; el.append(A.glyph(el.dataset.g, ramps[el.dataset.ramp] || skin.glyphRamp, { line: skin.glyphLine })); });
     root.querySelectorAll('i.bdg:empty').forEach(el => el.append(skin.badge(el.dataset.g, el.dataset.k)));
+    root.querySelectorAll('i.cic:empty').forEach(el => el.append(conditionIcon(el.dataset.c)));
     root.querySelectorAll('i.portrait:empty').forEach(el => el.append(A.portrait(el.dataset.p, +el.dataset.size || 48, skin.portraitBg)));
     root.querySelectorAll('i.pawnspr:empty').forEach(el => el.append(A.pawnFull(el.dataset.p)));
     root.querySelectorAll('i.bspr:empty').forEach(el => el.append(A.building(el.dataset.b)));
