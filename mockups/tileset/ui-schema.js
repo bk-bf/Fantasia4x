@@ -122,6 +122,9 @@
     dump: T('Dump', 'stat dump', o => (o.src.statDump || []).join(', ')),
     bias: T('Size', 'size bias', o => (o.src.sizeBias || []).join(', ')),
     traits: T('Traits', 'traits', o => (o.src.traits || []).join(', ')),
+    ckind: T('Kind', 'condition kind', o => o.src.kind),
+    cicon: T('Icon', 'icon', o => o.src.icon),
+    mark: T('Mark', 'boon or bane', o => o.src.mark),
     trinket: T('Effect', 'effect', o => (o.d.defense === undefined && o.d.block === undefined ? o.d.stat || o.d.effects || '' : '')),
   };
   for (const id in STAT) STAT[id].id = id;
@@ -177,6 +180,7 @@
     { id: 'crop', name: 'Crops', world: true },
     { id: 'ore', name: 'Ore & rock', world: true },
     { id: 'site', name: 'Sites', world: true },
+    { id: 'condition', name: 'Conditions', lenses: ['sprites', 'table'], table: ['ckind', 'cicon', 'mark'], by: [by('kind', 'Kind', one(o => o.src.kind))] },
     { id: 'concept', name: 'Concepts', lenses: ['sprites'] },
   ];
   for (const t of TABS) {

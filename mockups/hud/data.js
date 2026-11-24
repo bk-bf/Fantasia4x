@@ -46,7 +46,7 @@ HUD.data = {
   sel: {
     kind: 'woodcutter', name: 'Greta Thornfield', line: 'Syleth · Marsh-folk · Reaver', job: 'Felling an oak by the west fence', progress: .62,
     bars: [['Health', .88, 'leaf', '88'], ['Mood', .64, 'honey', '64'], ['Hunger', .41, 'ember', 'Peckish'], ['Rest', .72, 'water', 'Rested']],
-    conditions: [['Old burn', 'warn', 'flame', 'left arm'], ['Soaked', 'cold', 'drop', 'since the ford'], ['Well fed', 'good', 'bowl', 'until dusk']],
+    conditions: [['Old burn', 'warn', 'burning', 'left arm'], ['Soaked', 'cold', 'drops', 'since the ford'], ['Well fed', 'good', 'wellfed', 'until dusk']],
     carries: 'Cast Bronze Hatchet',
     attrs: [['STR', 9, 52], ['DEX', 14, 50], ['INT', 12, 53], ['PER', 15, 45], ['CHA', 11, 54], ['CON', 15, 41]],
     status: [['Culture', 'Syleth · Marsh-folk'], ['Origin', 'the Village of Ebon'], ['Childhood', 'Caravan-born'], ['Adulthood', 'Reaver'], ['Age', '34 years'], ['Sex', 'Female']],
