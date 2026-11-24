@@ -34,7 +34,9 @@ const HAUL = (() => {
     const forced = (AT_LEAST.find(([, min]) => kg >= min.kg || litres >= min.litres) || ['light'])[0];
     return BULKS[Math.max(BULKS.indexOf(base), BULKS.indexOf(forced))];
   }
-  function sourceOf(o, k) {
+  const LYING = 'map-ground';
+  const sourceOf = (o, k) => ({ ...sidesOf(o, k), lying: DBX.byId.has('item/' + o.id + '/' + LYING) ? LYING : null });
+  function sidesOf(o, k) {
     const has = v => DBX.byId.has('item/' + o.id + '/' + v);
     const [toward, away] = END_SOURCES.find(pair => has(pair[0])) || [];
     if (k.long) return { side: 'map-lie', upright: 'map-lean', headUp: PROPS.headUp(k.long, o.id) };
@@ -77,8 +79,10 @@ const HAUL = (() => {
     for (let x = 0; x < spr.w; x++) if (spr.c[from * spr.w + x]) xs.push(x);
     return [xs[xs.length >> 1], row];
   }
-  function layer(load, hold, face) {
-    const src = load.source, upright = hold === 'hip' && face !== 's' && src.upright, ended = ON_SHOULDER.includes(hold) && face !== 's' && (face === 'f' ? src.toward : src.away);
+  function layer(load, hold, face, resting) {
+    const src = load.source;
+    if (resting) { const along = hold === 'shoulder' && face !== 's' && (face === 'f' ? src.toward : src.away), lying = along || src.lying || src.side, spr = cropped(load.id, lying); return { key: load.id + '/' + lying + '/rest', sprite: 'item/' + load.id + '/' + lying, spr, grip: [face === 's' ? REST.edge : spr.w >> 1, along && face === 'f' ? 0 : spr.h - 1], sag: 0 }; }
+    const upright = hold === 'hip' && face !== 's' && src.upright, ended = ON_SHOULDER.includes(hold) && face !== 's' && (face === 'f' ? src.toward : src.away);
     const variant = upright || ended || src.side, spr = cropped(load.id, variant), headDown = (face === 'f') === !!src.headUp;
     const out = { key: load.id + '/' + variant, sprite: 'item/' + load.id + '/' + variant, spr, grip: spr.hold || GRIPS[hold](spr), sag: load.limp && !ended ? SAG[hold] : 0 };
     if (upright) {

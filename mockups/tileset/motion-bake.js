@@ -117,7 +117,7 @@ function frameOf(A, st, lvl, smooth) {
     else { pose = def.pose(u, c); make = () => rigQuad(A.kind, JSON.parse(key0)); }
   } else if (A.rig === 'critter') { pose = def.pose(u, c); make = () => rigCritter(A.kind, JSON.parse(key0)); }
   else { pose = def.pose(u, c); make = () => (A.rig === 'fowl' ? rigFowl : rigRabbit)(JSON.parse(key0)); }
-  const layer = pose.carry && A.load ? HAUL.layer(A.load, pose.carry, c.face) : null;
+  const layer = pose.carry && A.load ? HAUL.layer(A.load, pose.carry, c.face, pose.down > .5) : null;
   const key0 = quant(pose, ang), key = A.look + '|' + lvl + (c.face !== 's' ? c.face : '') + (flip ? 'F' : '') + key0 + (layer ? '|' + layer.key : '');
   return { s: cachedFrame(key, () => { const bare = make(), s = layer && bare.mask ? MOTION_LOAD.put(bare, layer) : bare; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
 }

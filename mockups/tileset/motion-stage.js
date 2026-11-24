@@ -44,7 +44,7 @@ function fellPlan(S) {
   const def = animOf(S.A, 'chop'), hits = [];
   for (const s of steps) for (let k = 0; s.t0 + (k + def.hit[0]) * def.dur <= s.t0 + s.dur; k++) hits.push(s.t0 + (k + def.hit[0]) * def.dur);
   const take = S.steps.find(s => s.tag === 'take'), last = steps[steps.length - 1];
-  return { hits, fallAt: hits[hits.length - 1], clearAt: take ? take.t0 + take.dur * .45 : Infinity, dir: last.flip ? -1 : 1, period: S.period };
+  return { hits, fallAt: hits[hits.length - 1], clearAt: take ? take.t0 : Infinity, dir: last.flip ? -1 : 1, period: S.period };
 }
 function treeState(tree, plan, T, lvl, smooth) {
   const tl = ((T % plan.period) + plan.period) % plan.period, out = { parts: [], bursts: [] }, dir = plan.dir;

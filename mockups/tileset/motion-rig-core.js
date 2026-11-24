@@ -116,7 +116,14 @@ function toolAt(s, kind, gx, gy, ang, o) {
 }
 
 const TOOL_BUTT = { sword: 3, axe: 4, pick: 4, hoe: 11, hammer: 2, spear: 11, club: 2, bow: 11, torch: 2, staff: 11 };
-const STOWED = { toward: 172, away: 8, shown: 3 };
+const STOWED = { toward: 172, away: 8, shown: 3, least: .12 };
+function aimed(ang, stow, back) {
+  const along = back ? STOWED.away : STOWED.toward;
+  if (!(stow > 0)) return { ang, fore: 1 };
+  if (stow >= 1) return { ang: along, fore: SEEN.depth };
+  const k = stow * Math.PI / 2, a = ang * D2R, d = along * D2R, x = Math.cos(k) * Math.sin(a) + Math.sin(k) * SEEN.depth * Math.sin(d), up = Math.cos(k) * Math.cos(a) + Math.sin(k) * SEEN.depth * Math.cos(d);
+  return { ang: Math.atan2(x, up) / D2R, fore: Math.max(STOWED.least, Math.hypot(x, up)) };
+}
 const BOW = { half: 11, sag: 4, nock: 10 };
 const RIG_OVER = {
   hip: { s: ['near arm'], f: ['carrying arm'], b: ['body'] },
@@ -125,7 +132,9 @@ const RIG_OVER = {
   shoulder: { s: ['near arm'], f: ['shoulder hand'], b: ['shoulder hand'] },
   game: { s: ['head', 'near arm'], f: ['head', 'shoulder hand'], b: ['shoulder hand'] },
   drape: { s: ['near arm'], f: ['head', 'shoulder arm'], b: [] },
+  rest: { s: ['near arm'], f: ['hands'], b: ['body'] },
 };
+const REST = { toes: 4, reach: 8, edge: 2, raised: .7 };
 const RIG_FLAT = [];
 function rigMask(s, names, parts) {
   const m = new Uint8Array(s.w * s.h);

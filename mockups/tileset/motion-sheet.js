@@ -18,7 +18,7 @@ const SHEET = (() => {
   const loop = (anim, o) => [['act', anim, 9999, o]];
   const one = (id, group, label, rig, kind, anim, x) => ({ id, group, label, cast: [P1(rig, kind, loop(anim))], ...(x || {}) });
   const go = (id, group, label, rig, kind, anim, dir, v, x) => ({ id, group, label, follow: 1, cast: [P1(rig, kind, [['run', dir, v, anim]])], ...(x || {}) });
-  const BARE = { tool: null, shield: null }, PACE = { hip: 26, chest: 19, low: 16, shoulder: 22, game: 16, drape: 18 }, BEARER = { hip: 'weaver', chest: 'cook', low: 'woodcutter', shoulder: 'hauler', game: 'hauler', drape: 'woodcutter' };
+  const BARE = { tool: null, shield: null }, PACE = { hip: 26, chest: 17, low: 11.5, shoulder: 13, game: 11.5, drape: 11.5 }, BEARER = { hip: 'weaver', chest: 'cook', low: 'woodcutter', shoulder: 'hauler', game: 'hauler', drape: 'woodcutter' };
   const OWN = { hip: 'bone_stock', chest: 'wild_berries', low: 'granite_block', shoulder: 'pine_log', game: 'deer_carcass', drape: 'carried_pawn' }, FIXED = ['drape'];
   const HOLD_NAMES = { hip: 'at the hip', chest: 'in front', low: 'low in front', shoulder: 'on one shoulder', game: 'game on one shoulder', drape: 'draped over one shoulder' };
   const WAYS = [['side', 'sideways', [1, 0]], ['toward', 'toward', [0, 1]], ['away', 'away', [0, -1]], ['left', 'the other way', [-1, 0]]];
@@ -26,10 +26,15 @@ const SHEET = (() => {
   const carries = hold => WAYS.map(([way, text, dir]) => haul(HOLDS[hold][0] + '-' + way, PAWN_ANIMS[HOLDS[hold][0]].label + ' · ' + text, way === 'left' && hold !== 'shoulder' ? 'smith' : BEARER[hold], hold, dir, OWN[hold], { pick: FIXED.includes(hold) ? 0 : 1 }));
   const stood = (id, label, face) => ({ id, group: 'Carrying', label, w: 296, h: 108, pick: 1, loads: HAUL.HOLDS.map(h => OWN[h]), fixed: HAUL.HOLDS.map(h => FIXED.includes(h)), cast: HAUL.HOLDS.map((h, i) => P1('pawn', BEARER[h], loop(HOLDS[h][1], { face }), [(i - 2.5) * 48, 0], BARE)) });
   const ARMS = [['one', 'sword and shield', 'warlord', null], ['two', 'spear in two hands', 'guard', { shield: null }], ['bow', 'bow', 'hunter', null]];
-  const drill = (family, face) => { const m = HAUL.STANCES[family]; return [['act', m.carry + 'Stand', 1, { face }], ['act', m.draw, PAWN_ANIMS[m.draw].dur, { face }], ['act', m.ready, 1.6, { face }], ['act', m.stow, PAWN_ANIMS[m.stow].dur, { face }]]; };
+  const DRILL = { stands: .4, guards: .8, tick: .1 };
+  const drill = (family, face) => { const m = HAUL.STANCES[family]; return [['act', m.carry + 'Stand', DRILL.stands, { face }], ['act', m.draw, PAWN_ANIMS[m.draw].dur, { face }], ['act', m.ready, DRILL.guards, { face }], ['act', m.stow, PAWN_ANIMS[m.stow].dur, { face }]]; };
+  const drilled = family => { const m = HAUL.STANCES[family], span = DRILL.stands + PAWN_ANIMS[m.draw].dur + DRILL.guards + PAWN_ANIMS[m.stow].dur; return { span, n: Math.round(span / DRILL.tick) }; };
+  const HANDLED = { lifts: 1.5, holds: 1.2, drops: 1.9, tick: .1 };
+  const handled = face => [['act', 'lift', HANDLED.lifts, { face }], ['act', 'held', HANDLED.holds, { face }], ['act', 'drop', HANDLED.drops, { face }]];
+  const handling = { span: HANDLED.lifts + HANDLED.holds + HANDLED.drops, n: Math.round((HANDLED.lifts + HANDLED.holds + HANDLED.drops) / HANDLED.tick) };
   const armed = ([family, text, kind, over]) => [
-    { id: 'arms-' + family, group: 'Combat', label: 'Weapon carry to ready · ' + text, w: 176, h: 124, n: 16, span: 2.6, t0: .6, cast: [P1('pawn', kind, [['go', [[18, 0]], 26, HAUL.STANCES[family].carry], ...drill(family, 's').slice(1), ['at', [-30, 0]]], [-30, 0], over)] },
-    { id: 'arms-' + family + '-fb', group: 'Combat', label: 'Weapon carry to ready · ' + text + ' · toward and away', w: 200, h: 124, n: 16, span: 2.6, t0: .6, cast: [P1('pawn', kind, drill(family, 'f'), [-48, 0], over), P1('pawn', kind, drill(family, 'b'), [48, -2], over)] },
+    { id: 'arms-' + family, group: 'Combat', label: 'Weapon carry to ready · ' + text, w: 176, h: 124, ...drilled(family), t0: 18 / PACE.hip, cast: [P1('pawn', kind, [['go', [[18, 0]], PACE.hip, HAUL.STANCES[family].carry], ...drill(family, 's'), ['at', [-30, 0]]], [-30, 0], over)] },
+    { id: 'arms-' + family + '-fb', group: 'Combat', label: 'Weapon carry to ready · ' + text + ' · toward and away', w: 200, h: 124, ...drilled(family), cast: [P1('pawn', kind, drill(family, 'f'), [-48, 0], over), P1('pawn', kind, drill(family, 'b'), [48, -2], over)] },
   ];
   const CELLS = [
     go('walk-side', 'Movement', 'Walking · sideways', 'pawn', 'woodcutter', 'walk', [1, 0], 28),
@@ -52,14 +57,14 @@ const SHEET = (() => {
     { id: 'hammer', group: 'Work', label: 'Metalworking', cast: [P1('pawn', 'smith', loop('hammer'), [-12, 0])], props: [['anvil', 10, 3]], ground: 'dirt' },
     { id: 'stir', group: 'Work', label: 'Cooking', cast: [P1('pawn', 'cook', loop('stir'), [-14, 0], { tool: null })], props: [['campfire', 9, 3]], ground: 'dirt', smoke: [9, -18] },
     one('gather', 'Work', 'Foraging', 'pawn', 'weaver', 'gather', { ox: -6 }),
-    { id: 'lift', group: 'Work', label: 'Picking up', h: 108, pick: 1, loads: [OWN.shoulder], cast: [P1('pawn', 'hauler', [['act', 'idle', 1], ['act', 'lift', 2.6]], [-4, 0], BARE)], span: 3.6, n: 12 },
+    { id: 'lift', group: 'Work', label: 'Picking up and setting down', w: 152, h: 108, pick: 1, loads: [OWN.shoulder], cast: [P1('pawn', 'hauler', handled('s'), [-22, 0], BARE)], ...handling },
     { id: 'chop-fb', group: 'Work', label: 'Woodcutting · toward and away', w: 136, cast: [P1('pawn', 'woodcutter', loop('chop', { face: 'f' }), [-30, 0]), P1('pawn', 'woodcutter', loop('chop', { face: 'b' }), [30, -2])] },
     { id: 'mine-fb', group: 'Work', label: 'Mining · toward and away', w: 136, h: 96, below: 20, cast: [P1('pawn', 'miner', loop('mine', { face: 'f' }), [-30, 0]), P1('pawn', 'miner', loop('mine', { face: 'b' }), [30, -2])] },
     { id: 'hoe-fb', group: 'Work', label: 'Planting · toward and away', w: 136, ground: 'tilled', cast: [P1('pawn', 'farmer', loop('hoe', { face: 'f' }), [-30, 0]), P1('pawn', 'farmer', loop('hoe', { face: 'b' }), [30, -2])] },
     { id: 'hammer-fb', group: 'Work', label: 'Metalworking · toward and away', w: 136, cast: [P1('pawn', 'smith', loop('hammer', { face: 'f' }), [-30, 0]), P1('pawn', 'smith', loop('hammer', { face: 'b' }), [30, -2])] },
     { id: 'stir-fb', group: 'Work', label: 'Cooking · toward and away', w: 136, cast: [P1('pawn', 'cook', loop('stir', { face: 'f' }), [-30, 0], { tool: null }), P1('pawn', 'cook', loop('stir', { face: 'b' }), [30, -2], { tool: null })] },
     { id: 'gather-fb', group: 'Work', label: 'Foraging · toward and away', w: 136, cast: [P1('pawn', 'weaver', loop('gather', { face: 'f' }), [-30, 0]), P1('pawn', 'weaver', loop('gather', { face: 'b' }), [30, -2])] },
-    { id: 'lift-fb', group: 'Work', label: 'Picking up · toward and away', w: 152, h: 108, pick: 1, loads: [OWN.shoulder], span: 3.6, n: 12, cast: [P1('pawn', 'hauler', [['act', 'idle', 1, { face: 'f' }], ['act', 'lift', 2.6, { face: 'f' }]], [-36, 0], BARE), P1('pawn', 'hauler', [['act', 'idle', 1, { face: 'b' }], ['act', 'lift', 2.6, { face: 'b' }]], [36, -2], BARE)] },
+    { id: 'lift-fb', group: 'Work', label: 'Picking up and setting down · toward and away', w: 184, h: 116, below: 24, pick: 1, loads: [OWN.shoulder, OWN.shoulder], ...handling, cast: [P1('pawn', 'hauler', handled('f'), [-44, 0], BARE), P1('pawn', 'hauler', handled('b'), [44, -2], BARE)] },
     { id: 'draw', group: 'Needs', label: 'Drawing water', cast: [P1('pawn', 'farmer', loop('draw'), [-18, 0], { tool: null })], props: [['well', 8, 1]], ground: 'dirt' },
     one('drink', 'Needs', 'Drinking', 'pawn', 'miner', 'drink'),
     one('eat', 'Needs', 'Eating', 'pawn', 'guard', 'eat', { over: { shield: null }, props: [['stool', -3, -1]] }),
@@ -163,8 +168,8 @@ const SHEET = (() => {
     one('stirge-idle', 'Creatures', 'Fen Stirge · idle', 'critter', 'stirge', 'idle', { ground: 'mud', h: 124 }),
     one('stirge-attack', 'Creatures', 'Fen Stirge · darting', 'critter', 'stirge', 'attack', { ground: 'mud', ox: -8, h: 124 }),
     { id: 'stirge-death', group: 'Creatures', label: 'Fen Stirge · death', ground: 'mud', h: 124, cast: [P1('critter', 'stirge', [['act', 'idle', 1], ['act', 'fall', 0.9], ['act', 'down', 2.4]])], span: 1.4, t0: .9, n: 10 },
-    { id: 'fell', group: 'World response', label: 'Felling', w: 190, h: 140, loads: [OWN.shoulder], fell: ['oak', 2, 20, -2], cast: [P1('pawn', 'woodcutter', [['act', 'idle', .8], ['act', 'chop', 3.75, { tag: 'fell' }], ['act', 'idle', 2.2], ['go', [[26, 6]], 22, 'walk'], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[-120, 6]], 22, 'haul'], ['hide', 1], ['at', [-120, 0]], ['go', [[-6, 0]], 28, 'walk']], [-6, 0])], span: 6.8, n: 20, ox: -10 },
-    { id: 'fall-tree', group: 'World response', label: 'Felled tree falling', w: 190, h: 140, loads: [OWN.shoulder], fell: ['oak', 2, 20, -2], cast: [P1('pawn', 'woodcutter', [['act', 'idle', .8], ['act', 'chop', 3.75, { tag: 'fell' }], ['act', 'idle', 2.2], ['go', [[26, 6]], 22, 'walk'], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[-120, 6]], 22, 'haul'], ['hide', 1], ['at', [-120, 0]], ['go', [[-6, 0]], 28, 'walk']], [-6, 0])], fallOnly: 1, ox: -10 },
+    { id: 'fell', group: 'World response', label: 'Felling', w: 190, h: 140, loads: [OWN.shoulder], fell: ['oak', 2, 20, -2], cast: [P1('pawn', 'woodcutter', [['act', 'idle', .8], ['act', 'chop', 3.75, { tag: 'fell' }], ['act', 'idle', 2.2], ['go', [[26, 6]], 22, 'walk'], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[-120, 6]], PACE.shoulder, 'haul'], ['hide', 1], ['at', [-120, 0]], ['go', [[-6, 0]], 28, 'walk']], [-6, 0])], span: 6.8, n: 20, ox: -10 },
+    { id: 'fall-tree', group: 'World response', label: 'Felled tree falling', w: 190, h: 140, loads: [OWN.shoulder], fell: ['oak', 2, 20, -2], cast: [P1('pawn', 'woodcutter', [['act', 'idle', .8], ['act', 'chop', 3.75, { tag: 'fell' }], ['act', 'idle', 2.2], ['go', [[26, 6]], 22, 'walk'], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[-120, 6]], PACE.shoulder, 'haul'], ['hide', 1], ['at', [-120, 0]], ['go', [[-6, 0]], 28, 'walk']], [-6, 0])], fallOnly: 1, ox: -10 },
     go('prints', 'World response', 'Prints in mud', 'pawn', 'farmer', 'walk', [1, 0], 28, { ground: 'mud', ox: 22, t0: 6 }),
     go('snow', 'World response', 'Snow prints and cold breath', 'pawn', 'guard', 'walk', [1, 0], 28, { ground: 'snow', cold: 1, ox: 22, t0: 6 }),
     go('shallows', 'World response', 'Wading the shallows', 'pawn', 'hunter', 'walk', [1, 0], 24, { ground: 'water', ox: 14, t0: 6 }),

@@ -27,7 +27,9 @@ const FB_POSES = {
   },
   stir(u, c) { return { item: 'ladle', hl: [4, 8], hr: [-4 + cs(u) * 2, 9 + sn(u) * 1], tool: 180 + sn(u) * 14, by: 1, hd: [cs(u) > .6 ? 1 : 0, 1], uf: 0, nb: 1, blink: c.lvl > 2 && u > .9 ? 1 : 0 }; },
   gather(u) { return { item: null, by: 5, hl: [4 + sn(u), 10 - Math.max(0, sn(u)) * 2], hr: [-4 + sn(u), 10 - Math.max(0, -sn(u)) * 2], hd: [0, 2], nb: 1 }; },
-  lift(u, c) { const crouch = { by: 5, hl: [3, 10], hr: [-3, 10], hd: [0, 2] }; return keyed(u, { item: null, hl: HANG, hr: HANG, by: 0, hd: [0, 0], fl: [0, 0], fr: [0, 0], cu: 0 }, [[0, {}], [.4, crouch], [.55, { ...crouch, carry: c.hold }], [1, { ...carried(c.hold, 0, { ...c, face: 'f' }, 0), cu: 1 }, 'o']]); },
+  lift(u, c) { return lifted(u, { item: null, carry: c.hold, hl: HANG, hr: HANG, by: 0, hd: [0, 0], fl: [0, 0], fr: [0, 0], cu: 0, down: 1 }, { by: 5, hl: [3, 10], hr: [-3, 10], hd: [0, 2] }, carried(c.hold, 0, { ...c, face: 'f' }, 0)); },
+  drop(u, c) { return FB_POSES.lift(1 - u, c); },
+  held(u, c) { return carried(c.hold, u, { ...c, face: 'f' }, 0); },
   tuck(u, c) { return tucked(u, { ...c, face: 'f' }, 1); },
   tuckStand(u, c) { return tucked(u, { ...c, face: 'f' }, 0); },
   guardTwo(u, c) { return FB_READY.two(u, c); },
@@ -70,7 +72,12 @@ const FB_READY = {
   two: (u, c) => c.tool === 'spear' || c.tool === 'staff' ? { hl: [4, 1.2 + sn(u) * .4], hr: [-1, 7 + sn(u) * .4], tool: -60, by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0], ub: 1 } : { hl: [5, 8], hr: [-5, 8 + sn(u) * .4], tool: 35, by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0], ub: 1 },
   bow: (u, c) => ({ hl: [4, 5.5 + sn(u) * .4], hr: [-4, 4.5], bow: 1, arrow: 1, cant: 40, by: .6 + sn(u) * .3, fl: [0, 0], fr: [0, 0] }),
 };
-const fbReadied = (family, u, c) => keyed(u, { ...FB_POSES.tuckStand(0, c), br: 0, clasp: 0, ub: 1 }, [[0, {}], [.45, { hr: [-1, 6], tool: 100, by: .6 }], [1, { ...FB_READY[family](0, c), crook: [], fore: [], stow: 0 }, 'o']]);
+const FB_HALFWAY = { one: { hr: [-1, 6], by: .6 }, two: { hr: [-1, 6.5], hl: [3, 6], by: .6 }, bow: { hl: [2, 6.5], hr: [-2, 7], by: .6 } };
+function fbReadied(family, u, c) {
+  const end = FB_READY[family](0, c);
+  if (u >= DRAWN.lands) return FB_READY[family](DRAWN.stance, c);
+  return keyed(u / DRAWN.lands, { ...FB_POSES.tuckStand(0, c), br: 0, clasp: 0, ub: 1, ...(end.tool === undefined ? {} : { tool: end.tool }) }, [[0, {}], [DRAWN.turns, FB_HALFWAY[family], 'l'], [1, { ...end, crook: [], fore: [], stow: 0 }, 'l']]);
+}
 function fbPose(name, u, c) {
   const back = c.face === 'b', p = { ...FB_POSES[name](u, c), face: c.face };
   p.under = (!back && p.uf > .5) || (back && p.ub > .5) ? 1 : 0;

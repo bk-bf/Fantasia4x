@@ -12,7 +12,7 @@ const MOTION_LOAD = (() => {
       const X = ax - grip[0] + i, drop = Math.round(sag * ((i - grip[0]) / half) ** 2) + Math.round((i - grip[0]) * pawn.tilt / TILT_SPAN);
       for (let j = 0; j < spr.h; j++) {
         const row = layer.upside ? spr.h - 1 - j : j, c = spr.c[row * spr.w + i], Y = ay - grip[1] + j + drop, q = Y * s.w + X;
-        if (!c || !s.ok(X, Y) || mask[q] || (layer.rows && (j < layer.rows[0] || j >= layer.rows[1])) || (layer.fused && edged(spr, i, row))) continue;
+        if (!c || !s.ok(X, Y) || mask[q] || (pawn.floor !== null && Y > pawn.floor) || (layer.rows && (j < layer.rows[0] || j >= layer.rows[1])) || (layer.fused && edged(spr, i, row))) continue;
         s.c[q] = c; s.e[q] = spr.e[row * spr.w + i]; placed.push(q);
       }
     }
