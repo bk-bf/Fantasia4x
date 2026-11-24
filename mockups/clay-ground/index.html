@@ -28,7 +28,6 @@ body[data-show="today"] #scene .new, body[data-show="new"] #scene .old { display
 .row figure { max-width: 100%; overflow-x: auto; }
 .row + .row { margin-top: 14px; }
 .crop { border: 1px solid var(--line); background-repeat: no-repeat; image-rendering: pixelated; flex: none; }
-.sheet { display: block; image-rendering: pixelated; border: 1px solid var(--line); max-width: none; }
 </style>
 <link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
 <script src="../fantasia4x-hud/chrome.js"></script>
@@ -36,8 +35,8 @@ body[data-show="today"] #scene .new, body[data-show="new"] #scene .old { display
 <body>
 <header id="mock">
   <div class="mrow"><strong>Clay ground</strong><button id="mockhide">Hide · `</button></div>
-  <div class="mrow"><span class="grp" data-k="dir"><span class="lab">direction</span><button data-v="a">A</button><button data-v="b">B</button><button data-v="c">C</button></span></div>
-  <div class="mrow"><span class="grp" data-k="show"><span class="lab">show</span><button data-v="pair">Pair</button><button data-v="today">Today</button><button data-v="new">Direction</button><span class="lab">flip · T</span></span></div>
+  <div class="mrow"><span class="grp" data-k="sat"><span class="lab">saturation</span><button data-v="s85">85%</button><button data-v="s70">70%</button><button data-v="s55">55%</button></span></div>
+  <div class="mrow"><span class="grp" data-k="show"><span class="lab">show</span><button data-v="pair">Pair</button><button data-v="today">Today</button><button data-v="new">Revision</button><span class="lab">flip · T</span></span></div>
   <div class="mrow"><span class="grp" data-k="view"><span class="lab">view</span><button data-v="close">By moss and grass</button><button data-v="ring">Ringed in mud</button></span></div>
   <div class="mrow"><span class="grp" data-k="zoom"><span class="lab">zoom</span><button data-v="fit">Fit</button><button data-v="1">1×</button><button data-v="2">2×</button></span></div>
   <div class="mrow"><span class="grp" data-k="theme"><span class="lab">page</span><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span></div>
@@ -52,46 +51,30 @@ body[data-show="today"] #scene .new, body[data-show="new"] #scene .old { display
 
 <h2>Edges, 2×</h2>
 <div id="edges"></div>
-
-<h2>Fire clay, 2×</h2>
-<div class="row" id="fire"></div>
-
-<h2>Tile set, 3×</h2>
-<div class="row">
-  <figure><figcaption><b>Today</b> · clay, blue clay, fire clay</figcaption><img class="sheet" src="img/sheet-today.png" alt="today's clay tile and deposits"></figure>
-  <figure><figcaption><b>Reworked</b> · clay, blue clay as seams, low fire clay</figcaption><img class="sheet" src="img/sheet-new.png" alt="reworked clay tile and deposits"></figure>
-</div>
 </main>
 <script>
 (() => {
-  const DIRS = {
-    a: 'A · earth-toned clay, blue clay as seams',
-    b: 'B · A with ragged edges',
-    c: 'C · clay in pans over mud, ragged edges'
-  };
+  const SAT = { s85: '85%', s70: '70%', s55: '55%' };
   const WHERE = { close: 'Tile 173, 357', ring: 'Tile 312, 196' };
   const EDGES = {
     close: [['Clay against bog', 190, 160, 330, 230], ['Clay against moss and tall grass', 640, 380, 330, 230]],
     ring: [['Mud, bog, clay', 660, 60, 330, 250], ['Clay against grass and dirt', 180, 300, 330, 230]]
   };
-  const FIRE = [['Today', 'fire-today'], ['Low mound', 'fire-low']];
   const src = (view, v) => `img/${view}-${v}.webp`;
   const crop = (label, url, x, y, w, h) =>
-    `<figure><figcaption><b>${label}</b></figcaption><div class="crop" style="width:${w * 2}px;height:${h * 2}px;background-image:url(${url});background-size:2560px 1460px;background-position:${-x * 2}px ${-y * 2}px"></div></figure>`;
+    `<figure><figcaption><b>${label}</b></figcaption><div class="crop" style="width:${w * 2}px;height:${h * 2}px;background-image:url(${url});background-size:2560px 1600px;background-position:${-x * 2}px ${-y * 2}px"></div></figure>`;
   function render(s) {
     document.body.dataset.show = s.show;
     document.body.dataset.zoom = s.zoom;
     document.getElementById('where').textContent = WHERE[s.view];
     document.getElementById('old').src = src(s.view, 'today');
     const img = document.getElementById('new');
-    img.src = src(s.view, s.dir);
-    img.alt = DIRS[s.dir];
-    document.getElementById('newcap').innerHTML = `<b>${DIRS[s.dir]}</b>`;
+    img.src = src(s.view, s.sat);
+    img.alt = 'Revision ' + SAT[s.sat];
+    document.getElementById('newcap').innerHTML = `<b>Revision · ${SAT[s.sat]}</b>`;
     document.getElementById('edges').innerHTML = EDGES[s.view].map(([label, x, y, w, h]) =>
-      `<div class="row">${[['Today · ' + label, 'today'], ['A', 'a'], ['B', 'b'], ['C', 'c']].map(([t, v]) => crop(t, src(s.view, v), x, y, w, h)).join('')}</div>`).join('');
+      `<div class="row">${[['Today · ' + label, 'today'], ...Object.entries(SAT).map(([v, t]) => [t, v])].map(([t, v]) => crop(t, src(s.view, v), x, y, w, h)).join('')}</div>`).join('');
   }
-  document.getElementById('fire').innerHTML = FIRE.map(([t, f]) =>
-    `<figure><figcaption><b>${t}</b></figcaption><img class="sheet" src="img/${f}.webp" width="1040" height="560" alt="${t} fire clay"></figure>`).join('');
   const ui = F4X.bar((s) => render(s));
   render(ui.state);
   addEventListener('keydown', (ev) => {
