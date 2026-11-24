@@ -30,11 +30,11 @@ function canvasPen(s) {
 }
 
 const ROSE = [196, 84, 84];
-const blend = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const toward = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 function paintWomanFace(pen, g, look, skin) {
   const { X, er, F, hd, hTop, hh, face } = g, sn = skin.length - 1, tone = k => skin[clamp(sn - k, 0, sn)];
   if (look.sex !== 'female' || face === 'b') return;
-  const lip = blend(tone(2), ROSE, .55), blush = blend(tone(1), ROSE, .3);
+  const lip = toward(tone(2), ROSE, .55), blush = toward(tone(1), ROSE, .3);
   if (face === 's') {
     for (const x of [F - 4, F - 3, F - 2]) pen.put(x, er - 1, tone(1));
     pen.put(F - 3, er + 3, tone(1)); pen.put(F - 2, er + 3, lip); pen.put(F - 1, er + 3, lip);

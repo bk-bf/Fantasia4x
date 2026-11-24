@@ -1,6 +1,6 @@
 'use strict';
 const SHEET = (() => {
-  const GROUPS = ['Movement', 'Carrying', 'Idle life', 'Work', 'Needs', 'Social', 'Combat', 'Creatures', 'World response'];
+  const GROUPS = ['Movement', 'Carrying', 'Idle life', 'Work', 'Needs', 'Social', 'Combat', 'Creatures', 'World response', 'Composed folk'];
   const TILES = {}, TW = 256, TH = 128;
   const GKIND = { grass: 'grass', dirt: 'soft', mud: 'soft', tilled: 'soft', sand: 'soft', snow: 'snow', water: 'water' };
   const groundFn = {

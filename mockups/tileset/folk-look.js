@@ -209,22 +209,30 @@ function skinOf(look) {
   return SKINS[look.skin].ramp;
 }
 
-let LOOKS = 0;
-function drawLook(look, face, time) {
-  const key = 'look' + (++LOOKS), m = look.marks;
+function lookRig(look) {
+  const race = 'look:' + look.id, m = look.marks;
   const skin = skinOf(look), eye = m.dragonEyes ? P.gold[4] : m.beastEyes ? P.gold[3] : m.murkEyes ? P.frost[5] : EYES[look.eyes].col;
-  FOLK[key] = { ...look.body, skin, eyes: eye, tusks: m.tusks ? 1 : 0, pointears: m.fur >= 3 || m.scales >= 4 ? 1 : 0 };
+  FOLK[race] = { ...look.body, skin, eyes: eye, tusks: m.tusks ? 1 : 0, pointears: m.fur >= 3 || m.scales >= 4 ? 1 : 0 };
   const style = STYLES.find(s => s.id === look.style), hair = hairRamp(look.hair);
-  const o = { race: key, tunic: DYES[look.garb], pants: HOSE[look.legwear], hair, seed: seedOf(look.id) % 97 + 1, ...(style.o || {}) };
+  const o = { race, tunic: DYES[look.garb], pants: HOSE[look.legwear], hair, seed: seedOf(look.id) % 97 + 1, ...(style.o || {}) };
   if (look.trim) o.trim = look.trim;
   if (look.hat === 'hood' || look.hat === 'coif') { o.hat = 'hood'; o.hood = look.hat === 'coif' ? P.cloth : DYES[look.hood]; }
   if (look.hat === 'straw') o.hat = 'straw';
   if (look.cloak) o.cape = DYES[look.cloak];
   if (look.style === 'mohawk') o.mohawk = hair;
   if (look.beard === 'full' || look.beard === 'braided') o.beard = 1;
-  const pose = idlePose(look, time);
-  const s = rigPawn(o, { face: face || 'f', br: pose.br, blink: pose.blink, look: pose.glance, hair: pose.wave() * 1.2, cape: pose.wave(.2) * 1.5 });
-  delete FOLK[key];
-  paintLook(s, look, skin, hair, face || 'f', pose);
+  return { o, skin, hair };
+}
+
+function drawLook(look, face, time, act, gear) {
+  const { o, skin, hair } = lookRig(look), idle = idlePose(look, time);
+  if (act) {
+    const pose = { ...idle, br: act.br ? 1 : 0, blink: !!act.blink }, rig = { ...o, ...(gear || {}) };
+    const s = act.lie ? rigPawnLie(rig, act) : rigPawn(rig, act);
+    paintLook(s, look, skin, hair, act.lie ? 's' : act.face || 's', pose);
+    return s;
+  }
+  const s = rigPawn(o, { face: face || 'f', br: idle.br, blink: idle.blink, look: idle.glance, hair: idle.wave() * 1.2, cape: idle.wave(.2) * 1.5 });
+  paintLook(s, look, skin, hair, face || 'f', idle);
   return s;
 }

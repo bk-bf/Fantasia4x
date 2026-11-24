@@ -11,6 +11,7 @@ function paintSleeves(pen, g, look, skin, cloth, s) {
   const { cx, hw, aw, sTop, tl, face } = g, n = cloth.length - 1, skinSet = new Set(skin);
   if (look.sleeves !== 'long') return;
   if (face === 's') {
+    if (!s.pts.hand) return;
     const wrist = s.pts.hand[1] - 3;
     for (let y = sTop + 2; y <= wrist; y++) for (let x = cx - hw - aw - 2; x <= cx + hw + aw + 2; x++) if (skinSet.has(pen.get(x, y))) pen.put(x, y, cloth[clamp(n - (y === wrist ? 4 : 2), 0, n)]);
     return;
