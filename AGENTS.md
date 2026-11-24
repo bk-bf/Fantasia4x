@@ -177,21 +177,14 @@ raise it.
 **The data files are strict `.json`.** No comments, no trailing commas — the parser rejects
 both, which is how the no-comments rule is enforced rather than remembered.
 
-**ALWAYS GIVE THE OWNER !!!!!ONE!!!!!!! COMPLETE COMMAND THAT STARTS EVERYTHING. NEVER WITHHOLD A
-STEP.** One line, chained with `&&`, that works from whatever his laptop checkout is on:
-
-```bash
-cd ~/Documents/local/Projects/Fantasia4x && git fetch origin && git switch --detach origin/<branch> && F4X_PAINTED=1 ./launch.sh --electron
-```
-
-Name the commit it lands on and whether he needs a new save. Not `./launch.sh <branch>` on its own:
-an older checkout's `launch.sh` ignores the branch and starts nothing. `./dev.sh` is the dev server
-beneath it, for an agent's own runs; never `pnpm dev` directly.
-
-**Hand the owner a build to play as one line**: `./launch.sh <branch>   # <commit>`, with the commit
-it lands on. It fetches, switches his checkout detached to `origin/<branch>` and starts the painted
-game in Electron; any other launch flag goes after the branch. Never the separate `git fetch`,
-`git switch` and `F4X_PAINTED=1` steps.
+**ALWAYS GIVE THE OWNER !!!!!ONE!!!!!!! COMMAND TO TYPE: `f4x <branch>`.** It is for him to run
+on his laptop, never for an agent to run, and it exists only there (`~/.config/bin/f4x`), not on
+ubuntuserver. Outside the repo, it works whatever his laptop checkout is on: it fetches, switches
+that checkout to `origin/<branch>` and plays it painted in Electron. A part of the name is enough
+(`f4x water`), and `f4x` alone plays `dev`. Give the full branch name, the commit it lands on, and
+whether he needs a new save. Never hand him `./launch.sh`, `git fetch` or `git switch`. An agent
+starting the game itself uses `./dev.sh` in its own tree, on whichever machine it runs; never
+`pnpm dev` directly.
 
 **Scope tests after an edit.** `pnpm test:related <the files you edited>`. Run the full suite
 only when asked, or when the change touches a hub everything imports.
