@@ -1,12 +1,5 @@
 import conditions from '$lib/game/database/pawns/conditions.json';
-import {
-  ICON_IDS,
-  arrows,
-  icon,
-  type IconId,
-  type IconMark,
-  type Trend
-} from '$lib/pixelArt/fx/icons';
+import { ICON_IDS, arrows, floater, icon, type IconId, type Trend } from '$lib/pixelArt/fx/icons';
 import type { Spr } from '$lib/pixelArt/fx/spr';
 import { conditionIcon, iconFor, iconWords } from './conditionIcons';
 
@@ -21,7 +14,7 @@ export interface SheetRow {
   name: string;
   kind: 'condition' | 'combat word' | 'severity arrow';
   icon: string;
-  mark: string;
+  grade: number;
   sprite: SheetSprite;
 }
 
@@ -38,21 +31,19 @@ const sheetSprite = (s: Spr): SheetSprite => ({
   px: s.c.map((c) => (c ? `#${hex2(c[0])}${hex2(c[1])}${hex2(c[2])}` : null))
 });
 
-const MARK: Record<IconMark, string> = { up: 'boon', down: 'bane' };
-
 const row = (
   id: string,
   name: string,
   kind: SheetRow['kind'],
   look: IconId,
-  mark?: IconMark
+  grade: Trend = 0
 ): SheetRow => ({
   id,
   name,
   kind,
   icon: look,
-  mark: mark ? MARK[mark] : '',
-  sprite: sheetSprite(icon(look, mark)[0])
+  grade,
+  sprite: sheetSprite(floater(look, null, '', grade)[0])
 });
 
 const ARROWS: [Trend, string][] = [
@@ -68,7 +59,7 @@ export function conditionIconSheet(): IconSheet {
   );
   const rows: SheetRow[] = shown.map((c) => {
     const look = conditionIcon(c.id)!;
-    return row(c.id, c.name, 'condition', look.id, look.mark);
+    return row(c.id, c.name, 'condition', look.id, look.grade);
   });
   for (const w of iconWords()) {
     const look = iconFor({
@@ -80,7 +71,7 @@ export function conditionIconSheet(): IconSheet {
       text: w,
       kind: 'dodge'
     })!;
-    rows.push(row(w, w, 'combat word', look.id, look.mark));
+    rows.push(row(w, w, 'combat word', look.id));
   }
   rows.push(row('crit', 'Critical hit', 'combat word', 'crit'));
   for (const [t, name] of ARROWS)
@@ -89,7 +80,7 @@ export function conditionIconSheet(): IconSheet {
       name,
       kind: 'severity arrow',
       icon: '',
-      mark: '',
+      grade: 0,
       sprite: sheetSprite(arrows(t)!)
     });
   return { icons: Object.fromEntries(ICON_IDS.map((id) => [id, sheetSprite(icon(id)[0])])), rows };

@@ -1,6 +1,6 @@
-import { HONEY, tint } from './glyphs';
-import { art, keys, lit, type Pal } from './iconArt';
-import { P, hex, type Spr } from './spr';
+import { HONEY } from './glyphs';
+import { art, glow, keys, lit, ramp } from './iconArt';
+import { P, type Spr } from './spr';
 
 export type MotifId =
   | 'pain'
@@ -15,23 +15,19 @@ export type MotifId =
   | 'dazed'
   | 'hamstring'
   | 'yield'
-  | 'splint'
   | 'ache'
   | 'fang'
   | 'rage'
-  | 'heart'
   | 'surge'
   | 'leaf'
   | 'glare'
   | 'wolf'
-  | 'fullmoon'
   | 'crescent'
   | 'paw'
   | 'storm'
   | 'gust'
   | 'fever'
   | 'rot'
-  | 'organ'
   | 'block'
   | 'parry'
   | 'dodge'
@@ -39,8 +35,6 @@ export type MotifId =
   | 'quiver'
   | 'pack';
 
-const ramp = (h: string, chars = '012345'): Pal => keys(tint(h), chars);
-const glow = (h: string, e = 255) => lit(hex(h), e);
 const STARS = { y: lit(HONEY[4], 255), z: lit(HONEY[5], 255) };
 
 export const MOTIFS: Record<MotifId, () => Spr> = {
@@ -252,24 +246,6 @@ export const MOTIFS: Record<MotifId, () => Spr> = {
       { ...ramp('#e8e4d8'), k: P.wood[2] },
       170
     ),
-  splint: () =>
-    art(
-      [
-        '.......55.',
-        '......5555',
-        '......5545',
-        '.....w4554',
-        '....www4..',
-        '...www....',
-        '..4www....',
-        '.4554.....',
-        '5455......',
-        '5555......',
-        '.55.......'
-      ],
-      { ...keys(P.bone, '012345'), w: glow('#f0ead8', 180) },
-      170
-    ),
   ache: () =>
     art(
       [
@@ -318,22 +294,6 @@ export const MOTIFS: Record<MotifId, () => Spr> = {
         '...33333...'
       ],
       { ...ramp('#e04030'), k: P.ink, w: glow('#fff6e0') },
-      190
-    ),
-  heart: () =>
-    art(
-      [
-        '.344...443.',
-        '34554.45543',
-        '35555454443',
-        '35555544443',
-        '.355554443.',
-        '..3554443..',
-        '...35443...',
-        '....343....',
-        '.....3.....'
-      ],
-      ramp('#e05050'),
       190
     ),
   surge: () =>
@@ -402,22 +362,6 @@ export const MOTIFS: Record<MotifId, () => Spr> = {
       ],
       { ...ramp('#b0b0e8'), k: P.ink },
       180
-    ),
-  fullmoon: () =>
-    art(
-      [
-        '...44444...',
-        '..4555554..',
-        '.455535554.',
-        '.455555554.',
-        '.453555554.',
-        '.455555354.',
-        '.455555554.',
-        '..4555543..',
-        '...33333...'
-      ],
-      ramp('#e07050'),
-      210
     ),
   crescent: () =>
     art(
@@ -522,22 +466,6 @@ export const MOTIFS: Record<MotifId, () => Spr> = {
       ],
       ramp('#7cb342'),
       180
-    ),
-  organ: () =>
-    art(
-      [
-        '.344...443.',
-        '34554.y5543',
-        '35555yy4443',
-        '3555y5y4443',
-        '.355y5y443.',
-        '..35554y3..',
-        '...3544y...',
-        '....343....',
-        '.....3.....'
-      ],
-      { ...ramp('#c62828'), y: glow('#ffd870') },
-      200
     ),
   block: () =>
     art(
