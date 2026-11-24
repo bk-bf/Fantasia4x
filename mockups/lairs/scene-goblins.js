@@ -5,34 +5,36 @@ LAIR_SCENES.goblins = (() => {
   const item = (id, ...v) => LAIR.sprite(...v.map(x => 'item/' + id + '/' + x));
 
   function place(k) {
-    const { put, bare, age, cleared, loot } = k;
+    const { put, bare, age, cleared, decay, loot } = k;
     bare(17, 16.2, 8.4); bare(28.5, 17.6, 3.2); bare(33.5, 19.2, 4.6); bare(43, 17.5, 4);
     for (let i = 0; i < 20; i++) {
       const a = i / 20 * Math.PI * 2 + .16;
-      if (Math.cos(a) > .9 || (age < 2 && i % 2)) continue;
-      put(LAIR_PROPS.stakes(i, 3), 17 + Math.cos(a) * 7.7, 16.3 + Math.sin(a) * 5.5);
+      if (Math.cos(a) > .9 || (age < 2 && i % 2) || (decay > 2 ? i % 7 !== 2 : decay > 1 && i % 4 === 1)) continue;
+      put(LAIR_PROPS.stakes(i, 3, decay), 17 + Math.cos(a) * 7.7, 16.3 + Math.sin(a) * 5.5);
     }
-    HUTS.slice(0, age + 1).forEach((h, i) => put(LAIR_PROPS.hut(i + 2), h[0], h[1]));
-    put(build('campfire'), FIRE[0], FIRE[1]);
-    put(LAIR_PROPS.spit(1), FIRE[0] + 1.6, FIRE[1] + .5);
-    put(build('drying'), RACK[0], RACK[1]);
-    if (age > 1) put(LAIR_PROPS.totem(1), GATE[0] + .3, GATE[1] - 2.2);
+    HUTS.slice(0, age + 1).forEach((h, i) => put(LAIR_PROPS.hut(i + 2, decay), h[0], h[1]));
+    put(decay ? LAIR_PROPS.firepit(1, decay) : build('campfire'), FIRE[0], FIRE[1]);
+    put(LAIR_PROPS.spit(1, decay), FIRE[0] + 1.6, FIRE[1] + .5);
+    put(decay > 1 ? LAIR_PROPS.rack(1, decay) : build('drying'), RACK[0], RACK[1]);
+    if (age > 1) put(LAIR_PROPS.totem(1, decay), GATE[0] + .3, GATE[1] - 2.2);
     loot.add('Wooden chest', 1, item('wooden_chest', 'map-ground'), STASH[0] + .2, STASH[1] + .5);
-    loot.add('Crate', age, build('crate'), STASH[0] - 1, STASH[1]);
-    loot.add('Grain sacks', age + 1, build('sacks'), STASH[0] + 1.3, STASH[1] - .3);
-    if (age > 1) loot.add('Barrel', 1, build('barrel'), STASH[0] - .1, STASH[1] - .7);
-    loot.add('Dried meat', [6, 14, 24][age - 1], item('dried_meat', 'map-pile-' + age), RACK[0] + 1.2, RACK[1] + .5);
-    if (age > 1) loot.add('Cured wolf hide', age * 2, item('cured_wolf_hide', 'map-pile-' + (age - 1)), HUTS[1][0] + 1.6, HUTS[1][1] + .6);
-    if (age > 1) loot.add('Goblin hooked spear', age, item('goblin_hooked_spear', 'map-lean'), HUTS[0][0] + 1.4, HUTS[0][1] + .4);
-    if (age > 2) { loot.add('Native gold', 5, item('native_gold', 'map-pile-1'), STASH[0] + .9, STASH[1] + 1); put(LAIR_PROPS.skeleton(8), GATE[0] + 1.6, GATE[1] - 1.5); }
+    loot.add('Crate', age, build('crate'), STASH[0] - 1, STASH[1], 'wood');
+    loot.add('Grain sacks', age + 1, build('sacks'), STASH[0] + 1.3, STASH[1] - .3, 'food');
+    if (age > 1) loot.add('Barrel', 1, build('barrel'), STASH[0] - .1, STASH[1] - .7, 'wood');
+    loot.add('Dried meat', [6, 14, 24][age - 1], item('dried_meat', k.heap(age)), RACK[0] + 1.2, RACK[1] + .5, 'food');
+    if (age > 1) loot.add('Cured wolf hide', age * 2, item('cured_wolf_hide', k.heap(age - 1)), HUTS[1][0] + 1.6, HUTS[1][1] + .6, 'hide');
+    if (age > 1) loot.add('Goblin hooked spear', age, item('goblin_hooked_spear', 'map-lean'), HUTS[0][0] + 1.4, HUTS[0][1] + .4, 'wood');
+    if (age > 2) { loot.add('Native gold', 5, item('native_gold', 'map-pile-1'), STASH[0] + .9, STASH[1] + 1); put(LAIR_PROPS.skeleton(8, decay), GATE[0] + 1.6, GATE[1] - 1.5); }
+    LAIR.regrow(k, 17.2, 16.6, 5.4, 3.2, 53, ['scrub', 'flowers', 'bush'], 'birch', [FIRE, RACK, STASH, [STASH[0] + 1, STASH[1] + .6], GATE, ...HUTS]);
+    if (decay > 2) put(LAIR_PROPS.sapling(5, 'birch'), HUTS[1][0] + .1, HUTS[1][1] - .15);
     if (!cleared) return;
     const dead = [[FIRE[0] - 1.4, FIRE[1] + .6], [GATE[0] - .4, GATE[1] + .6], [MATS[0][0], MATS[0][1]], [FIRE[0] + 2.6, FIRE[1] - .8], [MATS[1][0], MATS[1][1]], [STASH[0] + 2.2, STASH[1] - .6]].slice(0, age * 2);
     dead.forEach((d, i) => { const o = put(item('goblin_carcass', 'map-pile-1'), d[0], d[1]); if (!i) loot.push({ name: 'Goblin carcass', n: dead.length, o }); });
   }
 
   function cast(R, k) {
-    const smoke = [FIRE[0], FIRE[1] - .7];
-    if (k.cleared) return { smoke };
+    const smoke = [FIRE[0], FIRE[1] - .7], post = { kind: 'oak', at: [9.4, 12.2], seed: 2 };
+    if (k.vacant) return k.decay ? { post } : { smoke, post };
     const { age } = k, F = { face: 'f' }, T0 = time.sec(19.5);
     R.add(LAIR.pawn('goblin', { tool: 'spear' }), [GATE[0] - .2, GATE[1] + .7], 'Gate sentry').state('On watch').act('look', 22, F).act('guard', 3, { flip: 0 }).act('look', 30, F).act('guard', 3, { flip: 0 }).rest('look', F);
     const prey = R.add(LAIR.quad('boar'), [32.6, 18.9]), bones = R.add(LAIR.prop(LAIR_PROPS.ribs(6)), [32.6, 18.9]);
@@ -64,15 +66,15 @@ LAIR_SCENES.goblins = (() => {
         .state('Resting').until(24, 'warm', { flip: 1 }).state('Returning').go([MATS[2]], 30, 'walk').state('Sleeping').rest('sleep');
     }
     if (age > 2) R.add(LAIR.pawn('kobold'), [GATE[0] + .5, GATE[1] - 1.2], 'Cave kobold').state('On watch').act('guard', 20, { flip: 0 }).act('look', 8, F).rest('guard', { flip: 0 });
-    return { smoke, post: { kind: 'oak', at: [9.4, 12.2], seed: 2 } };
+    return { smoke, post };
   }
 
   return {
     name: 'Goblin warren', size: [56, 32], seed: 53, home: [17, 16.3], cam: [27, 16.5], ring: 8.6, time, place, cast,
     who: ['a boss and three raiders', 'a boss and five raiders', 'a boss, five raiders and a kobold'],
-    ground(x, y, n, n2) {
+    ground(x, y, n, n2, age, decay) {
       const d = Math.hypot((x - 17) / 7.4, (y - 16.3) / 5.2) + (n - .5) * .35;
-      if (d < .82) return n2 < .34 ? 'grass' : 'dirt';
+      if (d < .82) return n2 > [.34, .34, .6, .88][decay] ? 'dirt' : decay > 2 && n2 > .42 ? 'tall_grass' : 'grass';
       if (d < 1.1) return n2 < .5 ? 'grass' : 'tall_grass';
       if (x + (n - .5) * 9 < 12) return n2 < .5 ? 'tree' : 'deep_grass';
       return n2 < .34 ? 'grass' : n2 < .68 ? 'tall_grass' : 'deep_grass';

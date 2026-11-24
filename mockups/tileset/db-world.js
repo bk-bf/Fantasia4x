@@ -10,10 +10,20 @@
     const ground = [['map-ground', () => PROPS.worn(k.worn, ramps(), false, o)]];
     return k.worn === 'shield' ? [...ground, ['map-lean', () => PROPS.worn('shieldUp', ramps(), false, o)]] : ground;
   }
-  function carryForm(o) {
-    const k = RULES.classify(o), own = WORLD_GEAR.of(o);
-    if (k.pile && PROPS.CARRIED.includes(k.pile)) return () => PROPS.carried(k.pile, RULES.rampsFor(k, o), 1);
-    return own && own.carried;
+  const DARK = 60;
+  function toneOf(icon) {
+    const sum = [0, 0, 0];
+    let n = 0;
+    for (let i = 0; i < icon.w * icon.h; i++) { const [r, g, b, alpha] = icon.rgba.subarray(i * 4, i * 4 + 4); if (alpha && r + g + b > DARK) { sum[0] += r; sum[1] += g; sum[2] += b; n++; } }
+    return '#' + sum.map(v => Math.round(v / Math.max(1, n)).toString(16).padStart(2, '0')).join('');
+  }
+  function carryForms(o) {
+    const k = RULES.classify(o), own = WORLD_GEAR.of(o), forms = [];
+    if (k.pile && PROPS.CARRIED.includes(k.pile)) forms.push(['map-carry', () => PROPS.carried(k.pile, RULES.rampsFor(k, o), 1)]);
+    if (o.sub === 'Carcass') forms.push(['map-carry-end', () => { const icon = X.bake(X.byId.get('item/' + o.id + '/0')); return PROPS.carriedEnd('meat', { a: PROPS.rampOf(toneOf(icon)) }, icon.h); }]);
+    else if (k.pile && PROPS.SHOULDERED.includes(k.pile)) forms.push(['map-carry-end', () => PROPS.carriedEnd(k.pile, RULES.rampsFor(k, o))]);
+    if (own && own.carried) forms.push(...Object.entries(own.carried));
+    return forms;
   }
   const drawn = o => X.of('item', o.id).length > 0, mapped = o => X.of('item', o.id).some(e => e.inWorld);
   const prev = X.fromData;
@@ -24,8 +34,8 @@
       for (const [variant, make] of variants(o)) X.reg('item', o.id, variant, make, { inWorld: true });
     }
     for (const o of objects) {
-      const make = o.cat === 'item' && (drawn(o) || WORLD_GEAR.of(o)) && carryForm(o);
-      if (make) X.reg('item', o.id, 'map-carry', make);
+      if (o.cat !== 'item' || !(drawn(o) || WORLD_GEAR.of(o))) continue;
+      for (const [variant, make] of carryForms(o)) X.reg('item', o.id, variant, make);
     }
   };
 })();

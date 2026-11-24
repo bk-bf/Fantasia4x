@@ -1,17 +1,31 @@
 'use strict';
 function paintLook(s, look, skin, hair, face, pose) {
-  const g = lookGeometry(look, face, pose), pen = canvasPen(s);
-  paintGarb(pen, g, look, skin, s);
-  paintBuild(pen, g, look);
-  paintWomanFace(pen, g, look, skin);
+  const g = lookGeometry(look, face, pose, s.pts), pen = canvasPen(s), head = canvasPen(s, s.front), body = canvasPen(s, s.front, g.lx);
+  paintBody(body, g, look, skin);
+  paintWomanFace(head, g, look, skin);
   paintSkin(pen, g, look, skin, hair);
-  paintEyes(pen, g, look, skin);
-  paintHair(pen, g, look, hair, skin);
-  paintBeard(pen, g, look, hair, skin);
-  paintEyewear(pen, g, look, skin);
-  paintHead(pen, g, look, skin, hair);
+  paintFaceMarks(head, g, look, skin);
+  paintEyes(head, g, look, skin);
+  paintHair(head, g, look, hair, skin);
+  paintBeard(head, g, look, hair, skin);
+  paintEyewear(head, g, look, skin);
+  paintHead(head, g, look, skin, hair);
   paintLimbs(pen, g, look, skin, s);
-  paintBack(pen, g, look, skin, hair);
+  paintBack(body, g, look, skin, hair);
+}
+
+function paintLookLying(s, look, skin, hair, pose) {
+  const [x0, hTop, top, gy, ex, cy] = s.pts.lie, out = ex !== x0, g = lookGeometry(look, out ? 'f' : 's', pose), mid = Math.round((top + gy) / 2);
+  const head = canvasPen(s, null, null, out ? (x, y) => [ex + y - g.er, cy + x - g.X] : (x, y) => [x0 + y - g.hTop, hTop + g.X + g.hd - 1 - x]);
+  const body = canvasPen(s, null, null, out ? (x, y) => [x0 + y - g.hTop, mid + x - g.cx] : (x, y) => [x0 + y - g.hTop, mid + g.cx - x]);
+  paintWomanFace(head, g, look, skin);
+  paintSkin(canvasPen(s), g, look, skin, hair);
+  paintFaceMarks(head, g, look, skin);
+  paintHair(head, g, look, hair, skin);
+  paintBeard(head, g, look, hair, skin);
+  paintEyewear(head, g, look, skin);
+  paintHead(head, g, look, skin, hair);
+  paintBack(body, g, look, skin, hair);
 }
 
 function paintSkin(pen, g, look, skin, hair) {
@@ -38,7 +52,6 @@ function paintSkin(pen, g, look, skin, hair) {
   });
   if (m.ironSkin) each((x, y, i) => { if ((x - X) % 4 === 0 && !faceCore(x, y)) pen.put(x, y, skin[0]); else if ((x - X) % 4 === 1 && y % 3 === 0) pen.put(x, y, skin[sn], 90); if (sheen(x, y, 5, 60)) pen.put(x, y, P.iron[6], 120); });
   if (m.feathers >= 3) each((x, y) => { if (!faceCore(x, y) && hash(x, y, 5) > .5) pen.put(x, y, P.furWhite[hash(x, y, 9) > .5 ? 4 : 3]); });
-  if (m.feathers) for (let x = X - hd - 1; x < X + hd + 1; x++) for (let k = 0; k < 2; k++) if (hash(x, k, 31) > .35) pen.under(x, g.sTop - 1 + k - (pose.wave(.25) > .7 && !k ? 1 : 0), P.furWhite[3 + (k ? 0 : 1)]);
   if (m.fur) each((x, y) => { if (!faceCore(x, y) || hash(x, y, 3) > .75) pen.put(x, y, hair[clamp(hair.length - 2 - (hash(x, y, 4) > .5 ? 1 : 0), 0, hair.length - 1)]); });
   if (m.slick) each((x, y) => { if (hash(x, y, 7) > (m.slick >= 3 ? .8 : .9) || (sheen(x, y * 2, 4, 48) && !faceCore(x, y))) pen.put(x, y, skin[sn], 40); });
   if (m.leafSkin) {
@@ -52,6 +65,10 @@ function paintSkin(pen, g, look, skin, hair) {
   if (m.emberSkin === 1) each((x, y, i) => { if (hash(x, y, 2) > .8) pen.put(x, y, skin[Math.max(0, i - 2)]); else if (hash(x, y, 8 + pose.i) > .985) pen.put(x, y, P.ember[4], 160); });
   if (m.emberSkin === 2) each((x, y) => { if (hash(x, y, 2 + (pose.i >> 1)) > .9) pen.put(x, y, P.ember[5], 200); });
   if (m.emberSkin >= 3) { const hot = pose.wave() > 0 ? P.gold[4] : P.ember[5]; each((x, y) => { if (((x * 2 + y) % 7 === 0 || hash(x, y, 2 + (pose.i >> 1)) > .93) && !faceCore(x, y)) pen.put(x, y, hot, 230); }); }
+}
+
+function paintFaceMarks(pen, g, look, skin) {
+  const m = look.marks, sn = skin.length - 1, idx = new Map(skin.map((c, i) => [c, i])), { X, hd, hTop, er, face } = g;
   if (m.pox) for (let k = 0; k < 6; k++) { const x = X - hd + 1 + Math.floor(hash(k, 1, 6) * (2 * hd - 2)), y = er + 1 + Math.floor(hash(k, 2, 6) * 3); if (idx.has(pen.get(x, y))) pen.put(x, y, skin[Math.max(0, sn - 3)]); }
   if (m.burn && face !== 'b') {
     const big = /critical/.test(look.from.burn) ? 2 : /serious/.test(look.from.burn) ? 1 : 0, x0 = face === 's' ? g.F - 4 : X - hd + 1;
@@ -132,26 +149,12 @@ function reink(pen, x0, y0, x1, y1) {
 }
 
 function paintLimbs(pen, g, look, skin, s) {
-  const m = look.marks, { cx, hw, aw, tTop, legTop, legs, base, face } = g, sn = skin.length - 1;
-  if (face === 's') return;
-  const wrap = [P.cloth[2], P.cloth[1]];
-  if (m.oneArm) {
-    const x0 = face === 'b' ? cx + hw : cx - hw - aw - 3, x1 = face === 'b' ? cx + hw + aw + 2 : cx - hw - 1, cut = tTop + 4;
-    for (let y = cut; y <= base; y++) for (let x = x0; x <= x1; x++) pen.put(x, y, null);
-    for (let x = x0; x <= x1; x++) if (pen.get(x, cut - 1) && pen.get(x, cut - 1) !== P.ink) pen.put(x, cut - 1, wrap[x & 1]);
-    reink(pen, x0 - 1, tTop - 2, x1 + 1, base + 1);
-  }
-  if (m.oneLeg) {
-    const x0 = face === 'b' ? cx : cx - hw - 2, x1 = face === 'b' ? cx + hw + 1 : cx - 2, cut = legTop + Math.ceil(legs * .4);
-    for (let y = cut; y <= base + 1; y++) for (let x = x0; x <= x1; x++) pen.put(x, y, null);
-    for (let x = x0; x <= x1; x++) if (pen.get(x, cut - 1) && pen.get(x, cut - 1) !== P.ink) pen.put(x, cut - 1, wrap[x & 1]);
-    reink(pen, x0 - 1, legTop - 1, x1 + 1, base + 1);
-  }
-  if ((m.claws || m.webbed) && s.pts.hand) {
-    const [hx, hy] = s.pts.hand, hands = face === 's' ? [hx] : [hx, 2 * cx - 1 - hx];
-    if (m.webbed) for (const x of hands) { pen.under(x - 1, hy + 2, skin[Math.max(0, sn - 2)]); pen.under(x + 1, hy + 2, skin[Math.max(0, sn - 2)]); pen.under(x, hy + 3, skin[Math.max(0, sn - 1)]); }
+  const m = look.marks, { cx, face } = g, sn = skin.length - 1;
+  if (face === 's' || !(m.claws || m.webbed) || !s.pts.hands) return;
+  for (const [x, hy] of s.pts.hands) {
+    if (m.webbed) { pen.under(x - 1, hy + 2, skin[Math.max(0, sn - 2)]); pen.under(x + 1, hy + 2, skin[Math.max(0, sn - 2)]); pen.under(x, hy + 3, skin[Math.max(0, sn - 1)]); }
     const n = m.claws >= 3 ? 3 : 2, len = m.claws >= 4 ? 4 : m.claws >= 3 ? 3 : 1;
-    if (m.claws) for (const x of hands) for (let c = 0; c < n; c++) {
+    if (m.claws) for (let c = 0; c < n; c++) {
       const dx = c - (n >> 1);
       for (let k = 0; k < len; k++) pen.under(x + dx + (k >= len - 1 && len > 2 ? (x < cx ? -1 : 1) : 0), hy + 2 + k, k === len - 1 ? P.bone[2] : P.bone[5 - (k >> 1)]);
     }

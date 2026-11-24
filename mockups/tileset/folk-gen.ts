@@ -1,5 +1,5 @@
 import { rng } from '$lib/game/core/util/rng';
-import { generateCulture, TRAIT_DATABASE } from '$lib/game/core/gen/culture';
+import { generateCulture, sizeFromHeight, TRAIT_DATABASE } from '$lib/game/core/gen/culture';
 import { buildPawnFromCulture } from '$lib/game/entities/Pawns';
 import loreData from '$lib/game/database/social/culture-lore.json';
 
@@ -32,5 +32,11 @@ const cultures = archetypes.map((archetype, ci) => {
 });
 const names = Object.fromEntries(TRAIT_DATABASE.map((t) => [t.id, t.name]));
 const rarity = Object.fromEntries(TRAIT_DATABASE.map((t) => [t.id, t.rarity ?? 'common']));
-  return { cultures, traitNames: names, traitRarity: rarity };
+const sizes: Record<string, [number, number]> = {};
+for (let cm = 60; cm <= 320; cm++) {
+  const k = sizeFromHeight(cm);
+  sizes[k] = sizes[k] ? [sizes[k][0], cm] : [cm, cm];
+}
+const lore = archetypes.map((a) => ({ name: a.name, sizeBias: a.sizeBias, traits: a.traits }));
+  return { cultures, archetypes: lore, sizes, traitNames: names, traitRarity: rarity };
 }

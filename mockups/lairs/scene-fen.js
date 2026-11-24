@@ -6,26 +6,29 @@ LAIR_SCENES.fen = (() => {
   const pool = (x, y, n) => Math.hypot((x - 24) / 7.6, (y - 16) / 5) + (n - .5) * .5;
 
   function place(k) {
-    const { put, bare, age, cleared, loot, season } = k;
+    const { put, bare, age, cleared, decay, loot, season } = k;
     bare(15.6, 17.4, 4.4); bare(LARDER[0], LARDER[1], 2.2); bare(33.5, 17, 3.4); bare(42, 16.4, 4.6);
-    [[NEST[0], NEST[1]], [NEST[0] - 1.9, NEST[1] + 1.5], [NEST[0] + .4, NEST[1] - 1.7]].slice(0, age).forEach((p, i) => loot.add(i ? 'Lurker eggs' : 'Lurker eggs', [4, 9, 15][age - 1], LAIR_PROPS.eggs(i + 1, 3 + ((i + age) % 3)), p[0], p[1]));
-    k.loot.splice(1, 9);
+    [[NEST[0], NEST[1]], [NEST[0] - 1.9, NEST[1] + 1.5], [NEST[0] + .4, NEST[1] - 1.7]].slice(0, age).forEach((p, i) => {
+      const o = put(LAIR_PROPS.eggs(i + 1, decay === 1 ? 1 + ((i + age) % 2) : 3 + ((i + age) % 3), decay), p[0], p[1]);
+      if (!i && decay < 2) loot.push({ name: 'Lurker eggs', n: LAIR.left([4, 9, 15][age - 1], 'food', decay), o });
+    });
     for (const [x, y, s] of [[13.2, 18.6, 1], [19, 20.2, 2], [31.6, 15.2, 3], [32, 18.8, 4], [20.4, 12.2, 5], [28.4, 20.8, 6], [16.4, 13.6, 7]]) put(plant('reeds', s, season), x, y);
-    loot.add('Large bones', [3, 10, 24][age - 1], item('large_bones', 'map-pile-' + age), LARDER[0] + 1.4, LARDER[1] + .5);
+    loot.add('Large bones', [3, 10, 24][age - 1], item('large_bones', k.heap(age)), LARDER[0] + 1.4, LARDER[1] + .5, 'bone');
     if (age > 2) {
-      put(LAIR_PROPS.skeleton(11), 12.6, 20.4);
+      put(LAIR_PROPS.skeleton(11, decay), 12.6, 20.4);
       loot.add('Iron nasal helm', 1, item('iron_nasal_helm', 'map-ground'), 11.6, 19.9);
       loot.add('Iron winged spear', 1, item('iron_winged_spear', 'map-lie'), 13.6, 21);
     }
+    if (k.vacant) put(LAIR_PROPS.ribs(9, decay), LARDER[0], LARDER[1]);
+    LAIR.regrow(k, 15.4, 17.6, 3.2, 2.2, 61, ['reeds', 'fern', 'reeds'], 'willow', [NEST, [NEST[0] - 1.9, NEST[1] + 1.5], LARDER]);
     if (!cleared) return;
-    put(LAIR_PROPS.ribs(9), LARDER[0], LARDER[1]);
     const dead = [[BANK[0], BANK[1]], [NEST[0] + 1.5, NEST[1] + .9]].slice(0, age > 1 ? 2 : 1);
     dead.forEach((d, i) => { const o = put(item('mire_crocodile_carcass', 'map-pile-1'), d[0], d[1]); if (!i) loot.push({ name: 'Bog lurker carcass', n: dead.length, o }); });
   }
 
   function cast(R, k) {
     const post = { kind: 'bonewood', at: SNAG, seed: 2 };
-    if (k.cleared) return { post };
+    if (k.vacant) return { post };
     const { age } = k, spot = [EDGE[0] + REACH + .5, EDGE[1] + .04];
     const croc = R.add(LAIR.quad('lurker'), BANK, 'Bog lurker'), prey = R.add(LAIR.quad('deer'), [41.4, 15.6]), ribs = R.add(LAIR.prop(LAIR_PROPS.ribs(9)), LARDER);
     croc.state('Basking').until(15.6, 'bask', { flip: 0 }).state('Going to the water').go([[18.9, 17.7]], 22, 'walk').go([EDGE], 32, 'wade').state('Lying in wait');
@@ -59,13 +62,13 @@ LAIR_SCENES.fen = (() => {
   }
 
   return {
-    name: 'Fen nest', size: [56, 32], seed: 61, home: [15.6, 17.4], cam: [27, 16.5], ring: 5.2, time, place, cast,
+    name: 'Fen nest', size: [56, 32], seed: 61, home: [15.6, 17.4], cam: [27, 16.5], ring: 5.2, turf: P.grassLoam, time, place, cast,
     who: ['a bog lurker', 'a pair of bog lurkers and two stirges', 'a pair of bog lurkers, stirges and croakers'],
-    ground(x, y, n, n2) {
-      const d = pool(x, y, n);
+    ground(x, y, n, n2, age, decay) {
+      const d = pool(x, y, n), yard = LAIR.yard(Math.hypot(x - 16, (y - 18) * 1.3), 3.4 + n2, decay, 'mud', 'moss');
       if (d < .62) return 'water';
       if (d < 1) return 'shallow_water';
-      if (Math.hypot(x - 16, (y - 18) * 1.3) < 3.4 + n2) return 'mud';
+      if (yard) return yard;
       if (x > 30.5 && d < 1.3) return n2 < .5 ? 'mud' : 'riverbank';
       if (x + (n - .5) * 8 > 36) return n2 < .4 ? 'grass' : n2 < .7 ? 'tall_grass' : 'deep_grass';
       return n2 < .34 ? 'bog' : n2 < .5 ? 'mud' : 'moss';

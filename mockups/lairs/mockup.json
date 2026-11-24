@@ -1,5 +1,5 @@
 {
   "project": "fantasia4x",
   "title": "Lairs as places",
-  "description": "Lairs as multi-part places on the motion kit, one sample day each, and a running region model where herds and predators walk in from the map edge, found lairs, starve, split and abandon them."
+  "description": "Lairs as multi-part places on the motion kit, with three stages of decay once left empty, and a running region model on the game's creature data: a rolled cast per map, tiers earned by lairs, a danger balancer, wildfires, years of history before the colony lands, and saved runs."
 }

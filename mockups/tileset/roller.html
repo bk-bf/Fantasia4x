@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasia4x folk roller</title>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+<link rel="stylesheet" href="database.css">
+<link rel="stylesheet" href="motion.css">
+<link rel="stylesheet" href="roller.css">
+</head>
+<body class="dbase motion roller">
+<header id="mock" class="bar">
+  <strong>Folk roller</strong>
+  <span class="grp"><button id="roll">Roll</button><button id="batch">Roll twelve</button></span>
+  <span class="grp" data-k="zoom" data-def="4"><span class="lab">Zoom</span><button data-v="3">3</button><button data-v="4">4</button><button data-v="6">6</button></span>
+  <span class="grp" data-k="alive" data-def="1"><button data-v="1">Alive</button><button data-v="0">Still</button></span>
+  <nav><a href="./?cat=folk">Database</a><a href="motion.html">Motion</a><a href="yard.html">Yard</a></nav>
+  <span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span>
+</header>
+<main id="sheet">
+  <div class="desk">
+    <form id="fields" autocomplete="off"></form>
+    <section class="stage">
+      <div id="views" class="cells"></div>
+      <p id="lean" class="lean"></p>
+      <ul id="pieces" class="pieces"></ul>
+    </section>
+  </div>
+  <h2>Twelve rolls</h2>
+  <div id="rolls" class="cells"></div>
+</main>
+<script src="registry-scripts.js"></script>
+<script src="load.js" data-then="roller.js"></script>
+</body>
+</html>

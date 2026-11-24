@@ -96,9 +96,23 @@ const LAIR = (() => {
     return { add, done, secOf, period };
   }
 
+  const DECAY = { abandoned: 1, overgrown: 2, ruin: 3 }, WORN = [1, 1, .62, .3];
+  const ROT = { food: [1, .5, 0, 0], hide: [1, 1, .5, 0], wood: [1, 1, 1, 0], bone: [1, 1, .6, .3] };
+  const left = (n, kind, decay) => Math.ceil(n * (ROT[kind] ? ROT[kind][decay] : 1));
+  const yard = (dist, reach, decay, worn, grown) => dist < reach * WORN[decay] ? worn : dist < reach ? grown : null;
+  function regrow(k, cx, cy, rx, ry, seed, kinds, young, shown = []) {
+    if (k.decay < 2) return;
+    const r = rng(seed * 53 + k.decay), ruin = k.decay > 2;
+    for (let i = 0; i < Math.round(rx * ry * (ruin ? 1.5 : .8)); i++) {
+      const a = r() * TAU, q = Math.sqrt(r()), x = cx + Math.cos(a) * q * rx, y = cy + Math.sin(a) * q * ry, pick = r();
+      if (GROUND[k.w.g[Math.round(y) * k.w.W + Math.round(x)]].water || shown.some(p => Math.abs(x - p[0]) < 1.3 && y - p[1] > -.5 && y - p[1] < 1.3)) continue;
+      k.put(ruin && pick < .12 ? LAIR_PROPS.sapling(seed + i, young) : pick < (ruin ? .42 : .2) ? plant(kinds[i % kinds.length], i, k.season) : LAIR_PROPS.weeds(seed + i, 26 + (i % 3) * 6, k.decay - 1, k.turf), x, y);
+    }
+  }
+
   const sprite = (...ids) => { for (const id of ids) { const e = DBX.byId.get(id); if (e && e.kind === 'sprite') return DBX.built(e); } throw new Error('no kit sprite among ' + ids.join(', ')); };
   const copy = s => { const c = new Spr(s.w, s.h, s.ax, s.ay); c.c = s.c.slice(); c.e = s.e.slice(); c.sh = s.sh; c.emit = s.emit; c.sway = s.sway; c.leaf = s.leaf; return c; };
 
-  return { at, quad, pawn, critter, prop, RIGS, clock, routine, sprite, copy, STILL };
+  return { at, quad, pawn, critter, prop, RIGS, clock, routine, sprite, copy, STILL, DECAY, left, yard, regrow };
 })();
 const LAIR_SCENES = {};

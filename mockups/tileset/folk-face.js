@@ -7,19 +7,21 @@ function idlePose(look, time) {
   return { i, n, u, br: u >= .45 && u < .8 ? 1 : 0, blink: i === n - 2, glance: i === 3 || i === 4 ? (seedOf(look.id + ':glance') & 1 ? 1 : -1) : 0, still: false, wave: shift => Math.sin((u + (shift || 0)) * TURN) };
 }
 
-function lookGeometry(look, face, pose) {
-  const b = look.body, cx = RG.CX, base = RG.BASE, legTop = base - b.legs + 1, tTop = legTop - b.tl, sTop = tTop - pose.br, hTop = sTop - b.hh;
-  const X = face === 's' ? cx + 1 : cx, er = hTop + Math.floor(b.hh * .5);
-  return { ...b, cx, base, legTop, tTop, sTop, hTop, X, er, F: X + b.hd, face, pose };
+function lookGeometry(look, face, pose, pts) {
+  const b = look.body, base = RG.BASE, at = pts && pts.hip ? pts : null;
+  const cx = at ? at.hip[0] : RG.CX, legTop = at ? at.hip[1] : base - b.legs + 1, tTop = legTop - b.tl, sTop = at ? at.torso[1] : tTop - pose.br;
+  const hTop = at ? at.head[1] + 3 : sTop - b.hh, X = at ? at.head[0] : face === 's' ? cx + 1 : cx, er = hTop + Math.floor(b.hh * .5), lean = at ? at.torso[2] : 0;
+  const lx = y => y < sTop || y >= legTop ? 0 : Math.round(lean * clamp(1 - Math.max(0, y - tTop) / b.tl, 0, 1));
+  return { ...b, cx, base, legTop, tTop, sTop, hTop, X, er, F: X + b.hd, face, pose, lean, lx };
 }
 
-function canvasPen(s) {
-  const at = (x, y) => y * s.w + x;
+function canvasPen(s, behind, shift, place) {
+  const at = (x, y) => y * s.w + x, to = place || (shift ? (x, y) => [x + shift(y), y] : (x, y) => [x, y]);
   const pen = {
-    ok: (x, y) => s.ok(x, y),
-    get: (x, y) => (s.ok(x, y) ? s.c[at(x, y)] : null),
-    put: (x, y, c, e) => { if (s.ok(x, y)) { s.c[at(x, y)] = c; s.e[at(x, y)] = e || 0; } },
-    under: (x, y, c, e) => { if (s.ok(x, y) && !s.c[at(x, y)]) pen.put(x, y, c, e); },
+    ok: (x, y) => s.ok(...to(x, y)),
+    get: (x, y) => { const [X, Y] = to(x, y); return s.ok(X, Y) ? s.c[at(X, Y)] : null; },
+    put: (x, y, c, e) => { [x, y] = to(x, y); if (s.ok(x, y) && !(behind && behind[at(x, y)])) { s.c[at(x, y)] = c; s.e[at(x, y)] = e || 0; } },
+    under: (x, y, c, e) => { if (pen.ok(x, y) && !pen.get(x, y)) pen.put(x, y, c, e); },
     rect: (x, y, w, h, c, e) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) pen.put(x + i, y + j, c, e); },
     line: (x0, y0, x1, y1, c, e, behind) => {
       const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
@@ -30,11 +32,11 @@ function canvasPen(s) {
 }
 
 const ROSE = [196, 84, 84];
-const blend = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const toward = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 function paintWomanFace(pen, g, look, skin) {
   const { X, er, F, hd, hTop, hh, face } = g, sn = skin.length - 1, tone = k => skin[clamp(sn - k, 0, sn)];
   if (look.sex !== 'female' || face === 'b') return;
-  const lip = blend(tone(2), ROSE, .55), blush = blend(tone(1), ROSE, .3);
+  const lip = toward(tone(2), ROSE, .55), blush = toward(tone(1), ROSE, .3);
   if (face === 's') {
     for (const x of [F - 4, F - 3, F - 2]) pen.put(x, er - 1, tone(1));
     pen.put(F - 3, er + 3, tone(1)); pen.put(F - 2, er + 3, lip); pen.put(F - 1, er + 3, lip);
@@ -144,6 +146,24 @@ function paintHair(pen, g, look, hair, skin) {
     case 'pigtails':
       for (const c of side ? [rear - 1] : [X - hd - 2, X + hd + 1]) { for (let y = er - 2; y < er + 3; y++) { pen.under(c, y, h(y & 1)); pen.under(c + (c < X ? 1 : -1), y, h(1)); } pen.put(c, er - 2, tie); }
       break;
+    case 'plumed': {
+      const light = hair[n], quill = hair[Math.max(0, n - 4)];
+      for (let y = hTop; y < hTop + (back ? hh - 2 : 2); y++) for (let x = X - hd; x < X + hd; x++) if (skinSet.has(pen.get(x, y))) pen.put(x, y, h(hash(x, y, 53) > .6 ? 1 : 2));
+      const feathers = side
+        ? [[X, [[0, -1], [-1, -1], [-1, -1], [-1, -1], [-1, 0], [-1, 0]]], [X - 3, [[0, -1], [-1, -1], [-1, -1], [-1, 0], [-1, 0]]], [X - 5, [[-1, -1], [-1, 0], [-1, 0], [-1, 1]]]]
+        : [[X - 3, [[0, -1], [-1, -1], [0, -1], [-1, -1], [-1, 0]]], [X, [[0, -1], [0, -1], [0, -1], [0, -1], [0, -1], [sway, -1]]], [X + 2, [[0, -1], [1, -1], [0, -1], [1, -1], [1, 0]]]];
+      for (const [bx, steps] of feathers) {
+        let x = bx, y = hTop;
+        const pts = [[x, y]];
+        for (const [dx, dy] of steps) { x += dx; y += dy; pts.push([x, y]); }
+        pts.forEach(([px, py], k) => {
+          const tip = k === pts.length - 1, flat = k > 0 && pts[k][1] === pts[k - 1][1];
+          if (k > 0 && !tip) for (const [vx, vy] of flat ? [[0, -1], [0, 1]] : [[-1, 0], [1, 0]]) if (!pen.get(px + vx, py + vy) || skinSet.has(pen.get(px + vx, py + vy))) pen.put(px + vx, py + vy, h(vx + vy > 0 ? 2 : 0));
+        });
+        pts.forEach(([px, py], k) => pen.put(px, py, k === pts.length - 1 ? light : k === 0 ? quill : h(1)));
+      }
+      break;
+    }
     case 'fringe':
       if (!back) for (let x = (side ? X : X - hd + 1); x < (side ? g.F - 1 : X + hd - 1); x++) { pen.put(x, hTop + 3, h(x & 1)); if (x % 3 === 0) pen.put(x, hTop + 4, h(1)); }
       break;
@@ -158,5 +178,17 @@ function paintBeard(pen, g, look, hair, skin) {
   if (look.beard === 'moustache' || look.beard === 'goatee') for (let x = span[0]; x < span[1]; x++) pen.put(x, er + 2, dark);
   if (look.beard === 'goatee') for (let y = er + 4; y < er + 6; y++) for (let x = (face === 's' ? F - 3 : X - 2); x < (face === 's' ? F - 1 : X + 1); x++) pen.put(x, y, dark);
   if (look.beard === 'stubble') for (let y = er + 2; y < hTop + hh; y++) for (let x = X - g.hd; x < X + g.hd + 1; x++) if (skinSet.has(pen.get(x, y)) && ((x + y) & 1)) pen.put(x, y, skin[Math.max(0, sn - 3)]);
+  if (look.beard === 'downy') {
+    const chin = hTop + hh - 1, x0 = face === 's' ? X - g.hd : X - g.hd - 1, x1 = face === 's' ? F : X + g.hd;
+    const fluff = (x, y) => hair[hash(x, y, 61) > .55 ? hair.length - 1 : hair.length - 2], deep = hair[Math.max(0, hair.length - 4)];
+    for (let y = chin - 3; y <= chin + 2; y++) for (let x = x0; x <= x1; x++) {
+      const up = chin - y, edge = Math.min(x - x0, x1 - x);
+      if (up > 0 && edge > up) continue;
+      if (up >= 0 && !skinSet.has(pen.get(x, y)) && pen.get(x, y) !== P.ink) continue;
+      if (y === chin + 2 && (edge < 2 || hash(x, y, 67) > .5)) continue;
+      if (y === chin + 1 && edge < 1) continue;
+      pen.put(x, y, y === chin + 2 ? deep : fluff(x, y));
+    }
+  }
   if (look.beard === 'braided') { const bx = face === 's' ? F - 2 : X - 1; for (let y = hTop + hh + 4; y < hTop + hh + 8; y++) pen.put(bx, y, hair[(y & 1) ? 2 : 3]); pen.put(bx, hTop + hh + 8, look.trim ? look.trim[3] : P.gold[3]); }
 }
