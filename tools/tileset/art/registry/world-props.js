@@ -59,8 +59,19 @@ const PROPS = (() => {
     for (let y = B - 28; y <= B; y++) for (let x = cx - 18; x <= cx + 18; x++) if (s.get(x, y) && noise(x * .45, y * .45, o.seed + 9) > .7 && hash(x, y, 5) > .35) s.set(x, y, at(r.b, hash(x, y, 2) > .6 ? 5 : 3));
   }
 
+  const LUMPS = [
+    [[-5, 3, 3.6, 3], [4, 2.6, 3.4, 2.8], [0, 6.4, 3.4, 2.8], [-9, 1.6, 2, 1.6]],
+    [[-9, 3, 3.8, 3], [-2, 3.2, 4, 3.2], [6, 2.8, 3.8, 3], [-6, 8, 3.8, 3], [2, 8.4, 4, 3.2], [-2, 13, 3.6, 2.8], [12, 1.6, 2, 1.6], [-14, 1.6, 2, 1.6]],
+    [[-12, 3, 4, 3.2], [-4, 3.4, 4.2, 3.4], [4, 3.2, 4, 3.2], [12, 2.8, 3.8, 3], [-8, 8.6, 4, 3.2], [0, 9, 4.2, 3.4], [8, 8.4, 4, 3.2], [-4, 14, 4, 3.2], [4, 14, 3.8, 3], [0, 19, 3.6, 2.8], [-17, 1.6, 2, 1.6], [17, 1.6, 2, 1.6]]
+  ];
+  function lumps(s, cx, st, r, o) {
+    LUMPS[st].forEach(([dx, up, rx, ry], i) => s.ball(cx + dx, B - up, rx, ry, 30 - up, r.a, { facet: 3, seed: o.seed + i, d: .3, amp: 1.25 }));
+    for (let y = B - 24; y <= B; y++) for (let x = cx - 20; x <= cx + 20; x++) if (s.get(x, y) && s.get(x, y - 1) && hash(x, y, o.seed + 3) > .93) s.set(x, y, hi(r.a));
+  }
+
   const HEAPS = [[8, 5], [12, 8], [15, 12]];
   function heap(s, cx, st, r, o) {
+    if (r.lumps) return lumps(s, cx, st, r, o);
     const [rx, ry] = HEAPS[st];
     s.ball(cx, B, rx, ry, 0, r.a, { n: .34, ns: .6, seed: o.seed, d: .5 });
     s.ball(cx + rx * .5, B, rx * .55, ry * .45, 4, r.a, { n: .3, ns: .7, seed: o.seed + 1, d: .5 });

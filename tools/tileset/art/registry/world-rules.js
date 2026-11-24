@@ -44,6 +44,7 @@ const RULES = (() => {
     planks: c => ({ a: PROPS.mixed(P.plank, c, .35) }),
     blocks: c => ({ a: PROPS.mixed(P.stone, c, .5) }),
     rubble: (c, o) => ({ a: PROPS.mixed(P.rock, c, o.sub === 'Ore' ? .2 : .3), b: PROPS.rampOf(c), speck: o.sub === 'Ore' }),
+    heap: (c, o) => o.sub === 'Fuel' && !/dust/.test(o.id) ? { a: PROPS.mixed(P.rock, c, .76), lumps: true } : { a: PROPS.rampOf(c) },
     meat: c => ({ a: PROPS.mixed(P.red, c, .2) }),
     hides: (c, o) => ({ a: PROPS.mixed(P.furBrown, c, .7), b: PROPS.mixed(P.furTan, c, .5), smooth: o.sub !== 'Hide' }),
     cloth: c => ({ a: PROPS.rampOf(c), b: PROPS.mixed(P.cloth, c, .6) }),
