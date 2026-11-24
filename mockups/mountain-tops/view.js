@@ -2,7 +2,7 @@
 (() => {
   const TILE = 32;
   const MAP = { w: 96 * TILE, h: 64 * TILE };
-  const PLACES = { range: [21, 26], massif: [70, 9], arm: [39, 17], tail: [23, 52] };
+  const PLACES = { range: [21, 26], massif: [70, 9], arm: [39, 17], tail: [23, 52], dig: [79, 11], behind: [21, 5] };
   const SHOWN = ['all', 'today', 'a', 'b', 'c'];
   const stage = document.getElementById('stage');
   const panes = [...stage.querySelectorAll('.pane')];
@@ -10,7 +10,7 @@
   const centre = { x: 0, y: 0 };
   let ui = null;
 
-  const source = (top, snow) => `img/${top}${top !== 'today' && snow === 'on' ? '-snow' : ''}.webp`;
+  const source = (top, snow, mined) => `img/${top}${top === 'c' && mined === 'on' ? '-mined' : ''}${top !== 'today' && snow === 'on' ? '-snow' : ''}.webp`;
 
   function place(at) {
     const [tx, ty] = PLACES[at] ?? PLACES.range;
@@ -31,11 +31,11 @@
   }
 
   function apply() {
-    const { show, snow } = ui.state;
+    const { show, snow, mined } = ui.state;
     stage.classList.toggle('one', show !== 'all');
     for (const pane of panes) {
       pane.classList.toggle('shown', pane.dataset.top === show);
-      const img = pane.firstElementChild, src = source(pane.dataset.top, snow);
+      const img = pane.firstElementChild, src = source(pane.dataset.top, snow, mined);
       if (img.getAttribute('src') !== src) img.src = src;
     }
     draw();
@@ -49,6 +49,10 @@
     if (key === 'at' && state.at !== 'free') {
       place(state.at);
       F4X.write({ x: '', y: '' });
+    }
+    if (key === 'mined' && state.mined === 'on' && !['dig', 'behind'].includes(state.at)) {
+      ui.set('at', 'dig');
+      return;
     }
     apply();
   });

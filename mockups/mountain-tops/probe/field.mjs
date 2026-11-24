@@ -27,7 +27,7 @@ export async function loadScene(TREE, OUT) {
   const top = new Uint8Array(W * H);
   for (let i = 0; i < W * H; i++)
     top[i] = s0[i * 4] !== s6[i * 4] || s0[i * 4 + 1] !== s6[i * 4 + 1] ? 1 : 0;
-  return { art, LIFT, M, W, H, FW, FH, foot, today, top, s0, s6 };
+  return { art, LIFT, M, W, H, FW, FH, foot, today, top, s0, s6, rock: ROCK.rock, mass };
 }
 
 const INF = 1e20;
