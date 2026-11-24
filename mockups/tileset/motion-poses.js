@@ -36,11 +36,11 @@ const HOLD = {
   hip: { gait: 'light', swing: 1, side: { hr: [3, 7], lean: 1 }, fb: { hr: [0, 7], crook: ['hr'], fore: ['hr'] } },
   chest: { gait: 'bulky', side: { hr: [6, 7], hl: [7, 6.5], lean: -1 }, fb: { hl: [2.6, 8], hr: [-2.6, 8], fore: ['hl', 'hr'] } },
   low: { gait: 'heavy', sink: .9, side: { hr: [6.5, 7.5], hl: [7.5, 7], lean: -1.6 }, fb: { hl: [1, 9], hr: [-1, 9], fore: ['hl', 'hr'] } },
-  shoulder: { gait: 'heavy', tilt: 1, side: { hr: [3, -4], hl: [5, -3], lean: 1.4 }, fb: {} },
-  cradle: { gait: 'heavy', tilt: 1, side: { hr: [3, -4], hl: [5, -3], lean: 1.4 }, fb: { fore: ['hl', 'hr'] } },
-  yoke: { gait: 'heavy', sink: .9, side: { hr: [3, -4], hl: [5, -3], lean: 2.4, hd: [1, 1] }, fb: { hl: [-2, -4], hr: [2, -4], wing: 1, hd: [0, 1] } },
+  shoulder: { gait: 'heavy', tilt: 1, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 1.4 }, fb: { hl: [-2, -3.5], wing: 1 } },
+  game: { gait: 'heavy', sink: .9, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 2.4, hd: [1, 1] }, fb: { hl: [-2, -3.5], wing: 1, hd: [0, 1] } },
+  drape: { gait: 'heavy', sink: .4, free: 1, side: { hr: [5, 3.5], hl: [6, 4], lean: 1.8 }, fb: { hl: [4, 4], crook: ['hl'], fore: ['hl'] } },
 };
-const HOLDS = { hip: ['tote', 'toteStand'], chest: ['heft', 'heftStand'], low: ['lug', 'lugStand'], shoulder: ['haul', 'haulStand'], yoke: ['bear', 'bearStand'], cradle: ['rescue', 'rescueStand'] };
+const HOLDS = { hip: ['tote', 'toteStand'], chest: ['heft', 'heftStand'], low: ['lug', 'lugStand'], shoulder: ['haul', 'haulStand'], game: ['bear', 'bearStand'], drape: ['rescue', 'rescueStand'] };
 const turned = (p, keys) => { for (const k of keys) if (p[k]) p[k] = [-p[k][0], p[k][1]]; return p; };
 function carried(hold, u, c, go) {
   const h = HOLD[hold], g = GAIT[h.gait], a = sn(u), side = c.face === 's', push = c.lvl > 2 && go ? 1 : 0;
@@ -48,13 +48,13 @@ function carried(hold, u, c, go) {
   if (side) { p.fr = go ? stride(u, g.duty, g.S, g.H) : [1.5, 0]; p.fl = go ? stride(u + .5, g.duty, g.S, g.H) : [-1.5, 0]; }
   else { p.fl = [0, go ? Math.max(0, a) * g.up : 0]; p.fr = [0, go ? Math.max(0, -a) * g.up : 0]; }
   if (h.swing) p.hl = side ? [go * a * 5, 10 - go * Math.abs(a) * 1.2] : [0, 9.2 + go * a * 1.6];
-  if (h.tilt && push) p.tilt = side ? sn(u * 2 + .1) : a * .8;
-  if (hold === 'shoulder' || hold === 'cradle') { if (side) Object.assign(p, flow(c, u, 2)); else p.by = g.by - .1 + (go ? cs(u * 2) * g.bob : 0); return p; }
+  if (h.free && !side) p.hr = [0, 9.2 - go * a * 1.6];
+  if (h.tilt && push && side) p.tilt = sn(u * 2 + .1);
+  if (hold === 'shoulder' && side) return { ...p, ...flow(c, u, 2) };
   if (push) Object.assign(p, flow(c, u, hold === 'hip' ? 2.2 : 1.2));
   return c.face === 'b' ? turned(p, ['hl', 'hr', 'hd']) : p;
 }
-const TUCK_DROP = 11;
-const armed = (c, side) => side ? { hr: [3, 7], tool: 104, tuck: 1, lean: 1 } : { hr: [0, 7], crook: ['hr'], tool: 180 - Math.acos(Math.min(1, TUCK_DROP / ((TOOLS[c.tool] || { tip: [TUCK_DROP] }).tip[0] || TUCK_DROP))) / D2R, under: 1 };
+const armed = (c, side) => side ? { hr: [3, 7], tool: 104, tuck: 1, lean: 1 } : { hr: [0, 7], crook: ['hr'], fore: ['hr'], tool: 172, stow: 1 };
 function tucked(u, c, go) {
   const g = GAIT.light, a = sn(u), side = c.face === 's';
   const p = { face: c.face, ...armed(c, side), by: g.by + (go ? cs(u * 2) * g.bob : 0), br: !go && u > .35 && u < .8 ? 1 : 0, hl: side ? [go * a * 5, 10 - go * Math.abs(a) * 1.2] : [0, 9.2 + go * a * 1.6] };
@@ -67,7 +67,7 @@ const READY = {
   two: (u, c) => c.tool === 'spear' || c.tool === 'staff' ? { face: 's', two: 9, hr: [1, 4 + sn(u) * .4], tool: 72, fl: [-3, 0], fr: [3, 0], by: 1 + sn(u) * .4, lean: 1 } : { face: 's', two: 6, hr: [4, 3.5 + sn(u) * .4], tool: 38, fl: [-3, 0], fr: [3, 0], by: 1 + sn(u) * .4, lean: 1 },
   bow: (u, c) => ({ face: 's', hl: [8, 2.5 + sn(u) * .4], hr: [5, 3 + sn(u) * .4], bow: 1, arrow: 1, twang: 0, fl: [-3, 0], fr: [3, 0], by: .6 + sn(u) * .3, lean: .5 }),
 };
-const readied = family => (u, c) => keyed(u, { ...tucked(0, c, 0), br: 0 }, [[0, {}], [.45, { hr: [4, 4.5], tool: 70, lean: 1, by: .6 }], [1, READY[family](0, c), 'o']]);
+const readied = family => (u, c) => keyed(u, { ...tucked(0, c, 0), br: 0 }, [[0, {}], [.45, { hr: [4, 4.5], tool: 70, lean: 1, by: .6 }], [1, { ...READY[family](0, c), tuck: 0 }, 'o']]);
 
 const PAWN_ANIMS = {
   idle: { label: 'Standing', group: 'Idle life', dur: 2.8, n: 4, pose(u, c) {
@@ -101,14 +101,14 @@ const PAWN_ANIMS = {
   heft: { label: 'Bulky carry', group: 'Carrying', dist: GAIT.bulky.dist, n: 8, pose(u, c) { return carried('chest', u, c, 1); } },
   haul: { label: 'Hauling', group: 'Carrying', dist: GAIT.heavy.dist, n: 8, pose(u, c) { return carried('shoulder', u, c, 1); } },
   lug: { label: 'Heavy carry, low in front', group: 'Carrying', dist: GAIT.heavy.dist, n: 8, pose(u, c) { return carried('low', u, c, 1); } },
-  bear: { label: 'Carrying game', group: 'Carrying', dist: GAIT.heavy.dist, n: 8, pose(u, c) { return carried('yoke', u, c, 1); } },
-  rescue: { label: 'Carrying the downed', group: 'Carrying', dist: GAIT.heavy.dist, n: 8, pose(u, c) { return carried('cradle', u, c, 1); } },
-  rescueStand: { label: 'Standing with the downed', group: 'Carrying', dur: 2.8, n: 4, pose(u, c) { return carried('cradle', u, c, 0); } },
+  bear: { label: 'Carrying game', group: 'Carrying', dist: GAIT.heavy.dist, n: 8, pose(u, c) { return carried('game', u, c, 1); } },
+  rescue: { label: 'Carrying the downed', group: 'Carrying', dist: GAIT.heavy.dist, n: 8, pose(u, c) { return carried('drape', u, c, 1); } },
+  rescueStand: { label: 'Standing with the downed', group: 'Carrying', dur: 2.8, n: 4, pose(u, c) { return carried('drape', u, c, 0); } },
   toteStand: { label: 'Standing with a light load', group: 'Carrying', dur: 2.8, n: 4, pose(u, c) { return carried('hip', u, c, 0); } },
   heftStand: { label: 'Standing with a bulky load', group: 'Carrying', dur: 2.8, n: 4, pose(u, c) { return carried('chest', u, c, 0); } },
   haulStand: { label: 'Standing with a shouldered load', group: 'Carrying', dur: 2.8, n: 4, pose(u, c) { return carried('shoulder', u, c, 0); } },
   lugStand: { label: 'Standing with a low load', group: 'Carrying', dur: 2.2, n: 4, pose(u, c) { return carried('low', u, c, 0); } },
-  bearStand: { label: 'Standing with game', group: 'Carrying', dur: 2.2, n: 4, pose(u, c) { return carried('yoke', u, c, 0); } },
+  bearStand: { label: 'Standing with game', group: 'Carrying', dur: 2.2, n: 4, pose(u, c) { return carried('game', u, c, 0); } },
   lift: { label: 'Picking up', group: 'Work', dur: 1.1, n: 7, once: 1, pose(u, c) {
     const crouch = { by: 5, lean: 4, hr: [8, 8], hl: [9, 8], hd: [2, 3], fl: [-3, 0], fr: [3, 0] };
     return keyed(u, { face: 's', item: null, hr: HANG, hl: HANG, by: 0, lean: 0, hd: [0, 0], fl: [0, 0], fr: [0, 0], cu: 0 }, [[0, {}], [.4, crouch], [.55, { ...crouch, carry: c.hold }], [1, { ...carried(c.hold, 0, { ...c, face: 's' }, 0), cu: 1 }, 'o']]);

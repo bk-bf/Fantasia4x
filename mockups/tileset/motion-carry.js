@@ -1,7 +1,7 @@
 'use strict';
 const MOTION_LOAD = (() => {
   const RIM = .6, DOZEN = 12, TILT_SPAN = 14, LOADS = new Map();
-  const NOTES = { light: 'one hand at the hip, the usual walk', bulky: 'both arms in front, a shorter stride', heavy: 'slow and strained, on the shoulder or low in front' };
+  const NOTES = { light: 'one hand at the hip, the usual walk', bulky: 'both arms in front, a shorter stride', heavy: 'slow and strained, on one shoulder or low in front' };
   const empty = (spr, i, j) => i < 0 || j < 0 || i >= spr.w || j >= spr.h || !spr.c[j * spr.w + i];
   const edged = (spr, i, j) => spr.c[j * spr.w + i] === P.ink && (empty(spr, i - 1, j) || empty(spr, i + 1, j) || empty(spr, i, j - 1) || empty(spr, i, j + 1));
   function put(pawn, layer) {

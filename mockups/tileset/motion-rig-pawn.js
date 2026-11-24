@@ -186,10 +186,16 @@ function rigPawn(o, p) {
   const upper = path => { if (path.length === 3) return path.slice(0, 2); const k = .55; return [path[0], [mix(path[0][0], path[1][0], k), mix(path[0][1], path[1][1], k)]]; };
   const arm = (ax, ay, tgt, lit, far, bend, rim, S, lost) => { const path = reach(ax, ay, tgt, bend); limb(S || s, path, lit, far, rim, spanOf(path), lost); return handOf(path); };
   const pad = (x0, lit) => { if (!o.armor) return; s.rect(x0, tTop - br, aw + 1, 4, o.armor[lit ? 4 : 2]); s.rect(x0, tTop - br, aw + 1, 1, o.armor[lit ? o.armor.length - 1 : 4]); s.rect(x0, tTop + 3 - br, aw + 1, 1, o.armor[1]); };
-  const shield = (x, y) => { if (!o.shield) return; s.oval(x, y, 6, 7.4, (px, py, nx, ny) => { const q = Math.hypot(nx, ny); return q > .84 ? P.iron[nx + ny < 0 ? 5 : 2] : Math.abs(nx) < .16 || Math.abs(ny) < .13 ? P.cloth[4] : o.shield[nx < -.2 ? 4 : nx < .4 ? 3 : 2]; }); s.oval(x, y, 1.6, 1.6, () => P.iron[6]); };
+  const shieldTones = new Map();
+  const shield = (x, y) => { if (!o.shield) return; const before = s.c.slice(); shieldDrawn(x, y); s.c.forEach((c, i) => { if (c !== before[i]) shieldTones.set(i, c); }); };
+  const overShield = draw => { const t = new Spr(s.w, s.h), out = draw(t); t.c.forEach((c, i) => { if (!c) return; s.c[i] = c; s.e[i] = t.e[i]; for (const n of [i - 1, i + 1, i - s.w, i + s.w]) if (!t.c[n] && shieldTones.has(n) && s.c[n] === shieldTones.get(n)) s.c[n] = P.ink; }); return out; };
+  const beneath = (draw, fromRow) => { const t = new Spr(s.w, s.h), out = draw(t); for (let i = (fromRow || 0) * s.w; i < t.c.length; i++) if (t.c[i] && !s.c[i]) { s.c[i] = t.c[i]; s.e[i] = t.e[i]; } return out; };
+  const shieldDrawn = (x, y) => { s.oval(x, y, 6, 7.4, (px, py, nx, ny) => { const q = Math.hypot(nx, ny); return q > .84 ? P.iron[nx + ny < 0 ? 5 : 2] : Math.abs(nx) < .16 || Math.abs(ny) < .13 ? P.cloth[4] : o.shield[nx < -.2 ? 4 : nx < .4 ? 3 : 2]; }); s.oval(x, y, 1.6, 1.6, () => P.iron[6]); };
   const grip = (hx, hy, ang, opt) => {
     if (!TOOLS[kind]) return;
-    if (opt && opt.under) { const t = new Spr(s.w, s.h); pts.tip = toolAt(t, kind, hx, hy, ang, opt); for (let i = 0; i < t.c.length; i++) if (t.c[i] && !s.c[i]) { s.c[i] = t.c[i]; s.e[i] = t.e[i]; } }
+    if (kind === 'bow' && !side) opt = { ...opt, edge: 1 };
+    if (opt && opt.under) pts.tip = beneath(S => toolAt(S, kind, hx, hy, ang, opt));
+    else if (side && shieldTones.size) pts.tip = overShield(S => toolAt(S, kind, hx, hy, ang, opt));
     else pts.tip = toolAt(s, kind, hx, hy, ang, opt);
     if (kind === 'torch' || kind === 'staff') pts.glow = pts.tip;
   };
@@ -216,7 +222,7 @@ function rigPawn(o, p) {
     if (tucked) grip(...handOf(reach(near[0], near[1], hr, 1)), ang);
     const nh = nearArm(s);
     parts = { head: [S => rigHead(S, f, o, HX + 1, hTop, 's', p)], 'near arm': [nearArm] };
-    hand = [nh[0], nh[1] + 1]; holds = { hip: hand, chest: nh, low: nh, shoulder: [sx0 + 1, tTop + 1 - br], cradle: [sx0 + 1, tTop + 1 - br], yoke: [sx0 - 1, tTop + 2 - br] };
+    hand = [nh[0], nh[1] + 1]; holds = { hip: hand, chest: nh, low: nh, shoulder: [sx0 + 1, tTop + 1 - br], game: [sx0 - 1, tTop + 2 - br], drape: [sx0 - 1, tTop + 1 - br] };
     if (!bowing && !p.carry && !tucked) { grip(nh[0], nh[1], ang); if (pts.tip) knuckle(nh[0], nh[1]); }
     if (p.two && pts.tip) { const a = ang * D2R; knuckle(rnd(nh[0] + Math.sin(a) * p.two), rnd(nh[1] - Math.cos(a) * p.two)); }
     pts.hand = nh; pts.hands = [nh]; pts.mouth = [HX + f.hd + 2, hTop + Math.floor(f.hh * .5) + 3]; pts.head = [HX + 1, hTop - 3];
@@ -249,15 +255,26 @@ function rigPawn(o, p) {
     const th = back ? hL : hR, off = (back ? -1 : 1) * (aw - (aw >> 1));
     const head = S => rigHead(S, f, o, HX, hTop, face, p), arms = [S => armL(true, S), S => armR(true, S)], mid = cx + rnd(lean);
     const near = (draw, at, r) => S => { const t = new Spr(s.w, s.h); draw(t); for (let y = at[1] - r; y <= at[1] + r; y++) for (let x = at[0] - r; x <= at[0] + r; x++) if (t.get(x, y)) S.set(x, y, t.get(x, y)); };
-    const grips = S => { for (const g of [-9, 6]) { S.rect(cx + g, tTop + 5, 3, 3, skin[sn - 1]); S.rect(cx + g, tTop + 7, 3, 1, skin[Math.max(0, sn - 3)]); } };
     const elbows = [S => limb(S, upper(pathL), true, false, false, spanOf(pathL)), S => limb(S, upper(pathR), false, false, false, spanOf(pathR))];
-    if (p.carry === 'shoulder' || (p.carry === 'cradle' && !back)) grips(s);
-    parts = { head: [head], arms, hands: [near(arms[0], hL, 2), near(arms[1], hR, 2)], 'carrying arm': [arms[back ? 0 : 1]], grips: [grips], elbows };
-    const low = Math.max(hL[1], hR[1]);
-    hand = p.carry === 'hip' ? [th[0], th[1] + 1] : [mid, low + 2]; holds = { hip: hand, chest: [mid, low], low: [mid, low], shoulder: [cx, tTop + 10], cradle: [cx, tTop + 12], yoke: [mid, tTop + (back ? 4 : 2) - br] };
+    const hands = [near(arms[0], hL, 2), near(arms[1], hR, 2)], laden = back ? 1 : 0;
+    parts = { head: [head], arms, hands, 'carrying arm': [arms[back ? 0 : 1]], 'shoulder arm': [arms[laden]], elbows };
+    const low = Math.max(hL[1], hR[1]), onShoulder = [(back ? xR : xL) + (back ? 1 : -1), tTop + 1 - br];
+    hand = p.carry === 'hip' ? [th[0], th[1] + 1] : [mid, low + 2]; holds = { hip: hand, chest: [mid, low], low: [mid, low], shoulder: onShoulder, game: onShoulder, drape: onShoulder };
     if (p.carry) pts.hold = hand;
-    else if (kind === 'bow' && p.bow !== undefined) { const bh = back ? hR : hL; toolAt(s, 'bow', bh[0] + (back ? 1 : -1), bh[1] - 6, 0, { pull: p.bow, mirror: back ? 0 : 1 }); pts.tip = [bh[0], bh[1] - 6]; }
-    else grip(th[0] + off, th[1] - 1 - (kind === 'bow' ? 6 : 0), p.tool, { mirror: back ? 1 : 0, under: p.under });
+    else if (kind === 'bow' && p.bow !== undefined) {
+      const bh = back ? hR : hL, strung = S => toolAt(S, 'bow', bh[0], bh[1], 0, { edge: 1, arrow: !back && p.arrow });
+      if (back) beneath(strung); else { strung(s); hands[0](s); }
+      pts.tip = [bh[0], bh[1] - 6];
+    } else if (p.stow > .5 && TOOLS[kind]) {
+      const a = (back ? STOWED.away : STOWED.toward) * D2R, long = TOOLS[kind].tip[0] || TOOL_BUTT[kind], slide = back ? TOOL_BUTT[kind] - STOWED.behind : STOWED.drop - long, flip = back ? -1 : 1;
+      const t = new Spr(s.w, s.h), shoulderRow = tTop + 1 - br, handRow = th[1] - 2;
+      pts.tip = toolAt(t, kind, rnd(th[0] + off + flip * Math.sin(a) * slide), rnd(th[1] - 1 - Math.cos(a) * slide), a / D2R, { mirror: back ? 1 : 0, edge: kind === 'bow' ? 1 : 0 });
+      t.c.forEach((c, i) => { const row = (i / s.w) | 0; if (c && (row >= handRow || (!s.c[i] && row >= shoulderRow))) { s.c[i] = c; s.e[i] = t.e[i]; } });
+      arms[back ? 0 : 1](s);
+    } else {
+      grip(th[0] + off, th[1] - 1, p.tool, { mirror: back ? 1 : 0, under: p.under });
+      if (p.clasp > .5 && !back) for (const draw of hands) draw(s);
+    }
     pts.hand = th; pts.hands = [hL, hR].filter((h, i) => !(o.oneArm && i === (back ? 1 : 0))); pts.mouth = [HX, hTop + Math.floor(f.hh * .5) + 4]; pts.head = [HX, hTop - 3];
     pts.feet = [[cx - hw + 2, base - fl[1]], [cx + 3, base - fr[1]]];
   }

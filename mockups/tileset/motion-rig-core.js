@@ -1,5 +1,5 @@
 'use strict';
-const RG = { W: 104, H: 88, CX: 52, BASE: 72 };
+const RG = { W: 104, H: 112, CX: 52, BASE: 72 };
 const D2R = Math.PI / 180;
 const rnd = Math.round;
 
@@ -77,6 +77,7 @@ const TOOLS = {
   bow: { hold: 0, tip: [0, 9], f(l, b, o) {
     const arc = 4 - rnd(l * l / 28), pull = o.pull || 0;
     if (l < -11 || l > 11) return null;
+    if (o.edge) return b === 0 ? (l >= -2 && l <= 1 ? P.leather[3] : P.wood[4]) : b === 1 ? (l >= -2 && l <= 1 ? P.leather[1] : P.wood[2]) : o.arrow && l === 0 && b === -1 ? P.iron[6] : null;
     if (l >= -2 && l <= 1 && (b === arc || b === arc + 1)) return P.leather[3];
     if (b === arc) return P.wood[4];
     if (b === arc + 1) return P.wood[2];
@@ -112,15 +113,17 @@ function toolAt(s, kind, gx, gy, ang, o) {
   return [gx + m * (ux * T.tip[0] + vx * T.tip[1]), gy + uy * T.tip[0] + vy * T.tip[1]];
 }
 
+const TOOL_BUTT = { sword: 3, axe: 4, pick: 4, hoe: 11, hammer: 2, spear: 11, club: 2, bow: 11, torch: 2, staff: 11 };
+const STOWED = { toward: 172, away: 8, drop: 11, behind: 8 };
 const RIG_OVER = {
   hip: { s: ['near arm'], f: ['carrying arm'], b: ['body'] },
   chest: { s: ['near arm'], f: ['hands'], b: ['body'] },
   low: { s: ['near arm'], f: ['hands'], b: ['body'] },
-  shoulder: { s: ['near arm'], f: ['grips'], b: ['grips'] },
-  yoke: { s: ['head', 'near arm'], f: ['head', 'arms'], b: ['elbows'] },
-  cradle: { s: ['head', 'near arm'], f: ['grips'], b: ['body'] },
+  shoulder: { s: ['near arm'], f: ['shoulder arm'], b: ['shoulder arm'] },
+  game: { s: ['head', 'near arm'], f: ['head', 'shoulder arm'], b: ['shoulder arm'] },
+  drape: { s: ['near arm'], f: ['head', 'shoulder arm'], b: [] },
 };
-const RIG_FLAT = ['grips'];
+const RIG_FLAT = [];
 function rigMask(s, names, parts) {
   const m = new Uint8Array(s.w * s.h);
   if (names.includes('body')) { for (let i = 0; i < m.length; i++) m[i] = s.c[i] ? 1 : 0; return m; }

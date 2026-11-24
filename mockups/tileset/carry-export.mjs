@@ -39,6 +39,6 @@ const head = JSON.stringify({ origin: 'feet', mirror: 'a pawn facing left flips 
   .replace(/\[\s+(-?[\d.]+),\s+(-?[\d.]+)\s+\]/g, '[$1, $2]').replace(/\[\s+((?:"[^"]+",?\s*)+)\]/g, flat).replace(/\[\s+((?:\[-?[\d.]+, -?[\d.]+\],?\s*)+)\]/g, flat).replace(/\[\s+((?:-?[\d.]+,?\s*)+)\]/g, flat).replace(/"(storage|holds)": \{[^{}]+\}/g, flat);
 writeFileSync(join(here, 'carry-data.json'), head.replace(/\n}$/, ',\n "items": {\n' + items.join(',\n') + '\n }\n}\n'));
 
-const added = G.DBX.list.filter(e => e.variant === 'map-carry').length;
+const added = G.DBX.list.filter(e => e.variant.startsWith('map-carry')).length;
 for (const b of G.HAUL.BULKS) console.log(b.padEnd(6), String(tally[b].count).padEnd(5), Object.entries(tally[b].holds).map(([k, n]) => k + ' ' + n).join(', ').padEnd(40), Object.entries(tally[b].storage).sort((x, y) => y[1] - x[1]).map(([k, n]) => k + ' ' + n).join(', '));
 console.log(loads.length, 'items written to carry-data.json,', added, 'carry sprites,', Object.entries(stances).map(([k, v]) => k + ' ' + v.weapons).join(', '), 'weapons by stance');

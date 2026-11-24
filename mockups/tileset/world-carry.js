@@ -5,12 +5,14 @@ const HAUL = (() => {
   const PILE_BULK = { logs: 'heavy', planks: 'heavy', blocks: 'heavy', sacks: 'heavy', rubble: 'bulky', heap: 'bulky', bars: 'bulky', crates: 'bulky', baskets: 'bulky', bundles: 'bulky', hides: 'bulky', fluids: 'light', meat: 'light', cloth: 'light', pots: 'light' };
   const WORN_BULK = { torso: 'bulky', cuirass: 'bulky', pack: 'bulky', shield: 'bulky', hauler: 'heavy', body: 'heavy' };
   const BULK_OF_ITEM = {};
-  const HOLDS = ['hip', 'chest', 'low', 'shoulder', 'yoke', 'cradle'];
-  const HEAVY_HOLD = { logs: 'shoulder', planks: 'shoulder', body: 'cradle', meat: 'yoke' };
+  const HOLDS = ['hip', 'chest', 'low', 'shoulder', 'game', 'drape'];
+  const HEAVY_HOLD = { logs: 'shoulder', planks: 'shoulder', body: 'drape', meat: 'game' };
   const HOLD_OF_BULK = { light: () => 'hip', bulky: () => 'chest', heavy: storage => HEAVY_HOLD[storage] || 'low' };
   const LIMP = { pile: ['meat', 'hides'], long: [], worn: [] };
-  const SAG = { hip: 0, chest: 2, low: 2, shoulder: 0, yoke: 4, cradle: 0 };
+  const SAG = { hip: 0, chest: 2, low: 2, shoulder: 0, game: 4, drape: 0 };
+  const ON_SHOULDER = ['shoulder', 'game', 'drape'];
   const FUSED = ['shoulder'];
+  const END_SOURCES = [['map-carry-toward', 'map-carry-away'], ['map-carry-end', 'map-carry-end']];
   const WORN_SOURCES = ['map-carry', 'map-ground', 'map-pile-1', 'map', '0'];
   const UPRIGHT_FOOT = 9;
   const STANCES = { one: { carry: 'tuck', draw: 'ready', ready: 'guard', stow: 'stow' }, two: { carry: 'tuck', draw: 'readyTwo', ready: 'guardTwo', stow: 'stowTwo' }, bow: { carry: 'tuck', draw: 'readyBow', ready: 'guardBow', stow: 'stowBow' } };
@@ -34,10 +36,11 @@ const HAUL = (() => {
   }
   function sourceOf(o, k) {
     const has = v => DBX.byId.has('item/' + o.id + '/' + v);
+    const [toward, away] = END_SOURCES.find(pair => has(pair[0])) || [];
     if (k.long) return { side: 'map-lie', upright: 'map-lean', headUp: PROPS.headUp(k.long, o.id) };
-    if (o.sub === 'Carcass') return { side: '0' };
-    if (k.pile) return { side: PROPS.CARRIED.includes(k.pile) ? 'map-carry' : 'map-pile-1' };
-    return { side: WORN_SOURCES.find(has) };
+    if (o.sub === 'Carcass') return { side: '0', toward, away };
+    if (k.pile) return { side: PROPS.CARRIED.includes(k.pile) ? 'map-carry' : 'map-pile-1', toward, away };
+    return { side: WORN_SOURCES.find(has), toward, away };
   }
   function stanceOf(o, k) {
     if (o.group !== 'Weapon' || !k.long) return null;
@@ -66,8 +69,8 @@ const HAUL = (() => {
     chest: s => [s.w >> 1, s.h - 1 - Math.round(s.h / 3)],
     low: s => [s.w >> 1, s.h - 1 - Math.round(s.h / 3)],
     shoulder: s => [s.w >> 1, s.h - 1],
-    yoke: s => [s.w >> 1, s.h - 1],
-    cradle: s => [s.w >> 1, s.h - 1]
+    game: s => [s.w >> 1, s.h - 1],
+    drape: s => [s.w >> 1, s.h - 1]
   };
   function shaftAt(spr, row, upside) {
     const from = upside ? spr.h - 1 - row : row, xs = [];
@@ -75,11 +78,12 @@ const HAUL = (() => {
     return [xs[xs.length >> 1], row];
   }
   function layer(load, hold, face) {
-    const upright = hold === 'hip' && face !== 's' && load.source.upright, variant = upright || load.source.side, spr = cropped(load.id, variant);
-    const upside = !!upright && (face === 'f') === load.source.headUp, grip = upright ? shaftAt(spr, Math.max(spr.h >> 1, spr.h - 1 - UPRIGHT_FOOT), upside) : spr.hold || GRIPS[hold](spr);
-    const out = { key: load.id + '/' + variant + (upside ? '/upside' : ''), sprite: 'item/' + load.id + '/' + variant, spr, grip, sag: load.limp ? SAG[hold] : 0 };
+    const src = load.source, upright = hold === 'hip' && face !== 's' && src.upright, ended = ON_SHOULDER.includes(hold) && face !== 's' && (face === 'f' ? src.toward : src.away);
+    const variant = upright || ended || src.side, spr = cropped(load.id, variant);
+    const upside = !!upright && (face === 'f') === src.headUp, grip = upright ? shaftAt(spr, Math.max(spr.h >> 1, spr.h - 1 - UPRIGHT_FOOT), upside) : spr.hold || GRIPS[hold](spr);
+    const out = { key: load.id + '/' + variant + (upside ? '/upside' : ''), sprite: 'item/' + load.id + '/' + variant, spr, grip, sag: load.limp && !ended ? SAG[hold] : 0 };
     if (upright) Object.assign(out, { upside, clip: true });
-    if (FUSED.includes(hold)) out.fused = true;
+    if (FUSED.includes(hold) && face === 's') out.fused = true;
     return out;
   }
   const flags = l => Object.fromEntries(['sag', 'upside', 'clip', 'fused'].filter(k => l[k]).map(k => [k, l[k]]));

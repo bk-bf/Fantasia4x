@@ -112,3 +112,36 @@ function lieLolledFace(s, f, o, x0, ex, cy, skin, lid) {
   s.rect(ex + 3, cy - 1, 1, 2, dark(skin[0], .5));
   s.set(ex - 1, cy + 3, skin[Math.max(0, sn - 2)]);
 }
+const SLUNG = { hip: [5, 3.5], hang: 8, arm: 8 };
+function rigPawnSlung(o, view) {
+  const f = FOLK[o.race || 'human'], s = new Spr(RG.W, RG.H, RG.CX, RG.BASE), skin = o.skin || f.skin, sn = skin.length - 1, tunic = o.tunic || P.cloth, pants = o.pants || P.leather, body = o.armor || tunic, hair = o.hair || P.furBrown, hn = hair.length - 1;
+  const X = RG.CX, Y = 34, [rx, ry] = SLUNG.hip, lw = 3, legs = f.legs, hd = f.hd, bald = o.bald || f.bald;
+  const leg = (path, far) => { const len = lieLength(path); rigLimb(s, path, lw, (t, k) => { const boot = t > len - 3.5, c = pick3(boot ? P.leather : pants, k / (lw - 1) * .8, boot && t < len - 2.5 ? 1 : 0); return far ? dark(c, .82) : c; }, far ? null : shade); };
+  const arm = (x, y, far) => rigLimb(s, [[x, y], [x, y + SLUNG.arm]], f.aw, (t, k) => { const c = t > SLUNG.arm - 3 || o.sleeves === 0 ? skin[clamp(sn - 1 - (k ? 1 : 0), 0, sn)] : pick3(body, k / f.aw * .5, 0); return far ? dark(c, .82) : c; }, far ? null : shade);
+  const rump = () => s.oval(X, Y - ry + 1, rx, ry, (x, y, nx, ny) => pick3(pants, (nx + 1) / 2, ny < -.4 ? 1 : ny > .5 ? -1 : 0));
+  const head = (cx, cy, turnedAway) => {
+    s.oval(cx, cy, hd - .5, hd, (x, y, nx, ny) => turnedAway || bald ? (bald ? skin[clamp(sn - 1 - (nx > .3 ? 1 : 0), 0, sn)] : hair[clamp(hn - 1 - (nx > .3 ? 1 : 0) - ((x + y) % 4 === 0 ? 1 : 0), 0, hn)]) : ny > .1 || nx < -.35 ? hair[clamp(hn - 1 - (ny > .6 ? 1 : 0), 0, hn)] : skin[clamp(sn - 1 - (nx > .4 ? 1 : 0), 0, sn)]);
+    if (!turnedAway && !bald) s.rect(Math.round(cx) + 1, Math.round(cy) - 2, 2, 1, skin[Math.max(0, sn - 3)]);
+  };
+  if (view === 's') {
+    leg([[X + 3, Y - 2], [X + 7, Y + 1], [X + 8, Y + legs - 2]], true);
+    arm(X - 9, Y + SLUNG.hang - 1, true);
+    for (let j = 0; j < SLUNG.hang; j++) for (let i = -10; i <= -3; i++) s.set(X + i, Y - 1 + j, j === 0 ? pick3(P.leather, (i + 10) / 7, 0) : pick3(body, (i + 10) / 7, j === SLUNG.hang - 1 ? -1 : 0));
+    head(X - 6.5, Y + SLUNG.hang + hd - 2, false);
+    leg([[X + 1, Y - 2], [X + 5, Y + 1], [X + 6, Y + legs - 2]], false);
+    rump();
+    arm(X - 4, Y + SLUNG.hang - 1, false);
+  } else if (view === 'f') {
+    for (const [x0, lit] of [[X - 4, 1], [X, 0]]) for (let j = 0; j < legs; j++) for (let i = 0; i < lw + 1; i++) { const boot = j >= legs - 3, c = pick3(boot ? P.leather : pants, (lit ? 0 : .3) + i / lw * .6, boot && j === legs - 3 ? 1 : j === legs - 1 ? -2 : 0); s.set(x0 + i, Y + j, c); }
+    rump();
+  } else {
+    for (const x of [X - 7, X + 5]) arm(x + 1, Y + SLUNG.hang - 2, x > X);
+    for (let j = 0; j < SLUNG.hang; j++) for (let i = -5; i <= 4; i++) s.set(X + i, Y + j, j === 0 ? pick3(P.leather, (i + 5) / 9, 0) : pick3(body, (i + 5) / 9, j === SLUNG.hang - 1 ? -1 : 0));
+    head(X, Y + SLUNG.hang + hd - 2, true);
+    if (!bald && (f.longhair || o.longhair)) for (let j = 0; j < 4; j++) s.rect(X - 3 + (j > 2 ? 1 : 0), Y + SLUNG.hang + 2 * hd - 3 + j, 6 - (j > 2 ? 2 : 0), 1, hair[clamp(hn - 2, 0, hn)]);
+    rump();
+  }
+  s.outline();
+  s.hold = [X, Y];
+  return s;
+}
