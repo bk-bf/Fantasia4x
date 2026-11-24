@@ -177,14 +177,7 @@ raise it.
 **The data files are strict `.json`.** No comments, no trailing commas — the parser rejects
 both, which is how the no-comments rule is enforced rather than remembered.
 
-**ALWAYS GIVE THE OWNER !!!!!ONE!!!!!!! COMMAND TO TYPE: `f4x <branch>`.** It is for him to run
-on his laptop, never for an agent to run, and it exists only there (`~/.config/bin/f4x`), not on
-ubuntuserver. Outside the repo, it works whatever his laptop checkout is on: it fetches, switches
-that checkout to `origin/<branch>` and plays it painted in Electron. A part of the name is enough
-(`f4x water`), and `f4x` alone plays `dev`. Give the full branch name, the commit it lands on, and
-whether he needs a new save. Never hand him `./launch.sh`, `git fetch` or `git switch`. An agent
-starting the game itself uses `./dev.sh` in its own tree, on whichever machine it runs; never
-`pnpm dev` directly.
+**Always `./dev.sh`** to start the dev server, never `pnpm dev` directly.
 
 **Scope tests after an edit.** `pnpm test:related <the files you edited>`. Run the full suite
 only when asked, or when the change touches a hub everything imports.
