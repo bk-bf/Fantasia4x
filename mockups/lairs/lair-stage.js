@@ -3,20 +3,26 @@
   const q = new URLSearchParams(location.search), $ = id => document.getElementById(id), AM = HUD.ambient;
   const TIMES3 = ['day', 'dusk', 'night'], layer = { day: $('mapday'), dusk: $('mapdusk'), night: $('mapnight') }, ctx = {};
   const screen = $('screen'), world = $('world'), marks = $('marks'), busy = $('busy'), cards = $('cards'), daybar = $('daybar');
-  const AGES = { 1: 'Fresh', 2: 'Settled', 3: 'Old' }, built = new Map(), view = { k: 1, left: 0, top: 0, W: 0, H: 0 }, pan = { x: 0, y: 0 };
+  const AGES = { 1: 'Fresh', 2: 'Settled', 3: 'Old' }, LEFT = { cleared: 'cleared', abandoned: 'abandoned, left within a season', overgrown: 'overgrown, left within a year', ruin: 'a ruin, left long ago' }, built = new Map(), view = { k: 1, left: 0, top: 0, W: 0, H: 0 }, pan = { x: 0, y: 0 };
   let ui = null, B = null, T = q.has('t') ? +q.get('t') : 0, last = 0, wanted = '', tags = [];
 
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-  function build(D, age, cleared) {
-    const [W, H] = D.size, season = 'summer', w = new World(W, H, G.tall_grass), keep = new Uint8Array(W * H);
+  function build(D, age, state) {
+    const [W, H] = D.size, season = 'summer', w = new World(W, H, G.tall_grass), keep = new Uint8Array(W * H), decay = LAIR.DECAY[state] || 0, cleared = state === 'cleared', vacant = cleared || decay > 0;
     const put = (spr, x, y) => { const p = LAIR.at(x, y), o = { spr, x: p[0], y: p[1] }; w.objs.push(o); return o; };
     const bare = (x, y, r) => { for (let j = Math.floor(y - r); j <= y + r; j++) for (let i = Math.floor(x - r); i <= x + r; i++) if (w.in(i, j) && Math.hypot(i - x, j - y) <= r) keep[j * W + i] = 1; };
-    const k = { w, put, bare, age, cleared, season, loot: [] };
-    k.loot.add = (name, n, spr, x, y) => { const o = put(spr, x, y); k.loot.push({ name, n, o }); return o; };
+    const k = { w, put, bare, age, cleared, decay, vacant, season, turf: D.turf || P.grass, loot: [], heap: n => 'map-pile-' + Math.max(1, n - Math.max(0, decay - 1)) };
+    k.loot.add = (name, n, spr, x, y, kind) => {
+      const count = LAIR.left(n, kind, decay);
+      if (!count) return null;
+      const o = put(LAIR_PROPS.weathered(spr, decay, k.loot.length + 3, k.turf), x, y);
+      k.loot.push({ name, n: count, o });
+      return o;
+    };
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const n = fbm(x * .11, y * .11, D.seed, 3), n2 = fbm(x * .21 + 9, y * .21, D.seed + 1, 2);
-      w.g[y * W + x] = G[D.ground(x, y, n, n2, age)];
+      w.g[y * W + x] = G[D.ground(x, y, n, n2, age, decay)];
       if (D.wall && D.wall(x, y, n, n2)) w.wall[y * W + x] = WL.mountain;
     }
     D.place(k);
@@ -36,7 +42,7 @@
     r.anim = [];
     SEASON = season;
     present(r, document.createElement('canvas').getContext('2d'), 'day', 0, { calm: false, clip: { x0: 0, y0: 0, x1: 16, y1: 16 }, post() {} });
-    return { w, r, C, base: r.sway.slice(), live, season, at: {}, snow: new Set(P.snow.map(pack)), lastT: 0, D, age, cleared, loot: k.loot };
+    return { w, r, C, base: r.sway.slice(), live, season, at: {}, snow: new Set(P.snow.map(pack)), lastT: 0, D, age, state, cleared, vacant, loot: k.loot };
   }
 
   function layout() {
@@ -60,25 +66,25 @@
     let html = '';
     if (show === 'rules') { const c = LAIR.at(D.home[0], D.home[1]), r = D.ring * 32; html += `<div class="ring" style="left:${c[0] - r}px;top:${c[1] - 8 - r}px;width:${r * 2}px;height:${r * 2}px"><span>Home ground</span></div>`; }
     if (show === 'parts') html += parts.map((p, i) => { const c = LAIR.at(p.at[0], p.at[1]); return `<b class="pin" style="left:${c[0]}px;top:${c[1] - 26}px">${i + 1}</b>`; }).join('');
-    if (B.cleared) html += B.loot.map(l => { const b = box(l.o); return `<div class="mark" style="left:${b[0]}px;top:${b[1]}px;width:${b[2]}px;height:${b[3]}px"><i></i><i></i><i></i><i></i></div>`; }).join('');
+    if (B.vacant) html += B.loot.map(l => { const b = box(l.o); return `<div class="mark" style="left:${b[0]}px;top:${b[1]}px;width:${b[2]}px;height:${b[3]}px"><i></i><i></i><i></i><i></i></div>`; }).join('');
     marks.innerHTML = html + '<div id="tags"></div>';
     tags = [];
-    const head = `<h2>${esc(D.name)}</h2><p class="sub">${AGES[B.age]} · ${esc(B.cleared ? 'cleared' : D.who[B.age - 1])}</p>`;
+    const head = `<h2>${esc(D.name)}</h2><p class="sub">${AGES[B.age]} · ${esc(B.vacant ? LEFT[B.state] : D.who[B.age - 1])}</p>`;
     let body = '';
-    if (B.cleared) body = '<h3>Left behind</h3><ul class="loot">' + B.loot.map(l => `<li><span>${esc(l.name)}</span><em>${l.n}</em></li>`).join('') + `</ul><div class="verb"><span>${B.loot.length} marked</span><button>HAUL</button></div>`;
+    if (B.vacant) body = '<h3>Left behind</h3><ul class="loot">' + B.loot.map(l => `<li><span>${esc(l.name)}</span><em>${l.n}</em></li>`).join('') + `</ul><div class="verb"><span>${B.loot.length} marked</span><button>HAUL</button></div>`;
     else if (show === 'parts') body = '<ol>' + parts.map((p, i) => `<li><b>${i + 1}</b><div>${esc(p.name)}<span>${esc(p.note)}</span></div></li>`).join('') + '</ol>';
     else if (show === 'rules') body = '<h3>How it runs</h3><ul class="rules">' + D.rules.map(t => `<li>${esc(t)}</li>`).join('') + '</ul><h3>Needs from the sim</h3><ul class="rules need">' + D.needs.map(t => `<li>${esc(t)}</li>`).join('') + '</ul>';
     cards.innerHTML = `<section>${head}${body}</section>`;
     const span = h => D.time.sec(h) / D.time.period * 100, h0 = D.time.hour(0), ticks = [];
     for (let h = Math.ceil(h0 / 3) * 3; h < h0 + 24; h += 3) ticks.push(h);
-    daybar.innerHTML = '<div class="track">' + D.day.map(([a, b, label, tone]) => `<i class="${tone}" style="left:${span(a)}%;width:${span(b) - span(a)}%"><span>${esc(label)}</span></i>`).join('') +
+    daybar.innerHTML = '<div class="track">' + (B.vacant ? [] : D.day).map(([a, b, label, tone]) => `<i class="${tone}" style="left:${span(a)}%;width:${span(b) - span(a)}%"><span>${esc(label)}</span></i>`).join('') +
       ticks.map(h => `<u style="left:${span(h)}%">${String(h % 24).padStart(2, '0')}</u>`).join('') + '<b id="cursor"></b></div><output id="clock"></output>';
     daybar.hidden = B.cleared;
   }
   function stateTags(items) {
     const el = $('tags');
     if (!el) return;
-    if (ui.state.show !== 'rules' || B.cleared) { if (tags.length) { el.innerHTML = ''; tags = []; } return; }
+    if (ui.state.show !== 'rules' || B.vacant) { if (tags.length) { el.innerHTML = ''; tags = []; } return; }
     const P0 = B.D.time.period, tl = ((T % P0) + P0) % P0, live = items.filter(it => it.fr && it.S.states);
     if (tags.length !== live.length) { el.innerHTML = live.map(() => '<span></span>').join(''); tags = [...el.children]; }
     live.forEach((it, i) => {
@@ -116,7 +122,7 @@
     if (built.has(key)) { if (B !== built.get(key)) { pan.x = pan.y = 0; use(built.get(key)); } else { layout(); overlay(); draw(); } return; }
     busy.hidden = false;
     setTimeout(() => {
-      if (!built.has(key)) built.set(key, build(D, +s.age, s.state === 'cleared'));
+      if (!built.has(key)) built.set(key, build(D, +s.age, s.state));
       busy.hidden = true;
       if (wanted === key) { pan.x = pan.y = 0; use(built.get(key)); }
     }, 30);

@@ -1,5 +1,5 @@
 {
   "project": "fantasia4x",
   "title": "Lairs as places",
-  "description": "Lairs as multi-part places on the motion kit, one sample day each, and a running region model where 25 kinds of herds and predators walk in from the map edge, found lairs, fight over ground, starve, split and abandon them, with a stats tracker."
+  "description": "Lairs as multi-part places on the motion kit, one sample day each and three stages of decay once left empty, and a running region model where 25 kinds of herds and predators walk in from the map edge, found lairs, fight over ground, starve, split and abandon them, with a stats tracker."
 }

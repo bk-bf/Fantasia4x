@@ -5,19 +5,20 @@ LAIR_SCENES.harpies = (() => {
   const item = (id, ...v) => LAIR.sprite(...v.map(x => 'item/' + id + '/' + x));
 
   function place(k) {
-    const { put, bare, age, cleared, loot } = k;
+    const { put, bare, age, cleared, decay, loot } = k;
     bare(15.8, 15.4, 6); bare(24, 17, 3.4); bare(31.5, 19, 5); bare(41, 20, 4);
-    SPIRES.slice(0, age).forEach((s, i) => put(LAIR_PROPS.spire(i + 3, s[2], !i), s[0], s[1]));
-    loot.add('Small bones', [8, 20, 46][age - 1], item('small_bones', 'map-pile-' + age), MIDDEN[0], MIDDEN[1]);
-    loot.add('Tooth necklace', 1, item('tooth_necklace', 'map-ground'), MIDDEN[0] - 1.1, MIDDEN[1] + .4);
-    if (age > 1) { loot.add('Citrine', 2, item('citrine', 'map'), MIDDEN[0] + 1.2, MIDDEN[1] + .5); loot.add('Large bones', 9, item('large_bones', 'map-pile-1'), MIDDEN[0] + 2.4, MIDDEN[1] - .3); }
+    SPIRES.slice(0, age).forEach((s, i) => put(LAIR_PROPS.spire(i + 3, s[2], !i, decay), s[0], s[1]));
+    loot.add('Small bones', [8, 20, 46][age - 1], item('small_bones', k.heap(age)), MIDDEN[0], MIDDEN[1], 'bone');
+    loot.add('Tooth necklace', 1, item('tooth_necklace', 'map-ground'), MIDDEN[0] - 1.1, MIDDEN[1] + .4, 'hide');
+    if (age > 1) { loot.add('Citrine', 2, item('citrine', 'map'), MIDDEN[0] + 1.2, MIDDEN[1] + .5); loot.add('Large bones', 9, item('large_bones', 'map-pile-1'), MIDDEN[0] + 2.4, MIDDEN[1] - .3, 'bone'); }
     if (age > 2) {
-      loot.add('Matron’s hoard', 7, LAIR_PROPS.groundNest(4, true), GROUND[0], GROUND[1]);
+      loot.add('Matron’s hoard', 7, LAIR_PROPS.groundNest(4, true, decay), GROUND[0], GROUND[1]);
       loot.add('Bronze torc', 1, item('bronze_torc', 'map-ground'), GROUND[0] + 1.5, GROUND[1] + .3);
       loot.add('Gold bar', 2, item('gold_bar', 'map-pile-1'), GROUND[0] - 1.5, GROUND[1] + .4);
-      put(LAIR_PROPS.skeleton(14), 19.4, 17.6);
-      loot.add('Leather knapsack', 1, item('leather_knapsack', 'map-ground'), 20.6, 17.8);
+      put(LAIR_PROPS.skeleton(14, decay), 19.4, 17.6);
+      loot.add('Leather knapsack', 1, item('leather_knapsack', 'map-ground'), 20.6, 17.8, 'hide');
     }
+    LAIR.regrow(k, 15.8, 16.3, 4.2, 1.9, 73, ['scrub', 'flowers', 'scrub'], 'birch', [MIDDEN, GROUND, [MIDDEN[0] + 2, MIDDEN[1]], ...SPIRES]);
     if (!cleared) return;
     const dead = SPIRES.slice(0, age).map(s => [s[0] + 1.4, s[1] + .9]);
     dead.forEach((d, i) => { const o = put(item('harpy_carcass', 'map-pile-1'), d[0], d[1]); if (!i) loot.push({ name: 'Harpy carcass', n: dead.length + (age > 2 ? 1 : 0), o }); });
@@ -26,7 +27,7 @@ LAIR_SCENES.harpies = (() => {
 
   function cast(R, k) {
     const post = { kind: 'dead', at: [24.4, 16.4], seed: 1 };
-    if (k.cleared) return { post };
+    if (k.vacant) return { post };
     const { age } = k, home = s => [s[0], s[1] + .08];
     const hunter = R.add(LAIR.harpy(SPIRES[0][2] + 2, SPIRES[0][2] + 14), home(SPIRES[0]), 'Screamer'), prey = R.add(LAIR.critter('rabbit'), WARREN);
     hunter.state('Roosting').until(5.9, 'roost').state('Waking').act('cry', 1.6).state('Hunting').act('lift', .9).go([[27.4, 17.6]], 84, 'fly');
@@ -52,12 +53,13 @@ LAIR_SCENES.harpies = (() => {
   }
 
   return {
-    name: 'Harpy roost', size: [56, 32], seed: 73, home: [15.8, 15.2], cam: [26, 15.5], ring: 6.4, time, place, cast,
+    name: 'Harpy roost', size: [56, 32], seed: 73, home: [15.8, 15.2], cam: [26, 15.5], ring: 6.4, turf: P.grassDry, time, place, cast,
     who: ['one screamer', 'two screamers', 'three screamers and a matron'],
     wall(x, y, n) { return y + (n - .5) * 9 < 7.2; },
-    ground(x, y, n, n2) {
+    ground(x, y, n, n2, age, decay) {
       if (y + (n - .5) * 9 < 10.4) return 'rocky';
-      if (Math.hypot(x - 15.8, (y - 15.4) * 1.3) < 5 + n2 * 2) return n2 < .45 ? 'rocky' : 'dirt';
+      const yard = LAIR.yard(Math.hypot(x - 15.8, (y - 15.4) * 1.3), 5 + n2 * 2, decay, 'dirt', 'savanna');
+      if (yard) return n2 < .45 ? 'rocky' : yard;
       if (y + (n - .5) * 8 < 14) return n2 < .5 ? 'grass' : 'savanna';
       return n2 < .3 ? 'grass' : n2 < .64 ? 'savanna' : 'tall_grass';
     },

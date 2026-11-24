@@ -5,28 +5,31 @@ LAIR_SCENES.wolves = (() => {
   const item = (id, ...v) => LAIR.sprite(...v.map(x => 'item/' + id + '/' + x));
 
   function place(k) {
-    const { put, bare, age, cleared, loot } = k;
+    const { put, bare, age, cleared, decay, loot } = k;
     bare(16.5, 16.5, 5.4); bare(23, 18.6, 2.8); bare(28, 17.2, 3.2); bare(36, 16.5, 8.5); bare(47, 15.5, 5);
-    put(LAIR_PROPS.den(3, age > 2 ? [30, 62] : [46]), 15.6, 14.2);
-    BEDS.slice(0, [2, 4, 5][age - 1]).forEach((b, i) => put(LAIR_PROPS.bed(i + 1, P.thatch, P.soilRich, age > 2 && !i ? 76 : 66), b[0], b[1] - .6));
-    put(rock('boulder', 2, k.season), 20.2, 13.9);
-    loot.add('Large bones', [6, 14, 30][age - 1], item('large_bones', 'map-pile-' + age), LARDER[0] + 1.5, LARDER[1] + .7);
-    if (age > 1) loot.add('Small bones', [0, 9, 22][age - 1], item('small_bones', 'map-pile-' + (age - 1)), LARDER[0] - .9, LARDER[1] + 1.2);
+    put(LAIR_PROPS.den(3, age > 2 ? [30, 62] : [46], decay), 15.6, 14.2);
+    BEDS.slice(0, [2, 4, 5][age - 1]).forEach((b, i) => put(LAIR_PROPS.bed(i + 1, P.thatch, P.soilRich, age > 2 && !i ? 76 : 66, decay), b[0], b[1] - .6));
+    put(LAIR_PROPS.weathered(rock('boulder', 2, k.season), decay, 2, k.turf), 20.2, 13.9);
+    loot.add('Large bones', [6, 14, 30][age - 1], item('large_bones', k.heap(age)), LARDER[0] + 1.5, LARDER[1] + .7, 'bone');
+    if (age > 1) loot.add('Small bones', [0, 9, 22][age - 1], item('small_bones', k.heap(age - 1)), LARDER[0] - .9, LARDER[1] + 1.2, 'bone');
     if (age > 1) loot.add('Disturbed earth', 1, LAIR.sprite('site/buried_hoard/summer-0'), 11.3, 13.4);
     if (age > 2) {
-      put(LAIR_PROPS.skeleton(2), 11.7, 19.4);
-      loot.add('Leather knapsack', 1, item('leather_knapsack', 'map-ground'), 12.8, 19.6);
+      put(LAIR_PROPS.skeleton(2, decay), 11.7, 19.4);
+      loot.add('Leather knapsack', 1, item('leather_knapsack', 'map-ground'), 12.8, 19.6, 'hide');
       loot.add('Copper spear', 1, item('copper_spear', 'map-lie'), 10.6, 19.9);
       loot.add('Bronze skullcap', 1, item('cast_bronze_skullcap', 'map-ground'), 11.1, 18.8);
     }
+    if (k.vacant) put(LAIR_PROPS.ribs(4, decay), LARDER[0], LARDER[1]);
+    LAIR.regrow(k, 16.4, 17, 3.8, 2.3, 31, ['fern', 'flowers', 'bush'], 'birch', [[15.6, 14.2]]);
+    if (decay > 2) put(LAIR_PROPS.sapling(3, 'birch'), 15.2, 14.5);
     if (!cleared) return;
-    put(LAIR_PROPS.ribs(4), LARDER[0], LARDER[1]);
     const n = [2, 4, 5][age - 1];
     BEDS.slice(0, n).forEach((b, i) => { const o = put(item(age > 2 && !i ? 'dire_wolf_carcass' : 'wolf_carcass', 'map-pile-1'), b[0] + .1, b[1]); if (i < 2) loot.push({ name: i ? 'Wolf carcass' : age > 2 ? 'Dire wolf carcass' : 'Wolf carcass', n: i ? n - 1 : 1, o }); });
   }
 
   function cast(R, k) {
-    if (k.cleared) return {};
+    const post = { kind: 'pine', at: [13.2, 13.7], seed: 5 };
+    if (k.vacant) return { post };
     const { age } = k, pack = age > 1, T0 = time.sec(17.25);
     const prey = R.add(LAIR.quad('deer'), [33.2, 16.6]);
     prey.keeps = true;
@@ -62,7 +65,7 @@ LAIR_SCENES.wolves = (() => {
         .state('Fleeing').go([far], 180, 'run').state('Watching').act('watch', 5, { flip: 1 }).untilT(time.sec(24), 'idle').state('Grazing').until(30.5 + i * .3, 'graze')
         .go([s], 30, 'walk').rest('graze', { flip: i & 1 });
     }
-    if (!pack) return { post: { kind: 'pine', at: [13.2, 13.7], seed: 5 } };
+    if (!pack) return { post };
 
     R.add(LAIR.quad('wolf'), WATCH, 'Lookout').state('On watch').untilT(home + 1, 'sit', { flip: 0 }).state('Eating').go([[23.6, 19.7]], 44, 'trot').untilT(eaten, 'feed', { flip: 1 })
       .state('Returning').go([BEDS[3]], 30, 'walk').state('Sleeping').until(32.3, 'sleep', { flip: 0 }).state('Waking').act('shake', 1.1).go([WATCH], 30, 'walk').state('On watch').rest('sit', { flip: 0 });
@@ -76,16 +79,16 @@ LAIR_SCENES.wolves = (() => {
       b.until(17.2, 'sit', { flip: 0 }).state('Waiting at the den').go([door], 30, 'walk').untilT(home - .6, 'sit', { flip: 0 }).state('Eating').go([[19, 17.6], seat], 70, 'trot')
         .untilT(eaten, 'feed', { flip: i & 1 }).state('Returning').go([bed], 34, 'walk').state('Sleeping').until(36, 'sleep', { flip: i & 1 }).state('Playing').go([spot], 34, 'walk').rest('sit', { flip: i & 1 });
     });
-    return { post: { kind: 'pine', at: [13.2, 13.7], seed: 5 } };
+    return { post };
   }
 
   return {
     name: 'Wolf den', size: [56, 32], seed: 31, home: [16.4, 16.6], cam: [27, 16], ring: 6.5, time, place, cast,
     who: ['a pair', 'four wolves and two pups', 'a dire wolf, four wolves and three pups'],
-    ground(x, y, n, n2) {
-      const fx = x + (n - .5) * 10;
-      if (Math.hypot(x - 16.4, (y - 16.9) * 1.5) < 2.9 + n2 * 1.4) return 'dirt';
-      if (Math.hypot(x - 23, (y - 18.7) * 1.5) < 1.5 + n2 * 1.2) return 'dirt';
+    ground(x, y, n, n2, age, decay) {
+      const fx = x + (n - .5) * 10, grown = n2 < .5 ? 'deep_grass' : 'tall_grass';
+      const yard = LAIR.yard(Math.hypot(x - 16.4, (y - 16.9) * 1.5), 2.9 + n2 * 1.4, decay, 'dirt', grown) || LAIR.yard(Math.hypot(x - 23, (y - 18.7) * 1.5), 1.5 + n2 * 1.2, decay, 'dirt', grown);
+      if (yard) return yard;
       if (fx < 19.5) return n2 < .46 ? 'tree' : n2 < .7 ? 'mossy_ground' : 'deep_grass';
       if (fx < 25) return n2 < .5 ? 'deep_grass' : 'tall_grass';
       return n2 < .3 ? 'grass' : n2 < .62 ? 'tall_grass' : 'deep_grass';
