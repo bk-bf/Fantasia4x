@@ -2,7 +2,7 @@
 const MOTION_FOLK = (() => {
   const PEOPLE = [
     { kind: 'marked', name: 'Horned man', culture: 'vexast', pawn: { sex: 'male', age: 36, height: 181, weight: 82, traits: ['gore-horns', 'head-scar-serious', 'one-eyed', 'pox-marked', 'goring-fangs'] }, look: { style: 'ponytail', beard: 'goatee', sleeves: 'long', hat: 'none', cloak: null } },
-    { kind: 'kirtle', name: 'Woman in a kirtle', culture: 'rynek', pawn: { sex: 'female', age: 27, height: 166, weight: 61, traits: [] }, look: { style: 'braids', sleeves: 'long', apron: true, pouch: true, hat: 'none', cloak: null } },
+    { kind: 'kirtle', name: 'Unclothed woman', culture: 'rynek', pawn: { sex: 'female', age: 27, height: 166, weight: 61, traits: [] }, look: { style: 'braids', sleeves: 'long', apron: true, pouch: true, hat: 'none', cloak: null } },
     { kind: 'maimed', name: 'One-armed man', culture: 'krixul', pawn: { sex: 'male', age: 44, height: 172, weight: 74, traits: ['one-armed', 'one-legged', 'rending-claws', 'webbed-limbs'] }, look: { style: 'short', beard: 'full', sleeves: 'long', hat: 'none', cloak: null } },
     { kind: 'winged', name: 'Winged woman', culture: 'rynock', pawn: { sex: 'female', age: 23, height: 158, weight: 55, traits: ['wings', 'prehensile-tail', 'nub-horns', 'feathered'] }, look: { style: 'long', sleeves: 'rolled', apron: false, hat: 'none', cloak: null } },
     { kind: 'soldier', name: 'Man-at-arms', culture: 'rynek', pawn: { sex: 'male', age: 31, height: 178, weight: 80, traits: [] }, look: { style: 'short', beard: 'full' }, wear: ['linen_gambeson', 'mail_hauberk', 'linen_hose', 'hide_boots', 'iron_nasal_helm', 'wool_cloak'] },

@@ -7,9 +7,10 @@
 
   const state = () => ({ ...ui.state, ...extra });
   function mount() {
-    const s = state(), key = 'sheet' + s.zoom;
+    const s = state(), key = 'sheet' + s.zoom + s.folk;
     if (!ready || key === mounted) return;
     mounted = key;
+    LOOK_STYLE.pieces = s.folk === 'pieces';
     SHEET.mount(sheet, s, id => { extra.anim = id; F4X.write({ anim: id, frames: 1 }); ui.set('frames', '1'); sheet.scrollTo({ top: 0 }); }, id => { extra.load = id; F4X.write({ load: id }); SHEET.setLoad(id); });
   }
   function tick(now) {

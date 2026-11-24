@@ -22,7 +22,8 @@ const MOTION_LOAD = (() => {
     for (const q of placed) if (s.c[q] !== P.ink && [q - 1, q + 1, q - s.w, q + s.w].some(rimmed)) s.c[q] = dark(s.c[q], RIM);
     Object.assign(s, { parts: pawn.parts, owner: pawn.owner, layers: pawn.layers, loadCam: pawn.loadCam });
     if (pawn.layers) s.loadLayer = { name: 'load', cam: pawn.loadCam, spr: whole };
-    return layer.fused ? s.outline() : s;
+    const lined = layer.fused ? s.outline() : s;
+    return pawn.styled ? pawn.styled(lined) : lined;
   }
   function init(objects) {
     for (const o of objects) if (o.cat === 'item' && DBX.of('item', o.id).length) LOADS.set(o.id, HAUL.of(o));

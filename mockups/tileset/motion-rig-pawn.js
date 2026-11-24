@@ -117,7 +117,7 @@ function rigPawn(o, p) {
   const by = rnd(p.by || 0), lean = p.lean || 0, cx = RG.CX + rnd(p.bx || 0), base = RG.BASE, hw = f.hw, aw = f.aw, lw = hw - 1, br = p.br ? 1 : 0;
   const legTop = base - f.legs + 1 + by, tTop = legTop - f.tl, armLen = f.tl - 1, hTop = tTop - br - f.hh + rnd(p.hd ? p.hd[1] : 0), HX = cx + rnd(lean + (p.hd ? p.hd[0] : 0));
   const lx = j => rnd(lean * clamp(1 - j / f.tl, 0, 1)), kind = p.item === undefined ? o.tool : p.item, pts = s.pts = {}, sx0 = cx + rnd(lean);
-  const fl = p.fl || [0, 0], fr = p.fr || [0, 0], SW = 2 * hw;
+  const fl = p.fl || [0, 0], fr = p.fr || [0, 0], SW = 2 * hw, shaped = o.shape || null;
 
   const legF = (sd, ft, lost) => {
     const dx = rnd(ft[0]), n = Math.max(3, f.legs - by - rnd(ft[1])), x0 = sd < 0 ? cx - hw + dx : cx + 1 + dx, cut = Math.ceil(f.legs * .4);
@@ -127,10 +127,10 @@ function rigPawn(o, p) {
       if (lost && j === cut - 1) { for (let i = 0; i < lw; i++) s.set(x0 + i, y, WRAP[(x0 + i) & 1]); if (sd < 0) s.set(x0 + lw, y, j < 2 ? pick3(pants, .6, -1) : P.ink); continue; }
       for (let i = 0; i < lw; i++) {
         const u = i / (lw - 1), R = boot ? boots : pants, d = boot ? (jb === 2 ? 1 : sole ? -2 : 0) : (j === Math.floor(f.legs * .4) ? 1 : 0);
-        const w = wv(boot ? 'boots' : 'legs', x0 + i, y); s.set(x0 + i, y, sd < 0 ? pick3(R, u * .7, d + w) : pick3(R, .3 + u * .7, d - 1 + w));
+        const w = wv(boot ? 'boots' : 'legs', x0 + i, y), c = sd < 0 ? pick3(R, u * .7, d + w) : pick3(R, .3 + u * .7, d - 1 + w); s.set(x0 + i, y, shaped ? shaped('leg', c, { j, k: i, w: lw, len: n, sd }) : c);
       }
-      if (jb < 2) s.set(sd < 0 ? x0 - 1 : x0 + lw, y, boots[sole ? 0 : sd < 0 ? 3 : 1]);
-      if (sd < 0) s.set(x0 + lw, y, j < 2 ? pick3(pants, .6, -1) : P.ink);
+      if (jb < (shaped ? 1 : 2)) s.set(sd < 0 ? x0 - 1 : x0 + lw, y, boots[shaped ? 2 : sole ? 0 : sd < 0 ? 3 : 1]);
+      if (sd < 0 && !shaped) s.set(x0 + lw, y, j < 2 ? pick3(pants, .6, -1) : P.ink);
     }
   };
   const legS = (ft, far) => {
@@ -139,10 +139,10 @@ function rigPawn(o, p) {
     (pts.legs = pts.legs || []).push({ path: [[rx, legTop], [kx, ky], [ex, ey]], w });
     rigLimb(s, [[rx, legTop], [kx, ky], [ex, ey]], w, (t, k) => {
       const u = k / (w - 1), boot = t >= tot - 2.5, sole = t >= tot - .5, c = pick3(boot ? boots : pants, far ? .3 + u * .7 : u * .7, (boot ? (sole ? -2 : t < tot - 1.5 ? 1 : 0) : 0) - (far ? 1 : 0) + wv(boot ? 'boots' : 'legs', k, Math.round(t)));
-      return far ? dark(c, .82) : c;
+      return shaped ? shaped('leg', c, { j: rnd(t), k, w, len: tot + 1, far, side: 1 }) : far ? dark(c, .82) : c;
     }, far ? null : shade);
     const tx = rnd(ex) - (w >> 1) + w, ty = rnd(ey);
-    s.set(tx, ty, boots[0]); s.set(tx, ty - 1, far ? dark(boots[2], .82) : boots[2]);
+    s.set(tx, ty, boots[shaped ? 1 : 0]); s.set(tx, ty - 1, far ? dark(boots[2], .82) : boots[2]);
   };
   const torso = () => {
     const sw = SW;
@@ -162,7 +162,7 @@ function rigPawn(o, p) {
           if (o.apron && back && jj === 3 && Math.abs(i + .5) < w - 1.5) c = P.leather[2];
           if (o.trim && (jj === f.tl || (!back && !side && jj < 3 && Math.abs(i + .5) < 1 + (2 - jj)))) c = o.trim[3];
         }
-        s.set(ox + i, y, c);
+        s.set(ox + i, y, shaped ? shaped('torso', c, { j: jj, k: i - (side ? -(sw >> 1) - 1 : -hw), w: sw, len: f.tl + 2 }) : c);
       }
     }
     if (!o.armor && !back && !side) { s.set(sx0 - 1, tTop - br, skin[sn - 2]); s.set(sx0, tTop - br, skin[sn - 3]); s.set(sx0 - 1, tTop + 1 - br, skin[sn - 2]); }
@@ -175,7 +175,7 @@ function rigPawn(o, p) {
     if (lost && j === 2 + br) return WRAP[X & 1];
     let c = L === skin ? skin[clamp(lit ? sn - 1 - (e ? 1 : 0) - (last ? 1 : 0) : sn - 3 + (e ? 1 : 0) - (last ? 1 : 0), 0, sn)] : lit ? pick3(L, k / aw * .5, (j === 6 ? -1 : 0) + wv('sleeve', X, j)) : pick3(L, .7, (e ? 1 : 0) + (j === 6 ? -1 : 0) + wv('sleeve', X, j));
     if (o.sleeves === 'long' && j > 6 && j <= cuff) c = sl[clamp(bn - (j === cuff ? 4 : side ? 2 : lit ? 1 : 3), 0, bn)];
-    return far ? dark(c, .8) : c;
+    return shaped ? shaped('arm', c, { j, k, w: aw, len: armLen, lit, far }) : far ? dark(c, .8) : c;
   };
   const TOT = armLen - 1;
   const reach = (ax, ay, tgt, bend, crook) => {

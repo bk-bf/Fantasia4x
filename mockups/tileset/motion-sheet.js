@@ -282,7 +282,7 @@ const SHEET = (() => {
     box.hidden = !on;
     for (const g of figs) g.f.classList.toggle('sel', !!on && g.cell === cell);
     if (!on) { stripKey = ''; return; }
-    const key = [cell.id, state.lvl, state.cad, state.zoom, picked, state.pin ? T : ''].join('|');
+    const key = [cell.id, state.lvl, state.cad, state.zoom, state.folk, picked, state.pin ? T : ''].join('|');
     if (key === stripKey) return;
     stripKey = key;
     const smooth = state.cad === 'smooth', n = cell.n * (smooth && cell.cyc ? 3 : 1), t0 = cell.t0 || 0, z = Math.max(1, Math.min(Math.max(2, +state.zoom), Math.floor((innerWidth - 26) / cell.w))), row = box.querySelector('.frames');

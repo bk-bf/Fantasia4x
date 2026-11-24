@@ -48,7 +48,8 @@ function plainPts(s) {
   const [x0, y0, x1] = bounds(s);
   return { head: [s.ax, y0 - 3], mouth: [x1 - 2, y0 + 8], tip: [x1, y0 + 6], hand: [x1, y0 + 20], body: [s.ax, (y0 + s.ay) >> 1], feet: [[s.ax - 3, s.ay, true], [s.ax + 3, s.ay, true]] };
 }
-function cachedFrame(key, make) {
+function cachedFrame(plain, make) {
+  const key = (LOOK_STYLE.pieces ? 'pieces|' : '') + plain;
   let s = FRAMES.get(key);
   if (!s) { if (FRAMES.size > 9000) FRAMES.clear(); s = make(); if (!s.pts) s.pts = plainPts(s); packSpr(s); FRAMES.set(key, s); }
   return s;

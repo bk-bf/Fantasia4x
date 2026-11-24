@@ -198,16 +198,21 @@ function lookRig(look) {
   return { o, skin, hair };
 }
 
+const LOOK_STYLE = { pieces: false };
+
 function drawLook(look, face, time, act, gear) {
-  const { o, skin, hair } = lookRig(look), idle = idlePose(look, time);
+  const { o, skin, hair } = lookRig(look), idle = idlePose(look, time), pieces = LOOK_STYLE.pieces;
+  const styled = s => FOLK_SHAPE.restyle(s, look, skin, hair), finished = s => pieces ? Object.assign(styled(s), { styled }) : s;
   if (act) {
     const pose = { ...idle, br: act.br ? 1 : 0, blink: !!act.blink }, rig = { ...o, ...(gear || {}) };
-    if (act.lie) { const s = rigPawnLie(rig, act); paintLookLying(s, look, skin, hair, { ...pose, rest: !!act.rest }); return s; }
+    if (act.lie) { const s = rigPawnLie(rig, act); paintLookLying(s, look, skin, hair, { ...pose, rest: !!act.rest }); return finished(s); }
+    if (pieces) rig.shape = FOLK_SHAPE.shaper(look, skin, act.face || 's');
     const s = rigPawn(rig, act);
     paintLook(s, look, skin, hair, act.face || 's', pose);
-    return s;
+    return finished(s);
   }
+  if (pieces) o.shape = FOLK_SHAPE.shaper(look, skin, face || 'f');
   const s = rigPawn(o, { face: face || 'f', br: idle.br, blink: idle.blink, look: idle.glance, hair: idle.wave() * 1.2, cape: idle.wave(.2) * 1.5 });
   paintLook(s, look, skin, hair, face || 'f', idle);
-  return s;
+  return finished(s);
 }
