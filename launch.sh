@@ -122,6 +122,17 @@ run_at_app_priority() {
     -- "$@"
 }
 
+render_when_hidden() {
+  command -v hyprctl >/dev/null 2>&1 || return 0
+  local sig
+  sig=$(systemctl --user show-environment 2>/dev/null | sed -n 's/^HYPRLAND_INSTANCE_SIGNATURE=//p')
+  [[ -n "$sig" ]] || return 0
+  HYPRLAND_INSTANCE_SIGNATURE="$sig" hyprctl eval \
+    "hl.config({ misc = { render_unfocused_fps = 60 } }) hl.window_rule({ name = \"f4x-render-hidden\", match = { class = \"^(f4x-dev-shell)\$\" }, render_unfocused = true }):set_enabled($1)" \
+    >/dev/null 2>&1 && [[ "$1" == true ]] && echo "  [hyprland] keeps rendering at 60 fps on a hidden workspace"
+  return 0
+}
+
 run_isolated_electron() {
   local port="$1" server_flag="$2" shell_dir="$3"
   echo "  [electron · sandboxed] private net namespace — dev server on 127.0.0.1:$port is"
@@ -252,6 +263,7 @@ if [[ -n "$SHELL_TARGET" ]]; then
 
   if [[ "$SHELL_TARGET" == electron && "$SBX" == true ]]; then
     echo ""
+    render_when_hidden false
     run_isolated_electron "$PORT" "$SERVER_FLAG" "$SHELL_DIR"
     cleanup
     exit 0
@@ -263,6 +275,7 @@ if [[ -n "$SHELL_TARGET" ]]; then
   case "$SHELL_TARGET" in
     electron)
       echo "  [electron] V8/Chromium → http://localhost:$PORT (close window or Ctrl-C to stop)"
+      render_when_hidden true
       (cd "$SHELL_DIR" && export SPIKE_URL="http://localhost:$PORT" F4X_PLAY="$PLAY" && run_at_app_priority pnpm start)
       ;;
   esac
