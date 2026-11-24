@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mountain tops</title>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+<style>
+  :root { --bg: #e9e4d8; --ink: #2a241c; --frame: #b9ae98; --chip: rgb(236 230 214 / .92); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121014; --ink: #eee6d4; --frame: #35303c; --chip: rgb(10 8 12 / .82); } }
+  :root[data-theme="dark"] { --bg: #121014; --ink: #eee6d4; --frame: #35303c; --chip: rgb(10 8 12 / .82); }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font: 12px/1.4 system-ui, sans-serif; }
+  #stage { position: fixed; inset: 0; display: grid; gap: 6px; padding: 6px; box-sizing: border-box; grid-template: 1fr 1fr / 1fr 1fr; touch-action: none; cursor: grab; }
+  #stage.held { cursor: grabbing; }
+  #stage.one { grid-template: 1fr / 1fr; }
+  @media (max-aspect-ratio: 4/5) { #stage:not(.one) { grid-template: repeat(4, 1fr) / 1fr; } }
+  .pane { position: relative; margin: 0; overflow: hidden; outline: 1px solid var(--frame); background: var(--bg); min-width: 0; min-height: 0; }
+  #stage.one .pane:not(.shown) { display: none; }
+  .pane img { position: absolute; left: 0; top: 0; transform-origin: 0 0; image-rendering: pixelated; user-select: none; -webkit-user-drag: none; max-width: none; }
+  .pane figcaption { position: absolute; left: 6px; top: 6px; padding: 1px 7px; background: var(--chip); color: var(--ink); font-weight: 650; letter-spacing: .02em; pointer-events: none; }
+</style>
+</head>
+<body>
+<main id="stage">
+  <figure class="pane" data-top="today"><img alt="" draggable="false"><figcaption>Today</figcaption></figure>
+  <figure class="pane" data-top="a"><img alt="" draggable="false"><figcaption>A · Ridgelines</figcaption></figure>
+  <figure class="pane" data-top="b"><img alt="" draggable="false"><figcaption>B · Crag tiers</figcaption></figure>
+  <figure class="pane" data-top="c"><img alt="" draggable="false"><figcaption>C · Peaks</figcaption></figure>
+</main>
+<header id="mock">
+  <div class="mrow"><strong>Mountain tops</strong><button id="mockhide">Hide · `</button></div>
+  <div class="mrow"><span class="grp" data-k="show" data-def="all"><span class="lab">Show</span><button data-v="all">All four</button><button data-v="today">Today</button><button data-v="a">A</button><button data-v="b">B</button><button data-v="c">C</button></span></div>
+  <div class="mrow"><span class="grp" data-k="snow" data-def="on"><span class="lab">Snow</span><button data-v="on">On</button><button data-v="off">Off</button></span><span class="grp" data-k="zoom" data-def="0.5"><span class="lab">Zoom</span><button data-v="0.5">½×</button><button data-v="1">1×</button><button data-v="2">2×</button></span></div>
+  <div class="mrow"><span class="grp" data-k="at" data-def="range"><span class="lab">Look at</span><button data-v="range">Range</button><button data-v="massif">Massif</button><button data-v="arm">Arm</button><button data-v="tail">Tail</button><button data-v="free" hidden>Free</button></span></div>
+  <p class="mnote">L map · seed 1337 · 32 px tiles · game render with the rock tops repainted</p>
+</header>
+<script src="view.js"></script>
+</body>
+</html>
