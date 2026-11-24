@@ -10,7 +10,7 @@ import type { FontAtlas } from './types.js';
 import { BASE_TILE_PX } from './tile-types.js';
 import { WORK_PINS } from '../workPins/flag.js';
 import { addFrameTotals } from '../workPins/page.js';
-import { GROUND_BLEND, PAINTED_LIGHT, PAINTED_TILES } from './painted/flag.js';
+import { GROUND_BLEND, PAINTED_LIGHT, PAINTED_TILES, PEAKS } from './painted/flag.js';
 import { passOn } from './passes.js';
 import { loadPaintedTileset, type LoadedPaintedTileset } from './painted/loader.js';
 import { GroundBlend, waterTime } from './painted/groundBlend.js';
@@ -39,8 +39,10 @@ import { WindClock, type Heading } from './painted/wind.js';
 import { WaveClock, waterStill, type MapMotion, type SeaWeather } from './painted/waves.js';
 import { FLUID_DEFS, FluidClock, WATER_FLUID, type FluidSet } from './painted/fluids.js';
 import { FallingLeaves } from './painted/leaves.js';
+import { PEAK_TILE_UNIT, Peaks, type PeakChunks } from './painted/peaks.js';
 
 const LIGHT_ATLAS_UNIT = 7;
+const WINTER = 'winter';
 
 export const ROW_DEPTH_RANGE = 8192;
 
@@ -116,6 +118,8 @@ export class WebGLRendererCore {
   private vignette: PaintedVignette | null = null;
   private groundRings: GroundRings | null = null;
   private leaves: FallingLeaves | null = null;
+  private peaks: Peaks | null = null;
+  private noPeakTiles: WebGLTexture | null = null;
   private readonly wind = new WindClock();
   private readonly waves = new WaveClock();
   private readonly fluidClock = new FluidClock();
@@ -195,6 +199,7 @@ export class WebGLRendererCore {
   setGrid(grid: GameGrid, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
     this.gameGrid = grid;
     this.groundBlend?.setGrid(grid, dirtyTiles);
+    this.peaks?.setGrids(grid, this.resourceOverlayGrid, dirtyTiles);
     if (dirtyTiles && dirtyTiles.length > 0) {
       this.gridRenderer?.markTerrainChunksDirty(dirtyTiles);
     } else {
@@ -225,6 +230,8 @@ export class WebGLRendererCore {
   }
 
   setResourceOverlayGrid(grid: GameGrid | null): void {
+    if (this.gameGrid && grid !== this.resourceOverlayGrid)
+      this.peaks?.setGrids(this.gameGrid, grid);
     this.resourceOverlayGrid = grid;
   }
 
@@ -302,6 +309,7 @@ export class WebGLRendererCore {
   setWind(strength: number, dir: Heading, season?: string): void {
     this.wind.set(strength, dir);
     if (season !== undefined) this.season = season;
+    this.peaks?.setSnow(this.season === WINTER);
   }
 
   setSeaWeather(weather: SeaWeather): void {
@@ -458,6 +466,10 @@ export class WebGLRendererCore {
       if (this.lightPass) this.vignette = PaintedVignette.create(gl, this.shaderManager);
       this.groundRings = GroundRings.create(gl, this.shaderManager);
       if (this.painted) this.leaves = FallingLeaves.create(gl, this.shaderManager);
+      if (PEAKS && this.rowDepth && this.painted)
+        this.peaks = Peaks.create(gl, this.shaderManager, this.painted);
+      if (this.peaks && this.gameGrid) this.peaks.setGrids(this.gameGrid, this.resourceOverlayGrid);
+      this.peaks?.setSnow(this.season === WINTER);
 
       if (this.debug) console.log('✅ WebGL2 renderer ready');
       return true;
@@ -490,6 +502,7 @@ export class WebGLRendererCore {
 
     const viewportTilesW = Math.ceil(this.viewport.width / this.tileWidth);
     const viewportTilesH = Math.ceil(this.viewport.height / this.tileHeight);
+    const peakChunks = this.peakFrame(gl, viewportTilesW, viewportTilesH);
     const lightFrame =
       this.lightPass && this.painted
         ? this.lightFrame(this.painted.tileset.tile, viewportTilesW, viewportTilesH)
@@ -567,6 +580,7 @@ export class WebGLRendererCore {
         lightFrame?.grade.saturation ?? 1,
         lightFrame?.grade.brightness ?? 1
       ]);
+    if (this.painted?.top) this.bindPeakTiles(gl);
     const gridStats = passOn('terrain')
       ? this.gridRenderer.renderGrid(this.gameGrid, {
           tileWidth: BASE_TILE_PX,
@@ -624,6 +638,7 @@ export class WebGLRendererCore {
         );
         if (layer === 'resource' && this.snowGrid && passOn('snow'))
           this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
+        if (layer === 'resource' && peakChunks) this.drawPeaks(gl, peakChunks, lightFrame);
       }
       this.drawLeaves(windSecs, viewportTilesW, viewportTilesH, lightFrame);
       this.stats.overlayMs = performance.now() - tOverlay;
@@ -639,6 +654,67 @@ export class WebGLRendererCore {
         strength: lightFrame.grade.vignette,
         tilePx: this.tileWidth
       });
+  }
+
+  private peakFrame(
+    gl: WebGL2RenderingContext,
+    viewportTilesW: number,
+    viewportTilesH: number
+  ): PeakChunks | null {
+    if (!this.peaks || !this.painted || !passOn('resources')) return null;
+    const art = this.painted.tileset.tile;
+    const shown = this.peaks.frame({
+      x0: this.viewTileX * art,
+      y0: this.viewTileY * art,
+      x1: (this.viewTileX + viewportTilesW + 1) * art,
+      y1: (this.viewTileY + viewportTilesH + 1) * art
+    });
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    return shown;
+  }
+
+  private drawPeaks(
+    gl: WebGL2RenderingContext,
+    chunks: PeakChunks,
+    lightFrame: LightPassFrame | null
+  ): void {
+    if (!this.peaks || !this.shaderManager || !this.fontTexture) return;
+    this.stats.drawCalls += this.peaks.draw(chunks, {
+      projection: this.projectionMatrix,
+      viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
+      zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
+      ambient: lightFrame
+        ? lightFrame.grade.ambient
+        : [
+            this.ambientLight * this.ambientTint[0],
+            this.ambientLight * this.ambientTint[1],
+            this.ambientLight * this.ambientTint[2]
+          ],
+      fieldLit: lightFrame !== null,
+      tone: [lightFrame?.grade.saturation ?? 1, lightFrame?.grade.brightness ?? 1],
+      rowPx: this.painted?.tileset.tile ?? BASE_TILE_PX,
+      rowDepth: 1 / ROW_DEPTH_RANGE
+    });
+    this.shaderManager.useProgram('tileRenderer');
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
+  }
+
+  private bindPeakTiles(gl: WebGL2RenderingContext): void {
+    if (this.peaks) this.peaks.bindTiles();
+    else {
+      if (!this.noPeakTiles) {
+        this.noPeakTiles = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0 + PEAK_TILE_UNIT);
+        gl.bindTexture(gl.TEXTURE_2D, this.noPeakTiles);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA16UI, 1, 1);
+      }
+      gl.activeTexture(gl.TEXTURE0 + PEAK_TILE_UNIT);
+      gl.bindTexture(gl.TEXTURE_2D, this.noPeakTiles);
+      gl.activeTexture(gl.TEXTURE0);
+    }
   }
 
   private lightFrame(
@@ -822,6 +898,8 @@ export class WebGLRendererCore {
     this.shaderManager.setUniform('tileRenderer', 'u_shadowDepth', SHADOW_DEPTH);
     this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 0);
     if (!painted.top) return;
+    this.bindPeakTiles(gl);
+    this.shaderManager.setUniform('tileRenderer', 'u_peakTileTexture', PEAK_TILE_UNIT);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, painted.top.texture);
     gl.activeTexture(gl.TEXTURE3);
@@ -950,6 +1028,9 @@ export class WebGLRendererCore {
     this.leaves = null;
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.light);
+    this.peaks?.dispose();
+    this.peaks = null;
+    if (this.noPeakTiles) this.webglState.getContext()?.deleteTexture(this.noPeakTiles);
     if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.texture);
     if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.veins);
     this.painted = null;

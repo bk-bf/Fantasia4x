@@ -458,6 +458,7 @@ export function buildSnowOverlay(worldMap: WorldTile[][], hiddenMask?: boolean[]
 }
 
 const ROCK_PIECES = 'rock';
+const MOUNTAIN_ROOF = 'mountain_roof';
 
 function rockMass(
   hiddenMask: boolean[][],
@@ -533,7 +534,7 @@ export function applyResourceToGrid(
     blank(gridShort);
     blank(gridTall);
   };
-  const paintOnly = (painted: PaintedSprite | undefined, scenery: boolean) => {
+  const paintOnly = (painted: PaintedSprite | undefined, scenery: boolean, rock = false) => {
     if (!painted) return clear();
     blank(gridTall);
     gridShort.setTile(tile.x, tile.y, {
@@ -542,10 +543,12 @@ export function applyResourceToGrid(
       background: { r: 0, g: 0, b: 0 },
       position: { x: tile.x, y: tile.y },
       painted,
-      ...(scenery ? { scenery } : null)
+      ...(scenery ? { scenery } : null),
+      ...(rock ? { rock } : null)
     });
   };
-  if (hiddenMask[tile.y]?.[tile.x]) return paintOnly(rockPiece(tile, hiddenMask, worldMap), false);
+  if (hiddenMask[tile.y]?.[tile.x])
+    return paintOnly(rockPiece(tile, hiddenMask, worldMap), false, true);
   const active = resolveActiveResource(tile);
   if (!active || (PAINTED_TILES && hiddenUnderFluid(active.resDef.id)))
     return paintOnly(bankReeds(tile), true);
@@ -573,7 +576,8 @@ export function applyResourceToGrid(
     position: { x: tile.x, y: tile.y },
     detail,
     scale: painted ? (stageScale !== 1 ? stageScale : undefined) : scale,
-    ...(painted ? { painted } : null)
+    ...(painted ? { painted } : null),
+    ...(piece ? { rock: true } : null)
   });
 }
 
@@ -664,7 +668,8 @@ export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding, _tile?: W
           g: t.background.g * ROOF_SHADE_BG,
           b: t.background.b * ROOF_SHADE_BG
         },
-        position: { x: b.x, y: b.y }
+        position: { x: b.x, y: b.y },
+        ...(b.type === MOUNTAIN_ROOF ? { underRock: true } : null)
       });
     }
     return;
