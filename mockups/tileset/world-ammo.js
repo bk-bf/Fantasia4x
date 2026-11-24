@@ -1,70 +1,113 @@
 'use strict';
 (() => {
-  const FEATHER = 'LMD', WOOD = 'lmd', METAL = 'zyx', CORD = 'ZYX', SHIFT = [1, 0, 2, 0, 1];
-  const toneOf = (set, r, n) => set[r === 0 ? 0 : r === n - 1 ? 2 : 1];
-  const SHAPES = {
-    arrow: { len: 14, fletch: 3, head: 2, sheaf: 3 },
-    broad: { len: 14, fletch: 3, head: 3, sheaf: 3, barb: true },
-    hooked: { len: 14, fletch: 3, head: 3, sheaf: 3, hook: true },
-    bolt: { len: 10, fletch: 3, head: 2, sheaf: 3, vane: true },
-    dart: { len: 11, fletch: 2, head: 2, sheaf: 4 }
+  const { piece, scene, strewn, packed, held, staged } = WORLD_STACKS;
+  const SHAFT = 'lmd', STAGGER = [0, 3, 1], PITCH = 2, CORD = 'ZYYYX';
+  const HEADS = {
+    flint: [' z ', 'zyx', ' x '],
+    splinter: ['    ', 'zzyx', '    '],
+    tined: ['z   ', ' zyx', 'x   '],
+    leaf: [' zy ', 'zyyx', ' xx '],
+    broad: ['zz  ', 'zyyx', 'xx  '],
+    bodkin: ['z    ', 'yzyyx', 'x    '],
+    barbed: ['zz   ', '  zyx', 'xx   '],
+    needle: ['      ', 'zzyyyx', '      '],
+    swept: ['zz   ', 'zzyyx', 'xx   '],
+    fang: ['   z', 'zzyy', '    '],
+    cast: ['zy ', 'zyx', 'xx '],
+    square: ['zz ', 'zyx', 'xx '],
+    chisel: ['zzy ', 'zyyx', 'xxx '],
+    socketed: ['z    ', 'zzyyx', 'x    '],
+    point: ['  ', 'yx', '  ']
   };
+  const VANES = { feather: [' LL', 'MMM', ' DD'], horn: ['LL', 'MM', 'DD'], down: ['L ', 'LM', 'D '] };
+  const SHAPES = { arrow: { len: 12, vane: 'feather' }, bolt: { len: 7, vane: 'horn' }, dart: { len: 8, vane: 'down' } };
 
-  function shaftRow(row, r, shape) {
-    const x0 = SHIFT[r % SHIFT.length], n = shape.sheaf;
-    for (let i = 0; i < shape.len; i++) row[x0 + i] = i < shape.fletch ? toneOf(FEATHER, r, n) : i >= shape.len - shape.head ? toneOf(METAL, r, n) : toneOf(WOOD, r, n);
+  function stamped(grid, rows, x, y) {
+    rows.forEach((row, j) => [...row].forEach((glyph, i) => { if (glyph !== ' ') grid[y + j][x + i] = glyph; }));
   }
-  function splay(grid, shape) {
-    const n = shape.sheaf, top = SHIFT[0], bottom = SHIFT[(n - 1) % SHIFT.length], reach = shape.vane ? shape.fletch : shape.fletch - 1;
-    for (let i = 0; i < reach; i++) { grid[0][top + i] = 'L'; grid[n + 1][bottom + i] = 'D'; }
-    const headTop = top + shape.len - shape.head, headBottom = bottom + shape.len - shape.head;
-    if (shape.barb) { grid[0][headTop] = 'z'; grid[n + 1][headBottom] = 'x'; }
-    if (shape.hook) grid[0][top + shape.len - 1] = 'z';
-  }
-  function sheaf(shape) {
-    const n = shape.sheaf, wide = shape.len + 3, tie = Math.floor(shape.len / 2) + 1;
-    const grid = Array.from({ length: n + 2 }, () => new Array(wide).fill(' '));
-    for (let r = 0; r < n; r++) shaftRow(grid[r + 1], r, shape);
-    splay(grid, shape);
-    grid.forEach((row, j) => { row[tie] = j === 0 ? 'Z' : j === n + 1 ? 'X' : 'Y'; });
+  function sheaf(shape, head) {
+    const reach = HEADS[head][1].length, wide = shape.len + reach + Math.max(...STAGGER), tie = 3 + (shape.len >> 1);
+    const grid = Array.from({ length: PITCH * (STAGGER.length - 1) + 3 }, () => new Array(wide).fill(' '));
+    STAGGER.forEach((x0, k) => {
+      const y = k * PITCH;
+      for (let i = 0; i < shape.len + 2; i++) grid[y + 1][x0 + i] = SHAFT[k];
+      stamped(grid, VANES[shape.vane], x0, y);
+      stamped(grid, HEADS[head], x0 + shape.len, y);
+    });
+    [...CORD].forEach((glyph, j) => { grid[j + 1][tie] = glyph; });
     return grid.map(row => row.join(''));
   }
 
-  const PILES = [[[0, 0]], [[0, 0], [3, 3]], [[2, 0], [0, 3], [4, 5]], [[1, 0], [5, 2], [0, 4], [4, 6]]];
-  const HEAPS = [[[0, 2], [4, 2], [2, 0]], [[0, 4], [4, 4], [8, 4], [2, 2], [6, 2], [4, 0]], [[0, 6], [4, 6], [8, 6], [12, 6], [2, 4], [6, 4], [10, 4], [4, 2], [8, 2], [6, 0]]];
-  const STAGES = [6, 20, 45, 80];
-  const countOf = quantity => quantity <= 12 ? 1 : quantity <= 30 ? 2 : quantity <= 60 ? 3 : 4;
-  const inksOf = wear => [wear.body, wear.trim || wear.body, wear.strap || wear.body, wear.lining || 'cord'];
-  const laid = (spots, rows, wear) => spots.reduce((sk, [x, y]) => PX.overlay(sk, x, y, rows, ...inksOf(wear)), PX.sketch());
-
-  const bundled = (shape, wear) => ({ kind: 'ammo', tuck: 'low', stages: STAGES, ground: quantity => laid(PILES[countOf(quantity || 1) - 1], sheaf(SHAPES[shape]), wear) });
-  const heaped = (rows, wear) => ({ kind: 'ammo', tuck: 'low', stages: STAGES.slice(0, 3), ground: quantity => laid(HEAPS[Math.min(3, countOf(quantity || 1)) - 1], rows, wear) });
-
-  const PEBBLE = [' lm ', 'lmmd', ' dd '];
-  const BICONE = [' lL ', 'lmmd', ' dd '];
-  const ACORN = [' lm ', 'lmmd', 'mmdd', ' dd '];
-  const ALMOND = [' lL ', 'lmmd', ' dd '];
+  const PILES = [[[0, 0]], [[0, 0], [2, 4]], [[2, 0], [0, 4], [3, 8]], [[1, 0], [4, 3], [0, 6], [3, 9]]];
+  const SHEAVES = [6, 20, 45, 80], countOf = quantity => quantity <= 12 ? 1 : quantity <= 30 ? 2 : quantity <= 60 ? 3 : 4;
   const arrow = (wood, feather, metal, lash) => ({ body: wood, trim: feather, strap: metal, lining: lash || 'cord' });
+  const bundled = (shape, head, wear) => ({ kind: 'ammo', tuck: 'low', stages: SHEAVES, ground: quantity => strewn(piece(sheaf(SHAPES[shape], head), wear), PILES[countOf(quantity || 1) - 1]) });
+
+  const PEBBLE = [
+    ' llm ',
+    'llmmd',
+    'lmmdd',
+    ' ddd '
+  ];
+  const BICONE = [
+    ' llmm ',
+    'lLmmdd',
+    ' mddd '
+  ];
+  const ACORN = [
+    ' llm  ',
+    'llmmmd',
+    ' mddd '
+  ];
+  const ALMOND = [
+    ' lm ',
+    'lLmd',
+    ' dd '
+  ];
+  const CREEL = [
+    'lllllllllllllllmmdd',
+    'lmlmlmlmlmlmlmdmdmd',
+    ' mlmlmlmlmlmdmdmdd ',
+    '  ddddddddddddddd  '
+  ];
+  const SHOT_BAG = [
+    ' zllllllmmdx ',
+    ' llmmmmmmmdd ',
+    'llmmmmmmmmmdd',
+    'lmmmmmmmmmddd',
+    ' mmmmmmmmddd ',
+    '  ddddddddd  '
+  ];
+
+  const SHOT = [6, 20, 45];
+  function cairn(p, rows) {
+    const step = p.w + 1, most = Math.max(...rows);
+    return rows.flatMap((n, tier) => Array.from({ length: n }, (_, i) => [((most - n) * step >> 1) + i * step, tier * (p.h - 1), p]));
+  }
+  const heaped = (p, many) => staged('ammo', SHOT, [() => scene(...cairn(p, [1, 2])), () => scene(...cairn(p, [1, 2, 3])), many]);
+  const pebble = piece(PEBBLE, { body: 'stone' }), bicone = piece(BICONE, { body: 'bronze', trim: 'gold' });
+  const acorn = piece(ACORN, { body: 'clay' }), almond = piece(ALMOND, { body: 'lead', trim: 'silver' });
+  const creel = piece(CREEL, { body: 'sapwood' }), bag = piece(SHOT_BAG, { body: 'hide', strap: 'cord' });
 
   WORLD_GEAR.add({
-    flint_arrow: bundled('arrow', arrow('sapwood', 'fur', 'flint')),
-    bone_arrow: bundled('arrow', arrow('wood', 'hide', 'bone')),
-    barbed_bone_arrow: bundled('broad', arrow('wood', 'fur', 'bone')),
-    bronze_arrow: bundled('arrow', arrow('ash', 'linen', 'bronze')),
-    broadhead_arrow: bundled('broad', arrow('wood', 'linen', 'iron')),
-    iron_arrow: bundled('arrow', arrow('ash', 'linen', 'iron')),
-    barbed_arrow: bundled('broad', arrow('wood', 'red', 'iron')),
-    steel_bodkin_arrow: bundled('arrow', arrow('ash', 'wool', 'steel')),
-    steel_broadhead_arrow: bundled('broad', arrow('wood', 'red', 'steel')),
-    fang_arrow: bundled('hooked', arrow('black', 'red', 'bone', 'red')),
-    bronze_bolt: bundled('bolt', arrow('wood', 'horn', 'bronze')),
-    iron_bolt: bundled('bolt', arrow('wood', 'leather', 'iron')),
-    heavy_quarrel: bundled('bolt', arrow('wood', 'leather', 'iron')),
-    steel_quarrel: bundled('bolt', arrow('ash', 'linen', 'steel')),
-    blow_dart: bundled('dart', arrow('sapwood', 'linen', 'wood')),
-    sling_stone: heaped(PEBBLE, { body: 'stone' }),
-    cast_sling_bullet: heaped(BICONE, { body: 'bronze', trim: 'gold' }),
-    clay_bullet: heaped(ACORN, { body: 'clay' }),
-    lead_glans: heaped(ALMOND, { body: 'lead', trim: 'silver' })
+    flint_arrow: bundled('arrow', 'flint', arrow('sapwood', 'fur', 'flint')),
+    bone_arrow: bundled('arrow', 'splinter', arrow('wood', 'hide', 'bone')),
+    barbed_bone_arrow: bundled('arrow', 'tined', arrow('wood', 'fur', 'bone')),
+    bronze_arrow: bundled('arrow', 'leaf', arrow('ash', 'linen', 'bronze')),
+    broadhead_arrow: bundled('arrow', 'broad', arrow('wood', 'linen', 'iron')),
+    iron_arrow: bundled('arrow', 'bodkin', arrow('ash', 'linen', 'iron')),
+    barbed_arrow: bundled('arrow', 'barbed', arrow('wood', 'red', 'iron')),
+    steel_bodkin_arrow: bundled('arrow', 'needle', arrow('ash', 'wool', 'steel')),
+    steel_broadhead_arrow: bundled('arrow', 'swept', arrow('wood', 'red', 'steel')),
+    fang_arrow: bundled('arrow', 'fang', arrow('black', 'red', 'bone', 'red')),
+    bronze_bolt: bundled('bolt', 'cast', arrow('wood', 'horn', 'bronze')),
+    iron_bolt: bundled('bolt', 'square', arrow('wood', 'leather', 'iron')),
+    heavy_quarrel: bundled('bolt', 'chisel', arrow('wood', 'leather', 'black')),
+    steel_quarrel: bundled('bolt', 'socketed', arrow('ash', 'linen', 'steel')),
+    blow_dart: bundled('dart', 'point', arrow('sapwood', 'linen', 'wood')),
+    sling_stone: heaped(pebble, () => held(cairn(pebble, [2, 3]), creel, [-1, 5])),
+    cast_sling_bullet: heaped(bicone, () => packed(bicone, 2, 5, { body: 'wood' }, 1)),
+    clay_bullet: heaped(acorn, () => packed(acorn, 3, 3, { body: 'ash' }, 1)),
+    lead_glans: heaped(almond, () => held(cairn(almond, [2, 3]), bag, [0, 3]))
   });
 })();

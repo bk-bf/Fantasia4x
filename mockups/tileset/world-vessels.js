@@ -190,16 +190,18 @@
     '  dddd  '
   ];
   const ALEMBIC = [
-    '  lmd       ',
-    ' lmmmd      ',
-    ' lmmmdmmmd  ',
-    '  lmd    md ',
-    ' llmmmd   d ',
-    'llmmmmmd lmd',
-    'lmmmmmmd lmd',
-    'lmmmmmdd mdd',
-    ' mmmmddd ddd',
-    '  ddddd     '
+    '   llmd            ',
+    '  llmmmd           ',
+    '  lmmmmmmd         ',
+    '  lmmmddmmmd       ',
+    '   zyyx   mmmd     ',
+    '   llmd     mmd    ',
+    '  llmmmd      md   ',
+    ' llmmmmmd          ',
+    ' lmmmmmmd     l   d',
+    ' lmmmmmdd     lmmmd',
+    '  mmmmdd      lmmdd',
+    '   dddd        ddd '
   ];
   const COOKING_POT = [
     '  llllmmmd  ',
@@ -229,7 +231,17 @@
     '  dddddddddd  '
   ];
 
+  const MELT = [
+    '   Z  Z   ',
+    'llLLMLLmmd',
+    'lMLLMMMDDd',
+    'lmmmmmmmdd',
+    ' mmmmmmdd ',
+    '  xxxxxx  '
+  ];
+
   const sits = (rows, wear, tuck) => ({ kind: 'vessel', tuck: tuck || 'low', ground: () => inked(rows, wear) });
+  const molten = metal => sits(MELT, { body: 'dun', trim: metal, strap: 'black', lining: 'flame' });
   const GLASS = { body: 'glass', trim: 'wood' };
   const phials = { kind: 'vessel', tuck: 'low', ground: () => PX.overlay(inked(ROUND_PHIAL, GLASS), 8, 3, TALL_PHIAL, GLASS.body, GLASS.trim) };
 
@@ -249,9 +261,17 @@
     porcelain_vessels: sits(GINGER_JAR, { body: 'milk', trim: 'sapphire' }),
     waterskin: sits(WATERSKIN, { body: 'leather', trim: 'cord' }),
     flask: sits(FLASK, { body: 'clay', trim: 'wood', strap: 'cord' }),
-    clay_alembic: sits(ALEMBIC, { body: 'clay' }),
+    clay_alembic: sits(ALEMBIC, { body: 'clay', strap: 'black' }),
     clay_cooking_pot: sits(COOKING_POT, { body: 'clay', trim: 'black' }),
+    unfired_jug: sits(JUG, { body: 'dun', trim: 'dun' }),
+    unfired_flask: sits(FLASK, { body: 'dun', trim: 'dun', strap: 'dun' }),
     clay_mold: sits(CLAY_MOLD, { body: 'clay' }),
-    tile_mold: sits(TILE_MOLD, { body: 'bronze', trim: 'clay' })
+    tile_mold: sits(TILE_MOLD, { body: 'bronze', trim: 'clay' }),
+    molten_copper: molten('copper'),
+    molten_tin: molten('moonstone'),
+    molten_bronze: molten('bronze'),
+    molten_lead: molten('lead'),
+    molten_silver: molten('silver'),
+    molten_gold: molten('gold')
   });
 })();

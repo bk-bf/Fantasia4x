@@ -13,7 +13,7 @@ const RULES = (() => {
     [/^(Metal|Iron|Steel)$/, /bar$|ingot/, 'bars'], [/^Fuel$/, /log|firewood/, 'logs'], [/^(Fuel|Soil|Clay)$/, /./, 'heap'],
     [/^Carcass$/, /./, 'meat'], [/^(Hide|Cured Hide|Leather)$/, /./, 'hides'], [/^(Cloth|Wool)$/, /./, 'cloth'], [/^Fiber$/, /./, 'bundles'],
     [/Seed$/, /./, 'sacks'], [/^Primitive$/, /small_stone|flint/, 'rubble'], [/^Primitive$/, /sand|salt|dirt|ash/, 'heap'], [/^Primitive$/, /hay|fiber|branch|bark|reed|straw/, 'bundles'],
-    [/^Organic$/, /flour|meal$|malt/, 'sacks'], [/^Organic$/, /./, 'baskets']
+    [/^Organic$/, /flour|meal$|malt/, 'sacks'], [/^Organic$/, /cloth$/, 'cloth'], [/^Organic$/, /./, 'baskets']
   ];
   const FOOD = [[/^(Meat|Fish)$/, /./, 'meat'], [/^Meal$/, /./, 'pots'], [/^(Grain|Legume)$/, /./, 'sacks'], [/^Preserve$/, /meat|fish|jerky|sausage/, 'meat'], [/^Preserve$/, /./, 'crates'], [/./, /./, 'baskets']];
   const pileOf = (table, o) => (table.find(r => r[0].test(o.sub || '') && r[1].test(o.id)) || [0, 0, 'crates'])[2];
