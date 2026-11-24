@@ -34,8 +34,6 @@ export interface TileData {
   scale?: number;
   painted?: PaintedSprite;
   scenery?: boolean;
-  rock?: boolean;
-  underRock?: boolean;
   ground?: number;
   waterIce?: number;
   river?: boolean;

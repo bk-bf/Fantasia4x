@@ -39,7 +39,6 @@ export interface ManifestPieceTop {
   veinSize: number;
   lift: number;
   ramp: string;
-  snow: string;
 }
 
 export interface ManifestPieces {
@@ -138,7 +137,6 @@ export interface PaintedPieceTop {
   veinSize: number;
   lift: number;
   ramp: { x: number; y: number; length: number };
-  snow: { x: number; y: number; length: number };
 }
 
 export interface PaintedPieces {
@@ -277,17 +275,12 @@ function readPieces(set: string, raw: unknown): ManifestPieces {
 
 function readTop(set: string, raw: unknown): ManifestPieceTop {
   if (!isObject(raw)) throw new Error(`pieces.${set}.top is not an object`);
-  const { image, veins, size, veinSize, lift, ramp, snow } = raw;
-  if (
-    typeof image !== 'string' ||
-    typeof veins !== 'string' ||
-    typeof ramp !== 'string' ||
-    typeof snow !== 'string'
-  )
-    throw new Error(`pieces.${set}.top does not name its images and ramps`);
+  const { image, veins, size, veinSize, lift, ramp } = raw;
+  if (typeof image !== 'string' || typeof veins !== 'string' || typeof ramp !== 'string')
+    throw new Error(`pieces.${set}.top does not name its images and ramp`);
   if (!isInt(size) || size <= 0 || !isInt(veinSize) || veinSize <= 0 || !isInt(lift) || lift < 0)
     throw new Error(`pieces.${set}.top has a bad size or lift`);
-  return { image, veins, size, veinSize, lift, ramp, snow };
+  return { image, veins, size, veinSize, lift, ramp };
 }
 
 function readField(name: string, raw: unknown): ManifestField {
@@ -477,9 +470,8 @@ export function buildTileset(
       continue;
     }
     const ramp = p.top ? m.sprites[p.top.ramp] : undefined;
-    const snow = p.top ? m.sprites[p.top.snow] : undefined;
-    if (p.top && (!ramp || !snow)) {
-      problems.push(`pieces.${set}.top names unknown sprite ${ramp ? p.top.snow : p.top.ramp}`);
+    if (p.top && !ramp) {
+      problems.push(`pieces.${set}.top names unknown sprite ${p.top.ramp}`);
       continue;
     }
     const veins = new Map<string, PaintedRamp>();
@@ -493,14 +485,8 @@ export function buildTileset(
       neighbours: p.neighbours,
       layouts: layouts as PaintedVariant[],
       veins,
-      ...(p.top && ramp && snow
-        ? {
-            top: {
-              ...p.top,
-              ramp: { x: ramp.x, y: ramp.y, length: ramp.w },
-              snow: { x: snow.x, y: snow.y, length: snow.w }
-            }
-          }
+      ...(p.top && ramp
+        ? { top: { ...p.top, ramp: { x: ramp.x, y: ramp.y, length: ramp.w } } }
         : null)
     });
   }
