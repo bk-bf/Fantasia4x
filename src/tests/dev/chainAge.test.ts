@@ -40,7 +40,7 @@ describe('hasRecipe', () => {
 
 describe('usesBossPart', () => {
   it('is true for an item whose recipe takes a boss part as a direct ingredient', () => {
-    expect(usesBossPart('great_bone_cuirass')).toBe(true);
+    expect(usesBossPart('ivory')).toBe(true);
   });
 
   it('is false for an item whose chain never touches a boss part', () => {

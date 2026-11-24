@@ -11,6 +11,7 @@ import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chain
 import { gearClassOf, weaponClassOf } from '$lib/game/core/rules/gear/gearClass';
 import { vesselAccepts } from '$lib/game/core/rules/gear/vessels';
 import { itemMatchesCostCategory } from '$lib/game/core/defs/items';
+import { RUNED_CONCEPT_ITEMS, waitsOnRunedConstruction } from './runedConceptItems';
 
 type Recipe = {
   id: string;
@@ -498,6 +499,7 @@ describe('ITEM-RULES R8 — every item has a way in', () => {
           !TIMED.has(i.id) &&
           !SIM_MADE.has(i.id) &&
           !R8_DEBT.has(i.id) &&
+          !RUNED_CONCEPT_ITEMS.has(i.id) &&
           i.category !== 'natural_weapon' &&
           !kingdomService.isTradeableDef(i as Item, 5)
       )
@@ -1075,6 +1077,7 @@ describe('voidshard — every way in is a hard one', () => {
 
 describe('ITEM-RULES R20 — a cure below the runed age costs the patient something', () => {
   const RUNED = AGE_NAMES.indexOf('runed');
+  const isRuned = (id: string) => chainAgeOf(id) >= RUNED || waitsOnRunedConstruction(id);
   const LOWER_IS_BETTER = new Set(['hungerRate', 'fatigueRate', 'thirstRate', 'pain']);
   type CondDef = { id: string; modifiers?: Record<string, number> };
   const CONDS = conditionsData as unknown as CondDef[];
@@ -1120,7 +1123,7 @@ describe('ITEM-RULES R20 — a cure below the runed age costs the patient someth
   it('no early-age dose clears a condition or a wound for nothing', () => {
     const bad = CONSUMABLES.filter((i) => !R20_DEBT.has(i.id))
       .filter((i) => cures(i).length > 0)
-      .filter((i) => chainAgeOf(i.id) < RUNED)
+      .filter((i) => !isRuned(i.id))
       .filter((i) => !pays(i))
       .map(
         (i) =>
@@ -1132,13 +1135,13 @@ describe('ITEM-RULES R20 — a cure below the runed age costs the patient someth
   it('the debt list has no stale entries', () => {
     const fixed = [...R20_DEBT].filter((id) => {
       const i = (ITEMS as Item[]).find((x) => x.id === id);
-      return i && (!cures(i).length || chainAgeOf(id) >= RUNED || pays(i));
+      return i && (!cures(i).length || isRuned(id) || pays(i));
     });
     expect(fixed, `fixed — drop from R20_DEBT: ${fixed.join(', ')}`).toEqual([]);
   });
 
   it('the runed age is the one that gets its cure clean', () => {
-    const bad = CONSUMABLES.filter((i) => cures(i).length > 0 && chainAgeOf(i.id) >= RUNED)
+    const bad = CONSUMABLES.filter((i) => cures(i).length > 0 && isRuned(i.id))
       .filter((i) => (i.grantsConditions ?? []).some(isPenalty))
       .map((i) => `${i.id} is a runed cure and still charges a price — that is what the age buys`);
     expect(bad, bad.join('; ')).toEqual([]);
