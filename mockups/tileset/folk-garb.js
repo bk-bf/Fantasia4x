@@ -71,7 +71,29 @@ function paintFigure(pen, g, look, cloth) {
     shadeBy(pen, x0, top, cloth, 1);
   }
   for (let y = top + 1; y <= top + tall; y++) for (const x of [cx - 1, cx]) shadeBy(pen, x, y, cloth, -1);
-  if (full >= 3) for (const x of [cx - 1 - wide, cx + wide]) shadeBy(pen, x, top + tall, cloth, -1);
+  if (full >= 2) for (let x = cx - hw + 2; x <= cx + hw - 3; x++) if (x !== cx - 1 && x !== cx) shadeBy(pen, x, top + tall, cloth, -1);
+}
+
+function paintBodice(pen, g, look, skin) {
+  const { cx, hw, tTop, tl, face } = g, sn = skin.length - 1, belt = tTop + tl - 2;
+  if (look.sex !== 'female') return;
+  const hooded = look.hat === 'hood' || look.hat === 'coif', lit = skin[Math.max(0, sn - 2)], shaded = skin[Math.max(0, sn - 3)];
+  const fitted = tl >= 9 && hw >= 5 && look.body.build < 1.3, waistTop = Math.max(tTop + 7, belt - 3);
+  if (face === 's') {
+    if (!hooded) for (const x of [cx + hw - 2, cx + hw - 3]) pen.put(x, tTop, lit);
+    if (!fitted) return;
+    for (let y = waistTop; y <= belt + 1; y++) { pen.put(cx + hw - 2, y, null); pen.put(cx - hw, y, null); }
+    pen.put(cx + hw - 3, belt, P.gold[4]); pen.put(cx + hw - 3, belt + 1, P.gold[2]);
+    reink(pen, cx - hw - 2, waistTop - 2, cx + hw, belt + 3);
+    return;
+  }
+  if (face === 'f' && !hooded && hw >= 4) {
+    const scoop = tl >= 9 ? [[tTop, 2], [tTop + 1, 2], [tTop + 2, 1]] : [[tTop, 2], [tTop + 1, 1]];
+    for (const [y, half] of scoop) for (let x = cx - half; x < cx + half; x++) pen.put(x, y, x < cx ? lit : shaded);
+  }
+  if (!fitted) return;
+  for (let y = waistTop; y <= belt + 1; y++) for (const x of [cx - hw + 1, cx + hw - 2]) pen.put(x, y, null);
+  reink(pen, cx - hw - 1, waistTop - 2, cx + hw, belt + 3);
 }
 
 function paintGarb(pen, g, look, skin, s) {
@@ -79,6 +101,7 @@ function paintGarb(pen, g, look, skin, s) {
   paintSleeves(pen, g, look, skin, cloth, s);
   paintSkirt(pen, g, look, cloth);
   paintFigure(pen, g, look, cloth);
+  paintBodice(pen, g, look, skin);
 }
 
 function paintBuild(pen, g, look) {
