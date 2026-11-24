@@ -1,0 +1,25 @@
+:root { --bg: #e9e4d8; --ink: #2a241c; --frame: #b9ae98; --card: rgb(246 241 228 / .93); --card-line: #c9c0aa; --dim: #6d6555; --hot: #a65f12; --on: #fff8e8; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121014; --ink: #f4ecd8; --frame: #35303c; --card: rgb(10 8 12 / .86); --card-line: #3a3444; --dim: #948c7c; --hot: #e0a04a; --on: #14100a; } }
+:root[data-theme="dark"] { --bg: #121014; --ink: #f4ecd8; --frame: #35303c; --card: rgb(10 8 12 / .86); --card-line: #3a3444; --dim: #948c7c; --hot: #e0a04a; --on: #14100a; }
+
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font: 11px/14px system-ui, sans-serif; }
+#stage { position: fixed; inset: 0; display: flex; overflow: auto; }
+#frame { position: relative; flex: none; margin: auto; outline: 1px solid var(--frame); }
+#view { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+#pins { position: absolute; inset: 0; pointer-events: none; }
+#pins b { position: absolute; transform: translate(-50%, -50%); min-width: 15px; height: 15px; padding: 0 2px; box-sizing: border-box; display: grid; place-items: center; font-weight: 650; font-size: 10px; line-height: 1; color: #14100a; background: #e0a04a; border: 1px solid #14100a; }
+#pins b.loot { background: #f2d36b; }
+
+#cards { position: fixed; inset: 12px auto auto 12px; z-index: 50; display: flex; flex-direction: column; gap: 8px; width: min(270px, calc(100vw - 24px)); pointer-events: none; }
+#cards section { background: var(--card); border: 1px solid var(--card-line); padding: 7px 9px; }
+#cards h2 { margin: 0 0 5px; font-size: 12px; font-weight: 650; }
+#cards ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
+#cards li { display: grid; grid-template-columns: 17px 1fr; gap: 6px; align-items: start; }
+#cards li > b { height: 15px; display: grid; place-items: center; font-size: 10px; color: var(--on); background: var(--hot); }
+#cards li span { color: var(--dim); display: block; }
+#loot ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+#loot ul li { grid-template-columns: 36px 1fr auto; align-items: center; }
+#loot i { display: block; height: 30px; background: url(sprites.png) no-repeat; image-rendering: pixelated; }
+#loot em { font-style: normal; font-variant-numeric: tabular-nums; color: var(--dim); }
+#loot button { pointer-events: auto; margin-top: 7px; font: inherit; font-weight: 650; letter-spacing: .06em; color: var(--on); background: var(--hot); border: 0; padding: 2px 10px; cursor: pointer; }
+@media (max-width: 600px) { #cards { width: min(210px, calc(100vw - 24px)); } #cards li span { display: none; } }

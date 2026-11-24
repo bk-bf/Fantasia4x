@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lairs as places</title>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+<link rel="stylesheet" href="lairs.css">
+</head>
+<body>
+<main id="stage"><div id="frame"><canvas id="view"></canvas><div id="pins"></div></div></main>
+<aside id="cards"><section id="legend" hidden></section><section id="loot" hidden></section></aside>
+<header id="mock">
+  <div class="mrow"><strong>Lairs as places</strong><button id="mockhide">Hide · `</button></div>
+  <div class="mrow"><span class="grp" data-k="lair"><span class="lab">Lair</span><button data-v="wolves">Wolves</button><button data-v="bear">Bear</button><button data-v="goblins">Goblins</button><button data-v="fen">Fen</button><button data-v="harpies">Harpies</button></span></div>
+  <div class="mrow"><span class="grp" data-k="age" data-def="2"><span class="lab">Age</span><button data-v="1">Fresh</button><button data-v="2">Settled</button><button data-v="3">Old</button></span><span class="grp" data-k="state"><button data-v="lived">Lived in</button><button data-v="cleared">Cleared</button></span></div>
+  <div class="mrow"><span class="grp" data-k="speed" data-def="1"><span class="lab">Play</span><button data-v="0">Pause</button><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="4">4×</button></span><input id="time" type="range" min="0" max="40" step="0.1" aria-label="Moment in the loop"></div>
+  <div class="mrow"><span class="grp" data-k="parts" data-def="on"><span class="lab">Parts</span><button data-v="off">Off</button><button data-v="on">On</button></span><span class="grp" data-k="zoom"><span class="lab">Zoom</span><button data-v="fit">Fit</button><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="3">3×</button></span></div>
+  <div class="mrow"><span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span></div>
+  <p class="mnote">mock scenes on the painted art · resting poses and loot counts invented</p>
+</header>
+<script src="sprites.js"></script>
+<script src="scenes.js"></script>
+<script src="lairs.js"></script>
+</body>
+</html>
