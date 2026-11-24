@@ -28,6 +28,6 @@
   addEventListener('keydown', ev => { if (ev.key === ' ' && !/^(INPUT|SELECT|BUTTON)$/.test(ev.target.tagName)) { ev.preventDefault(); ui.set('speed', ui.state.speed === '0' ? '1' : '0'); } });
   let rz = 0;
   addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { mounted = ''; mount(); }, 150); });
-  Promise.all(['catalog-data.json', 'folk-data.json'].map(u => fetch(u).then(r => r.json()))).then(([data, folk]) => { DBX.fromData(data.objects); MOTION_LOAD.init(data.objects); MOTION_FOLK.init(folk); ready = true; mount(); });
+  fetch('catalog-data.json').then(r => r.json()).then(data => { DBX.fromData(data.objects); MOTION_LOAD.init(data.objects); MOTION_FOLK.init(FOLK_CAST); ready = true; mount(); });
   requestAnimationFrame(tick);
 })();
