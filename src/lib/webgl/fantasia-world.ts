@@ -284,6 +284,14 @@ function recomputeExteriorComponent(
 }
 
 const DIRT_BG = (SUBTERRAINS['dirt']?.bg ?? [0.08, 0.06, 0.03]) as [number, number, number];
+const NO_COLOUR: RGB = Object.freeze({ r: 0, g: 0, b: 0 });
+const sharedColours = new WeakMap<readonly number[], RGB>();
+
+function sharedRgb(c: readonly number[]): RGB {
+  let rgb = sharedColours.get(c);
+  if (!rgb) sharedColours.set(c, (rgb = Object.freeze({ r: c[0], g: c[1], b: c[2] })));
+  return rgb;
+}
 const GLOWING_GROVE_SPRITE_SALT = 53;
 const REED_BANK = 'riverbank';
 const REED_SHARE = 0.2;
@@ -361,8 +369,8 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
   if (hiddenMask[tile.y]?.[tile.x]) {
     grid.setTile(tile.x, tile.y, {
       char: ' ',
-      foreground: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
-      background: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
+      foreground: sharedRgb(DIRT_BG),
+      background: sharedRgb(DIRT_BG),
       position: { x: tile.x, y: tile.y },
       ...(PAINTED_TILES ? { painted: paintedTile('subterrain', 'cave', tile.x, tile.y) } : null)
     });
@@ -379,8 +387,8 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     : undefined;
   grid.setTile(tile.x, tile.y, {
     char,
-    foreground: { r: fg[0], g: fg[1], b: fg[2] },
-    background: { r: bg[0], g: bg[1], b: bg[2] },
+    foreground: sharedRgb(fg),
+    background: sharedRgb(bg),
     position: { x: tile.x, y: tile.y },
     ...(PAINTED_TILES ? { painted } : null),
     ...(GROUND_BLEND && painted ? blendedGround(tile) : null)
@@ -526,8 +534,8 @@ export function applyResourceToGrid(
   const blank = (g: GameGrid) =>
     g.setTile(tile.x, tile.y, {
       char: ' ',
-      foreground: { r: 0, g: 0, b: 0 },
-      background: { r: 0, g: 0, b: 0 },
+      foreground: NO_COLOUR,
+      background: NO_COLOUR,
       position: { x: tile.x, y: tile.y }
     });
   const clear = () => {
@@ -568,11 +576,11 @@ export function applyResourceToGrid(
     : undefined;
   const tall = rs !== undefined && rs > 1;
   blank(tall ? gridShort : gridTall);
-  const detail = baseDetail ? { r: baseDetail[0], g: baseDetail[1], b: baseDetail[2] } : undefined;
+  const detail = baseDetail ? sharedRgb(baseDetail) : undefined;
   (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
     char: pool[h],
-    foreground: { r: baseFg[0], g: baseFg[1], b: baseFg[2] },
-    background: { r: 0, g: 0, b: 0 },
+    foreground: sharedRgb(baseFg),
+    background: NO_COLOUR,
     position: { x: tile.x, y: tile.y },
     detail,
     scale: painted ? (stageScale !== 1 ? stageScale : undefined) : scale,
