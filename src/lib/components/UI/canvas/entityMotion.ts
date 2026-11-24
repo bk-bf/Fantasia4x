@@ -13,6 +13,13 @@ export interface Pose {
   look: Look;
 }
 
+export interface Spot {
+  x: number;
+  y: number;
+}
+
+export type Placed = Look & { animationOffset: Spot };
+
 export interface CreatureLook {
   id: string;
   gait?: string;
@@ -135,12 +142,13 @@ export class EntityMotion {
     return this.tracks.size;
   }
 
-  begin(realMs: number, animMs: number): void {
+  begin(realMs: number, animMs: number, hits?: readonly HitEvent[]): void {
     this.dtMs = this.frame === 0 ? 0 : Math.max(0, realMs - this.realMs);
     this.realMs = realMs;
     this.animMs = animMs;
     this.frame++;
     this.live = 0;
+    if (hits) this.noteHits(hits);
   }
 
   noteHits(events: readonly HitEvent[]): void {
@@ -239,6 +247,30 @@ export class EntityMotion {
     return this.pose(id, x, y, 'pawn', pawnGait(state), pawnRest(state), lungeX);
   }
 
+  mobTile(
+    id: string,
+    at: Spot,
+    cellX: number,
+    cellY: number,
+    state: string,
+    def: CreatureLook,
+    lunge: Spot,
+    scale = 1
+  ): Placed {
+    return place(this.mob(id, at.x, at.y, state, def, lunge.x, scale), at, cellX, cellY, lunge);
+  }
+
+  pawnTile(
+    id: string,
+    at: Spot,
+    cellX: number,
+    cellY: number,
+    state: string | undefined,
+    lunge: Spot
+  ): Placed {
+    return place(this.pawn(id, at.x, at.y, state, lunge.x), at, cellX, cellY, lunge);
+  }
+
   end(): void {
     if (this.live === this.tracks.size) return;
     for (const [id, t] of this.tracks) if (t.frame !== this.frame) this.tracks.delete(id);
@@ -247,6 +279,16 @@ export class EntityMotion {
 
 const look: Look = { flip: false, lean: 0, squash: 0, pitch: 0, lift: 0 };
 const out: Pose = { dx: 0, look };
+const placed: Placed = { ...look, animationOffset: { x: 0, y: 0 } };
+
+function place(pose: Pose, at: Spot, cellX: number, cellY: number, lunge: Spot): Placed {
+  Object.assign(placed, pose.look);
+  placed.animationOffset = {
+    x: (at.x - cellX) * BASE_TILE_PX + lunge.x + pose.dx,
+    y: (at.y - cellY) * BASE_TILE_PX + lunge.y
+  };
+  return placed;
+}
 
 function face(t: Track, x: number, lungeX: number): void {
   if (Math.abs(lungeX) > LUNGE_FACE) {

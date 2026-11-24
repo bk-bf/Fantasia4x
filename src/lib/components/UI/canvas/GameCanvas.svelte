@@ -930,8 +930,7 @@
     const clampedDt = Math.min(dt, 0.05);
     const alpha = clampedDt > 0 ? 1 - Math.exp(-clampedDt / MOVE_SMOOTH_TAU) : 1;
     const nowMs = animNow();
-    motion.begin(performance.now(), nowMs);
-    motion.noteHits(combatFeedback.live(nowMs));
+    motion.begin(performance.now(), nowMs, combatFeedback.live(nowMs));
 
     const freshState = get(gameState);
     const liveMobs = freshState.mobs ?? mobList;
@@ -969,7 +968,6 @@
       const mLunge = lungeOffset(mob.id, nowMs);
       const mTier = def.tier;
       const mScale = mTier != null ? TIER_GLYPH_SCALE[mTier] : undefined;
-      const mPose = motion.mob(mob.id, rm.x, rm.y, mob.state, def, mLunge.x, mScale);
       const mTint = mTier != null ? TIER_GLYPH_TINT[mTier] : 1;
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: def.chars[0],
@@ -982,11 +980,7 @@
         ...(mScale != null && mScale !== 1 ? { scale: mScale } : {}),
         ...(PAINTED_TILES ? paintedEntity('creature', def.id, mob.id) : null),
         position: { x: cellX, y: cellY },
-        animationOffset: {
-          x: (rm.x - cellX) * BASE_TILE_PX + mLunge.x + mPose.dx,
-          y: (rm.y - cellY) * BASE_TILE_PX + mLunge.y
-        },
-        ...mPose.look
+        ...motion.mobTile(mob.id, rm, cellX, cellY, mob.state, def, mLunge, mScale)
       });
     }
     if (seenMobs.size !== mobRenderPos.size) {
@@ -1034,17 +1028,12 @@
                 : { r: 1, g: 1, b: 1 };
 
       const pLunge = lungeOffset(pawn.id, nowMs);
-      const pPose = motion.pawn(pawn.id, rp.x, rp.y, pawn.currentState, pLunge.x);
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: PAWN_SPRITES[i % PAWN_SPRITES.length],
         foreground: baseColor,
         background: isDrafted ? { r: 0.3, g: 0, b: 0 } : { r: 0, g: 0, b: 0 },
         position: { x: cellX, y: cellY },
-        animationOffset: {
-          x: (rp.x - cellX) * BASE_TILE_PX + pLunge.x + pPose.dx,
-          y: (rp.y - cellY) * BASE_TILE_PX + pLunge.y
-        },
-        ...pPose.look,
+        ...motion.pawnTile(pawn.id, rp, cellX, cellY, pawn.currentState, pLunge),
         rotation: isSleeping || isCollapsed ? 90 : undefined,
         ...(PAINTED_TILES ? paintedPawn(pawn, freshState.culturePool) : null)
       });
@@ -2411,24 +2400,24 @@
         }
         if (passOn('effects'))
           worldFx.frame(
-          {
-            pawns: pawnList,
-            mobs: mobList,
-            pawnPos: pawnRenderPos,
-            mobPos: mobRenderPos,
-            renderer,
-            hidden: isHiddenTile,
-            mobsDrawn: tW >= ENTITY_RENDER_MIN_PX,
-            aim: moveAimActive
-              ? {
-                  from: [moveAimAnchorX, moveAimAnchorY],
-                  to: [moveAimEndX, moveAimEndY],
-                  slots: moveAimSlots
-                }
-              : null
-          },
-          { vx, vy, tW, tH, paused: simPaused }
-        );
+            {
+              pawns: pawnList,
+              mobs: mobList,
+              pawnPos: pawnRenderPos,
+              mobPos: mobRenderPos,
+              renderer,
+              hidden: isHiddenTile,
+              mobsDrawn: tW >= ENTITY_RENDER_MIN_PX,
+              aim: moveAimActive
+                ? {
+                    from: [moveAimAnchorX, moveAimAnchorY],
+                    to: [moveAimEndX, moveAimEndY],
+                    slots: moveAimSlots
+                  }
+                : null
+            },
+            { vx, vy, tW, tH, paused: simPaused }
+          );
         updateSelectionRings(vx, vy, tW, tH);
         if (
           _terrainDirty &&

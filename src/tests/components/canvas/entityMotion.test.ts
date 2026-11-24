@@ -79,7 +79,8 @@ describe('step bob and lean', () => {
   it('bobs by whole art pixels locked to distance, not time', () => {
     const slow = walker(new EntityMotion(), 'a', 0, 2, 120);
     const fast = walker(new EntityMotion(), 'a', 0, 2, 40);
-    const bobsOf = (ps: Pose[]) => ps.filter((p, i) => i > 0 && p.look.lift !== ps[i - 1].look.lift).length;
+    const bobsOf = (ps: Pose[]) =>
+      ps.filter((p, i) => i > 0 && p.look.lift !== ps[i - 1].look.lift).length;
     for (const p of slow) expect([0, -ART]).toContain(p.look.lift);
     expect(Math.abs(bobsOf(slow) - bobsOf(fast))).toBeLessThanOrEqual(2);
     expect(bobsOf(slow)).toBeGreaterThan(4);
@@ -164,8 +165,7 @@ describe('stride', () => {
 
   it('reads the height from the creature sprite the entity is drawn with', () => {
     setPaintedTileset(creatureSet({ rat: 16 / 32, boar: 31 / 32, mammoth: 58 / 32 }));
-    const steps = (id: string) =>
-      stepsOver((m, x) => m.mob('a', x, 0, 'Wander', { id }, 0));
+    const steps = (id: string) => stepsOver((m, x) => m.mob('a', x, 0, 'Wander', { id }, 0));
     const [rat, boar, mammoth] = [steps('rat'), steps('boar'), steps('mammoth')];
     expect(rat).toBeGreaterThan(boar * 1.8);
     expect(mammoth).toBeLessThan(boar * 0.6);
@@ -223,7 +223,10 @@ describe('breathing', () => {
   it('breathes crowds out of step', () => {
     const m = new EntityMotion();
     m.begin(1000, 1000);
-    const squashes = Array.from({ length: 12 }, (_, i) => m.pawn(`p${i}`, i, 0, 'Idle', 0).look.squash);
+    const squashes = Array.from(
+      { length: 12 },
+      (_, i) => m.pawn(`p${i}`, i, 0, 'Idle', 0).look.squash
+    );
     expect(new Set(squashes).size).toBe(2);
   });
 
@@ -294,6 +297,43 @@ describe('bookkeeping', () => {
     m.begin(0, 0);
     const first = m.pawn('a', 0, 0, 'Idle', 0);
     expect(m.mob('b', 1, 0, 'Wander', WOLF, 0)).toBe(first);
+  });
+
+  it('places a figure on its tile from its sub-tile spot, its lunge and its pose', () => {
+    const m = new EntityMotion();
+    m.begin(0, 0);
+    const pose = { ...m.pawn('a', 3.25, 5.5, 'Idle', 4) };
+    const tile = m.pawnTile('a', { x: 3.25, y: 5.5 }, 3, 6, 'Idle', { x: 4, y: -2 });
+    expect(tile.animationOffset).toEqual({ x: 0.25 * 16 + 4 + pose.dx, y: -0.5 * 16 - 2 });
+    expect(tile.flip).toBe(pose.look.flip);
+    expect(tile.lift).toBe(pose.look.lift);
+  });
+
+  it('gives each placed figure its own offset, since a tile keeps it', () => {
+    const m = new EntityMotion();
+    m.begin(0, 0);
+    const a = m.pawnTile('a', { x: 1, y: 1 }, 1, 1, 'Idle', { x: 0, y: 0 }).animationOffset;
+    const b = m.mobTile('b', { x: 2.5, y: 1 }, 2, 1, 'Wander', WOLF, {
+      x: 0,
+      y: 0
+    }).animationOffset;
+    expect(b).not.toBe(a);
+    expect(a).toEqual({ x: 0, y: 0 });
+    expect(b.x).toBe(8);
+  });
+
+  it("takes the frame's hits with begin", () => {
+    const m = new EntityMotion();
+    m.begin(0, 0);
+    m.pawn('a', 0, 0, 'Idle', 0);
+    m.end();
+    m.begin(16, 16, [{ id: 1, entityId: 'a', kind: 'damage', spawnTime: 16 }]);
+    const dx = new Set<number>();
+    for (let t = 16; t < HIT_MS; t += 10) {
+      m.begin(t, t);
+      dx.add(m.pawn('a', 0, 0, 'Idle', 0).dx);
+    }
+    expect(dx.has(2 * ART)).toBe(true);
   });
 
   it('maps sim states and data to gaits', () => {
