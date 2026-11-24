@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-const SCOPE = '({ Spr, canopy, trunk2, limb, rng, noise, hash, clamp, dark, lit, rp, dith, P, TREES, mkTree, mkPlant, mkPawn, PAWNS })';
+const SCOPE = '({ Spr, canopy, trunk2, limb, rng, noise, hash, clamp, dark, lit, rp, dith, P, TREES, mkTree, mkPlant, mkPawn, PAWNS, decal })';
 
 export async function loadArt(TREE) {
   const { BAKE_ART } = await import(`${TREE}/tools/tileset/sources.mjs`);

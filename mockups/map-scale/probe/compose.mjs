@@ -67,7 +67,7 @@ if (snowy) {
 }
 
 const inView = (p, padX, padUp, padDown) => p[0] >= spec.x0 - padX && p[0] < spec.x0 + W / TILE + padX && p[1] >= spec.y0 - padUp && p[1] < spec.y0 + H / TILE + padDown;
-const px = (tx) => (tx - spec.x0) * TILE;
+const px = (tx) => Math.round((tx - spec.x0) * TILE);
 
 const folk = (spec.folk ?? []).map((f) => {
   const built = A.mkPawn(A.PAWNS[f.kind].o),
@@ -88,26 +88,18 @@ const cutaway = (x, y) => {
 };
 
 for (const [tx, ty] of plan.lilies.filter((p) => inView(p, 1, 1, 1))) {
-  const cx = px(tx) + 6 + Math.floor(A.hash(tx, ty, 301) * 20),
-    cy = (ty - spec.y0) * TILE + 6 + Math.floor(A.hash(tx, ty, 303) * 20),
-    pads = 1 + Math.floor(A.hash(tx, ty, 305) * 3);
+  const hx = Math.floor(tx * 7),
+    hy = Math.floor(ty * 7);
+  const cx = px(tx) + 6 + Math.floor(A.hash(hx, hy, 301) * 20),
+    cy = Math.round((ty - spec.y0) * TILE) + 6 + Math.floor(A.hash(hx, hy, 303) * 20),
+    pads = 1 + Math.floor(A.hash(hx, hy, 305) * 3);
   for (let p = 0; p < pads; p++) {
-    const ox = cx + Math.round((A.hash(tx + p, ty, 307) - 0.5) * 16),
-      oy = cy + Math.round((A.hash(tx, ty + p, 309) - 0.5) * 12),
-      wide = 3 + Math.floor(A.hash(tx + p, ty + p, 311) * 2);
-    for (let j = -2; j <= 2; j++)
-      for (let i = -wide; i <= wide; i++) {
-        if ((i * i) / (wide * wide + 1) + (j * j) / 5 > 1 || (i === wide - 1 && j === 0) || (i === wide && j === 0)) continue;
-        const x = ox + i,
-          y = oy + j;
-        if (x < 0 || y < 0 || x >= W || y >= H) continue;
-        const c = A.P.green[j < 0 ? 4 : j === 2 || i === -wide ? 1 : 3];
-        for (let k = 0; k < 3; k++) img[(y * W + x) * 3 + k] = c[k] * sun[k];
-      }
-    if (A.hash(tx + p, ty - p, 313) < 0.3 && ox > 0 && oy > 1 && ox < W - 1 && oy < H) {
-      const bloom = [[0, -1, [250, 244, 236]], [1, -1, [236, 196, 214]], [0, -2, [236, 196, 214]]];
-      for (const [i, j, c] of bloom) for (let k = 0; k < 3; k++) img[((oy + j) * W + ox + i) * 3 + k] = c[k] * sun[k];
-    }
+    const ox = cx + Math.round((A.hash(hx + p, hy, 307) - 0.5) * 16),
+      oy = cy + Math.round((A.hash(hx, hy + p, 309) - 0.5) * 12);
+    A.decal('lily', ox, oy, A.hash(hx + p, hy - p, 313), null, (x, y, c) => {
+      if (x < 0 || y < 0 || x >= W || y >= H) return;
+      for (let k = 0; k < 3; k++) img[(y * W + x) * 3 + k] = c[k] * sun[k];
+    });
   }
 }
 
@@ -124,8 +116,10 @@ for (const t of plan.trees.filter((p) => inView([p.x, p.y], 14, 4, 24))) {
   sprites.push({ sprite, x: px(t.x) + TILE / 2, base: (t.y - spec.y0) * TILE + TRUNK_FOOT, order: (t.y - spec.y0) * TILE + TRUNK_FOOT, crown: true });
 }
 for (const [tx, ty] of plan.reeds.filter((p) => inView(p, 2, 2, 3))) {
-  const sprite = A.mkPlant('reeds', 1 + Math.floor(A.hash(tx, ty, 315) * 3), 'summer');
-  sprites.push({ sprite, x: px(tx) + TILE / 2 + Math.round((A.hash(tx, ty, 317) - 0.5) * 10), base: (ty - spec.y0) * TILE + 22 + Math.round(A.hash(tx, ty, 319) * 8), order: (ty - spec.y0) * TILE + 26 });
+  const hx = Math.floor(tx * 7),
+    hy = Math.floor(ty * 7);
+  const sprite = A.mkPlant('reeds', 1 + Math.floor(A.hash(hx, hy, 315) * 3), 'summer');
+  sprites.push({ sprite, x: px(tx) + TILE / 2 + Math.round((A.hash(hx, hy, 317) - 0.5) * 10), base: Math.round((ty - spec.y0) * TILE) + 22 + Math.round(A.hash(hx, hy, 319) * 8), order: (ty - spec.y0) * TILE + 26 });
 }
 for (const f of folk) sprites.push(f);
 sprites.sort((a, b) => a.order - b.order);
