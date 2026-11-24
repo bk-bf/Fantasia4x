@@ -50,3 +50,4 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 #cursor { position: absolute; top: -2px; width: 2px; height: 20px; margin-left: -1px; background: var(--ink); }
 #clock { min-width: 96px; text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 600px) { #cards { width: min(200px, calc(100vw - 24px)); } #cards li span, #cards ul.need, #cards h3 { display: none; } #clock { min-width: 0; } }
+#mock a { color: inherit; margin-left: 8px; }

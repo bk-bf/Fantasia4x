@@ -1,6 +1,6 @@
 'use strict';
 const SHEET = (() => {
-  const GROUPS = ['Movement', 'Idle life', 'Work', 'Needs', 'Social', 'Combat', 'Creatures', 'World response'];
+  const GROUPS = ['Movement', 'Carrying', 'Idle life', 'Work', 'Needs', 'Social', 'Combat', 'Creatures', 'World response'];
   const TILES = {}, TW = 256, TH = 128;
   const GKIND = { grass: 'grass', dirt: 'soft', mud: 'soft', tilled: 'soft', sand: 'soft', snow: 'snow', water: 'water' };
   const groundFn = {
@@ -18,6 +18,11 @@ const SHEET = (() => {
   const loop = (anim, o) => [['act', anim, 9999, o]];
   const one = (id, group, label, rig, kind, anim, x) => ({ id, group, label, cast: [P1(rig, kind, loop(anim))], ...(x || {}) });
   const go = (id, group, label, rig, kind, anim, dir, v, x) => ({ id, group, label, follow: 1, cast: [P1(rig, kind, [['run', dir, v, anim]])], ...(x || {}) });
+  const BARE = { tool: null, shield: null }, PACE = { light: 26, bulky: 19, heavy: 12 }, BEARER = { light: 'weaver', bulky: 'hunter', heavy: 'hauler' }, OWN = { light: 'bone_stock', bulky: 'wild_oats', heavy: 'pine_log' };
+  const WAYS = [['side', 'sideways', [1, 0]], ['toward', 'toward', [0, 1]], ['away', 'away', [0, -1]], ['left', 'the other way', [-1, 0]]];
+  const haul = (id, label, kind, hold, dir, load, x) => go(id, 'Carrying', label, 'pawn', kind, HOLDS[hold][0], dir, PACE[hold], { over: BARE, loads: [load], hold, w: 120, h: 108, ...(x || {}) });
+  const carries = (hold, name) => WAYS.map(([way, text, dir]) => haul(HOLDS[hold][0] + '-' + way, name + ' · ' + text, way === 'left' ? 'smith' : BEARER[hold], hold, dir, OWN[hold], { pick: 1 }));
+  const stood = (id, label, faces, w) => ({ id, group: 'Carrying', label, w, h: 108, pick: 1, loads: faces.flatMap(() => HAUL.BULKS.map(b => OWN[b])), cast: faces.flatMap((f, row) => HAUL.BULKS.map((b, i) => P1('pawn', BEARER[b], loop(HOLDS[b][1], { face: f }), [(i - 1) * 46 + (row ? 23 : 0), row * -2], BARE))) });
   const CELLS = [
     go('walk-side', 'Movement', 'Walking · sideways', 'pawn', 'woodcutter', 'walk', [1, 0], 28),
     go('walk-toward', 'Movement', 'Walking · toward', 'pawn', 'woodcutter', 'walk', [0, 1], 24),
@@ -25,8 +30,11 @@ const SHEET = (() => {
     go('walk-left', 'Movement', 'Walking · the other way', 'pawn', 'guard', 'walk', [-1, 0], 28),
     go('run', 'Movement', 'Running', 'pawn', 'hunter', 'run', [1, 0], 80),
     go('stalk', 'Movement', 'Stalking', 'pawn', 'hunter', 'stalk', [1, 0], 11),
-    go('haul-side', 'Movement', 'Hauling · sideways', 'pawn', 'hauler', 'haul', [1, 0], 22),
-    go('haul-toward', 'Movement', 'Hauling · toward', 'pawn', 'hauler', 'haul', [0, 1], 20),
+    ...carries('light', 'Light carry'), ...carries('bulky', 'Bulky carry'), ...carries('heavy', 'Heavy carry'),
+    ...WAYS.slice(0, 3).map(([way, text, dir]) => haul('rescue-' + way, 'Carrying the downed · ' + text, 'woodcutter', 'heavy', dir, 'carried_pawn')),
+    stood('carry-stand', 'Standing with a load · light, bulky, heavy', ['s'], 168),
+    stood('carry-stand-fb', 'Standing with a load · toward', ['f'], 168),
+    stood('carry-stand-b', 'Standing with a load · away', ['b'], 168),
     go('panic', 'Movement', 'Panicking', 'pawn', 'weaver', 'panic', [1, 0], 66),
     one('idle', 'Idle life', 'Standing', 'pawn', 'farmer', 'idle', { face: 'f' }),
     one('idle-mage', 'Idle life', 'Standing · cloak and long hair', 'pawn', 'mage', 'idle', { face: 'f' }),
@@ -39,14 +47,14 @@ const SHEET = (() => {
     { id: 'hammer', group: 'Work', label: 'Metalworking', cast: [P1('pawn', 'smith', loop('hammer'), [-12, 0])], props: [['anvil', 10, 3]], ground: 'dirt' },
     { id: 'stir', group: 'Work', label: 'Cooking', cast: [P1('pawn', 'cook', loop('stir'), [-14, 0], { tool: null })], props: [['campfire', 9, 3]], ground: 'dirt', smoke: [9, -18] },
     one('gather', 'Work', 'Foraging', 'pawn', 'weaver', 'gather', { ox: -6 }),
-    { id: 'lift', group: 'Work', label: 'Picking up', cast: [P1('pawn', 'hauler', [['act', 'idle', 1], ['act', 'lift', 2.6]], [-4, 0], { tool: null })], span: 3.6, n: 12 },
+    { id: 'lift', group: 'Work', label: 'Picking up', h: 108, pick: 1, loads: [OWN.heavy], cast: [P1('pawn', 'hauler', [['act', 'idle', 1], ['act', 'lift', 2.6]], [-4, 0], BARE)], span: 3.6, n: 12 },
     { id: 'chop-fb', group: 'Work', label: 'Woodcutting · toward and away', w: 136, cast: [P1('pawn', 'woodcutter', loop('chop', { face: 'f' }), [-30, 0]), P1('pawn', 'woodcutter', loop('chop', { face: 'b' }), [30, -2])] },
     { id: 'mine-fb', group: 'Work', label: 'Mining · toward and away', w: 136, cast: [P1('pawn', 'miner', loop('mine', { face: 'f' }), [-30, 0]), P1('pawn', 'miner', loop('mine', { face: 'b' }), [30, -2])] },
     { id: 'hoe-fb', group: 'Work', label: 'Planting · toward and away', w: 136, ground: 'tilled', cast: [P1('pawn', 'farmer', loop('hoe', { face: 'f' }), [-30, 0]), P1('pawn', 'farmer', loop('hoe', { face: 'b' }), [30, -2])] },
     { id: 'hammer-fb', group: 'Work', label: 'Metalworking · toward and away', w: 136, cast: [P1('pawn', 'smith', loop('hammer', { face: 'f' }), [-30, 0]), P1('pawn', 'smith', loop('hammer', { face: 'b' }), [30, -2])] },
     { id: 'stir-fb', group: 'Work', label: 'Cooking · toward and away', w: 136, cast: [P1('pawn', 'cook', loop('stir', { face: 'f' }), [-30, 0], { tool: null }), P1('pawn', 'cook', loop('stir', { face: 'b' }), [30, -2], { tool: null })] },
     { id: 'gather-fb', group: 'Work', label: 'Foraging · toward and away', w: 136, cast: [P1('pawn', 'weaver', loop('gather', { face: 'f' }), [-30, 0]), P1('pawn', 'weaver', loop('gather', { face: 'b' }), [30, -2])] },
-    { id: 'lift-fb', group: 'Work', label: 'Picking up · toward and away', w: 136, span: 3.6, n: 12, cast: [P1('pawn', 'hauler', [['act', 'idle', 1, { face: 'f' }], ['act', 'lift', 2.6, { face: 'f' }]], [-30, 0], { tool: null }), P1('pawn', 'hauler', [['act', 'idle', 1, { face: 'b' }], ['act', 'lift', 2.6, { face: 'b' }]], [30, -2], { tool: null })] },
+    { id: 'lift-fb', group: 'Work', label: 'Picking up · toward and away', w: 152, h: 108, pick: 1, loads: [OWN.heavy], span: 3.6, n: 12, cast: [P1('pawn', 'hauler', [['act', 'idle', 1, { face: 'f' }], ['act', 'lift', 2.6, { face: 'f' }]], [-36, 0], BARE), P1('pawn', 'hauler', [['act', 'idle', 1, { face: 'b' }], ['act', 'lift', 2.6, { face: 'b' }]], [36, -2], BARE)] },
     { id: 'draw', group: 'Needs', label: 'Drawing water', cast: [P1('pawn', 'farmer', loop('draw'), [-18, 0], { tool: null })], props: [['well', 8, 1]], ground: 'dirt' },
     one('drink', 'Needs', 'Drinking', 'pawn', 'miner', 'drink'),
     one('eat', 'Needs', 'Eating', 'pawn', 'guard', 'eat', { over: { shield: null }, props: [['stool', -3, -1]] }),
@@ -149,8 +157,8 @@ const SHEET = (() => {
     one('stirge-idle', 'Creatures', 'Fen Stirge · idle', 'critter', 'stirge', 'idle', { ground: 'mud', h: 124 }),
     one('stirge-attack', 'Creatures', 'Fen Stirge · darting', 'critter', 'stirge', 'attack', { ground: 'mud', ox: -8, h: 124 }),
     { id: 'stirge-death', group: 'Creatures', label: 'Fen Stirge · death', ground: 'mud', h: 124, cast: [P1('critter', 'stirge', [['act', 'idle', 1], ['act', 'fall', 0.9], ['act', 'down', 2.4]])], span: 1.4, t0: .9, n: 10 },
-    { id: 'fell', group: 'World response', label: 'Felling', w: 190, h: 140, fell: ['oak', 2, 20, -2], cast: [P1('pawn', 'woodcutter', [['act', 'idle', .8], ['act', 'chop', 3.75, { tag: 'fell' }], ['act', 'idle', 2.2], ['go', [[26, 6]], 22, 'walk'], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[-120, 6]], 22, 'haul'], ['hide', 1], ['at', [-120, 0]], ['go', [[-6, 0]], 28, 'walk']], [-6, 0])], span: 6.8, n: 20, ox: -10 },
-    { id: 'fall-tree', group: 'World response', label: 'Felled tree falling', w: 190, h: 140, fell: ['oak', 2, 20, -2], cast: [P1('pawn', 'woodcutter', [['act', 'idle', .8], ['act', 'chop', 3.75, { tag: 'fell' }], ['act', 'idle', 2.2], ['go', [[26, 6]], 22, 'walk'], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[-120, 6]], 22, 'haul'], ['hide', 1], ['at', [-120, 0]], ['go', [[-6, 0]], 28, 'walk']], [-6, 0])], fallOnly: 1, ox: -10 },
+    { id: 'fell', group: 'World response', label: 'Felling', w: 190, h: 140, loads: [OWN.heavy], fell: ['oak', 2, 20, -2], cast: [P1('pawn', 'woodcutter', [['act', 'idle', .8], ['act', 'chop', 3.75, { tag: 'fell' }], ['act', 'idle', 2.2], ['go', [[26, 6]], 22, 'walk'], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[-120, 6]], 14, 'bear'], ['hide', 1], ['at', [-120, 0]], ['go', [[-6, 0]], 28, 'walk']], [-6, 0])], span: 6.8, n: 20, ox: -10 },
+    { id: 'fall-tree', group: 'World response', label: 'Felled tree falling', w: 190, h: 140, loads: [OWN.heavy], fell: ['oak', 2, 20, -2], cast: [P1('pawn', 'woodcutter', [['act', 'idle', .8], ['act', 'chop', 3.75, { tag: 'fell' }], ['act', 'idle', 2.2], ['go', [[26, 6]], 22, 'walk'], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[-120, 6]], 14, 'bear'], ['hide', 1], ['at', [-120, 0]], ['go', [[-6, 0]], 28, 'walk']], [-6, 0])], fallOnly: 1, ox: -10 },
     go('prints', 'World response', 'Prints in mud', 'pawn', 'farmer', 'walk', [1, 0], 28, { ground: 'mud', ox: 22, t0: 6 }),
     go('snow', 'World response', 'Snow prints and cold breath', 'pawn', 'guard', 'walk', [1, 0], 28, { ground: 'snow', cold: 1, ox: 22, t0: 6 }),
     go('shallows', 'World response', 'Wading the shallows', 'pawn', 'hunter', 'walk', [1, 0], 24, { ground: 'water', ox: 14, t0: 6 }),
@@ -186,8 +194,11 @@ const SHEET = (() => {
       buf[y * W + x] = (0xff000000 | (((c >> 16 & 255) * .68) << 16) | (((c >> 8 & 255) * .56) << 8) | ((c & 255) * .56)) >>> 0;
     }
   }
+  let picked = '';
+  const loadOf = (cell, i) => MOTION_LOAD.get((cell.pick && picked) || cell.loads[i] || cell.loads[0]);
   function draw(cell, T, lvl, smooth, buf) {
     prep(cell);
+    if (cell.loads) cell.S.forEach((S, i) => { S.A.load = loadOf(cell, i); });
     const W = cell.w, H = cell.h, items = castFrame(cell.S, T, lvl, smooth), lead = items[0].st;
     const camx = cell.follow ? rnd(lead.x) : 0, camy = cell.follow ? rnd(lead.y) : 0, ox = (W >> 1) + (cell.ox || 0) - camx, oy = H - 16 - camy;
     if (cell.ground === 'water') { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) buf[y * W + x] = pack(waterCol(x - ox + 900, y - oy + 400, 1, T * 2.1, 0)); }
@@ -210,30 +221,57 @@ const SHEET = (() => {
   }
 
   const cv = (w, h, z) => { const c = document.createElement('canvas'); c.width = w; c.height = h; c.style.width = w * z + 'px'; c.style.height = h * z + 'px'; return c; };
-  let root = null, figs = [], stripKey = '', seen = null;
-  function mount(el, state, onPick) {
-    root = el; figs = []; stripKey = '';
+  let root = null, figs = [], stripKey = '', seen = null, samples = null;
+  const sampled = () => samples || (samples = HAUL.BULKS.flatMap(b => MOTION_LOAD.dozen(b).map(l => haul('sample-' + l.id, l.name, BEARER[b], b, [1, 0], l.id, { group: 'bulk-' + b, w: 88, h: 100, sample: l.id }))));
+  function bulkBlocks() {
+    const tally = MOTION_LOAD.tally();
+    return HAUL.BULKS.map(b => `<h3>${b[0].toUpperCase() + b.slice(1)} · ${tally[b].count} items<small>${MOTION_LOAD.NOTES[b]}</small></h3><p class="counts">${Object.entries(tally[b].storage).sort((x, y) => y[1] - x[1]).map(([k, n]) => `<span><b>${n}</b>${RULES.NAMES[k] || k}</span>`).join('')}</p><div class="cells" data-g="bulk-${b}"></div>`).join('');
+  }
+  const optionOf = l => { const o = document.createElement('option'); o.value = l.id; o.textContent = l.name + ' · ' + (RULES.NAMES[l.storage] || l.storage); return o; };
+  function shown() {
+    const sel = root.querySelector('#load');
+    if (picked && ![...sel.options].some(o => o.value === picked)) sel.append(optionOf(MOTION_LOAD.get(picked)));
+    sel.value = picked;
+    marks();
+  }
+  function loadBar(onLoad) {
+    const sel = root.querySelector('#load'), own = document.createElement('option');
+    own.value = ''; own.textContent = 'Each carry with its own sample'; sel.append(own);
+    for (const g of MOTION_LOAD.picker()) { const og = document.createElement('optgroup'); og.label = g.bulk; og.append(...g.loads.map(optionOf)); sel.append(og); }
+    sel.addEventListener('change', () => onLoad(sel.value));
+    shown();
+  }
+  function marks() {
+    const l = picked && MOTION_LOAD.get(picked);
+    root.querySelector('#loadnote').textContent = l ? `${l.name} · ${RULES.NAMES[l.storage] || l.storage} · ${l.bulk}` : '';
+    for (const g of figs) g.f.classList.toggle('off', !!(l && g.cell.pick && g.cell.hold && g.cell.hold !== l.bulk));
+  }
+  function setLoad(id) { picked = MOTION_LOAD.get(id) ? id : ''; stripKey = ''; if (root) shown(); }
+  function mount(el, state, onPick, onLoad) {
+    root = el; figs = []; stripKey = ''; picked = MOTION_LOAD.get(state.load) ? state.load : '';
     const fit = w => Math.max(1, Math.min(+state.zoom, Math.floor((innerWidth - 26) / w)));
-    el.innerHTML = '<section id="strip" hidden><header><h2></h2><p></p></header><div class="frames"></div></section>' + GROUPS.map(g => `<section class="grp-s"><h2>${g}</h2><div class="cells" data-g="${g}"></div></section>`).join('');
+    const extra = g => g === 'Carrying' ? ['<label class="loadbar">Carried <select id="load"></select><output id="loadnote"></output></label>', '<div class="bulks">' + bulkBlocks() + '</div>'] : ['', ''];
+    el.innerHTML = '<section id="strip" hidden><header><h2></h2><p></p></header><div class="frames"></div></section>' + GROUPS.map(g => `<section class="grp-s"><h2>${g}</h2>${extra(g)[0]}<div class="cells" data-g="${g}"></div>${extra(g)[1]}</section>`).join('');
     seen = new IntersectionObserver(es => { for (const e of es) e.target._on = e.isIntersecting; }, { rootMargin: '120px' });
-    for (const cell of CELLS) {
+    for (const cell of [...CELLS, ...sampled()]) {
       prep(cell);
-      const f = document.createElement('figure'), c = cv(cell.w, cell.h, fit(cell.w)), cap = document.createElement('figcaption');
+      const f = document.createElement('figure'), c = cv(cell.w, cell.h, fit(cell.w)), cap = document.createElement('figcaption'), act = () => cell.sample ? onLoad(cell.sample) : onPick(cell.id);
       cap.textContent = cell.label; f.append(c, cap); f.dataset.id = cell.id; f.tabIndex = 0;
-      f.addEventListener('click', () => onPick(cell.id));
-      f.addEventListener('keydown', ev => { if (ev.key === 'Enter') onPick(cell.id); });
+      f.addEventListener('click', act);
+      f.addEventListener('keydown', ev => { if (ev.key === 'Enter') act(); });
       el.querySelector(`.cells[data-g="${cell.group}"]`).append(f);
       const ctx = c.getContext('2d'), img = ctx.createImageData(cell.w, cell.h);
       figs.push({ cell, f, ctx, img, buf: new Uint32Array(img.data.buffer) });
       f._on = true; seen.observe(f);
     }
+    loadBar(onLoad);
   }
   function strip(state, T) {
     const box = root.querySelector('#strip'), cell = CELLS.find(c => c.id === state.anim), on = state.frames === '1' && cell;
     box.hidden = !on;
     for (const g of figs) g.f.classList.toggle('sel', !!on && g.cell === cell);
     if (!on) { stripKey = ''; return; }
-    const key = [cell.id, state.lvl, state.cad, state.zoom, state.pin ? T : ''].join('|');
+    const key = [cell.id, state.lvl, state.cad, state.zoom, picked, state.pin ? T : ''].join('|');
     if (key === stripKey) return;
     stripKey = key;
     const smooth = state.cad === 'smooth', n = cell.n * (smooth && cell.cyc ? 3 : 1), t0 = cell.t0 || 0, z = Math.max(1, Math.min(Math.max(2, +state.zoom), Math.floor((innerWidth - 26) / cell.w))), row = box.querySelector('.frames');
@@ -253,5 +291,5 @@ const SHEET = (() => {
     strip(state, T);
     return actors;
   }
-  return { mount, frame, CELLS, draw, prep };
+  return { mount, frame, setLoad, CELLS, draw, prep };
 })();

@@ -90,18 +90,22 @@ function procFrame(A, st, def, u, lvl) {
   return { s, dx: rnd(op.dx) * (st.flip ? -1 : 1), dy: op.dy };
 }
 
+function fitted(A, pose) {
+  for (const k of ['hl', 'hr']) if (pose[k]) pose[k] = [pose[k][0] * A.as, pose[k][1] * A.as];
+  for (const k of ['fl', 'fr']) if (pose[k]) pose[k] = [pose[k][0] * A.ls, pose[k][1] * A.ls];
+  if (pose.by) pose.by *= A.ls;
+  if (pose.two) pose.two *= A.as;
+  return pose;
+}
 function frameOf(A, st, lvl, smooth) {
   const def = animOf(A, st.anim), n = (def.n || 6) * (smooth ? 3 : 1), u0 = clamp(st.u - Math.floor(st.u), 0, .9999), u = (Math.floor(u0 * n) + .5) / n;
   if (lvl < 2 || A.rig === 'plain') return procFrame(A, st, def, lvl ? u : u0, lvl);
-  const c = { face: st.face || 's', lvl, t: st.t || 0, seed: A.seed, tool: A.o && A.o.tool, o: A.rig === 'quad' ? BEASTS[A.kind].o : null }, ang = smooth ? 2 : 5;
+  const c = { face: st.face || 's', lvl, t: st.t || 0, seed: A.seed, tool: A.o && A.o.tool, bulk: A.load ? A.load.bulk : 'bulky', o: A.rig === 'quad' ? BEASTS[A.kind].o : null }, ang = smooth ? 2 : 5;
   let flip = !!st.flip, make, pose;
   if (A.rig === 'pawn') {
     pose = c.face !== 's' && FB_POSES[st.anim] ? fbPose(st.anim, u, c) : def.pose(u, c);
     if (pose.lie) { const q = { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, out: pose.out ? 1 : 0, bent: A.seed > .5 ? 1 : 0 }, fl = !!st.flip; return { s: cachedFrame(A.look + '|lie' + JSON.stringify(q) + (fl ? 'F' : ''), () => { const s = rigPawnLie(A.o, q); return fl ? mirror(s) : s; }), dx: 0, dy: 0 }; }
-    for (const k of ['hl', 'hr']) if (pose[k]) pose[k] = [pose[k][0] * A.as, pose[k][1] * A.as];
-    for (const k of ['fl', 'fr']) if (pose[k]) pose[k] = [pose[k][0] * A.ls, pose[k][1] * A.ls];
-    if (pose.by) pose.by *= A.ls;
-    if (pose.two) pose.two *= A.as;
+    fitted(A, pose);
     if (pose.face !== 's') flip = false;
     make = () => rigPawn(A.o, JSON.parse(key0));
   } else if (A.rig === 'quad') {
@@ -110,8 +114,9 @@ function frameOf(A, st, lvl, smooth) {
     else { pose = def.pose(u, c); make = () => rigQuad(A.kind, JSON.parse(key0)); }
   } else if (A.rig === 'critter') { pose = def.pose(u, c); make = () => rigCritter(A.kind, JSON.parse(key0)); }
   else { pose = def.pose(u, c); make = () => (A.rig === 'fowl' ? rigFowl : rigRabbit)(JSON.parse(key0)); }
-  const key0 = quant(pose, ang), key = A.look + '|' + lvl + (c.face !== 's' ? c.face : '') + (flip ? 'F' : '') + key0;
-  return { s: cachedFrame(key, () => { const s = make(); return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
+  const layer = pose.carry && A.load ? HAUL.layer(A.load, pose.carry, c.face) : null;
+  const key0 = quant(pose, ang), key = A.look + '|' + lvl + (c.face !== 's' ? c.face : '') + (flip ? 'F' : '') + key0 + (layer ? '|' + layer.key : '');
+  return { s: cachedFrame(key, () => { const bare = make(), s = layer ? MOTION_LOAD.put(bare, layer) : bare; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
 }
 
 function rotated(src, deg, dir) {

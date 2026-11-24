@@ -2,21 +2,21 @@
 (() => {
   const q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
   const sheet = $('sheet'), pinBtn = $('pin'), clock = $('clock'), cost = $('cost');
-  const extra = { anim: q.get('anim') || 'walk-side', pin: q.has('t') };
-  let T = q.has('t') ? +q.get('t') / 1000 : 0, last = performance.now(), ms = 0, shown = -500, mounted = '', ui = null;
+  const extra = { anim: q.get('anim') || 'walk-side', pin: q.has('t'), load: q.get('load') || '' };
+  let T = q.has('t') ? +q.get('t') / 1000 : 0, last = performance.now(), ms = 0, shown = -500, mounted = '', ui = null, ready = false;
 
   const state = () => ({ ...ui.state, ...extra });
   function mount() {
     const s = state(), key = 'sheet' + s.zoom;
-    if (key === mounted) return;
+    if (!ready || key === mounted) return;
     mounted = key;
-    SHEET.mount(sheet, s, id => { extra.anim = id; F4X.write({ anim: id, frames: 1 }); ui.set('frames', '1'); sheet.scrollTo({ top: 0 }); });
+    SHEET.mount(sheet, s, id => { extra.anim = id; F4X.write({ anim: id, frames: 1 }); ui.set('frames', '1'); sheet.scrollTo({ top: 0 }); }, id => { extra.load = id; F4X.write({ load: id }); SHEET.setLoad(id); });
   }
   function tick(now) {
     const dt = clamp((now - last) / 1000, 0, .1), s = state();
     last = now;
     if (!extra.pin) T += dt * +s.speed;
-    const t0 = performance.now(), n = SHEET.frame(s, T);
+    const t0 = performance.now(), n = ready ? SHEET.frame(s, T) : 0;
     ms = ms ? ms * .9 + (performance.now() - t0) * .1 : performance.now() - t0;
     clock.textContent = (T * 1000 | 0) + ' ms';
     if (now - shown >= 500) { shown = now; cost.textContent = n ? `${n} drawn · ${ms.toFixed(1)} ms a frame` : ''; }
@@ -28,6 +28,6 @@
   addEventListener('keydown', ev => { if (ev.key === ' ' && !/^(INPUT|SELECT|BUTTON)$/.test(ev.target.tagName)) { ev.preventDefault(); ui.set('speed', ui.state.speed === '0' ? '1' : '0'); } });
   let rz = 0;
   addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { mounted = ''; mount(); }, 150); });
-  mount();
+  fetch('catalog-data.json').then(r => r.json()).then(data => { DBX.fromData(data.objects); MOTION_LOAD.init(data.objects); ready = true; mount(); });
   requestAnimationFrame(tick);
 })();

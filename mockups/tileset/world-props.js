@@ -422,6 +422,17 @@ const PROPS = (() => {
     const s = own ? WORLD_GEAR.sprite(own, kind === 'shieldUp' ? 'lean' : 'ground', quantity) : generic(kind, ramps);
     return flip ? s.flip() : s;
   }
+  const CARRIED = {
+    logs: (s, r, seed) => log(s, CX - 14, B - 6, 28, 1 + seed % 5, r.a, r.b),
+    rubble: (s, r, seed) => basket(s, CX, B, 8, 9, r.a, seed),
+    heap: (s, r, seed) => basket(s, CX, B, 8, 9, r.a, seed)
+  };
+  function carried(cls, ramps, seed) {
+    const s = new Spr(48, HIGH, CX, B);
+    CARRIED[cls](s, ramps, seed);
+    s.outline();
+    return s;
+  }
   function generic(kind, ramps) {
     const s = new Spr(48, HIGH, CX, B);
     ARMOUR[kind](s, CX, ramps);
@@ -461,5 +472,5 @@ const PROPS = (() => {
     }
     return s;
   }
-  return { B, rampOf, mixed, pile, long, worn, tucked, bedded, undersides, PILES: Object.keys(PILES), LONG: Object.keys(LONG), lengthOf: k => LONG[k].L };
+  return { B, rampOf, mixed, pile, long, worn, carried, tucked, bedded, undersides, PILES: Object.keys(PILES), LONG: Object.keys(LONG), CARRIED: Object.keys(CARRIED), lengthOf: k => LONG[k].L };
 })();

@@ -29,6 +29,27 @@ function canvasPen(s) {
   return pen;
 }
 
+const ROSE = [196, 84, 84];
+const blend = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+function paintWomanFace(pen, g, look, skin) {
+  const { X, er, F, hd, hTop, hh, face } = g, sn = skin.length - 1, tone = k => skin[clamp(sn - k, 0, sn)];
+  if (look.sex !== 'female' || face === 'b') return;
+  const lip = blend(tone(2), ROSE, .55), blush = blend(tone(1), ROSE, .3);
+  if (face === 's') {
+    for (const x of [F - 4, F - 3, F - 2]) pen.put(x, er - 1, tone(1));
+    pen.put(F - 3, er + 3, tone(1)); pen.put(F - 2, er + 3, lip); pen.put(F - 1, er + 3, lip);
+    pen.put(F - 3, er + 1, blush);
+    return;
+  }
+  [[X - 3, 0], [X - 2, 1], [X + 1, 1], [X + 2, 2]].forEach(([x, k]) => pen.put(x, er - 1, tone(k)));
+  pen.put(X - 2, er + 3, tone(1)); pen.put(X - 1, er + 3, lip); pen.put(X, er + 3, lip);
+  pen.put(X - 4, er + 1, blush); pen.put(X + 3, er + 1, blush);
+  const chin = hTop + hh - 1;
+  for (const x of [X - hd + 2, X + hd - 3]) pen.put(x, chin, null);
+  for (const x of [X - hd + 1, X + hd - 2]) pen.put(x, chin - 1, null);
+  reink(pen, X - hd - 1, chin - 3, X + hd, chin + 1);
+}
+
 function paintEyes(pen, g, look, skin) {
   const m = look.marks, { X, er, F, face } = g, sn = skin.length - 1, brow = skin[Math.max(0, sn - 1)];
   if (face === 'b') return;
@@ -39,6 +60,7 @@ function paintEyes(pen, g, look, skin) {
   else if (m.beastEyes) recolour((a, b2) => { pen.put(a, er, P.gold[2]); pen.put(b2, er, P.gold[4]); });
   else if (m.murkEyes) { const flip = (pose.i >> 1) & 1; recolour((a, b2) => { pen.put(a, er, P.frost[flip ? 5 : 4], 120); pen.put(b2, er, P.frost[flip ? 4 : 5], 120); }); }
   if (look.oddEye && face === 'f' && open) pen.put(X + 1, er, EYES[look.oddEye].col);
+  if (look.sex === 'female' && open && !m.spiderEyes && !m.blind) for (const x of eyes.flat()) { const c = pen.get(x, er); if (c !== P.cloth[5] && c !== P.cloth[4]) pen.put(x, er - 1, c); }
   if (m.spiderEyes) {
     const bare = skin[Math.max(0, sn - 1)];
     const beads = face === 's'

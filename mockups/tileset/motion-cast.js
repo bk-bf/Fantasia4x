@@ -8,7 +8,7 @@ function buildCast(w, season) {
 
   const cutter = add('Woodcutter', 'pawn', 'woodcutter', [27.7, 14.5], [
     ['go', [[26, 15.2], [26, 24.7], [24, 27.7], [22.6, 28.05]], 32], ['act', 'idle', .6, { flip: 0 }], ['act', 'chop', 6.25, { tag: 'fell' }], ['act', 'idle', 1.8],
-    ['go', [[23.9, 28.3]], 30], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[24, 27.7], [26, 24.7], [26, 15.2], [27.7, 14.5]], 22, 'haul'], ['act', 'gather', 1.4], ['act', 'idle', 1.5]]);
+    ['go', [[23.9, 28.3]], 30], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[24, 27.7], [26, 24.7], [26, 15.2], [27.7, 14.5]], 14, 'bear'], ['act', 'gather', 1.4], ['act', 'idle', 1.5]]);
   const tree = mkTreeProp('oak', 2, season, ...tp(23.45, 28)), plan = fellPlan(cutter);
 
   let spot = [44, 12], best = 1e9;
@@ -44,7 +44,7 @@ function buildCast(w, season) {
 
   const H = 60;
   add('Hunter', 'pawn', 'hunter', [19.6, 29.2], [['hide', 3], ['go', [[23.6, 30.6]], 11, 'stalk'], ['act', 'shoot', 2.2, { to: [27.6, 30.6], tag: 'kill' }], ['act', 'idle', 1.5],
-    ['go', [[26.9, 30.75]], 30], ['act', 'gather', 3, { tag: 'take' }], ['go', [[19.6, 29.2]], 24, 'lug'], ['hide', 5]], { pad: H });
+    ['go', [[26.9, 30.75]], 30], ['act', 'gather', 3, { tag: 'take' }], ['go', [[19.6, 29.2]], 19, 'heft'], ['hide', 5]], { pad: H });
   add('Red Deer', 'quad', 'deer', [27.6, 30.6], [['act', 'graze', 17.36, { flip: 0 }], ['act', 'hit', .45], ['act', 'fall', .9], ['act', 'down', 5.2], ['hide', 14], ['at', [35.2, 31.4]], ['act', 'graze', 6, L], ['go', [[27.6, 30.6]], 22], ['act', 'graze', 5, { flip: 0 }]], { pad: H });
   for (const [k, x, y, ex, ey] of [['deer', 28.9, 29.7, 34.6, 29.9], ['fawn', 29.4, 31.1, 34.8, 31.3]])
     add('', 'quad', k, [x, y], [['act', 'graze', 17.2, { flip: k === 'fawn' ? 1 : 0 }], ['act', 'alert', .45], ['go', [[ex, ey]], 180, 'run'], ['act', 'watch', 5, L], ['act', 'idle', 8], ['go', [[x, y]], 22], ['act', 'graze', 12]], { pad: H });
