@@ -170,10 +170,16 @@ export function path(p: FxPainter, pts: readonly Pt[], col: Ramp, t: number): vo
   for (const [x, y] of dots) p.rect(x - 1, y - 1, 1, 1);
 }
 
-export function rings(p: FxPainter, stops: readonly Pt[], col: Ramp, attack: boolean): void {
+export function rings(
+  p: FxPainter,
+  stops: readonly Pt[],
+  col: Ramp,
+  attack: boolean,
+  even = false
+): void {
   const last = stops.length - 1;
   stops.forEach((s, i) => {
-    if (i < last) p.put(ring(5, 3, col), s[0], s[1]);
+    if (i < last) p.put(even ? ring(9, 4, col) : ring(5, 3, col), s[0], s[1]);
   });
   if (!attack && last >= 0) p.put(ring(9, 4, col), stops[last][0], stops[last][1]);
 }

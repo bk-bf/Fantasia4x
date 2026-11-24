@@ -65,11 +65,17 @@ function draw(
   const p = {
     textRatio: 1,
     label: (s: Spr, x: number, y: number, ox: number, oy: number) =>
-      put.push({ s, x: x + ox, y: y + oy })
+      put.push({ s, x: x + ox, y: y + oy }),
+    fill: () => {},
+    band: (x: number, y: number, ox: number, oy: number, w: number, h: number) =>
+      ticks.push([x + ox, y + oy, w, h])
   } as unknown as FxPainter;
+  ticks.length = 0;
   drawFloats(p, null, list, now, mode, blocked, locate);
   return put;
 }
+
+const ticks: number[][] = [];
 
 const rect = (d: Put) => {
   const x = Math.round(d.x) - d.s.ax;
@@ -151,28 +157,33 @@ describe('condition floaters', () => {
     expect(eased).toBe(floater('bleeding', 'Bleeding', '#9575cd', undefined, -1)[0]);
   });
 
-  it('strikes a lost condition out, left to right, and never a gained one', () => {
+  it('drifts a lost condition in from above, strikes it through, then crumbles it', () => {
     const at = 200_000;
     const gain = onset('wet', 'Wet', 900, 4);
     const loss = onset('wet', 'Wet', 1900, 4, { lost: true });
-    const bands = (e: CombatTextEvent, now: number) => {
-      const out: number[] = [];
-      const p = {
-        textRatio: 1,
-        label: () => {},
-        fill: () => {},
-        band: (_x: number, _y: number, _ox: number, _oy: number, w: number) => out.push(w)
-      } as unknown as FxPainter;
-      drawFloats(p, null, [e], now, both);
-      return out;
+    const frame = (e: CombatTextEvent, now: number) => {
+      const drawn = draw([e], both, now);
+      const lines = ticks.filter((t) => t[3] === 1).map((t) => t[2]);
+      return { s: drawn[0]?.s, y: drawn[0] && rect(drawn[0])[1], line: lines[0] ?? 0 };
     };
-    bands(gain, at);
-    expect(bands(gain, at + 300)).toEqual([]);
-    bands(loss, at + 10_000);
-    const early = bands(loss, at + 10_200);
-    const late = bands(loss, at + 10_900);
-    expect(early.length).toBe(2);
-    expect(late[1]).toBeGreaterThan(early[1]);
+    frame(gain, at);
+    expect(frame(gain, at + 1000).line).toBe(0);
+    const t0 = at + 10_000;
+    frame(loss, t0);
+    const early = frame(loss, t0 + 100);
+    const settled = frame(loss, t0 + 550);
+    expect(settled.y).toBeGreaterThan(early.y);
+    expect(early.line).toBe(0);
+    const striking = frame(loss, t0 + 750);
+    const struck = frame(loss, t0 + 1500);
+    expect(striking.line).toBeGreaterThan(0);
+    expect(struck.line).toBeGreaterThan(striking.line);
+    const lit = (x: Spr) => x.c.filter(Boolean).length;
+    const crumbling = frame(loss, t0 + 2100).s;
+    const gone = frame(loss, t0 + 2900).s;
+    expect(crumbling.h).toBeGreaterThan(struck.s.h);
+    expect(lit(gone)).toBeLessThan(lit(crumbling));
+    expect(lit(crumbling)).toBeLessThan(lit(struck.s) + struck.s.w);
   });
 
   it('fades a lost condition so it never looks like the gain', () => {
@@ -248,6 +259,21 @@ describe('condition floaters', () => {
     const freed = lift(t0 + 3600, [second, alone]);
     expect(blocked).toBeGreaterThan(0);
     expect(freed).toBeLessThan(blocked);
+  });
+
+  it('ties a lifted floater to its own creature with a tick down to its head', () => {
+    const t0 = 290_000;
+    const low = onset('knockdown', 'Knocked Down', 9000, 4, { entityId: 'left' });
+    const high = onset('winded', 'Winded', 9001, 4, { entityId: 'right' });
+    draw([low], both, t0);
+    draw([low, high], both, t0 + 300);
+    const drawn = draw([low, high], both, t0 + 800);
+    const mine = ticks.filter((t) => t[2] === 1);
+    expect(mine).toHaveLength(1);
+    expect(mine[0][0]).toBe((9001 + 0.5) * 32);
+    const winded = rect(drawn.find((d) => d.x > (9001 - 0.5) * 32)!);
+    expect(mine[0][1]).toBe(winded[3]);
+    expect(mine[0][3]).toBeGreaterThan(5);
   });
 
   it('merges hits that land close together, however late the frame that sees them', () => {

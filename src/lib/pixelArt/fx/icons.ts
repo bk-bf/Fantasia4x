@@ -1,6 +1,7 @@
 import type { Rgb } from '../palette';
 import { GORE, HONEY, HURT, tint, word, type Pair } from './glyphs';
-import { P, STAR, Spr, hex, melt } from './spr';
+import { P, STAR, Spr, copy, hex, melt } from './spr';
+import { hash } from '../noise';
 import { art, bane, boon, keys, lit, stamp } from './iconArt';
 import { MOTIFS, type MotifId } from './motifs';
 
@@ -396,7 +397,7 @@ function row(parts: [Spr, number][], lead: Spr, struck: Spr): Spr {
     const y = (h - p.h + 1) >> 1;
     stamp(s, p, x, y);
     if (p === lead) [ax, ay] = [x + p.ax, y + p.ay];
-    if (p === struck) line = { x: x + 1, y: y + (p.h >> 1) + 1, w: p.w - 2 };
+    if (p === struck) line = { x: 1, y: y + (p.h >> 1) + 1, w: w - 2 };
     x += p.w;
   }
   s.ax = ax;
@@ -457,3 +458,67 @@ export function floater(
 
 export const worded = (id: IconId, label: string, col: string, mark?: IconMark): Pair =>
   floater(id, label, col, mark);
+
+const dressed = new WeakMap<Spr, Map<IconId, Pair>>();
+
+export function withIcon(id: IconId, text: Pair | null): Pair {
+  if (!text) return icon(id);
+  let byId = dressed.get(text[0]);
+  if (!byId) {
+    byId = new Map();
+    dressed.set(text[0], byId);
+  }
+  let p = byId.get(id);
+  if (!p) {
+    p = pair(
+      row(
+        [
+          [icon(id)[0], 0],
+          [text[0], 2]
+        ],
+        text[0],
+        text[0]
+      )
+    );
+    byId.set(id, p);
+  }
+  return p;
+}
+
+export const STRIKE_LIGHT = hex('#f4ecd8');
+export const CRUMBLE_FRAMES = 6;
+const CRUMBLE_FALL = 6;
+const crumbles = new WeakMap<Spr, Spr[]>();
+
+function struckThrough(s: Spr): Spr {
+  const o = copy(s);
+  const line = strikeOf(s);
+  for (let x = line.x - 1; x <= line.x + line.w; x++) {
+    o.set(x, line.y, P.ink, 255);
+    o.set(x, line.y + 1, P.ink, 255);
+  }
+  for (let x = line.x; x < line.x + line.w; x++) o.set(x, line.y, STRIKE_LIGHT, 255);
+  return o;
+}
+
+export function crumbled(s: Spr): Spr[] {
+  let frames = crumbles.get(s);
+  if (frames) return frames;
+  const base = struckThrough(s);
+  frames = [];
+  for (let k = 1; k <= CRUMBLE_FRAMES; k++) {
+    const t = k / CRUMBLE_FRAMES;
+    const o = new Spr(s.w, s.h + CRUMBLE_FALL, s.ax, s.ay);
+    for (let y = 0; y < s.h; y++)
+      for (let x = 0; x < s.w; x++) {
+        const i = y * s.w + x;
+        const c = base.c[i];
+        if (!c || hash(x, y, 7) < t * 1.1 - 0.1) continue;
+        const fall = Math.floor(t * t * CRUMBLE_FALL * (0.4 + hash(x, y, 11)));
+        o.set(x, y + fall, c, base.e[i]);
+      }
+    frames.push(o);
+  }
+  crumbles.set(s, frames);
+  return frames;
+}

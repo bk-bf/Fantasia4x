@@ -79,13 +79,22 @@ const BY_CONDITION: Record<string, ConditionIcon> = {
 
 const BY_WORD: Record<string, ConditionIcon> = {
   'Fractured!': plain('fractured'),
-  'Organ hit!': plain('organ')
+  'Organ hit!': plain('organ'),
+  PARRY: plain('parry'),
+  BLOCK: plain('block'),
+  dodge: plain('dodge'),
+  bleed: plain('bleeding'),
+  'No ammo': plain('quiver')
 };
+
+const CRIT = plain('crit');
 
 export function iconFor(e: CombatTextEvent): ConditionIcon | undefined {
   if (e.kind === 'condition') return BY_CONDITION[(e.conditionId ?? '').split(':')[0]];
-  if (e.kind === 'fracture') return BY_WORD[e.text];
-  return undefined;
+  if (e.kind === 'crit') return CRIT;
+  return BY_WORD[e.text];
 }
+
+export const iconWords = (): readonly string[] => Object.keys(BY_WORD);
 
 export const iconConditions = (): readonly string[] => Object.keys(BY_CONDITION);
