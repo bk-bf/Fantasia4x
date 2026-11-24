@@ -17,10 +17,18 @@
     for (let i = 0; i < icon.w * icon.h; i++) { const [r, g, b, alpha] = icon.rgba.subarray(i * 4, i * 4 + 4); if (alpha && r + g + b > DARK) { sum[0] += r; sum[1] += g; sum[2] += b; n++; } }
     return '#' + sum.map(v => Math.round(v / Math.max(1, n)).toString(16).padStart(2, '0')).join('');
   }
+  const CARCASS_RIG = { deer: 'deer', elk: 'elk', wolf: 'wolf', great_wolf: 'wolf', dire_wolf: 'direwolf', worg: 'worg', jackal: 'jackal', bear: 'bear', great_bear: 'bear', cave_bear: 'cavebear', boar: 'boar', great_boar: 'boar', direboar: 'boar', aurochs: 'ox', mountain_goat: 'bighorn', woolly_mammoth: 'mammoth', sabretooth: 'sabre', owlbear: 'owlbear', hippogriff: 'hippogriff', mire_crocodile: 'lurker' };
+  const CARCASS_FOLK = { goblin: 'goblin', orc_reaver: 'orc', gnoll_marauder: 'gnoll', kobold_skulker: 'kobold', pawn: 'human' };
+  function carcassForms(o) {
+    const creature = o.id.replace(/_carcass$/, ''), beast = CARCASS_RIG[creature], race = CARCASS_FOLK[creature];
+    if (beast) return [['map-carry-toward', () => quadSlung(beast, false)], ['map-carry-away', () => quadSlung(beast, true)]];
+    if (race) return [['map-carry-toward', () => rigPawnSlung({ race }, 'f')], ['map-carry-away', () => rigPawnSlung({ race }, 'b')]];
+    return [['map-carry-end', () => { const icon = X.bake(X.byId.get('item/' + o.id + '/0')); return PROPS.carriedEnd('meat', { a: PROPS.rampOf(toneOf(icon)) }, icon.h); }]];
+  }
   function carryForms(o) {
     const k = RULES.classify(o), own = WORLD_GEAR.of(o), forms = [];
     if (k.pile && PROPS.CARRIED.includes(k.pile)) forms.push(['map-carry', () => PROPS.carried(k.pile, RULES.rampsFor(k, o), 1)]);
-    if (o.sub === 'Carcass') forms.push(['map-carry-end', () => { const icon = X.bake(X.byId.get('item/' + o.id + '/0')); return PROPS.carriedEnd('meat', { a: PROPS.rampOf(toneOf(icon)) }, icon.h); }]);
+    if (o.sub === 'Carcass') forms.push(...carcassForms(o));
     else if (k.pile && PROPS.SHOULDERED.includes(k.pile)) forms.push(['map-carry-end', () => PROPS.carriedEnd(k.pile, RULES.rampsFor(k, o))]);
     if (own && own.carried) forms.push(...Object.entries(own.carried));
     return forms;

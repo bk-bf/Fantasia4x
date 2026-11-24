@@ -435,14 +435,17 @@ const PROPS = (() => {
     heap: (s, r, seed) => basket(s, CX, B, 8, 9, r.a, seed)
   };
   const SHOULDER_FORMS = ['logs', 'planks'];
+  const END_REST = { logs: 0, planks: 0 };
   const ENDS = {
     logs(s, r) {
-      for (let j = 0; j < 4; j++) for (let i = -3; i <= 4; i++) if (j || (i > -3 && i < 4)) s.set(CX + i, B - 9 + j, at(r.a, 5 - j - (noise(i * .6, j, 3) > .68 ? 1 : 0)));
+      const rows = Math.round(SHOULDERED.half * 2 * SEEN.depth);
+      for (let j = 0; j < rows; j++) for (let i = -3; i <= 4; i++) if (j || (i > -3 && i < 4)) s.set(CX + i, B - 6 - rows + j, at(r.a, [3, 5, 4, 4, 3, 3, 2, 1][i + 3] - (noise(i * 1.3, j * .5, 3) > .68 ? 1 : 0)));
       s.oval(CX + .5, B - 3, 4, 3.7, (px, py, nx, ny) => { const q = Math.hypot(nx, ny); return q > .8 ? at(r.a, 2) : q < .3 ? at(r.b, 2) : at(r.b, q < .6 ? 5 : 4); });
     },
     planks(s, r) {
-      for (let j = 0; j < 5; j++) for (let i = -3; i <= 4; i++) s.set(CX + i, B - 7 + j, at(r.a, i === -1 || i === 2 ? 4 : 5));
-      s.rect(CX - 3, B - 2, 8, 3, at(r.a, 3)); s.rect(CX - 3, B, 8, 1, at(r.a, 1)); s.set(CX - 1, B - 1, at(r.a, 2)); s.set(CX + 2, B - 1, at(r.a, 2));
+      const rows = Math.round(SHOULDERED.half * 2 * SEEN.depth);
+      for (let j = 0; j < rows; j++) for (let i = -3; i <= 4; i++) s.set(CX + i, B - 2 - rows + j, at(r.a, i === -1 || i === 2 ? 4 : 5));
+      s.rect(CX - 3, B - 1, 8, 2, at(r.a, 3)); s.rect(CX - 3, B, 8, 1, at(r.a, 1));
     },
     meat(s, r, size) {
       const rx = clamp(size * .3, 5, 9), ry = rx * .8, top = B - ry * 2;
@@ -456,7 +459,7 @@ const PROPS = (() => {
     const s = new Spr(48, HIGH, CX, B);
     ENDS[cls](s, ramps, size);
     s.outline();
-    s.hold = [CX, B + 1];
+    s.hold = cls === 'meat' ? [CX, B + 1] : [CX, B + 1 - END_REST[cls] - Math.round(SHOULDERED.half * SEEN.depth)];
     return s;
   }
   function carried(cls, ramps, seed) {

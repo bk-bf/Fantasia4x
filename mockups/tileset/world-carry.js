@@ -14,7 +14,7 @@ const HAUL = (() => {
   const FUSED = ['shoulder'];
   const END_SOURCES = [['map-carry-toward', 'map-carry-away'], ['map-carry-end', 'map-carry-end']];
   const WORN_SOURCES = ['map-carry', 'map-ground', 'map-pile-1', 'map', '0'];
-  const UPRIGHT_FOOT = 9;
+  const SEEN_ROWS = { least: 4, most: 11 };
   const STANCES = { one: { carry: 'tuck', draw: 'ready', ready: 'guard', stow: 'stow' }, two: { carry: 'tuck', draw: 'readyTwo', ready: 'guardTwo', stow: 'stowTwo' }, bow: { carry: 'tuck', draw: 'readyBow', ready: 'guardBow', stow: 'stowBow' } };
   const POLES = ['spear', 'staff'];
   const NAMES = {
@@ -79,14 +79,16 @@ const HAUL = (() => {
   }
   function layer(load, hold, face) {
     const src = load.source, upright = hold === 'hip' && face !== 's' && src.upright, ended = ON_SHOULDER.includes(hold) && face !== 's' && (face === 'f' ? src.toward : src.away);
-    const variant = upright || ended || src.side, spr = cropped(load.id, variant);
-    const upside = !!upright && (face === 'f') === src.headUp, grip = upright ? shaftAt(spr, Math.max(spr.h >> 1, spr.h - 1 - UPRIGHT_FOOT), upside) : spr.hold || GRIPS[hold](spr);
-    const out = { key: load.id + '/' + variant + (upside ? '/upside' : ''), sprite: 'item/' + load.id + '/' + variant, spr, grip, sag: load.limp && !ended ? SAG[hold] : 0 };
-    if (upright) Object.assign(out, { upside, clip: true });
+    const variant = upright || ended || src.side, spr = cropped(load.id, variant), headDown = (face === 'f') === !!src.headUp;
+    const out = { key: load.id + '/' + variant, sprite: 'item/' + load.id + '/' + variant, spr, grip: spr.hold || GRIPS[hold](spr), sag: load.limp && !ended ? SAG[hold] : 0 };
+    if (upright) {
+      const seen = Math.min(spr.h, SEEN_ROWS.most, Math.max(SEEN_ROWS.least, Math.round(spr.h * SEEN.depth))), rows = face === 'f' ? [spr.h - seen, spr.h] : [0, seen], held = face === 'f' ? rows[0] : rows[1] - 1;
+      Object.assign(out, { key: out.key + (headDown ? '/upside' : '') + '/' + rows, upside: headDown, rows, grip: shaftAt(spr, held, headDown) });
+    }
     if (FUSED.includes(hold) && face === 's') out.fused = true;
     return out;
   }
-  const flags = l => Object.fromEntries(['sag', 'upside', 'clip', 'fused'].filter(k => l[k]).map(k => [k, l[k]]));
+  const flags = l => Object.fromEntries(['sag', 'upside', 'rows', 'fused'].filter(k => l[k]).map(k => [k, l[k]]));
   function ported(load) {
     const side = layer(load, load.hold, 's'), row = { bulk: load.bulk, hold: load.hold, sprite: side.sprite, grip: side.grip, ...flags(side) };
     for (const [face, name] of [['f', 'toward'], ['b', 'away']]) { const l = layer(load, load.hold, face); if (l.key !== side.key) row[name] = { sprite: l.sprite, grip: l.grip, ...flags(l) }; }

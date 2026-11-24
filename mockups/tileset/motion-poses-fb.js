@@ -67,8 +67,8 @@ const FB_POSES = {
 };
 const FB_READY = {
   one: (u, c) => ({ hr: [-2, 5 + sn(u) * .5], tool: 25, hl: [5, 4], by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0], clasp: 1, ub: 1 }),
-  two: (u, c) => c.tool === 'spear' || c.tool === 'staff' ? { hl: [4, 1.2 + sn(u) * .4], hr: [-1, 7 + sn(u) * .4], tool: -60, by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0], clasp: 1, ub: 1 } : { hl: [5, 8], hr: [-5, 8 + sn(u) * .4], tool: 35, by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0], clasp: 1, ub: 1 },
-  bow: (u, c) => ({ hl: [-1.5, 2.5 + sn(u) * .4], hr: [-5, 3], bow: 1, arrow: 1, by: .6 + sn(u) * .3, fl: [0, 0], fr: [0, 0] }),
+  two: (u, c) => c.tool === 'spear' || c.tool === 'staff' ? { hl: [4, 1.2 + sn(u) * .4], hr: [-1, 7 + sn(u) * .4], tool: -60, by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0], ub: 1 } : { hl: [5, 8], hr: [-5, 8 + sn(u) * .4], tool: 35, by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0], ub: 1 },
+  bow: (u, c) => ({ hl: [4, 5.5 + sn(u) * .4], hr: [-4, 4.5], bow: 1, arrow: 1, cant: 40, by: .6 + sn(u) * .3, fl: [0, 0], fr: [0, 0] }),
 };
 const fbReadied = (family, u, c) => keyed(u, { ...FB_POSES.tuckStand(0, c), br: 0, clasp: 0, ub: 1 }, [[0, {}], [.45, { hr: [-1, 6], tool: 100, by: .6 }], [1, { ...FB_READY[family](0, c), crook: [], fore: [], stow: 0 }, 'o']]);
 function fbPose(name, u, c) {

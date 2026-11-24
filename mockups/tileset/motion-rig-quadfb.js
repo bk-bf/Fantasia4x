@@ -143,6 +143,12 @@ function fbTail(s, o, cx, y, p, back, lr) {
   }
 }
 
+const SLUNG_LEG = 6, SLUNG_HEAD = 1.05;
+function quadSlung(kind, back) {
+  const o = BEASTS[kind].o, dangle = Math.min(o.leg, SLUNG_LEG), hung = o.Hb * SLUNG_HEAD + (o.up || 0) * .85, s = rigQuadFB(kind, { by: o.leg - dangle, head: [0, hung], hung: 1, blink: 1, ear: -1, tail: { a: 30 } }, back);
+  s.hold = [QG.CX, QG.GY - dangle + 1];
+  return s;
+}
 function rigQuadFB(kind, p, back) {
   p = p || {};
   const o = BEASTS[kind].o, X = FBX[kind] || {}, s = new Spr(QG.W, QG.H, QG.CX, QG.GY), gy = QG.GY, cx = QG.CX, L = o.L, Hb = o.Hb, fur = o.fur, n = fur.length - 1, bo = furOpt(o), hr = o.head;
@@ -162,7 +168,7 @@ function rigQuadFB(kind, p, back) {
     if (o.ears === 'flap') fbEars(s, o, hx, hy, p.ear || 0, true);
     s.ball(hx, hy, hr * 1.04, hr * .94, -2, fur, bo);
     if (o.ears !== 'flap') fbEars(s, o, hx, hy, p.ear || 0, true);
-    if (X.head) X.head({ s, hx, hy, hr });
+    if (X.head && !p.hung) X.head({ s, hx, hy, hr });
     const b = new Spr(QG.W, QG.H, QG.CX, QG.GY);
     if (o.hump) b.ball(cx, cyF - Hb * .3 - o.hump * .6, bw * .7, Hb * .5 + o.hump, 0, fur, bo);
     b.ball(cx, cyF, bw * .92, Hb * .95, 1, fur, bo);

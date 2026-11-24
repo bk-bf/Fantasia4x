@@ -36,8 +36,8 @@ const HOLD = {
   hip: { gait: 'light', swing: 1, side: { hr: [3, 7], lean: 1 }, fb: { hr: [0, 7], crook: ['hr'], fore: ['hr'] } },
   chest: { gait: 'bulky', side: { hr: [6, 7], hl: [7, 6.5], lean: -1 }, fb: { hl: [2.6, 8], hr: [-2.6, 8], fore: ['hl', 'hr'] } },
   low: { gait: 'heavy', sink: .9, side: { hr: [6.5, 7.5], hl: [7.5, 7], lean: -1.6 }, fb: { hl: [1, 9], hr: [-1, 9], fore: ['hl', 'hr'] } },
-  shoulder: { gait: 'heavy', tilt: 1, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 1.4 }, fb: { hl: [-2, -3.5], wing: 1 } },
-  game: { gait: 'heavy', sink: .9, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 2.4, hd: [1, 1] }, fb: { hl: [-2, -3.5], wing: 1, hd: [0, 1] } },
+  shoulder: { gait: 'heavy', tilt: 1, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 1.4 }, fb: { hl: [-5.5, -4], wing: 1, lean: 1.5, hd: [1, 0] } },
+  game: { gait: 'heavy', sink: .9, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 2.4, hd: [1, 1] }, fb: { hl: [-5.5, -4], wing: 1, lean: 1.5, hd: [1, 1] } },
   drape: { gait: 'heavy', sink: .4, free: 1, side: { hr: [5, 3.5], hl: [6, 4], lean: 1.8 }, fb: { hl: [4, 4], crook: ['hl'], fore: ['hl'] } },
 };
 const HOLDS = { hip: ['tote', 'toteStand'], chest: ['heft', 'heftStand'], low: ['lug', 'lugStand'], shoulder: ['haul', 'haulStand'], game: ['bear', 'bearStand'], drape: ['rescue', 'rescueStand'] };
@@ -52,6 +52,7 @@ function carried(hold, u, c, go) {
   if (h.tilt && push && side) p.tilt = sn(u * 2 + .1);
   if (hold === 'shoulder' && side) return { ...p, ...flow(c, u, 2) };
   if (push) Object.assign(p, flow(c, u, hold === 'hip' ? 2.2 : 1.2));
+  if (c.face === 'b' && p.lean) p.lean = -p.lean;
   return c.face === 'b' ? turned(p, ['hl', 'hr', 'hd']) : p;
 }
 const armed = (c, side) => side ? { hr: [3, 7], tool: 104, tuck: 1, lean: 1 } : { hr: [0, 7], crook: ['hr'], fore: ['hr'], tool: 172, stow: 1 };

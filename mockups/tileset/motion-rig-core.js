@@ -1,5 +1,7 @@
 'use strict';
 const RG = { W: 104, H: 112, CX: 52, BASE: 72 };
+const SEEN = { depth: .4 };
+const seenAt = p => [p[0], SEEN.depth * p[1] - p[2]];
 const D2R = Math.PI / 180;
 const rnd = Math.round;
 
@@ -105,22 +107,23 @@ function toolAt(s, kind, gx, gy, ang, o) {
   const T = TOOLS[kind];
   if (!T) return null;
   o = o || {};
-  const a = (ang === undefined ? T.hold : ang) * D2R, ux = Math.sin(a), uy = -Math.cos(a), vx = Math.cos(a), vy = Math.sin(a), R = 38, m = o.mirror ? -1 : 1;
+  const fore = o.fore || 1, a = (ang === undefined ? T.hold : ang) * D2R, ux = Math.sin(a), uy = -Math.cos(a), vx = Math.cos(a), vy = Math.sin(a), R = 38, m = o.mirror ? -1 : 1;
   for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
-    const c = T.f(rnd(m * dx * ux + dy * uy), rnd(m * dx * vx + dy * vy + .5), o);
+    const c = T.f(rnd((m * dx * ux + dy * uy) / fore), rnd(m * dx * vx + dy * vy + .5), o);
     if (c) s.set(gx + dx, gy + dy, c, kind === 'staff' && P.mana.includes(c) ? 255 : 0);
   }
-  return [gx + m * (ux * T.tip[0] + vx * T.tip[1]), gy + uy * T.tip[0] + vy * T.tip[1]];
+  return [gx + m * (ux * T.tip[0] * fore + vx * T.tip[1]), gy + uy * T.tip[0] * fore + vy * T.tip[1]];
 }
 
 const TOOL_BUTT = { sword: 3, axe: 4, pick: 4, hoe: 11, hammer: 2, spear: 11, club: 2, bow: 11, torch: 2, staff: 11 };
-const STOWED = { toward: 172, away: 8, drop: 11, behind: 8 };
+const STOWED = { toward: 172, away: 8, shown: 3 };
+const BOW = { half: 11, sag: 4, nock: 10 };
 const RIG_OVER = {
   hip: { s: ['near arm'], f: ['carrying arm'], b: ['body'] },
   chest: { s: ['near arm'], f: ['hands'], b: ['body'] },
   low: { s: ['near arm'], f: ['hands'], b: ['body'] },
-  shoulder: { s: ['near arm'], f: ['shoulder arm'], b: ['shoulder arm'] },
-  game: { s: ['head', 'near arm'], f: ['head', 'shoulder arm'], b: ['shoulder arm'] },
+  shoulder: { s: ['near arm'], f: ['shoulder hand'], b: ['shoulder hand'] },
+  game: { s: ['head', 'near arm'], f: ['head', 'shoulder hand'], b: ['shoulder hand'] },
   drape: { s: ['near arm'], f: ['head', 'shoulder arm'], b: [] },
 };
 const RIG_FLAT = [];
@@ -135,6 +138,18 @@ function rigMask(s, names, parts) {
   return m;
 }
 
+function bowSeen(S, gx, gy, o) {
+  const { half, sag, nock } = BOW, pull = o.pull || 0, mix3 = (t, off) => o.u.map((c, i) => c * t + o.v[i] * off);
+  const at = (t, off) => { const p = seenAt(mix3(t, off)); return [rnd(gx + p[0]), rnd(gy + p[1])]; };
+  const upright = Math.abs(seenAt(o.u)[1]) >= Math.abs(seenAt(o.u)[0]), thick = upright ? [1, 0] : [0, 1];
+  for (let t = -half; t <= half; t += .5) { const [x, y] = at(t, -sag - pull * (1 - Math.abs(t) / half)); S.set(x, y, P.cloth[4]); }
+  if (o.arrow) for (let d = -sag - pull; d <= nock; d += .5) { const [x, y] = at(0, d); S.set(x, y, d > nock - 2.5 ? P.iron[6] : d < -sag - pull + 1.5 ? P.cloth[5] : P.wood[5]); }
+  for (let t = -half; t <= half; t += .5) {
+    const [x, y] = at(t, -sag * t * t / (half * half)), held = Math.abs(t) <= 1.5;
+    S.set(x, y, held ? P.leather[3] : P.wood[4]); S.set(x + thick[0], y + thick[1], held ? P.leather[1] : P.wood[2]);
+  }
+  return at(0, nock);
+}
 function turn(spr) {
   const s = new Spr(spr.h, spr.w, spr.h - 1 - spr.ay, spr.ax);
   for (let y = 0; y < spr.h; y++) for (let x = 0; x < spr.w; x++) {
