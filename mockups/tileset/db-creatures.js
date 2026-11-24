@@ -143,7 +143,7 @@
 
   const MM = beastOf('mammoth');
   X.reg('creature', 'woolly_mammoth', '0', () => recolor(quadX(grow(MM, fac(3.5, 4.02), { fur: C.mammoth, extra: MM.extra })), P.furRust, C.mammoth));
-  X.quadX = quadX; X.grow = grow; X.onBody = onBody; X.greyFace = greyFace; X.ridge = ridge; X.patch = patch;
+  X.quadX = quadX; X.grow = grow; X.onBody = onBody; X.greyFace = greyFace; X.ridge = ridge; X.patch = patch; X.ribs = ribs; X.scars = scars; X.earNotch = earNotch; X.creatureRamps = C;
   const REDO = { wolf: 'wolf', direwolf: 'dire_wolf', bear: 'bear', boar: 'boar', deer: 'deer', elk: 'elk', ox: 'aurochs', packox: 'kingdom_pack_beast', frostfang: 'frost_fang', worg: 'worg', jackal: 'jackal', cavebear: 'cave_bear', fawn: 'fawn', sabre: 'sabretooth', bighorn: 'mountain_goat', mammoth: 'bull_mammoth', lurker: 'mire_crocodile', owlbear: 'owlbear' };
   for (const k in REDO) { X.drop('creature', REDO[k]); X.reg('creature', REDO[k], '0', () => quadX(BEASTS[k].o)); }
 })();
@@ -289,6 +289,7 @@
     const bx = Math.round(g.hx + g.hr * .74), by = Math.round(g.hy + g.hr * .02);
     for (const [dx, dy, w, kk] of [[0, 0, 4, 4], [0, 1, 5, 4], [1, 2, 4, 3], [2, 3, 3, 3], [3, 4, 2, 2], [3, 5, 1, 1]]) s.rect(bx + dx, by + Math.round(dy * k), Math.max(1, Math.round(w * k)), Math.max(1, Math.round(k)), P.gold[kk]);
   };
+  X.owlFace = owlFace;
   const owlbear = (id, f, over, fur) => {
     X.drop('creature', id);
     X.reg('creature', id, '0', () => {
@@ -385,6 +386,7 @@
   const snare = (s, g) => { for (let a = 0; a < 14; a++) { const t = a / 14 * 6.283; s.set(g.cx - 4 + Math.cos(t) * 3, g.legTop - 1 + Math.sin(t) * 3, P.wicker[a & 1 ? 4 : 2]); } s.rect(g.cx + g.hw - 1, g.tTop + 2, 4, 6, P.leather[2]); s.rect(g.cx + g.hw - 1, g.tTop + 2, 4, 1, P.leather[4]); };
   const studs = (s, g) => { for (let j = 1; j < g.f.tl - 3; j += 3) for (let i = -g.hw + 1; i < g.hw - 1; i += 3) s.set(g.cx + i + ((j / 3) & 1), g.tTop + j, P.iron[6]); };
   const scarsP = (s, g) => { for (let j = 0; j < 5; j++) s.set(g.cx - 4 + j, g.er - 3 + j, P.skinPale[3]); for (let j = 0; j < 4; j++) s.set(g.cx + 2 - j, g.tTop + 3 + j, P.skinPale[3]); };
+  X.scarsP = scarsP;
   const PW = (id, o, extra) => X.reg('creature', id, '0', () => pawnX(o, extra));
   const gob = (o) => Object.assign({ race: 'goblin', pants: P.furDark, sleeves: 0 }, o);
   PW('goblin_sneak', gob({ tunic: C.black, hat: 'hood', hood: C.black, cape: C.black, sleeves: 1 }), dagger(false));
