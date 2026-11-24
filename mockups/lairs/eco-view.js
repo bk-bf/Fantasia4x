@@ -2,19 +2,18 @@
 (() => {
   const $ = id => document.getElementById(id), map = $('map'), land = $('land'), life = $('life'), shade = $('shade'), busy = $('busy');
   const lctx = land.getContext('2d'), ctx = life.getContext('2d'), graph = $('graph'), gctx = graph.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1);
-  const ART = { deer: 'deer', elk: 'elk', aurochs: 'ox', boar: 'boar', goat: 'bighorn', mammoth: 'mammoth', rabbit: 'rabbit', wolf: 'wolf', worg: 'worg', jackal: 'jackal', frostfang: 'frostfang', gnoll: 'pawn:gnoll', hippogriff: 'hippogriff', bear: 'bear', owlbear: 'owlbear', sabre: 'sabre', lurker: 'lurker', spider: 'spider', adder: 'adder', harpy: 'db:creature/harpy/0', stirge: 'stirge', goblin: 'pawn:goblin', orc: 'pawn:orc', kobold: 'pawn:kobold', croaker: 'croaker' };
-  const TALL = { deer: 20, elk: 23, aurochs: 20, boar: 14, goat: 17, mammoth: 28, rabbit: 9, wolf: 15, worg: 17, jackal: 12, frostfang: 17, gnoll: 20, hippogriff: 23, bear: 18, owlbear: 21, sabre: 16, lurker: 9, spider: 12, adder: 9, harpy: 21, stirge: 15, goblin: 17, orc: 21, kobold: 16, croaker: 12 };
-  const DEN = { den: [() => LAIR_PROPS.den(3, [46]), 15], cave: [() => LAIR_PROPS.overhang(4), 22], camp: [() => LAIR_PROPS.hut(2), 19], nest: [() => LAIR_PROPS.eggs(1, 4), 12], spire: [() => LAIR_PROPS.spire(3, 40, false), 30] };
-  const WORN = { 'lived in': 'none', abandoned: 'grayscale(.75) brightness(.95)', overgrown: 'grayscale(1) sepia(.7) hue-rotate(55deg) brightness(.72)', ruin: 'grayscale(1) brightness(.5) opacity(.8)' };
-  const TINT = { deer: '#dcae6c', elk: '#b48a5a', aurochs: '#8a6a4a', boar: '#9a6a4a', goat: '#dcd6c6', mammoth: '#b0683c', rabbit: '#d8b48c', wolf: '#eef0f4', worg: '#9aa0aa', jackal: '#d2a872', frostfang: '#a8e6fa', gnoll: '#c8a060', hippogriff: '#c0c2c0', bear: '#b06a2c', owlbear: '#d2a872', sabre: '#c9b256', lurker: '#a6d05a', spider: '#9c6cc0', adder: '#879340', harpy: '#f29ac4', stirge: '#c47c38', goblin: '#ecdc48', orc: '#84a046', kobold: '#a45a26', croaker: '#6a7832' };
-  const PING = { death: '#f0564a', clash: '#f29a3c', found: '#7ad06a', gone: '#b8b2a6', in: '#6cb4f0', out: '#6cb4f0', raid: '#ecdc48', steal: '#b06a2c', split: '#c8a0f0' };
-  const TODAY = { wolf: 55, bear: 32, lurker: 24, goblin: 65, harpy: 85 }, MIX = [['lurker', .5], ['goblin', .14], ['bear', .14], ['harpy', .12], ['wolf', .1]];
-  const WX = { clear: 'Clear', rain: 'Rain', storm: 'Storm', snow: 'Snow', drought: 'Drought' }, ICON = {}, LAIRICON = {}, FACE = new Map();
-  let ui, S = null, seed = 7, frac = 0, last = 0, pick = null, cellMap = null, tone = null, img = null, drawnDay = -1, D = 600, still = null, pings = [], seen = 0, shownHour = -1;
+  const DEN = { den: (d) => LAIR_PROPS.den(3, [46], d), cave: (d) => LAIR_PROPS.overhang(4, d), camp: (d) => LAIR_PROPS.hut(2, d), nest: (d) => LAIR_PROPS.eggs(1, 4, d), spire: (d) => LAIR_PROPS.spire(3, 40, false, d) };
+  const DEN_TALL = { den: 15, cave: 22, camp: 19, nest: 12, spire: 30 }, DECAY = { 'lived in': 0, abandoned: 1, overgrown: 2, ruin: 3 };
+  const PING = { death: '#f0564a', clash: '#f29a3c', found: '#7ad06a', gone: '#b8b2a6', in: '#6cb4f0', out: '#6cb4f0', raid: '#ecdc48', steal: '#b06a2c', split: '#c8a0f0', fire: '#ff7a1a', rise: '#ffd24a' };
+  const TODAY = { wolf: 55, bear: 32, mire_crocodile: 24, goblin: 65, harpy: 85 }, MIX = [['mire_crocodile', .5], ['goblin', .14], ['bear', .14], ['harpy', .12], ['wolf', .1]];
+  const WX = { clear: 'Clear', rain: 'Rain', storm: 'Storm', snow: 'Snow', drought: 'Drought' }, ICON = new Map(), LAIRICON = {}, FACE = new Map(), STORE = 'f4x-region-runs';
+  const q = new URLSearchParams(location.search);
+  let ui, S = null, LINES = null, LEFT = [], seed = +q.get('seed') || 7, frac = 0, last = 0, pick = null, cellMap = null, tone = null, img = null, drawnDay = -1, D = 600, still = null, pings = [], seen = 0, shownHour = -1, replay = null, note = '';
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
   const blank = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; };
+  const hours = (days) => { const h = days * ECO.DAY_MIN / 60; return h < 10 ? h.toFixed(1) : Math.round(h); };
 
   function raster(spr) {
     let x0 = spr.w, y0 = spr.h, x1 = 0, y1 = 0;
@@ -24,20 +23,26 @@
     cx.putImageData(im, 0, 0);
     return c;
   }
-  function scaled(src, tall, filter, mirror) {
+  function scaled(src, tall, mirror) {
     const k = tall * dpr / src.height, c = blank(src.width * k, tall * dpr), cx = c.getContext('2d');
     cx.imageSmoothingQuality = 'high';
-    if (filter && filter !== 'none') cx.filter = filter;
     if (mirror) { cx.translate(c.width, 0); cx.scale(-1, 1); }
     cx.drawImage(src, 0, 0, c.width, c.height);
     return c;
   }
-  function icons() {
-    for (const kind in ART) {
-      const a = ART[kind], spr = a.startsWith('pawn:') ? mkPawn(PAWNS[a.slice(5)].o) : a.startsWith('db:') ? DBX.built(DBX.byId.get(a.slice(3))) : mkBeast(a), src = raster(spr);
-      ICON[kind] = { r: scaled(src, TALL[kind]), l: scaled(src, TALL[kind], null, true), y: scaled(src, TALL[kind] * .62), url: scaled(src, 16).toDataURL() };
-    }
-    for (const den in DEN) { const src = raster(DEN[den][0]()); LAIRICON[den] = {}; for (const state in WORN) LAIRICON[den][state] = scaled(src, DEN[den][1], WORN[state]); }
+  function icon(id) {
+    let I = ICON.get(id);
+    if (I) return I;
+    const e = DBX.byId.get('creature/' + id + '/0'), src = e ? raster(DBX.built(e)) : raster(mkBeast('wolf')), tall = clamp(Math.round(src.height * .5), 7, 32);
+    I = { r: scaled(src, tall), l: scaled(src, tall, true), url: scaled(src, 16).toDataURL() };
+    ICON.set(id, I);
+    return I;
+  }
+  const groupIcon = g => icon(ECO.variant(g).id), youngIcon = g => icon((g.k.tiers.find(t => t.tier === 1) || g.k.tiers[0]).id);
+  function lairIcon(den, state) {
+    const key = den + state;
+    if (!LAIRICON[key]) { const src = raster(DEN[den](DECAY[state])); LAIRICON[key] = scaled(src, DEN_TALL[den]); }
+    return LAIRICON[key];
   }
 
   function tiles(N) {
@@ -49,11 +54,12 @@
     }
   }
   function paint() {
-    const C2 = S.C * S.C, pal = new Uint8Array(C2 * 3), s = ECO.season(S), snow = S.wx.kind === 'snow', col = S.colony, N = S.N;
+    const C2 = S.C * S.C, pal = new Uint8Array(C2 * 3), s = ECO.season(S), snow = S.wx.kind === 'snow', col = S.colony, N = S.N, Y = ECO.YEAR;
     for (let i = 0; i < C2; i++) {
-      const t = S.land[i], k = S.K[i] ? clamp(S.grass[i] / S.K[i], 0, 1) : 0;
+      const t = S.land[i], k = S.K[i] ? clamp(S.grass[i] / S.K[i], 0, 1) : 0, b = S.burn[i] >= 0 ? S.day - S.burn[i] : -1;
       let c = t === ECO.WATER ? (snow && S.wx.hard ? [156, 184, 200] : [44, 96, 138]) : t === ECO.ROCK ? mix3([106, 102, 108], [100, 112, 96], k) : t === ECO.SWAMP ? mix3([88, 82, 56], [58, 86, 58], k)
         : t === ECO.FOREST ? (s === 2 ? mix3([96, 72, 40], [74, 88, 44], k) : mix3([46, 62, 46], [34, 80, 52], k)) : mix3(s === 2 ? [156, 130, 72] : [150, 136, 84], s === 0 ? [98, 154, 64] : s === 2 ? [132, 138, 62] : [90, 138, 60], k);
+      if (b >= 0) c = b < 4 ? [40, 30, 28] : b < Y * .25 ? mix3([52, 42, 36], [120, 150, 60], b / (Y * .25)) : b < Y ? mix3([120, 160, 62], [96, 150, 58], b / Y) : b < 2 * Y ? [88, 122, 58] : mix3([70, 100, 56], c, (b - 2 * Y) / (2 * Y));
       if (snow && t !== ECO.WATER) c = mix3(c, [228, 234, 238], t === ECO.FOREST ? .35 : .72);
       if (col && t !== ECO.WATER && Math.hypot((i % S.C) * 10 + 5 - col.x, Math.floor(i / S.C) * 10 + 5 - col.y) < col.r * .8) c = (i + Math.floor(i / S.C)) & 1 ? [170, 142, 82] : [150, 126, 70];
       pal[i * 3] = c[0]; pal[i * 3 + 1] = c[1]; pal[i * 3 + 2] = c[2];
@@ -76,23 +82,24 @@
   }
 
   function fit() {
-    const side = innerWidth > 860 ? 424 : 0;
+    const side = innerWidth > 860 ? 444 : 0;
     D = Math.max(240, Math.floor(Math.min(innerWidth - 24 - side, innerHeight - 24)));
     map.style.width = map.style.height = D + 'px';
     life.width = life.height = Math.round(D * dpr);
   }
   const put = (c, x, y) => ctx.drawImage(c, Math.round(x - c.width / 2), Math.round(y - c.height));
   function ring(x, y, r, color, alpha, dash) { ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = dpr; ctx.setLineDash(dash || []); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; }
-  function label(text, x, y) { ctx.font = `600 ${10 * dpr}px system-ui`; ctx.lineWidth = 3 * dpr; ctx.strokeStyle = '#17131a'; ctx.strokeText(text, x, y); ctx.fillStyle = '#fff'; ctx.fillText(text, x, y); }
+  function label(text, x, y, color) { ctx.font = `600 ${10 * dpr}px system-ui`; ctx.lineWidth = 3 * dpr; ctx.strokeStyle = '#17131a'; ctx.strokeText(text, x, y); ctx.fillStyle = color || '#fff'; ctx.fillText(text, x, y); }
+  const TIERCOL = ['#fff', '#d8d2c6', '#fff', '#ffd24a', '#ff9a3c', '#ff5a5a'];
 
   function draw(now) {
     const k = D * dpr / S.N, rings = ui.state.rings === 'on';
     ctx.clearRect(0, 0, life.width, life.height);
     if (still) {
       shade.style.opacity = 0;
-      if (rings) for (const l of still.lairs) ring(l.x * k, l.y * k, TODAY[l.kind] * k, TINT[l.kind], .5);
-      for (const l of still.lairs) put(LAIRICON[ECO.KINDS[l.kind].den]['lived in'], l.x * k, l.y * k + 4 * dpr);
-      for (const m of still.mobs) put(ICON[m.kind].y, m.x * k, m.y * k);
+      if (rings) for (const l of still.lairs) ring(l.x * k, l.y * k, TODAY[l.kind] * k, '#e0d6b8', .45);
+      for (const l of still.lairs) put(lairIcon(LINES[l.kind].den, 'lived in'), l.x * k, l.y * k + 4 * dpr);
+      for (const m of still.mobs) put(icon(m.kind).r, m.x * k, m.y * k);
       const w = still.lairs.find(l => l.kind === 'wolf' && l.x > 200 && l.y > 200 && l.x < S.N - 200 && l.y < S.N - 200);
       if (w) { ring(w.x * k, w.y * k, 150 * k, '#ffffff', .9, [6 * dpr, 4 * dpr]); label('how far one wolf looks for prey', w.x * k - 76 * dpr, (w.y - 154) * k); }
       return;
@@ -101,85 +108,134 @@
     shade.style.opacity = clamp((Math.cos(h / 24 * Math.PI * 2) + .15) * .42, 0, .42).toFixed(3);
     const col = S.colony;
     if (col) { ring(col.x * k, col.y * k, (col.r + 130) * k, '#ffffff', .35, [3 * dpr, 5 * dpr]); ctx.fillStyle = '#17131a'; ctx.fillRect(col.x * k - 8 * dpr, col.y * k - 8 * dpr, 16 * dpr, 16 * dpr); ctx.fillStyle = '#f2e2b0'; ctx.fillRect(col.x * k - 6 * dpr, col.y * k - 6 * dpr, 12 * dpr, 12 * dpr); ctx.fillStyle = '#a8322c'; ctx.fillRect(col.x * k - 6 * dpr, col.y * k - 6 * dpr, 12 * dpr, 5 * dpr); }
+    else ring(S.N / 2 * k, S.N / 2 * k, 70 * k, '#ffffff', .3, [2 * dpr, 4 * dpr]);
+    for (const f of S.fires) { const a = S.day - f.day; if (a < ECO.YEAR) label(a < 4 ? 'fire' : 'burn · deadwood, morels', f.x * k - 30 * dpr, f.y * k, a < 4 ? '#ff9a3c' : '#e0d6b8'); }
     for (const m of S.marks) { const a = 1 - (S.day - m.day) / 6; if (a <= 0) continue; ctx.globalAlpha = a; ctx.fillStyle = '#efe6d2'; ctx.fillRect(m.x * k - 3 * dpr, m.y * k - dpr * .5, 6 * dpr, dpr); ctx.fillRect(m.x * k - dpr * .5, m.y * k - 3 * dpr, dpr, 6 * dpr); ctx.globalAlpha = 1; }
-    if (rings) for (const g of S.groups) if (g.lair) ring(g.lair.x * k, g.lair.y * k, g.k.range * k, TINT[g.kind], g.lair === pick ? .95 : .4);
-    for (const l of S.lairs) put(LAIRICON[ECO.KINDS[l.kind].den][ECO.age(S, l)], l.x * k, l.y * k + 4 * dpr);
+    if (rings) for (const g of S.groups) if (g.lair) ring(g.lair.x * k, g.lair.y * k, g.k.range * k, '#e0d6b8', g.lair === pick ? .95 : .35);
+    for (const l of S.lairs) put(lairIcon(LINES[l.kind].den, ECO.age(S, l)), l.x * k, l.y * k + 4 * dpr);
     const list = S.groups.map(g => ({ g, x: (g.px + (g.x - g.px) * frac) * k, y: (g.py + (g.y - g.py) * frac) * k })).sort((a, b) => a.y - b.y);
     for (const { g, x, y } of list) {
-      const prey = g.k.prey, ic = ICON[g.kind];
+      const prey = g.k.prey, ic = groupIcon(g);
       if (g.state === 'asleep') { label('z', g.lair.x * k + 8 * dpr, g.lair.y * k - 8 * dpr); continue; }
       if (g.state === 'hunting' || g.state === 'raiding' || g.state === 'scavenging') { const t = g.state === 'raiding' ? S.colony : g.state === 'scavenging' ? g.goal : S.groups.find(o => o.id === g.target); if (t) { ctx.strokeStyle = g.state === 'raiding' ? '#ecdc48' : g.state === 'scavenging' ? '#c8a0f0' : '#f0564a'; ctx.lineWidth = 1.5 * dpr; ctx.setLineDash([4 * dpr, 3 * dpr]); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(t.x * k, t.y * k); ctx.stroke(); ctx.setLineDash([]); } }
       if (g.x < g.px - .5) FACE.set(g.id, 'l'); else if (g.x > g.px + .5) FACE.set(g.id, 'r');
       const side = FACE.get(g.id) || 'r', m = prey ? clamp(Math.ceil(g.n / 4), 1, 6) : Math.min(g.n, 5), spread = (prey ? 6 + m * 2.6 : 4 + m * 2.2) * dpr, home = g.lair && Math.hypot(g.x - g.lair.x, g.y - g.lair.y) < 3 ? 7 * dpr : 0, spots = [];
       for (let i = 0; i < m; i++) spots.push([(hash(g.id, i, 1) - .5) * 2 * spread + (g.state === 'grazing' ? Math.sin(now / 1100 + i * 1.7 + g.id) * 1.5 * dpr : 0), (hash(g.id, i, 2) - .5) * spread, ic[side]]);
-      for (let i = 0; i < Math.min(g.young, 3); i++) spots.push([(hash(g.id, i, 3) - .5) * 2 * spread, (hash(g.id, i, 4) - .5) * spread + 2 * dpr, ic.y]);
+      if (g.young) { const yi = youngIcon(g); for (let i = 0; i < Math.min(g.young, 3); i++) spots.push([(hash(g.id, i, 3) - .5) * 2 * spread, (hash(g.id, i, 4) - .5) * spread + 2 * dpr, yi[side]]); }
       spots.sort((a, b) => a[1] - b[1]);
       for (const [ox, oy, c] of spots) put(c, x + ox, y + oy + home + c.height * .3);
-      label(String(g.n + g.young), x + spread + 5 * dpr, y + home + 4 * dpr);
+      label(String(g.n + g.young), x + spread + 5 * dpr, y + home + 4 * dpr, prey ? '#fff' : TIERCOL[g.tier]);
       if (g === pick) ring(x, y + home, spread + 12 * dpr, '#ffffff', .9);
     }
     if (pick && pick.story) ring(pick.x * k, pick.y * k, 16 * dpr, '#ffffff', .9);
     pings = pings.filter(p => now - p.t < 2800);
     for (const p of pings) {
       const a = (now - p.t) / 2800, x = p.x * k, y = p.y * k;
-      ring(x, y, (5 + a * 28) * dpr, PING[p.type] || '#fff', 1 - a);
+      ring(x, y, (5 + a * (p.type === 'fire' ? 60 : 28)) * dpr, PING[p.type] || '#fff', 1 - a);
       if (p.type === 'clash') { ctx.globalAlpha = 1 - a * .7; ctx.strokeStyle = PING.clash; ctx.lineWidth = 2.5 * dpr; ctx.beginPath(); ctx.moveTo(x - 7 * dpr, y - 7 * dpr); ctx.lineTo(x + 7 * dpr, y + 7 * dpr); ctx.moveTo(x + 7 * dpr, y - 7 * dpr); ctx.lineTo(x - 7 * dpr, y + 7 * dpr); ctx.stroke(); ctx.globalAlpha = 1; }
     }
-    if (S.hour !== shownHour) { shownHour = S.hour; $('hour').textContent = String(S.hour).padStart(2, '0') + ':00'; for (const u of document.querySelectorAll('#now u')) u.style.left = (S.hour + .5) / 24 * 100 + '%'; }
+    if (S.hour !== shownHour) { shownHour = S.hour; const el = $('hour'); if (el) el.textContent = String(S.hour).padStart(2, '0') + ':00'; for (const u of document.querySelectorAll('#now u')) u.style.left = (S.hour + .5) / 24 * 100 + '%'; }
   }
 
   function chart() {
-    const W = graph.width, H = graph.height, hist = S.hist.slice(-ECO.YEAR * 8), n = hist.length, pm = Math.max(50, ...hist.map(p => p.prey)), qm = Math.max(10, ...hist.map(p => p.pred)), x = i => 6 + i / Math.max(1, n - 1) * (W - 200), y = (v, m) => H - 14 - v / m * (H - 30);
+    const W = graph.width, H = graph.height, hist = S.hist.slice(-ECO.YEAR * 10), n = hist.length, pm = Math.max(50, ...hist.map(p => p.prey)), qm = Math.max(10, ...hist.map(p => p.pred)), dm = Math.max(50, ...hist.map(p => Math.max(p.danger, p.target))), x = i => 6 + i / Math.max(1, n - 1) * (W - 200), y = (v, m) => H - 14 - v / m * (H - 30);
     gctx.clearRect(0, 0, W, H);
     if (n < 2) return;
     gctx.globalAlpha = .22; gctx.fillStyle = css('--grass'); gctx.beginPath(); gctx.moveTo(x(0), H - 14);
     hist.forEach((p, i) => gctx.lineTo(x(i), y(p.grass, 1))); gctx.lineTo(x(n - 1), H - 14); gctx.fill(); gctx.globalAlpha = 1;
-    for (const [key, m, c, name] of [['prey', pm, css('--prey'), 'big prey'], ['pred', qm, css('--pred'), 'predators']]) {
+    gctx.setLineDash([6, 6]); gctx.strokeStyle = css('--dim'); gctx.lineWidth = 2; gctx.beginPath(); hist.forEach((p, i) => i ? gctx.lineTo(x(i), y(p.target, dm)) : gctx.moveTo(x(i), y(p.target, dm))); gctx.stroke(); gctx.setLineDash([]);
+    const ends = [];
+    for (const [key, m, c, name] of [['prey', pm, css('--prey'), 'big prey'], ['pred', qm, css('--pred'), 'predators'], ['danger', dm, css('--danger'), 'danger']]) {
       gctx.strokeStyle = c; gctx.lineWidth = 2.5; gctx.beginPath(); hist.forEach((p, i) => i ? gctx.lineTo(x(i), y(p[key], m)) : gctx.moveTo(x(i), y(p[key], m))); gctx.stroke();
-      gctx.fillStyle = c; gctx.font = '600 20px system-ui'; gctx.fillText(hist[n - 1][key] + ' ' + name, x(n - 1) + 8, clamp(y(hist[n - 1][key], m) + 6, 18, H - 16) + (key === 'pred' && Math.abs(y(hist[n - 1].pred, qm) - y(hist[n - 1].prey, pm)) < 22 ? 22 : 0));
+      let ly = clamp(y(hist[n - 1][key], m) + 6, 18, H - 16);
+      while (ends.some(e => Math.abs(e - ly) < 22)) ly += 22;
+      ends.push(ly); gctx.fillStyle = c; gctx.font = '600 20px system-ui'; gctx.fillText(hist[n - 1][key] + ' ' + name, x(n - 1) + 8, ly);
     }
     gctx.fillStyle = css('--dim'); gctx.font = '18px system-ui'; gctx.fillText('grass ' + Math.round(hist[n - 1].grass * 100) + '%', x(n - 1) + 8, H - 2);
   }
   const head = g => `${g.n}${g.young ? ' and ' + g.young + ' young' : ''}`, pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '–';
-  const strip = kind => `<i style="background:linear-gradient(90deg,${ECO.KINDS[kind].active.map((a, h) => `color-mix(in srgb, ${TINT[kind]} ${Math.round(a * 100)}%, #1c1920) ${h / 24 * 100}% ${(h + 1) / 24 * 100}%`).join(',')})"><u></u></i>`;
+  const strip = kind => `<i style="background:linear-gradient(90deg,${LINES[kind].clock.map((a, h) => `color-mix(in srgb, #e0c48a ${Math.round(a * 100)}%, #1c1920) ${h / 24 * 100}% ${(h + 1) / 24 * 100}%`).join(',')})"><u></u></i>`;
+  const tierText = list => { const c = {}; for (const g of list) c[g.tier] = (c[g.tier] || 0) + g.n; return Object.keys(c).sort().map(t => `<b class="t${t}">${t}</b>${c[t]}`).join(' '); };
+
   function side() {
     const when = $('when');
     if (still) {
       const n = still.lairs.length, t = still.mobs.length;
-      when.innerHTML = `<b>Today’s counts on this map</b><span>${n} lairs · ${t} creatures · one per ${Math.round(S.N * S.N / t)} tiles</span><span>${still.herb} of them grazers seeded singly or in handfuls</span><span>Rings are today’s lair ranges. The lair mix is assumed.</span><span id="hour" hidden></span>`;
+      when.innerHTML = `<b>Today’s counts on this map</b><span>${n} lairs · ${t} creatures · one per ${Math.round(S.N * S.N / t)} tiles</span><span>${still.herb} of them grazers seeded singly or in handfuls</span><span>Rings are today’s lair ranges. The lair mix is assumed.</span>`;
       return;
     }
-    when.innerHTML = `<b>Year ${ECO.year(S)} · ${ECO.SEASONS[ECO.season(S)]} ${S.day % ECO.SEASON_DAYS + 1}</b><span><span id="hour" style="display:inline"></span> · ${WX[S.wx.kind]}${S.wx.hard ? ' · hard winter' : ''}${S.colony ? ` · colony reach ${Math.round(S.colony.r + 130)} tiles` : ''}</span>`;
+    const col = S.colony;
+    when.innerHTML = `<b>Year ${ECO.year(S)} · ${ECO.SEASONS[ECO.season(S)]} ${S.day % ECO.SEASON_DAYS + 1}</b><span><i id="hour"></i> · ${WX[S.wx.kind]}${S.wx.hard ? ' · hard winter' : ''}</span>` +
+      `<span>${col ? `Colony landed ${hours(S.day - col.since)} h of play ago at 1× (${hours((S.day - col.since) / 4)} h at 4×)` : `${ECO.year(S) - 1} years of history, no colony yet`}</span><span class="dim">A year is ${ECO.YEAR} days of ${ECO.DAY_MIN} min: ${hours(ECO.YEAR)} h at 1×, ${hours(ECO.YEAR / 4)} h at 4×</span>${note ? `<span class="note">${esc(note)}</span>` : ''}`;
     shownHour = -1;
     chart();
-    const rows = {};
-    for (const g of S.groups) { const r = rows[g.kind] || (rows[g.kind] = { groups: 0, head: 0, young: 0, away: 0 }); r.groups++; r.head += g.n; r.young += g.young; if (!g.k.prey && !g.lair) r.away++; }
-    $('now').innerHTML = '<tr><th></th><th>Kind</th><th>Groups</th><th>Head</th><th>Active by hour</th></tr>' + [...ECO.PREY, ...ECO.PREDATORS].filter(kind => rows[kind]).map(kind => { const r = rows[kind], K = ECO.KINDS[kind]; return `<tr${K.prey ? '' : ' class="hunter"'}><td><img src="${ICON[kind].url}" alt=""></td><td>${esc(K.name)}${!K.prey && ECO.dormant(S, K) ? ' <em>asleep</em>' : ''}</td><td>${r.groups}${r.away ? ` <em>${r.away} roaming</em>` : ''}</td><td>${r.head}${r.young ? ` <em>+${r.young}</em>` : ''}</td><td>${strip(kind)}</td></tr>`; }).join('');
+    const by = {};
+    for (const g of S.groups) (by[g.kind] = by[g.kind] || []).push(g);
+    const ids = Object.keys(LINES).filter(id => S.cast[id]).sort((a, b) => (LINES[b].prey ? 1 : 0) - (LINES[a].prey ? 1 : 0) || (by[b] || []).reduce((s, g) => s + g.n, 0) - (by[a] || []).reduce((s, g) => s + g.n, 0));
+    $('now').innerHTML = '<tr><th></th><th>Line</th><th>Groups</th><th>Head by tier</th><th>Danger</th><th>By hour</th></tr>' + ids.map(id => {
+      const K = LINES[id], gs = by[id] || [], top = gs.slice().sort((a, b) => b.tier - a.tier)[0], dn = gs.reduce((s, g) => s + ECO.danger(g), 0), roam = gs.filter(g => !K.prey && !g.lair).length;
+      return `<tr class="${K.prey ? 'prey' : 'hunter'}${gs.length ? '' : ' gone'}"><td><img src="${icon(top ? ECO.variant(top).id : (K.tiers.find(t => t.tier === 2) || K.tiers[0]).id).url}" alt=""></td><td>${esc(K.name)}<em> ${esc(K.rarity)}</em>${!K.prey && ECO.dormant(S, K) ? ' <em>asleep</em>' : ''}</td><td>${gs.length || '–'}${roam ? ` <em>${roam} roaming</em>` : ''}</td><td>${gs.length ? tierText(gs) : '<em>not yet seen</em>'}</td><td>${Math.round(dn) || ''}</td><td>${strip(id)}</td></tr>`;
+    }).join('');
+    const absent = Object.keys(LINES).filter(id => !S.cast[id]).map(id => LINES[id].name);
+    $('absent').innerHTML = `<b>Not in this region:</b> ${esc(absent.join(', ')) || 'none'}. <b>Not in the food web:</b> ${esc(LEFT.map(l => l.name).join(', '))}.`;
+    const B = S.bal, reach = col ? S.groups.filter(g => Math.hypot(g.x - col.x, g.y - col.y) < col.r + 130).reduce((s, g) => s + ECO.danger(g), 0) : 0, Dm = S.groups.reduce((s, g) => s + ECO.danger(g), 0);
+    $('bal').innerHTML = `<dt>Map danger now</dt><dd>${Math.round(Dm)}</dd><dt>Season average</dt><dd>${Math.round(B.ema)}</dd><dt>Target</dt><dd>${Math.round(B.target)}</dd>${col ? `<dt>Inside the colony’s reach</dt><dd>${Math.round(reach)}</dd>` : ''}<dt>Arrivals from the edge</dt><dd>×${B.mult.toFixed(2)}${B.dull > ECO.SEASON_DAYS ? ' · too quiet' : ''}</dd>`;
     const T = S.tally, lived = S.lairs.filter(l => l.owner).length, pair = (a, b) => `<dt>${a}</dt><dd>${b}</dd>`;
-    $('tally').innerHTML = pair('Lairs lived in · empty', `${lived} · ${S.lairs.length - lived}`) + pair('Hunts won', `${T.won} of ${T.tried} (${pct(T.won, T.tried)})`) + pair('Prey killed', T.kills) + pair('Prey born', T.preyBorn) + pair('Prey starved · aged', `${T.preyStarved} · ${T.preyAged}`) +
-      (S.colony ? pair('Prey taken by colonists', T.preyHunted) : '') + pair('Predators born', T.predBorn) + pair('Predators starved · aged', `${T.predStarved} · ${T.predAged}`) + pair('Lost hunting · in fights', `${T.predHunting} · ${T.predFight}`) + pair('Fights over ground', T.fights) +
-      pair('Herds in · out', `${T.herdsIn} · ${T.herdsOut}`) + pair('Packs in · out', `${T.packsIn} · ${T.packsOut}`) + pair('Lairs founded · retaken · left', `${T.founded} · ${T.reoccupied} · ${T.abandoned}`) + pair('Kills stolen by bears', T.stolen) + (S.colony ? pair('Raids on the colony · killed there', `${T.raids} · ${T.predColony}`) : '');
-    $('years').innerHTML = '<tr><th>Yr</th><th>Prey</th><th>Pred</th><th>Lairs</th><th>Empty</th><th>Kills</th><th>Hunts</th><th title="prey · predators">Starved</th><th>Fights</th><th title="packs in · out">Packs</th><th title="lowest of the year">Grass</th></tr>' +
-      S.years.slice().reverse().map(y => `<tr><td>${y.year}</td><td>${y.prey}</td><td>${y.pred}</td><td>${y.lairs}</td><td>${y.empty}</td><td>${y.kills}</td><td>${pct(y.won, y.tried)}</td><td>${y.preyStarved} · ${y.predStarved}</td><td>${y.fights}</td><td>${y.packsIn} · ${y.packsOut}</td><td>${Math.round(y.grassLow * 100)}%</td></tr>`).join('');
+    $('tally').innerHTML = pair('Lairs lived in · empty', `${lived} · ${S.lairs.length - lived}`) + pair('Hunts won', `${T.won} of ${T.tried} (${pct(T.won, T.tried)})`) + pair('Prey killed · born', `${T.kills} · ${T.preyBorn}`) + pair('Prey starved · aged', `${T.preyStarved} · ${T.preyAged}`) +
+      (col ? pair('Prey taken by colonists', T.preyHunted) : '') + pair('Predators born', T.predBorn) + pair('Predators starved · aged', `${T.predStarved} · ${T.predAged}`) + pair('Lost hunting · in fights', `${T.predHunting} · ${T.predFight}`) + pair('Fights over ground', T.fights) +
+      pair('Leaders risen', T.risen) + pair('Wildfires', T.fires) + pair('Herds in · out', `${T.herdsIn} · ${T.herdsOut}`) + pair('Packs in · out', `${T.packsIn} · ${T.packsOut}`) + pair('Lairs founded · retaken · left', `${T.founded} · ${T.reoccupied} · ${T.abandoned}`) + pair('Kills stolen by bears', T.stolen) + (col ? pair('Raids on the colony · killed there', `${T.raids} · ${T.predColony}`) : '');
+    $('years').innerHTML = '<tr><th>Yr</th><th>Prey</th><th>Pred</th><th>Lairs</th><th>Empty</th><th>Kills</th><th>Hunts</th><th title="prey · predators">Starved</th><th>Fights</th><th title="groups led by tier 3 or higher">T3+</th><th>Fires</th><th>Danger</th><th title="lowest of the year">Grass</th></tr>' +
+      S.years.slice().reverse().map(y => `<tr><td>${y.year}</td><td>${y.prey}</td><td>${y.pred}</td><td>${y.lairs}</td><td>${y.empty}</td><td>${y.kills}</td><td>${pct(y.won, y.tried)}</td><td>${y.preyStarved} · ${y.predStarved}</td><td>${y.fights}</td><td>${y.high}</td><td>${y.fires}</td><td>${y.danger}</td><td>${Math.round(y.grassLow * 100)}%</td></tr>`).join('');
     const p = $('pick');
     if (pick && pick.story) {
       const g = S.groups.find(o => o.lair === pick), state = ECO.age(S, pick);
-      p.innerHTML = `<h2>${esc(pick.name)}</h2><p>${g ? `Lived in by ${head(g)} · ${esc(g.state)}` : esc(state[0].toUpperCase() + state.slice(1))}</p>` +
-        (g ? `<div class="bar"><i style="width:${clamp(ECO.stockDays(g) / 4, 0, 1) * 100}%"></i></div><p>${ECO.stockDays(g).toFixed(1)} days of food in the larder${g.hungry ? ' · hungry for ' + g.hungry + ' days' : ''}</p>` : '') +
+      p.innerHTML = `<h2>${esc(pick.name)}</h2><p>${g ? `Lived in by ${head(g)} ${esc(ECO.variant(g).name.toLowerCase())}s · ${esc(g.state)}` : esc(state[0].toUpperCase() + state.slice(1))}${pick.burnt ? ' · burnt' : ''}</p>` +
+        (g ? `<div class="bar"><i style="width:${clamp(ECO.stockDays(g) / 4, 0, 1) * 100}%"></i></div><p>${ECO.stockDays(g).toFixed(1)} days of food in the larder${g.hungry ? ' · hungry for ' + g.hungry + ' days' : ''} · tier ${g.tier}, ${g.held} good seasons</p>` : '') +
         `<p>Bones of ${pick.kills} kills · most it ever held: ${pick.peak}</p><ul>${pick.story.slice(-10).map(t => `<li>${esc(t)}</li>`).join('')}</ul>`;
     } else if (pick && S.groups.includes(pick)) {
-      p.innerHTML = `<h2>${esc(pick.k.name)}</h2><p>${head(pick)} · ${esc(pick.state)}</p><p>${pick.k.prey ? 'Condition ' + (pick.cond > .7 ? 'good' : pick.cond > .4 ? 'lean' : 'starving') : ECO.stockDays(pick).toFixed(1) + ' days of food, looking for ground'}</p>`;
+      p.innerHTML = `<h2>${esc(ECO.variant(pick).name)}</h2><p>${head(pick)} · ${esc(pick.state)} · tier ${pick.tier}</p><p>${pick.k.prey ? 'Condition ' + (pick.cond > .7 ? 'good' : pick.cond > .4 ? 'lean' : 'starving') : ECO.stockDays(pick).toFixed(1) + ' days of food, looking for ground'}</p>`;
     } else { pick = null; p.innerHTML = '<h3>Pick</h3><p>Click a lair or a group on the map for its story.</p>'; }
+    runs();
+  }
+
+  const code = () => btoa(JSON.stringify({ v: 1, seed, map: +ui.state.map, colony: ui.state.colony, hist: +ui.state.hist, at: S.t, log: S.log }));
+  const saved = () => { try { return JSON.parse(localStorage.getItem(STORE) || '[]'); } catch { return []; } };
+  const keep = list => { try { localStorage.setItem(STORE, JSON.stringify(list)); } catch {} };
+  function runs() {
+    const list = saved();
+    $('runs').innerHTML = `<div class="row"><button id="copy">Copy link</button><button id="save">Save this run</button><span class="dim">seed ${seed}</span></div>` +
+      (list.length ? '<ul>' + list.map((r, i) => `<li><button data-load="${i}">Load</button> <b>${esc(r.name)}</b> <em>${esc(r.line)}</em> <button data-drop="${i}" title="Remove">×</button></li>`).join('') + '</ul>' : '<p class="dim">No saved runs in this browser yet.</p>');
+  }
+  $('runs').addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if (!b || !S) return;
+    if (b.id === 'copy') { const url = location.origin + location.pathname + '?run=' + code(); (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => { note = 'Link copied.'; side(); }, () => prompt('Copy this link', url)); return; }
+    if (b.id === 'save') { const H = S.hist[S.hist.length - 1] || {}, list = saved(); list.unshift({ name: `Seed ${seed} · year ${ECO.year(S)}`, line: `${H.prey || 0} prey · ${H.pred || 0} predators · ${H.lairs || 0} lairs · ${S.log.length} sent`, code: code() }); keep(list.slice(0, 30)); note = 'Saved in this browser.'; side(); return; }
+    if (b.dataset.load) { load(saved()[+b.dataset.load].code); return; }
+    if (b.dataset.drop) { const list = saved(); list.splice(+b.dataset.drop, 1); keep(list); runs(); }
+  });
+  function load(c) {
+    let r;
+    try { r = JSON.parse(atob(c)); } catch { note = 'That run could not be read.'; return; }
+    seed = r.seed; replay = r;
+    for (const [k, v] of [['map', r.map], ['colony', r.colony], ['hist', r.hist]]) ui.state[k] = String(v);
+    ui.set('speed', '0');
+    start();
   }
 
   function start() {
-    const s = ui.state;
+    const s = ui.state, r = replay;
     busy.hidden = false; S = null;
     setTimeout(() => {
-      if (!ICON.deer) icons();
-      const made = ECO.make({ size: +s.map, seed, colony: s.colony });
-      for (let h = 0; h < ECO.YEAR * 24 * +s.start; h++) ECO.hour(made);
-      S = made; seen = S.said; pick = null; drawnDay = -1; frac = 0; FACE.clear();
+      const made = ECO.make({ size: +s.map, seed, lines: LINES }), histH = ECO.YEAR * 24 * +s.hist, end = r ? r.at : histH, log = r ? r.log.slice() : [];
+      while (made.t < end) {
+        if (made.t === histH && !made.colony) ECO.land(made, s.colony);
+        while (log.length && log[0][0] === made.t) ECO.act(made, log.shift()[1]);
+        ECO.hour(made);
+      }
+      if (made.t >= histH && !made.colony) ECO.land(made, s.colony);
+      if (r) made.log = r.log.slice();
+      S = made; seen = S.said; pick = null; drawnDay = -1; frac = 0; FACE.clear(); note = r ? `Replayed to year ${ECO.year(S)}, ${S.log.length} things sent.` : ''; replay = null;
+      F4X.write({ seed, run: null });
       tiles(S.N); still = s.counts === 'today' ? crowd(S.N) : null;
       document.body.classList.toggle('still', !!still);
       fit(); busy.hidden = true;
@@ -208,13 +264,18 @@
     pick = l ? l[1] : g ? g[1] : null;
     side();
   });
-  for (const b of document.querySelectorAll('[data-wx]')) b.addEventListener('click', () => { if (S && !still) { ECO.force(S, b.dataset.wx); drawnDay = -1; } });
-  $('again').addEventListener('click', () => { seed += 3; start(); });
+  for (const b of document.querySelectorAll('[data-wx]')) b.addEventListener('click', () => { if (S && !still) { ECO.act(S, b.dataset.wx); drawnDay = -1; } });
+  $('again').addEventListener('click', () => { seed = 1 + Math.floor(Math.random() * 99999); start(); });
   addEventListener('keydown', ev => { if (ev.key === ' ' && !/^(INPUT|SELECT|BUTTON)$/.test(ev.target.tagName)) { ev.preventDefault(); ui.set('speed', ui.state.speed === '0' ? '8' : '0'); } });
   let rz = 0;
   addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(fit, 120); });
 
-  ui = F4X.bar((state, key) => { if (key === 'map' || key === 'colony' || key === 'counts' || key === 'start') start(); else if (key === 'theme' && S) drawnDay = -1; });
-  start();
-  requestAnimationFrame(tick);
+  fetch('../fantasia4x-tileset/catalog-data.json').then(res => res.json()).then(data => {
+    const D = ECO_DATA.lines(data.objects);
+    LINES = D.lines; LEFT = D.left;
+    for (const k of Object.values(LINES)) k.clock = ECO.CLOCKS[k.active] || ECO.CLOCKS.day;
+    ui = F4X.bar((state, key) => { if (key === 'map' || key === 'colony' || key === 'counts' || key === 'hist') start(); else if (key === 'theme' && S) drawnDay = -1; });
+    if (q.get('run')) load(q.get('run')); else start();
+    requestAnimationFrame(tick);
+  });
 })();

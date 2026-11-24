@@ -12,21 +12,23 @@
 <header id="mock">
   <div class="mrow"><strong>The region</strong><a href="./">Dens</a><button id="mockhide">Hide · `</button></div>
   <div class="mrow"><span class="grp" data-k="map" data-def="1000"><span class="lab">Map</span><button data-v="750">L 750</button><button data-v="1000">XL 1000</button></span><span class="grp" data-k="counts"><button data-v="spaced">Spaced</button><button data-v="today">Today</button></span></div>
-  <div class="mrow"><span class="grp" data-k="start" data-def="10"><span class="lab">Start at</span><button data-v="0">Empty</button><button data-v="3">Year 3</button><button data-v="10">Year 10</button></span></div>
+  <div class="mrow"><span class="grp" data-k="hist" data-def="10"><span class="lab">History</span><button data-v="0">None</button><button data-v="3">3 yrs</button><button data-v="10">10 yrs</button><button data-v="30">30 yrs</button></span></div>
   <div class="mrow"><span class="grp" data-k="colony"><span class="lab">Colony</span><button data-v="none">None</button><button data-v="settled">Settled</button><button data-v="growing">Growing</button></span></div>
   <div class="mrow"><span class="grp" data-k="speed" data-def="8"><button data-v="0">Pause</button><button data-v="1">1×</button><button data-v="8">8×</button><button data-v="60">60×</button></span><span class="grp" data-k="rings" data-def="on"><span class="lab">Ranges</span><button data-v="on">On</button><button data-v="off">Off</button></span></div>
-  <div class="mrow"><span class="lab">Send</span><button data-wx="drought">Drought</button><button data-wx="storm">Storm</button><button data-wx="winter">Hard winter</button><button id="again">New world</button></div>
+  <div class="mrow"><span class="lab">Send</span><button data-wx="drought">Drought</button><button data-wx="storm">Storm</button><button data-wx="winter">Hard winter</button><button data-wx="fire">Wildfire</button><button id="again">New world</button></div>
   <div class="mrow"><span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span></div>
-  <p class="mnote">a running model · every number invented</p>
+  <p class="mnote">a running model on the game’s creature data · behaviour numbers invented</p>
 </header>
 <main id="screen">
   <div id="map"><canvas id="land"></canvas><canvas id="life"></canvas><div id="shade"></div></div>
   <aside id="side">
     <section id="when"></section>
-    <section><h3>Prey and predators</h3><canvas id="graph" width="760" height="230"></canvas></section>
-    <section><h3>Who is here</h3><table id="now"></table></section>
-    <section><h3>This year so far</h3><dl id="tally"></dl></section>
+    <section><h3>Prey, predators and danger</h3><canvas id="graph" width="800" height="250"></canvas></section>
+    <section><h3>Who is here</h3><table id="now"></table><p id="absent"></p></section>
+    <section><h3>Balance</h3><dl id="bal" class="pairs"></dl></section>
+    <section><h3>This year so far</h3><dl id="tally" class="pairs"></dl></section>
     <section><h3>Year by year</h3><div class="scroll"><table id="years"></table></div></section>
+    <section><h3>Runs</h3><div id="runs"></div></section>
     <section id="pick"></section>
   </aside>
   <div id="busy">Letting the years pass…</div>
@@ -36,6 +38,7 @@
 document.write(REGISTRY_SCRIPTS.map(src => '<script src="../fantasia4x-tileset/' + src + '"><\/script>').join(''));
 </script>
 <script src="lair-props.js"></script>
+<script src="eco-data.js"></script>
 <script src="eco-model.js"></script>
 <script src="eco-view.js"></script>
 </body>
