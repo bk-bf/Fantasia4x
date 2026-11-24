@@ -110,7 +110,7 @@ try {
     await prepareWorktree(wt, out);
     out(`\nGreen: ${run.url}`);
     out('\nPlay it first — the worktree above has its own checkout:');
-    out(`  cd ${wt} && ./dev.sh`);
+    out(`  cd ${wt} && ./launch.sh --electron`);
     out('\nThen, when you are happy:');
     out('  pnpm promote --push');
   } else {

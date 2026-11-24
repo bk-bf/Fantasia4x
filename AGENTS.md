@@ -177,7 +177,10 @@ raise it.
 **The data files are strict `.json`.** No comments, no trailing commas — the parser rejects
 both, which is how the no-comments rule is enforced rather than remembered.
 
-**Always `./dev.sh`** to start the dev server, never `pnpm dev` directly.
+**The owner plays with `./launch.sh <branch>`.** It fetches, switches his checkout to `origin/<branch>`
+and starts the game, so asking him to try something is that one line and the commit it lands on,
+never a separate `git fetch` or `git switch`. `./dev.sh` is the dev server beneath it, for an agent's
+own runs; never `pnpm dev` directly.
 
 **Hand the owner a build to play as one line**: `./launch.sh <branch>   # <commit>`, with the commit
 it lands on. It fetches, switches his checkout detached to `origin/<branch>` and starts the painted
