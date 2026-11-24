@@ -6,7 +6,7 @@
   let { id }: { id: string } = $props();
 
   const look = $derived(conditionIcon(id));
-  const art = $derived(look ? iconArt(look.id, look.mark) : null);
+  const art = $derived(look ? iconArt(look.id, look.grade) : null);
 </script>
 
 {#if art}
