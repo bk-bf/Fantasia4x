@@ -22,14 +22,34 @@ function paintSleeves(pen, g, look, skin, cloth, s) {
   }
 }
 
-function paintSkirt(pen, g, look, cloth) {
-  const { legTop, legs, base, tTop, tl, cx, hw, face } = g, n = cloth.length - 1, gown = look.sex === 'female';
-  const hem = gown ? base - 3 : legTop + Math.max(2, Math.round(legs * .35)), [left, right] = legSpan(pen, g);
-  const cut = look.marks.oneLeg && face !== 's' ? legTop + Math.ceil(legs * .4) : Infinity, lost = face === 'b' ? [cx, cx + hw + 1] : [cx - hw - 2, cx - 2];
+function legRows(legs) {
+  const rows = new Map(), at = (x, y) => { const r = rows.get(y); rows.set(y, r ? [Math.min(r[0], x), Math.max(r[1], x)] : [x, x]); };
+  for (const { path, w } of legs) for (let i = 0; i + 1 < path.length; i++) {
+    const [x0, y0] = path[i], [x1, y1] = path[i + 1], vert = Math.abs(y1 - y0) >= Math.abs(x1 - x0), n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 2));
+    for (let j = 0; j <= n; j++) { const x = mix(x0, x1, j / n), y = mix(y0, y1, j / n); for (let k = 0; k < w; k++) vert ? at(Math.round(x - (w >> 1) + k), Math.round(y)) : at(Math.round(x), Math.round(y - (w >> 1) + k)); }
+  }
+  return rows;
+}
+
+function skirtSpan(g, legs, left, right) {
+  if (!legs || g.face !== 's') return () => [left, right];
+  const rows = legRows(legs), knee = Math.max(...legs.map(l => l.path[1][1])), lap = legs.some(l => l.path[1][0] - l.path[0][0] > g.legs * .3);
+  return y => {
+    const r = rows.get(y);
+    if (!r) return [left, right];
+    if (lap && y > knee + 1) return [r[0] - 1, r[1] + 1];
+    return [Math.min(left, r[0]), Math.max(right, r[1])];
+  };
+}
+
+function paintSkirt(pen, g, look, cloth, legs) {
+  const { legTop, legs: legLen, base, tTop, tl, cx, hw, face } = g, n = cloth.length - 1, gown = look.sex === 'female';
+  const hem = gown ? base - 3 : legTop + Math.max(2, Math.round(legLen * .35)), [left, right] = legSpan(pen, g), span = skirtSpan(g, legs, left, right);
+  const cut = look.marks.oneLeg && face !== 's' ? legTop + Math.ceil(legLen * .4) : Infinity, lost = face === 'b' ? [cx, cx + hw + 1] : [cx - hw - 2, cx - 2];
   const put = pen.put;
   pen = { ...pen, put: (x, y, c, e) => x < lost[0] || x > lost[1] || y < cut - 1 ? put(x, y, c, e) : y === cut - 1 ? put(x, y, WRAP[x & 1]) : null };
   for (let y = legTop + 2; y <= hem; y++) {
-    const flare = gown ? (y > legTop + legs * .55 && hw >= 5 ? 2 : 1) : 0, x0 = left - flare, x1 = right + (face === 's' ? 0 : flare);
+    const [l, r] = span(y), flare = gown ? (y > legTop + legLen * .55 && hw >= 5 ? 2 : 1) : 0, x0 = l - flare, x1 = r + (face === 's' ? 0 : flare);
     for (let x = x0; x <= x1; x++) {
       const u = (x - x0) / Math.max(1, x1 - x0), fold = gown && y > legTop + 3 && (x - cx) % 4 === 0 ? 1 : 0;
       const shade = (u < .25 ? 1 : u < .7 ? 2 : 3) + fold;
@@ -103,7 +123,7 @@ function paintBodice(pen, g, look, skin) {
 function paintGarb(pen, body, g, look, skin, s) {
   const cloth = DYES[look.garb];
   paintSleeves(pen, g, look, skin, cloth, s);
-  paintSkirt(pen, g, look, cloth);
+  paintSkirt(body, g, look, cloth, s.pts.legs);
   paintFigure(body, g, look, cloth);
   paintBodice(body, g, look, skin);
 }
