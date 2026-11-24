@@ -45,6 +45,29 @@ export function drawnTile(
   );
 }
 
+const NOWHERE = '';
+
+export function drawnItemTile(
+  renderer: WebGLRenderer | null,
+  cx: number,
+  cy: number,
+  v: MapView
+): string {
+  const hit = drawnTile(renderer, cx, cy, v);
+  return hit.layer === 'item' ? `${hit.x},${hit.y}` : NOWHERE;
+}
+
+export function hoveredDrop<T extends { x: number; y: number }>(
+  drops: readonly T[],
+  hoverX: number,
+  hoverY: number,
+  drawnAt: string
+): T | null {
+  if (hoverX < 0 || hoverY < 0) return null;
+  const at = drawnAt === NOWHERE ? `${hoverX},${hoverY}` : drawnAt;
+  return drops.find((d) => `${d.x},${d.y}` === at) ?? null;
+}
+
 export function drawnFirst(layers: TileLayer[], layer: SpriteLayer | undefined): TileLayer[] {
   if (!layer) return layers;
   const drawn = (l: TileLayer) => LAYER_KINDS[layer].includes(l.kind);

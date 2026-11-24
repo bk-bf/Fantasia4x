@@ -99,11 +99,14 @@
   import {
     BUILDING_SPRITES,
     drawnFirst,
+    drawnItemTile,
     drawnTile,
+    hoveredDrop,
     RESOURCE_SPRITES,
     spriteRect,
     type TileLayer
   } from '$lib/components/UI/canvas/drawnSelection';
+  import { drawStackBadges, stackBadges } from '$lib/components/UI/canvas/stackBadges';
   import VerbTag from '$lib/components/UI/hud/VerbTag.svelte';
   import PawnCard from '$lib/components/UI/hud/PawnCard.svelte';
   import BuildingCard from '$lib/components/UI/hud/BuildingCard.svelte';
@@ -756,10 +759,8 @@
 
   $: verbTag = markedTag ?? multiResourceTag ?? resourceTag;
 
-  $: hoverDroppedItem =
-    hoverTileX >= 0 && hoverTileY >= 0
-      ? (droppedItems.find((d) => d.x === hoverTileX && d.y === hoverTileY) ?? null)
-      : null;
+  let hoverItemTile = '';
+  $: hoverDroppedItem = hoveredDrop(droppedItems, hoverTileX, hoverTileY, hoverItemTile);
 
   function needBar(value: number): string {
     const filled = Math.round(value / 10);
@@ -1673,31 +1674,9 @@
       dragBox(mctx, tileBoxRect(minX, minY, maxX, maxY));
     }
 
-    const STACK_BADGE_MIN_TILE = 16;
-    const STACK_BADGE_FONT_PX = 5;
-    if (tileWidth >= STACK_BADGE_MIN_TILE && droppedItems.length > 0) {
-      const tileTotals = new Map<string, number>();
-      for (const d of droppedItems) {
-        const k = `${d.x},${d.y}`;
-        tileTotals.set(k, (tileTotals.get(k) ?? 0) + (d.quantity ?? 1));
-      }
-      ctx.save();
-      ctx.font = `bold ${STACK_BADGE_FONT_PX}px monospace`;
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'bottom';
-      ctx.fillStyle = '#ffffff';
-      for (const [k, total] of tileTotals) {
-        if (total < 2) continue;
-        const [wx, wy] = k.split(',').map(Number);
-        const sx = (wx - viewX) * tileWidth;
-        const sy = (wy - viewY) * tileHeight;
-        if (sx < -tileWidth || sy < -tileHeight || sx > W + tileWidth || sy > H + tileHeight)
-          continue;
-        const label = total > 999 ? '999+' : String(total);
-        ctx.fillText(label, sx + tileWidth - 1, sy + tileHeight - 1);
-      }
-      ctx.restore();
-    }
+    const itemOffset = (x: number, y: number) => itemOverlayGrid.getTile(x, y)?.animationOffset;
+    const view = { viewX, viewY, tileWidth, tileHeight };
+    drawStackBadges(ctx, stackBadges(droppedItems, view, W, H, itemOffset));
 
     if (buildings.length > 0) {
       const tintCanvas = document.createElement('canvas');
@@ -2871,6 +2850,7 @@
       lastCursorCy = cy;
       hoverTileX = Math.floor(cx / tileWidth + viewX);
       hoverTileY = Math.floor(cy / tileHeight + viewY);
+      hoverItemTile = drawnItemTile(renderer, cx, cy, { viewX, viewY, tileWidth, tileHeight });
       cursorOverCanvas = true;
       updateHoverEntity();
     }
