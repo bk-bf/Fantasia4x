@@ -430,7 +430,7 @@ const PROPS = (() => {
   }
   const CARRIED = {
     logs: (s, r) => shouldered(s, r.a, r.b),
-    planks: (s, r, seed) => s.slab(CX - SHOULDERED.half, B - 5, SHOULDERED.half * 2 + 1, 4, 2, M.wood(r.a, { pw: 4, seed, b: 3 }), M.flat(r.a, 2, seed + 1, .04)),
+    planks: (s, r, seed) => s.slab(CX - SHOULDERED.half, B - 3, SHOULDERED.half * 2 + 1, 2, 2, M.wood(r.a, { pw: 4, seed, b: 3 }), M.flat(r.a, 2, seed + 1, .04)),
     rubble: (s, r, seed) => basket(s, CX, B, 8, 9, r.a, seed),
     heap: (s, r, seed) => basket(s, CX, B, 8, 9, r.a, seed),
     bars: (s, r) => bar(s, CX - 6, B - 4, r.a)

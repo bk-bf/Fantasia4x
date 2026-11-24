@@ -118,33 +118,37 @@ function toolAt(s, kind, gx, gy, ang, o) {
 const TOOL_BUTT = { sword: 3, axe: 4, pick: 4, hoe: 11, hammer: 2, spear: 11, club: 2, bow: 11, torch: 2, staff: 11 };
 const STOWED = { toward: 172, away: 8, shown: 3, least: .12 };
 function aimed(ang, stow, back) {
-  const along = back ? STOWED.away : STOWED.toward;
   if (!(stow > 0)) return { ang, fore: 1 };
-  if (stow >= 1) return { ang: along, fore: SEEN.depth };
-  const k = stow * Math.PI / 2, a = ang * D2R, d = along * D2R, x = Math.cos(k) * Math.sin(a) + Math.sin(k) * SEEN.depth * Math.sin(d), up = Math.cos(k) * Math.cos(a) + Math.sin(k) * SEEN.depth * Math.cos(d);
-  return { ang: Math.atan2(x, up) / D2R, fore: Math.max(STOWED.least, Math.hypot(x, up)) };
+  const along = back ? STOWED.away : STOWED.toward, turn = ((ang - along + 540) % 360) - 180;
+  return { ang: along + turn * (1 - stow), fore: mix(SEEN.depth, 1, 1 - stow) };
 }
-const BOW = { half: 11, sag: 4, nock: 10 };
-const SIDE_DEPTH = { far: -3, farHeld: -2.9, farHand: -2.85, shield: -2.8, cape: -2, tail: -1.9, farLeg: -1, nearLeg: -.9, torso: 0, head: .3, pad: .4, tucked: .9, near: 1, tool: 1.5, hand: 1.6, fingers: 1.7 };
-const TOWARD_DEPTH = { behind: -4, cape: -.45, tail: -.4, legs: -.3, torso: -.2, raised: .2, head: .3, upper: 1, pad: 1.5, fore: 2, shield: 2.5, hand: 3, butt: -.5, step: .05 };
-const AWAY_DEPTH = { shield: -3.5, hand: -3, fore: -2, upper: -1, tail: -.4, legs: -.3, torso: -.2, pad: -.1, cape: .1, head: .3, butt: 3.2, behind: 4, step: .05 };
-const ON_ONE_SHOULDER = ['shoulder', 'game', 'drape'];
+const BOW = { half: 11, sag: 4, nock: 10, grip: 4.5 };
+const SIDE_DEPTH = { far: -3, farHeld: -2.9, farHand: -2.85, shield: -2.8, cape: -2, tail: -1.9, farLeg: -1, nearLeg: -.9, torso: 0, over: .25, head: .3, pad: .4, tucked: .9, near: 1, tool: 1.5, hand: 1.6, fingers: 1.7 };
+const TOWARD_DEPTH = { slung: -3.5, cape: -.45, tail: -.4, legs: -.3, torso: -.2, head: .3, upper: 1, pad: 1.5, fore: 2, shield: 2.5, hand: 3, butt: -.5, step: .05 };
+const AWAY_DEPTH = { shield: -3.5, hand: -3, fore: -2, upper: -1, tail: -.4, legs: -.3, torso: -.2, pad: -.1, cape: .1, slung: .2, head: .3, butt: 3.2, step: .05 };
+const ON_ONE_SHOULDER = ['shoulder', 'game', 'drape'], IN_BOTH_ARMS = ['chest', 'low'], HELD_LOW = { chest: 8, low: 10 };
 const HELD = {
   hip: { s: { at: .95, palm: 'around' }, f: { at: 2.95, palm: 'around' }, b: { at: -3.05, palm: 'around' } },
   chest: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'around' }, b: { at: -6, palm: 'around' } },
   low: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'under' }, b: { at: -6, palm: 'under' } },
   shoulder: { s: { at: .95, palm: 'around' }, f: { at: 7, palm: 'under' }, b: { at: 7, palm: 'under' } },
-  game: { s: { at: .2, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: 7, palm: 'under' } },
-  drape: { s: { at: .95, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: 7, palm: 'under' } },
+  game: { s: { at: .2, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: .25, palm: 'around' } },
+  drape: { s: { at: .25, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: .25, palm: 'around' } },
   rest: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'under' }, b: { at: -6, palm: 'under' } },
 };
-const REST = { toes: 4, reach: 8, edge: 2, raised: .7 };
+const REST = { toes: 4, along: 3, edge: 2, raised: .7 };
 const RIG_KEEP = { layers: false };
 const STRUCK = { reach: 1.5 };
+const TWO_HANDS = { apart: 3 };
+function aheadSeen(ang, ahead, back) {
+  const a = ang * D2R, flat = Math.sqrt(Math.max(0, 1 - ahead * ahead)), across = Math.sin(a) * flat, down = -Math.cos(a) * flat + (back ? -1 : 1) * SEEN.depth * ahead;
+  return { ang: Math.atan2(across, -down) / D2R, fore: Math.max(STOWED.least, Math.hypot(across, down)) };
+}
 function struckAway(ang) {
   const a = ang * D2R, across = Math.sin(a), up = Math.cos(a), ahead = STRUCK.reach * Math.max(0, -up), n = Math.hypot(across, up, ahead), rise = (up + SEEN.depth * ahead) / n;
   return { ang: Math.atan2(across / n, rise) / D2R, fore: Math.max(STOWED.least, Math.hypot(across / n, rise)) };
 }
+const HELD_THINGS = ['tool', 'tool butt', 'shield'];
 function rigComposite(s, layers) {
   const order = layers.map((l, i) => [l, i]).sort((a, b) => a[0].cam - b[0].cam || a[1] - b[1]).map(x => x[0]), owner = new Uint8Array(s.w * s.h), near = [-1, 1, -s.w, s.w], rims = new Map();
   order.forEach((l, n) => {
@@ -155,7 +159,7 @@ function rigComposite(s, layers) {
         const q = i + d;
         if (t.c[q] || !s.c[q]) continue;
         if (inked && owner[q] === inked) s.c[q] = P.ink;
-        else if (l.rim && s.c[q] !== P.ink && !rimmed.has(q) && !(l.limb && owner[q] && order[owner[q] - 1].limb === l.limb)) { s.c[q] = shade(s.c[q]); rimmed.add(q); }
+        else if (l.rim && s.c[q] !== P.ink && !rimmed.has(q) && !(l.limb && owner[q] && order[owner[q] - 1].limb === l.limb)) { s.c[q] = owner[q] && HELD_THINGS.includes(order[owner[q] - 1].name) ? P.ink : shade(s.c[q]); rimmed.add(q); }
       }
     }
     for (let i = 0; i < t.c.length; i++) if (t.c[i]) { s.c[i] = t.c[i]; s.e[i] = t.e[i]; owner[i] = n + 1; }

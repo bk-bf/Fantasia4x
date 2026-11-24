@@ -19,14 +19,16 @@ const stride = (ph, duty, S, H) => {
 };
 const HANG = [0, 10];
 const CARRY = {
-  axe: s => ({ hr: [3 + s * .5, 5], tool: -42 }), pick: s => ({ hr: [3 + s * .5, 5], tool: -42 }), hoe: s => ({ hr: [3 + s * .5, 5], tool: -38 }),
-  spear: s => ({ hr: [4 + s, 5], tool: 6 }), staff: s => ({ hr: [4 + s, 5], tool: 6 }), torch: s => ({ hr: [5 + s * .5, 3], tool: 14 }),
+  axe: s => ({ hr: [1 + s * 2, 9.5], tool: 108 }), pick: s => ({ hr: [1 + s * 2, 9.5], tool: 108 }), hoe: s => ({ hr: [1 + s * 2, 9.5], tool: 104 }),
+  spear: s => ({ hr: [1 + s * 2, 9], tool: 96 }), staff: s => ({ hr: [1 + s * 2, 9], tool: 96 }), torch: s => ({ hr: [7.5 + s * .5, 3], tool: 20 }),
   sword: s => ({ hr: [1 + s * 2, 9.5], tool: 118 }), club: s => ({ hr: [1 + s * 2, 9.5], tool: 112 }), hammer: s => ({ hr: [1 + s * 2, 9.5], tool: 112 }),
-  bow: s => ({ hr: [2 + s * 2, 9], tool: 22 }),
+  bow: s => ({ hr: [2 + s * 2, 9.5], tool: 32 }),
 };
 const held = (c, s) => (CARRY[c.tool] ? CARRY[c.tool](s) : { hr: [s * 5.5, 10 - Math.abs(s) * 1.2] });
 const flow = (c, u, k) => c.lvl > 2 ? { cape: k + sn(u * 2 + .18) * 1.6, hair: rnd(sn(u * 2 + .22) * 1.2) } : {};
-const face = c => ({ face: c.face });
+const CARRY_FB = { haft: { hr: [1, 9.2], tool: 188, choke: 12, ahead: .6 }, raised: { hr: [1, 7], tool: 36 }, pole: { hr: [1, 9.2], tool: 12 }, bow: { tool: 25 }, torch: { hr: [3, 6], tool: 25 } };
+const carriedFb = c => c.tool === 'bow' || c.tool === 'torch' ? CARRY_FB[c.tool] : ['spear', 'staff', 'hoe'].includes(c.tool) ? CARRY_FB.pole : ['axe', 'pick'].includes(c.tool) ? CARRY_FB.haft : CARRY_FB.raised;
+const face = c => ({ face: c.face, ...(c.face === 's' || !c.tool ? null : carriedFb(c)) });
 const GAIT = {
   light: { duty: .58, S: 10.5, H: 3, up: 2.6, by: .3, bob: .7 },
   bulky: { duty: .62, S: 8, H: 2.4, up: 2.2, by: .6, bob: .6 },
@@ -35,15 +37,16 @@ const GAIT = {
 };
 for (const g of Object.values(GAIT)) g.dist = g.S / g.duty;
 const HOLD = {
-  hip: { gait: 'light', swing: 1, side: { hr: [3, 7], lean: 1 }, fb: { hr: [0, 7], crook: ['hr'], fore: ['hr'] } },
+  hip: { gait: 'light', swing: 1, side: { hr: [3, 7], lean: 1 }, fb: { hr: [1, 8] } },
   chest: { gait: 'bulky', side: { hr: [6, 7], hl: [7, 6.5], lean: -1 }, fb: { hl: [2.6, 8], hr: [-2.6, 8], fore: ['hl', 'hr'] }, beside: 8 },
   low: { gait: 'heavy', sink: .9, side: { hr: [6.5, 7.5], hl: [7.5, 7], lean: -1.6 }, fb: { hl: [1, 9], hr: [-1, 9], fore: ['hl', 'hr'] }, beside: 9 },
   shoulder: { gait: 'shouldered', tilt: 1, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 1.4 }, fb: { hl: [-5.5, -4], wing: 1, lean: 1.5, hd: [1, 0] } },
   game: { gait: 'heavy', sink: .9, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 2.4, hd: [1, 1] }, fb: { hl: [-5.5, -4], wing: 1, lean: 1.5, hd: [1, 1] } },
   drape: { gait: 'heavy', sink: .4, free: 1, side: { hr: [5, 3.5], hl: [6, 4], lean: 1.8 }, fb: { hl: [4, 4], crook: ['hl'], fore: ['hl'] } },
 };
-const LIFT = { reaches: .4, grips: .5, lands: .9 };
-const lifted = (u, base, crouch, end) => u >= LIFT.lands ? end : keyed(u / LIFT.lands, base, [[0, {}], [LIFT.reaches, crouch], [LIFT.grips, { ...crouch, down: 0 }], [1, { ...end, cu: 1, down: 0 }, 'o']]);
+const LIFT = { reaches: .4, grips: .5, lands: .9, stands: 24, bends: 8 };
+const stooped = c => clamp((LIFT.stands - (c.tall || 0) - 1) / LIFT.bends, 0, 1);
+const lifted = (u, base, crouch, end) => u >= LIFT.lands ? end : { ...keyed(u / LIFT.lands, base, [[0, {}], [LIFT.reaches, crouch], [LIFT.grips, crouch], [1, { ...end, cu: 1 }, 'o']]), down: u / LIFT.lands < LIFT.grips ? 1 : 0 };
 const BESIDE = { shoulder: 5.5, wrap: 1, reach: 4.5 };
 const HOLDS = { hip: ['tote', 'toteStand'], chest: ['heft', 'heftStand'], low: ['lug', 'lugStand'], shoulder: ['haul', 'haulStand'], game: ['bear', 'bearStand'], drape: ['rescue', 'rescueStand'] };
 const turned = (p, keys) => { for (const k of keys) if (p[k]) p[k] = [-p[k][0], p[k][1]]; return p; };
@@ -73,7 +76,7 @@ function tucked(u, c, go) {
   return c.lvl > 2 && go ? { ...p, ...flow(c, u, 2.2) } : p;
 }
 const READY = {
-  one: (u, c) => ({ face: 's', hr: [5, 2 + sn(u) * .5], tool: 30, hl: [6, 3], fl: [-3, 0], fr: [3, 0], by: 1 + sn(u) * .4, lean: 1 }),
+  one: (u, c) => ({ face: 's', hr: [7, 3 + sn(u) * .5], tool: c.tool === 'spear' ? 72 : 46, hl: [6, 3], fl: [-3, 0], fr: [3, 0], by: 1 + sn(u) * .4, lean: 1 }),
   two: (u, c) => c.tool === 'spear' || c.tool === 'staff' ? { face: 's', two: 9, hr: [1, 4 + sn(u) * .4], tool: 72, fl: [-3, 0], fr: [3, 0], by: 1 + sn(u) * .4, lean: 1 } : { face: 's', two: 6, hr: [4, 3.5 + sn(u) * .4], tool: 38, fl: [-3, 0], fr: [3, 0], by: 1 + sn(u) * .4, lean: 1 },
   bow: (u, c) => ({ face: 's', hl: [8, 2.5 + sn(u) * .4], hr: [5, 3 + sn(u) * .4], bow: 1, arrow: 1, cant: 0, twang: 0, fl: [-3, 0], fr: [3, 0], by: .6 + sn(u) * .3, lean: .5 }),
 };
@@ -92,19 +95,19 @@ const PAWN_ANIMS = {
     return { ...face(c), br: sn(u * 2) > 0 ? 1 : 0, look: k, hd: [k, 0], blink: c.lvl > 2 && (u > .47 && u < .51) ? 1 : 0, ...(c.face === 's' ? held(c, 0) : {}) };
   } },
   walk: { label: 'Walking', group: 'Movement', dist: 19, n: 8, pose(u, c) {
-    if (c.face !== 's') { const a = sn(u); return { ...face(c), fl: [0, Math.max(0, a) * 3], fr: [0, Math.max(0, -a) * 3], by: .2 + cs(u * 2) * .6, bx: c.lvl > 2 ? a * .6 : 0, hl: [0, 9.2 + a * 1.6], hr: [0, 9.2 - a * 1.6], ...flow(c, u, 1) }; }
+    if (c.face !== 's') { const a = sn(u); return { ...face(c), fl: [0, Math.max(0, a) * 3], fr: [0, Math.max(0, -a) * 3], by: .2 + cs(u * 2) * .6, bx: c.lvl > 2 ? a * .6 : 0, hl: [0, 9.2 + a * 1.6], hr: [c.tool ? 1 : 0, 9.2 - a * 1.6], ...flow(c, u, 1) }; }
     const a = sn(u);
     return { face: 's', fr: stride(u, .58, 11, 3.2), fl: stride(u + .5, .58, 11, 3.2), by: .3 + cs(u * 2) * .7, lean: 1, hl: [a * 5.5, 10 - Math.abs(a) * 1.2], ...held(c, -a), ...flow(c, u, 2.5) };
   } },
   run: { label: 'Running', group: 'Movement', dist: 34, n: 8, pose(u, c) {
-    if (c.face !== 's') { const a = sn(u); return { ...face(c), fl: [0, Math.max(0, a) * 5], fr: [0, Math.max(0, -a) * 5], by: -Math.abs(a) * 1.6 + .6, hl: [-1, 6 + a * 3], hr: [1, 6 - a * 3], ...flow(c, u, 2) }; }
+    if (c.face !== 's') { const a = sn(u); return { ...face(c), fl: [0, Math.max(0, a) * 5], fr: [0, Math.max(0, -a) * 5], by: -Math.abs(a) * 1.6 + .6, hl: [0, 7.5 + a * 2], hr: [c.tool ? 1 : 0, 7.5 - a * 2], crook: ['hl', 'hr'], ...flow(c, u, 2) }; }
     const a = sn(u);
-    return { face: 's', fr: stride(u, .38, 13, 5), fl: stride(u + .5, .38, 13, 5), by: .8 - Math.abs(sn(u + .12)) * 2.4, lean: 3, hl: [1 + a * 5, 6 - a], hr: [1 - a * 5, 6 + a], item: c.tool, tool: 100 - a * 30, ...flow(c, u, 5.5) };
+    return { face: 's', fr: stride(u, .38, 13, 5), fl: stride(u + .5, .38, 13, 5), by: .8 - Math.abs(sn(u + .12)) * 2.4, lean: 3, hl: [1 + a * 5, 6 - a], hr: [1 - a * 5, 6 + a], item: c.tool, tool: 96 - a * 6, ...flow(c, u, 5.5) };
   } },
   panic: { label: 'Panicking', group: 'Movement', dist: 30, n: 8, pose(u, c) {
     const a = sn(u), b = sn(u * 2);
-    if (c.face !== 's') return { ...face(c), fl: [0, Math.max(0, a) * 5], fr: [0, Math.max(0, -a) * 5], by: -Math.abs(a) * 1.4 + .5, hl: [-3, -8 + b], hr: [3, -8 - b], mouth: 1, item: null, ...flow(c, u, 2) };
-    return { face: 's', fr: stride(u, .4, 12, 5), fl: stride(u + .5, .4, 12, 5), by: .6 - Math.abs(sn(u + .12)) * 2, lean: 1.5, hl: [2, -8 + b], hr: [4, -8 - b], mouth: 1, item: null, ...flow(c, u, 5) };
+    if (c.face !== 's') return { ...face(c), fl: [0, Math.max(0, a) * 5], fr: [0, Math.max(0, -a) * 5], by: -Math.abs(a) * 1.4 + .5, hl: [-3, -8 + b], hr: [3, -8 - b], covers: 1, mouth: 1, item: null, ...flow(c, u, 2) };
+    return { face: 's', fr: stride(u, .4, 12, 5), fl: stride(u + .5, .4, 12, 5), by: .6 - Math.abs(sn(u + .12)) * 2, lean: 1.5, hl: [2, -8 + b], hr: [4, -8 - b], covers: 1, mouth: 1, item: null, ...flow(c, u, 5) };
   } },
   stalk: { label: 'Stalking', group: 'Movement', dist: 9.5, n: 8, pose(u, c) {
     return { face: 's', fr: stride(u, .7, 6.5, 2), fl: stride(u + .5, .7, 6.5, 2), by: 2.4 + cs(u * 2) * .4, lean: 2.6, hd: [1, 0], hl: [6, 7], hr: [5, 7.5], tool: 62, ...flow(c, u, 1) };
@@ -122,8 +125,8 @@ const PAWN_ANIMS = {
   lugStand: { label: 'Standing with a low load', group: 'Carrying', dur: 2.2, n: 4, pose(u, c) { return carried('low', u, c, 0); } },
   bearStand: { label: 'Standing with game', group: 'Carrying', dur: 2.2, n: 4, pose(u, c) { return carried('game', u, c, 0); } },
   lift: { label: 'Picking up', group: 'Work', dur: 1.1, n: 7, once: 1, pose(u, c) {
-    const crouch = { by: 5, lean: 4, hr: [8, 8], hl: [9, 8], hd: [2, 3], fl: [-3, 0], fr: [3, 0] }, end = carried(c.hold, 0, { ...c, face: 's' }, 0);
-    return lifted(u, { face: 's', item: null, carry: c.hold, hr: HANG, hl: HANG, by: 0, lean: 0, hd: [0, 0], fl: [0, 0], fr: [0, 0], cu: 0, down: 1 }, crouch, end);
+    const k = stooped(c), crouch = { by: 5 * k, lean: 4 * k, hr: [8, 8], hl: [9, 8], hd: [k, 1.5 * k], fl: [-3, 0], fr: [3, 0], reach: 1 }, end = carried(c.hold, 0, { ...c, face: 's' }, 0);
+    return lifted(u, { face: 's', item: null, carry: c.hold, hr: HANG, hl: HANG, by: 0, lean: 0, hd: [0, 0], fl: [0, 0], fr: [0, 0], cu: 0, down: 1, reach: 0 }, crouch, end);
   } },
   drop: { label: 'Setting down', group: 'Work', dur: 1.1, n: 7, once: 1, pose(u, c) { return PAWN_ANIMS.lift.pose(1 - u, c); } },
   held: { label: 'Standing with the load', group: 'Carrying', dur: 2.8, n: 4, pose(u, c) { return carried(c.hold, u, c, 0); } },
@@ -131,27 +134,27 @@ const PAWN_ANIMS = {
   tuckStand: { label: 'Standing with the weapon under the arm', group: 'Combat', dur: 2.8, n: 4, pose(u, c) { return tucked(u, c, 0); } },
   guardTwo: { label: 'Ready stance · two hands', group: 'Combat', dur: 1.4, n: 4, pose: READY.two },
   guardBow: { label: 'Ready stance · bow', group: 'Combat', dur: 1.6, n: 4, pose: READY.bow },
-  ready: { label: 'Drawing to ready', group: 'Combat', dur: .5, n: 5, once: 1, pose: readied('one') },
-  readyTwo: { label: 'Drawing to ready · two hands', group: 'Combat', dur: .55, n: 5, once: 1, pose: readied('two') },
-  readyBow: { label: 'Drawing to ready · bow', group: 'Combat', dur: .6, n: 5, once: 1, pose: readied('bow') },
-  stow: { label: 'Stowing the weapon', group: 'Combat', dur: .5, n: 5, once: 1, pose(u, c) { return readied('one')(1 - u, c); } },
-  stowTwo: { label: 'Stowing the weapon · two hands', group: 'Combat', dur: .55, n: 5, once: 1, pose(u, c) { return readied('two')(1 - u, c); } },
-  stowBow: { label: 'Stowing the bow', group: 'Combat', dur: .6, n: 5, once: 1, pose(u, c) { return readied('bow')(1 - u, c); } },
+  ready: { label: 'Drawing to ready', group: 'Combat', dur: .5, n: 8, once: 1, pose: readied('one') },
+  readyTwo: { label: 'Drawing to ready · two hands', group: 'Combat', dur: .55, n: 8, once: 1, pose: readied('two') },
+  readyBow: { label: 'Drawing to ready · bow', group: 'Combat', dur: .6, n: 8, once: 1, pose: readied('bow') },
+  stow: { label: 'Stowing the weapon', group: 'Combat', dur: .5, n: 8, once: 1, pose(u, c) { return readied('one')(1 - u, c); } },
+  stowTwo: { label: 'Stowing the weapon · two hands', group: 'Combat', dur: .55, n: 8, once: 1, pose(u, c) { return readied('two')(1 - u, c); } },
+  stowBow: { label: 'Stowing the bow', group: 'Combat', dur: .6, n: 8, once: 1, pose(u, c) { return readied('bow')(1 - u, c); } },
   chop: { label: 'Woodcutting', group: 'Work', dur: 1.25, n: 10, hit: [.55, 'chips'], pose(u, c) {
     const x = c.lvl > 2 ? 1 : 0;
-    return keyed(u, { face: 's', two: 6, hr: [5, 3], tool: 35, lean: 0, by: 0, bx: 0, fl: [-3, 0], fr: [3, 0], hd: [0, 0] }, [[0, {}], [.3, { hr: [-3, -6], tool: -78 - x * 14, lean: -1.5 - x, bx: -1, hd: [-x, -x] }, 'o'], [.42, { hr: [-3, -6.5], tool: -82 - x * 16, lean: -1.5 - x, bx: -1, hd: [-x, -x] }], [.55, { hr: [8, 1], tool: 82 + x * 8, lean: 2.5 + x, by: 1 + x, bx: 1, hd: [1, x] }, 'i'], [.63, { hr: [7, 1], tool: 75, lean: 2, by: 1, bx: 1 }], [.78, { hr: [8, 1.5], tool: 82, lean: 2.2, by: 1, bx: 1 }], [1, {}]]);
+    return keyed(u, { face: 's', over: 1, two: 6, hr: [5, 6], tool: 100, lean: 0, by: 0, bx: 0, fl: [-3, 0], fr: [3, 0], hd: [0, 0] }, [[0, {}], [.14, { hr: [1, 2], tool: 10 }], [.3, { hr: [-6, -5], tool: -78 - x * 14, lean: -1.5 - x, bx: -1, hd: [-x, -x] }, 'o'], [.42, { hr: [-6, -5.5], tool: -82 - x * 16, lean: -1.5 - x, bx: -1, hd: [-x, -x] }], [.49, { hr: [1, 1], tool: 10 }], [.55, { hr: [8, 1], tool: 82 + x * 8, lean: 2.5 + x, by: 1 + x, bx: 1, hd: [1, x] }, 'i'], [.63, { hr: [7, 1], tool: 75, lean: 2, by: 1, bx: 1 }], [.78, { hr: [8, 1.5], tool: 82, lean: 2.2, by: 1, bx: 1 }], [1, {}]]);
   } },
   mine: { label: 'Mining', group: 'Work', dur: 1.3, n: 10, hit: [.52, 'stone'], pose(u, c) {
     const x = c.lvl > 2 ? 1 : 0;
-    return keyed(u, { face: 's', two: 6, hr: [5, 2], tool: 30, lean: 0, by: 0, bx: 0, fl: [-3, 0], fr: [3, 0], hd: [0, 0] }, [[0, {}], [.32, { hr: [-2, -8], tool: -75 - x * 15, lean: -1.5 - x, by: -x, hd: [0, -1] }, 'o'], [.4, { hr: [-2, -8.5], tool: -78 - x * 16, lean: -1.5 - x, by: -x, hd: [0, -1] }], [.52, { hr: [8, -1], tool: 75 + x * 6, lean: 2.5 + x, by: 1 + x, bx: 1, hd: [1, 0] }, 'i'], [.6, { hr: [7, -1], tool: 66, lean: 2, by: 1, bx: 1 }], [.74, { hr: [8, 0], tool: 75, lean: 2.2, by: 1, bx: 1 }], [1, {}]]);
+    return keyed(u, { face: 's', over: 1, two: 6, hr: [5, 6], tool: 100, lean: 0, by: 0, bx: 0, fl: [-3, 0], fr: [3, 0], hd: [0, 0] }, [[0, {}], [.15, { hr: [1, 2], tool: 10 }], [.32, { hr: [-6, -5], tool: -75 - x * 15, lean: -1.5 - x, by: -x, hd: [0, -1] }, 'o'], [.4, { hr: [-6, -5.5], tool: -78 - x * 16, lean: -1.5 - x, by: -x, hd: [0, -1] }], [.47, { hr: [1, 1], tool: 10 }], [.52, { hr: [8, -1], tool: 75 + x * 6, lean: 2.5 + x, by: 1 + x, bx: 1, hd: [1, 0] }, 'i'], [.6, { hr: [7, -1], tool: 66, lean: 2, by: 1, bx: 1 }], [.74, { hr: [8, 0], tool: 75, lean: 2.2, by: 1, bx: 1 }], [1, {}]]);
   } },
   hoe: { label: 'Planting', group: 'Work', dur: 1.4, n: 10, hit: [.5, 'soil'], pose(u, c) {
     const x = c.lvl > 2 ? 1 : 0;
-    return keyed(u, { face: 's', two: 7, hr: [4, 3], tool: 40, lean: 0, by: 0, fl: [-3, 0], fr: [3, 0], hd: [0, 0] }, [[0, {}], [.3, { hr: [0, -7], tool: -20 - x * 14, lean: -1 - x, by: -x }, 'o'], [.38, { hr: [0, -7], tool: -22 - x * 14, lean: -1 - x, by: -x }], [.5, { hr: [8, 5], tool: 118, lean: 3 + x, by: 1.5 + x, hd: [1, 1] }, 'i'], [.72, { hr: [5, 6], tool: 110, lean: 2, by: 1.5, hd: [1, 1] }], [1, {}]]);
+    return keyed(u, { face: 's', over: 1, two: 7, hr: [5, 6], tool: 100, lean: 0, by: 0, fl: [-3, 0], fr: [3, 0], hd: [0, 0] }, [[0, {}], [.14, { hr: [1, 2], tool: 20 }], [.3, { hr: [-6, -4], tool: -40 - x * 14, lean: -1 - x, by: -x }, 'o'], [.38, { hr: [-6, -4], tool: -42 - x * 14, lean: -1 - x, by: -x }], [.45, { hr: [1, 1], tool: 20 }], [.5, { hr: [8, 5], tool: 118, lean: 3 + x, by: 1.5 + x, hd: [1, 1] }, 'i'], [.72, { hr: [5, 6], tool: 110, lean: 2, by: 1.5, hd: [1, 1] }], [1, {}]]);
   } },
   hammer: { label: 'Metalworking', group: 'Work', dur: .95, n: 8, hit: [.5, 'spark'], pose(u, c) {
     const x = c.lvl > 2 ? 1 : 0;
-    return keyed(u, { face: 's', hr: [5, 0], tool: 40, hl: [7, 5], lean: .5, by: 0, hd: [1, 0], fl: [-2, 0], fr: [3, 0] }, [[0, {}], [.3, { hr: [1, -7], tool: -25 - x * 20, lean: -.5 - x, hd: [0, -x] }, 'o'], [.38, { hr: [1, -7.5], tool: -28 - x * 20, lean: -.5 - x, hd: [0, -x] }], [.5, { hr: [8, 3], tool: 100, lean: 1.5 + x, by: .5 + x, hd: [1, 1] }, 'i'], [.58, { hr: [8, 1], tool: 80, lean: 1.5, by: .5 }], [1, {}]]);
+    return keyed(u, { face: 's', over: 1, hr: [6, 4], tool: 80, hl: [7, 5], lean: .5, by: 0, hd: [1, 0], fl: [-2, 0], fr: [3, 0] }, [[0, {}], [.14, { hr: [1, 2], tool: 15 }], [.3, { hr: [-6, -5], tool: -35 - x * 20, lean: -.5 - x, hd: [0, -x] }, 'o'], [.38, { hr: [-6, -5.5], tool: -38 - x * 20, lean: -.5 - x, hd: [0, -x] }], [.45, { hr: [1, 1], tool: 15 }], [.5, { hr: [8, 3], tool: 100, lean: 1.5 + x, by: .5 + x, hd: [1, 1] }, 'i'], [.58, { hr: [8, 1], tool: 80, lean: 1.5, by: .5 }], [1, {}]]);
   } },
   stir: { label: 'Cooking', group: 'Work', dur: 1.6, n: 8, pose(u, c) {
     return { face: 's', item: 'ladle', hr: [7 + cs(u) * 2, 5.5 + sn(u) * 1.2], tool: 152 + sn(u) * 12, hl: [5, 7], lean: 1.6, by: 1, hd: [1, 1], fl: [-2, 0], fr: [3, 0], blink: c.lvl > 2 && u > .9 ? 1 : 0 };
@@ -161,14 +164,14 @@ const PAWN_ANIMS = {
   } },
   draw: { label: 'Drawing water', group: 'Needs', dur: 1.5, n: 8, pose(u, c) {
     const a = sn(u);
-    return { face: 's', item: null, hr: [6, 1 + a * 4], hl: [6, 3 - a * 4], lean: 1, by: .5 + Math.max(0, a) * .8, fl: [-3, 0], fr: [3, 0], hd: [0, 0] };
+    return { face: 's', item: null, hr: [7, 4 + a * 3], hl: [7, 5 - a * 3], lean: 1, by: .5 + Math.max(0, a) * .8, fl: [-3, 0], fr: [3, 0], hd: [0, 0] };
   } },
   drink: { label: 'Drinking', group: 'Needs', dur: 2.6, n: 8, pose(u, c) {
-    return keyed(u, { face: 's', item: 'cup', hr: [5, 4], tool: 0, hd: [0, 0], lean: 0, hl: HANG }, [[0, {}], [.28, { hr: [6, -3], tool: -35, hd: [-1, -1], lean: -.6 }], [.66, { hr: [6, -3.4], tool: -55, hd: [-1, -1], lean: -1 }], [.82, { hr: [5, 4] }], [1, {}]]);
+    return keyed(u, { face: 's', covers: 1, item: 'cup', hr: [5, 4], tool: 0, hd: [0, 0], lean: 0, hl: HANG }, [[0, {}], [.28, { hr: [6, -3], tool: -35, hd: [-1, -1], lean: -.6 }], [.66, { hr: [6, -3.4], tool: -55, hd: [-1, -1], lean: -1 }], [.82, { hr: [5, 4] }], [1, {}]]);
   } },
   eat: { label: 'Eating', group: 'Needs', dur: 2.4, n: 8, pose(u, c) {
     const chew = u > .42 && u < .95 ? (Math.floor(u * 16) & 1) : 0;
-    return keyed(u, { face: 's', item: 'bread', by: 4, fl: [5, 0], fr: [6, 0], hr: [5, 5], tool: 90, hd: [0, 0], hl: [4, 6], mouth: 0 }, [[0, {}], [.26, { hr: [6, -3], hd: [0, 1], mouth: 1 }], [.38, { hr: [6, -3], hd: [0, 1], mouth: 1 }], [.52, { hr: [5, 5], hd: [0, chew], mouth: 0 }], [.95, { hd: [0, chew] }], [1, {}]]);
+    return keyed(u, { face: 's', covers: 1, item: 'bread', by: 4, fl: [5, 0], fr: [6, 0], hr: [5, 5], tool: 90, hd: [0, 0], hl: [4, 6], mouth: 0 }, [[0, {}], [.26, { hr: [6, -3], hd: [0, 1], mouth: 1 }], [.38, { hr: [6, -3], hd: [0, 1], mouth: 1 }], [.52, { hr: [5, 5], hd: [0, chew], mouth: 0 }], [.95, { hd: [0, chew] }], [1, {}]]);
   } },
   sit: { label: 'Sitting', group: 'Idle life', dur: 3, n: 4, pose(u, c) {
     return { face: 's', item: null, by: 4, fl: [5, 0], fr: [6, 0], hr: [5, 5.5], hl: [4, 6], br: u > .4 && u < .85 ? 1 : 0, blink: c.lvl > 2 && u > .94 ? 1 : 0 };
@@ -177,11 +180,11 @@ const PAWN_ANIMS = {
     return { face: 's', item: null, by: 4, fl: [5, 0], fr: [6, 0], hr: [8, 2 + sn(u) * .8], hl: [8, 3 - sn(u) * .8], lean: 1.4, hd: [1, 0] };
   } },
   tired: { label: 'Tired', group: 'Needs', dur: 3.2, n: 8, pose(u, c) {
-    return keyed(u, { face: 'f', item: null, hl: HANG, hr: HANG, hd: [0, 0], by: 0, mouth: 0, blink: 0 }, [[0, {}], [.2, { hl: [-2, 2], hr: [2, 2] }], [.4, { hl: [-3, -9], hr: [3, -9], hd: [0, -1], by: -1, mouth: 1, blink: 1 }], [.66, { hl: [-4, -8], hr: [4, -8], hd: [0, -1], by: -1, mouth: 1, blink: 1 }], [.85, { hd: [0, 1] }], [1, {}]]);
+    return keyed(u, { face: 'f', covers: 1, item: null, hl: HANG, hr: HANG, hd: [0, 0], by: 0, mouth: 0, blink: 0 }, [[0, {}], [.2, { hl: [-2, 2], hr: [2, 2] }], [.4, { hl: [-3, -9], hr: [3, -9], hd: [0, -1], by: -1, mouth: 1, blink: 1 }], [.66, { hl: [-4, -8], hr: [4, -8], hd: [0, -1], by: -1, mouth: 1, blink: 1 }], [.85, { hd: [0, 1] }], [1, {}]]);
   } },
   cry: { label: 'Crying', group: 'Needs', dur: 1.2, n: 6, pose(u, c) {
     const b = Math.floor(u * 6) & 1;
-    return { face: 'f', item: null, hd: [0, 2], hl: [5, -2 - b * .5], hr: [-5, -2 - b * .5], by: 1 + b * .6, blink: 1 };
+    return { face: 'f', covers: 1, item: null, hd: [0, 2], hl: [5, -2 - b * .5], hr: [-5, -2 - b * .5], by: 1 + b * .6, blink: 1 };
   } },
   talk: { label: 'Talking', group: 'Social', dur: 2.6, n: 8, pose(u, c) {
     const m = Math.floor(u * 10) & 1;
@@ -191,32 +194,32 @@ const PAWN_ANIMS = {
     return keyed(u, { face: 's', item: null, hr: [3, 8.5], hl: [2, 9], hd: [0, 0], blink: 0, br: 0 }, [[0, {}], [.3, { hd: [0, 1] }], [.4, { hd: [0, 0], br: 1 }], [.6, { hd: [0, 1], blink: c.lvl > 2 ? 1 : 0 }], [.7, { hd: [0, 0] }], [1, {}]]);
   } },
   guard: { label: 'Ready stance', group: 'Combat', dur: 1.4, n: 4, pose(u, c) {
-    return { face: 's', hr: [5, 2 + sn(u) * .5], tool: c.tool === 'spear' ? 72 : 30, hl: [6, 3], fl: [-3, 0], fr: [3, 0], by: 1 + sn(u) * .4, lean: 1 };
+    return { face: 's', hr: [7, 3 + sn(u) * .5], tool: c.tool === 'spear' ? 72 : 46, hl: [6, 3], fl: [-3, 0], fr: [3, 0], by: 1 + sn(u) * .4, lean: 1 };
   } },
   attack: { label: 'Striking', group: 'Combat', dur: .85, n: 8, hit: [.48, 'blow'], pose(u, c) {
     const x = c.lvl > 2 ? 1 : 0;
-    return keyed(u, { face: 's', hr: [5, 2], tool: 30, hl: [6, 3], lean: 1, by: 1, bx: 0, fl: [-3, 0], fr: [3, 0], hd: [0, 0] }, [[0, {}], [.3, { hr: [-3, -7], tool: -60 - x * 25, lean: -1.5 - x, bx: -1 - x, hd: [-x, 0] }, 'o'], [.36, { hr: [-3, -7], tool: -64 - x * 25, lean: -1.5 - x, bx: -1 - x }], [.48, { hr: [9, 0], tool: 95, lean: 3 + x, bx: 2 + x, fr: [6, 0], hd: [1, 0] }, 'i'], [.62, { hr: [7, 5], tool: 140 + x * 12, lean: 3, bx: 2, fr: [6, 0] }], [1, {}]]);
+    return keyed(u, { face: 's', over: 1, hr: [7, 3], tool: 42, hl: [6, 3], lean: 1, by: 1, bx: 0, fl: [-3, 0], fr: [3, 0], hd: [0, 0] }, [[0, {}], [.14, { hr: [1, 2], tool: 5 }], [.3, { hr: [-6, -5], tool: -50 - x * 25, lean: -1.5 - x, bx: -1 - x, hd: [-x, 0] }, 'o'], [.36, { hr: [-6, -5], tool: -54 - x * 25, lean: -1.5 - x, bx: -1 - x }], [.43, { hr: [1, 1], tool: 10 }], [.48, { hr: [9, 0], tool: 95, lean: 3 + x, bx: 2 + x, fr: [6, 0], hd: [1, 0] }, 'i'], [.62, { hr: [7, 5], tool: 140 + x * 12, lean: 3, bx: 2, fr: [6, 0] }], [1, {}]]);
   } },
   thrust: { label: 'Spear thrust', group: 'Combat', dur: .8, n: 7, hit: [.45, 'blow'], pose(u, c) {
     const x = c.lvl > 2 ? 1 : 0;
     return keyed(u, { face: 's', two: 9, hr: [1, 4], tool: 78, lean: 1, by: 1, bx: 0, fl: [-3, 0], fr: [3, 0] }, [[0, {}], [.3, { hr: [-4 - x, 4], tool: 82, lean: -1 - x, bx: -1 - x }, 'o'], [.45, { hr: [5, 3], tool: 88, lean: 3 + x, bx: 2 + x, fr: [7, 0] }, 'i'], [.62, { hr: [5, 3], tool: 88, lean: 3, bx: 2, fr: [7, 0] }], [1, {}]]);
   } },
   block: { label: 'Blocking', group: 'Combat', dur: .85, n: 6, pose(u, c) {
-    return keyed(u, { face: 's', hl: [6, 3], hr: [3, 5], tool: 30, lean: 1, by: 1, bx: 0, fl: [-3, 0], fr: [3, 0] }, [[0, {}], [.3, { hl: [8, 0], lean: 1.5, by: 1.5 }], [.48, { hl: [8, 0], lean: 1.5, by: 1.5 }], [.56, { hl: [6, 0], lean: -1.5, bx: -2, by: 2 }, 'o'], [.8, { hl: [8, 1], lean: 1, bx: 0 }], [1, {}]]);
+    return keyed(u, { face: 's', hl: [6, 3], hr: [7, 4], tool: 42, lean: 1, by: 1, bx: 0, fl: [-3, 0], fr: [3, 0] }, [[0, {}], [.3, { hl: [8, 0], lean: 1.5, by: 1.5 }], [.48, { hl: [8, 0], lean: 1.5, by: 1.5 }], [.56, { hl: [6, 0], lean: -1.5, bx: -2, by: 2 }, 'o'], [.8, { hl: [8, 1], lean: 1, bx: 0 }], [1, {}]]);
   } },
   shoot: { label: 'Loosing an arrow', group: 'Combat', dur: 2.2, n: 10, hit: [.76, 'arrow'], pose(u, c) {
     const tr = c.lvl > 2 && u > .6 && u < .75 ? (Math.floor(u * 40) & 1) * .5 : 0;
-    return keyed(u, { face: 's', hl: [6, 6], hr: [4, 7], bow: 0, arrow: 0, twang: 0, lean: 0, hd: [0, 0], fl: [-3, 0], fr: [3, 0] }, [[0, {}], [.22, { hl: [9, 0], hr: [7, 0], bow: 1, arrow: 1 }], [.3, { hl: [9, 0], hr: [7, 0], bow: 1, arrow: 1 }], [.6, { hl: [9, 0], hr: [-2, tr], bow: 9, arrow: 1, lean: -.6 }, 'o'], [.75, { hl: [9, 0], hr: [-2, tr], bow: 9, arrow: 1, lean: -.6 }], [.76, { hl: [9, 0], hr: [-4, 1], bow: 0, arrow: 0, twang: 1, lean: -.6 }, 'l'], [.8, { hl: [9, 0], hr: [-4, 1], bow: 0, twang: 0 }], [.9, { hl: [9, 0], hr: [-3, 2] }], [1, {}]]);
+    return keyed(u, { face: 's', hl: [6, 6], hr: [4, 7], bow: 0, arrow: 0, twang: 0, lean: 0, hd: [0, 0], fl: [-3, 0], fr: [3, 0] }, [[0, {}], [.22, { hl: [9, 1], hr: [7, 1], bow: 1, arrow: 1 }], [.3, { hl: [9, 1], hr: [7, 1], bow: 1, arrow: 1 }], [.6, { hl: [9, 1], hr: [-2, 1 + tr], bow: 9, arrow: 1, lean: -.6 }, 'o'], [.75, { hl: [9, 1], hr: [-2, 1 + tr], bow: 9, arrow: 1, lean: -.6 }], [.76, { hl: [9, 1], hr: [-4, 2], bow: 0, arrow: 0, twang: 1, lean: -.6 }, 'l'], [.8, { hl: [9, 1], hr: [-4, 2], bow: 0, twang: 0 }], [.9, { hl: [9, 1], hr: [-3, 3] }], [1, {}]]);
   } },
   hit: { label: 'Taking a blow', group: 'Combat', dur: .42, n: 4, once: 1, pose(u, c) {
-    return keyed(u, { face: 's', hr: [3, 7], hl: [3, 8], lean: 0, bx: 0, hd: [0, 0], blink: 0, by: 0 }, [[0, {}], [.25, { lean: -3, bx: -2, hd: [-1, -1], hr: [-2, 5], hl: [5, 4], blink: 1, by: 1 }, 'o'], [.55, { lean: -2.4, bx: -2, hd: [-1, 0], hr: [-1, 6], hl: [4, 5], blink: 1, by: 1 }], [1, {}]]);
+    return keyed(u, { face: 's', hr: [3, 8], hl: [3, 8], tool: 118, lean: 0, bx: 0, hd: [0, 0], blink: 0, by: 0 }, [[0, {}], [.25, { lean: -3, bx: -2, hd: [-1, -1], hr: [5, 5], hl: [5, 4], tool: 95, blink: 1, by: 1 }, 'o'], [.55, { lean: -2.4, bx: -2, hd: [-1, 0], hr: [5, 6], hl: [4, 5], tool: 105, blink: 1, by: 1 }], [1, {}]]);
   } },
   stagger: { label: 'Staggering', group: 'Combat', dur: .9, n: 6, once: 1, pose(u, c) {
-    return keyed(u, { face: 's', hr: [2, 8], hl: [3, 8], lean: 0, bx: 0, hd: [0, 0], by: 0, fl: [0, 0], fr: [0, 0], blink: 0 }, [[0, {}], [.2, { lean: -3, bx: -2, hd: [-1, -1], hr: [-3, 3], hl: [6, 2], fr: [-3, 2], blink: 1 }, 'o'], [.45, { lean: -2, bx: -4, hr: [-2, 5], hl: [5, 4], fr: [-5, 0], fl: [-3, 2], by: 1 }], [.7, { lean: 2, bx: -4, hd: [1, 1], hr: [4, 8], hl: [5, 8], fr: [-5, 0], fl: [-6, 0], by: 1.5 }], [1, { lean: 1, bx: -4, fr: [-5, 0], fl: [-6, 0], by: 1 }]]);
+    return keyed(u, { face: 's', hr: [2, 8], hl: [3, 8], tool: 118, lean: 0, bx: 0, hd: [0, 0], by: 0, fl: [0, 0], fr: [0, 0], blink: 0 }, [[0, {}], [.2, { lean: -3, bx: -2, hd: [-1, -1], hr: [6, 4], hl: [6, 2], tool: 90, fr: [-3, 2], blink: 1 }, 'o'], [.45, { lean: -2, bx: -4, hr: [5, 6], hl: [5, 4], tool: 105, fr: [-5, 0], fl: [-3, 2], by: 1 }], [.7, { lean: 2, bx: -4, hd: [1, 1], hr: [4, 8], hl: [5, 8], fr: [-5, 0], fl: [-6, 0], by: 1.5 }], [1, { lean: 1, bx: -4, fr: [-5, 0], fl: [-6, 0], by: 1 }]]);
   } },
   fall: { label: 'Collapsing', group: 'Combat', dur: 1, n: 7, once: 1, pose(u, c) {
     if (u >= .7) return { lie: 1, blink: 1, drop: 0 };
-    return keyed(u, { face: 's', item: null, hr: [2, 8], hl: [3, 8], lean: 0, bx: 0, hd: [0, 0], by: 0, fl: [0, 0], fr: [0, 0], blink: 1 }, [[0, {}], [.22, { lean: -3, bx: -2, hd: [-1, -1], hr: [-3, 3], hl: [6, 2], by: 1 }, 'o'], [.5, { lean: 3, bx: -1, hd: [2, 3], hr: [4, 9], hl: [5, 9], by: 6, fl: [-4, 0], fr: [3, 0] }, 'i'], [.7, { lean: 5, bx: 0, hd: [3, 4], hr: [6, 9], hl: [7, 9], by: 7, fl: [-5, 0], fr: [2, 0] }]]);
+    return keyed(u, { face: 's', item: null, hr: [2, 8], hl: [3, 8], lean: 0, bx: 0, hd: [0, 0], by: 0, fl: [0, 0], fr: [0, 0], blink: 1 }, [[0, {}], [.22, { lean: -3, bx: -2, hd: [-1, -1], hr: [-3, 3], hl: [6, 2], by: 1 }, 'o'], [.5, { lean: -5, bx: -3, hd: [-2, 2], hr: [-2, 8], hl: [1, 8], by: 6, fl: [2, 0], fr: [5, 0] }, 'i'], [.7, { lean: -7, bx: -4, hd: [-3, 4], hr: [-3, 9], hl: [0, 9], by: 7, fl: [3, 0], fr: [6, 0] }]]);
   } },
   down: { label: 'Collapsed', group: 'Combat', dur: 3, n: 1, pose() { return { lie: 1, blink: 1 }; } },
   sleep: { label: 'Sleeping', group: 'Needs', dur: 3.4, n: 4, pose(u) { return { lie: 1, blink: 1, br: u > .35 && u < .8 ? 1 : 0, rest: 1 }; } },

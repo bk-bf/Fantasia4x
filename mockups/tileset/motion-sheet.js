@@ -171,7 +171,7 @@ const SHEET = (() => {
     { id: 'fell', group: 'World response', label: 'Felling', w: 190, h: 140, loads: [OWN.shoulder], fell: ['oak', 2, 20, -2], cast: [P1('pawn', 'woodcutter', [['act', 'idle', .8], ['act', 'chop', 3.75, { tag: 'fell' }], ['act', 'idle', 2.2], ['go', [[26, 6]], 22, 'walk'], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[-120, 6]], PACE.shoulder, 'haul'], ['hide', 1], ['at', [-120, 0]], ['go', [[-6, 0]], 28, 'walk']], [-6, 0])], span: 6.8, n: 20, ox: -10 },
     { id: 'fall-tree', group: 'World response', label: 'Felled tree falling', w: 190, h: 140, loads: [OWN.shoulder], fell: ['oak', 2, 20, -2], cast: [P1('pawn', 'woodcutter', [['act', 'idle', .8], ['act', 'chop', 3.75, { tag: 'fell' }], ['act', 'idle', 2.2], ['go', [[26, 6]], 22, 'walk'], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[-120, 6]], PACE.shoulder, 'haul'], ['hide', 1], ['at', [-120, 0]], ['go', [[-6, 0]], 28, 'walk']], [-6, 0])], fallOnly: 1, ox: -10 },
     go('prints', 'World response', 'Prints in mud', 'pawn', 'farmer', 'walk', [1, 0], 28, { ground: 'mud', ox: 22, t0: 6 }),
-    go('snow', 'World response', 'Snow prints and cold breath', 'pawn', 'guard', 'walk', [1, 0], 28, { ground: 'snow', cold: 1, ox: 22, t0: 6 }),
+    go('snow', 'World response', 'Snow prints and cold breath', 'pawn', 'guard', 'walk', [1, 0], 28, { ground: 'snow', cold: 1, ox: 16, t0: 6 }),
     go('shallows', 'World response', 'Wading the shallows', 'pawn', 'hunter', 'walk', [1, 0], 24, { ground: 'water', ox: 14, t0: 6 }),
     go('dust', 'World response', 'Dust underfoot', 'pawn', 'hauler', 'run', [1, 0], 80, { ground: 'dirt', over: { tool: null }, ox: 22, t0: 6 }),
     go('grass', 'World response', 'Grass parting', 'quad', 'boar', 'trot', [1, 0], 44, { ox: 10, t0: 6 }),

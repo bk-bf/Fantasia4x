@@ -5,7 +5,9 @@ const MOTION_LOAD = (() => {
   const empty = (spr, i, j) => i < 0 || j < 0 || i >= spr.w || j >= spr.h || !spr.c[j * spr.w + i];
   const edged = (spr, i, j) => spr.c[j * spr.w + i] === P.ink && (empty(spr, i - 1, j) || empty(spr, i + 1, j) || empty(spr, i, j - 1) || empty(spr, i, j + 1));
   function put(pawn, layer) {
-    const s = new Spr(pawn.w, pawn.h, pawn.ax, pawn.ay), { spr, grip, sag } = layer, [ax, ay] = pawn.pts.carry, mask = pawn.mask, placed = [], under = layer.fused ? pawn.bare : pawn;
+    const s = new Spr(pawn.w, pawn.h, pawn.ax, pawn.ay), { spr, grip, sag } = layer, [ax, ay] = pawn.pts.carry, placed = [], under = layer.fused ? pawn.bare : pawn;
+    const body = pawn.parts.find(l => l.name === 'torso'), worn = body && body.cam > pawn.loadCam ? pawn.mask.map((m, q) => m || (pawn.c[q] && pawn.c[q] !== P.ink && !pawn.owner[q] ? 1 : 0)) : pawn.mask;
+    const mask = layer.fused ? pawn.mask : worn.map((m, q) => m || (pawn.c[q] === P.ink && !pawn.owner[q] && [q - 1, q + 1, q - pawn.w, q + pawn.w].some(n => worn[n] === 1) ? 1 : 0));
     s.c = under.c.slice(); s.e = under.e.slice(); s.sh = pawn.sh; s.pts = { ...pawn.pts };
     const half = Math.max(grip[0], spr.w - 1 - grip[0], 1), whole = new Spr(pawn.w, pawn.h, pawn.ax, pawn.ay);
     for (let i = 0; i < spr.w; i++) {
@@ -19,7 +21,7 @@ const MOTION_LOAD = (() => {
       }
     }
     const rimmed = n => mask[n] === 1 && under.c[n] !== P.ink;
-    for (const q of placed) if (s.c[q] !== P.ink && [q - 1, q + 1, q - s.w, q + s.w].some(rimmed)) s.c[q] = dark(s.c[q], RIM);
+    if (layer.fused) for (const q of placed) if (s.c[q] !== P.ink && [q - 1, q + 1, q - s.w, q + s.w].some(rimmed)) s.c[q] = dark(s.c[q], RIM);
     Object.assign(s, { parts: pawn.parts, owner: pawn.owner, layers: pawn.layers, loadCam: pawn.loadCam });
     if (pawn.layers) s.loadLayer = { name: 'load', cam: pawn.loadCam, spr: whole };
     const lined = layer.fused ? s.outline() : s;

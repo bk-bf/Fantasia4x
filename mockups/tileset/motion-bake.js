@@ -54,7 +54,8 @@ function cachedFrame(plain, make) {
   if (!s) { if (FRAMES.size > 9000) FRAMES.clear(); s = make(); if (!s.pts) s.pts = plainPts(s); packSpr(s); FRAMES.set(key, s); }
   return s;
 }
-const quant = (p, a) => JSON.stringify(p, (k, v) => typeof v === 'number' ? (k === 'tool' || k === 'snout' || k === 'a' ? Math.round(v / a) * a : k === 'ph' ? Math.round(v * 4) / 4 : Math.round(v * 2) / 2) : v);
+const FINE_KEYS = ['ahead', 'stow', 'cu', 'reach', 'bow'];
+const quant = (p, a) => JSON.stringify(p, (k, v) => typeof v === 'number' ? (k === 'tool' || k === 'snout' || k === 'a' ? Math.round(v / a) * a : k === 'ph' ? Math.round(v * 4) / 4 : FINE_KEYS.includes(k) ? Math.round(v * 10) / 10 : Math.round(v * 2) / 2) : v);
 
 function procOp(A, st, def, u) {
   const a = st.anim, op = { dx: 0, dy: 0, lean: 0, sq: 0, pitch: 0 }, beast = A.rig !== 'pawn', h = def.hit ? def.hit[0] : .5;
@@ -119,6 +120,7 @@ function frameOf(A, st, lvl, smooth) {
   } else if (A.rig === 'critter') { pose = def.pose(u, c); make = () => rigCritter(A.kind, JSON.parse(key0)); }
   else { pose = def.pose(u, c); make = () => (A.rig === 'fowl' ? rigFowl : rigRabbit)(JSON.parse(key0)); }
   const layer = pose.carry && A.load ? HAUL.layer(A.load, pose.carry, c.face, pose.down > .5) : null;
+  if (layer && A.rig === 'pawn') pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0];
   const key0 = quant(pose, ang), key = A.look + '|' + lvl + (c.face !== 's' ? c.face : '') + (flip ? 'F' : '') + key0 + (layer ? '|' + layer.key : '');
   return { s: cachedFrame(key, () => { const bare = make(), s = layer && bare.mask ? MOTION_LOAD.put(bare, layer) : bare; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
 }
