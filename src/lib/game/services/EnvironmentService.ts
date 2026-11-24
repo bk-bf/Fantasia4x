@@ -432,6 +432,7 @@ interface WeatherDef extends WeatherEffects {
   heavy?: boolean;
   panelSaturation?: number;
   windStrength?: number;
+  rain?: number;
   sightMul?: number;
   intensity: number;
   moistureBonus: number;
@@ -583,6 +584,10 @@ export function weatherOverlayKind(type?: string): WeatherOverlayKind {
 export function weatherWindStrength(type?: string): number {
   const def = weatherDef(type);
   return def.windStrength ?? (def.heavy ? 0.6 : 0.2);
+}
+
+export function weatherRain(type?: string): number {
+  return weatherDef(type).rain ?? 0;
 }
 
 export function ambientWind(weather?: WeatherState): number {

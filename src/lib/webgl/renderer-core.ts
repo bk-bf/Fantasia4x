@@ -36,6 +36,7 @@ import {
   type Quad
 } from './drawnSprites.js';
 import { WindClock, type Heading } from './painted/wind.js';
+import { WaveClock, waterStill, type MapMotion, type SeaWeather } from './painted/waves.js';
 import { FallingLeaves } from './painted/leaves.js';
 
 const LIGHT_ATLAS_UNIT = 7;
@@ -115,6 +116,7 @@ export class WebGLRendererCore {
   private groundRings: GroundRings | null = null;
   private leaves: FallingLeaves | null = null;
   private readonly wind = new WindClock();
+  private readonly waves = new WaveClock();
   private season: string | undefined = undefined;
   private rings: { list: readonly GroundRing[]; ink: RingInk } | null = null;
   private pointLights: readonly PointLight[] = [];
@@ -137,6 +139,9 @@ export class WebGLRendererCore {
   private dynamicLight = false;
   private vignetteOn = true;
   private swayOn = true;
+  private wavesOn = true;
+  private seaWeather: SeaWeather = { rain: 0 };
+  private waveMix = 1;
 
   private lightVersion = 0;
 
@@ -196,6 +201,7 @@ export class WebGLRendererCore {
 
   setSnowGrid(grid: GameGrid | null, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
     this.snowGrid = grid;
+    this.groundBlend?.setIce(grid, dirtyTiles);
     if (dirtyTiles && dirtyTiles.length > 0) {
       this.gridRenderer?.markSnowChunksDirty(dirtyTiles);
     } else {
@@ -295,6 +301,10 @@ export class WebGLRendererCore {
     if (season !== undefined) this.season = season;
   }
 
+  setSeaWeather(weather: SeaWeather): void {
+    this.seaWeather = weather;
+  }
+
   setPointLights(lights: readonly PointLight[]): void {
     this.pointLights = lights;
   }
@@ -307,8 +317,11 @@ export class WebGLRendererCore {
     this.vignetteOn = on;
   }
 
-  setSway(on: boolean): void {
-    this.swayOn = on;
+  setMotion(motion: MapMotion): void {
+    this.swayOn = motion.sway;
+    this.wavesOn = motion.waves;
+    this.waveMix = motion.waveMix;
+    this.groundBlend?.setWaterStyle(motion.waves);
   }
 
   setLightVersion(version: number): void {
@@ -428,8 +441,12 @@ export class WebGLRendererCore {
       if (PAINTED_TILES) this.painted = await loadPaintedTileset(gl);
       if (GROUND_BLEND && this.painted)
         this.groundBlend = GroundBlend.create(gl, this.shaderManager, this.painted);
+      this.groundBlend?.setWaterStyle(this.wavesOn);
       this.gridRenderer.skipBlendedGround = this.groundBlend !== null;
+      this.gridRenderer.skipWaterIce = this.groundBlend !== null;
       if (this.gameGrid) this.groundBlend?.setGrid(this.gameGrid);
+      this.groundBlend?.setIce(this.snowGrid);
+      this.snowVersion++;
       if (PAINTED_LIGHT && this.painted)
         this.lightPass = PaintedLightPass.create(gl, this.shaderManager);
       if (this.painted) this.shadowCast = PaintedShadowCast.create(gl, this.shaderManager);
@@ -751,6 +768,7 @@ export class WebGLRendererCore {
       fieldLit: this.lightPass !== null,
       tone,
       waterTime: waterTime(performance.now()),
+      sea: this.wavesOn ? this.seaFrame() : undefined,
       lightSampler: this.lightSampler ?? undefined,
       lightTime,
       lightVersion: this.lightVersion,
@@ -759,6 +777,13 @@ export class WebGLRendererCore {
     if (!drawn) return;
     this.stats.drawCalls++;
     this.stats.vertexCount += 6;
+  }
+
+  private seaFrame(): Float32Array {
+    const { strength, dir } = this.wind;
+    this.waves.tick(performance.now(), strength, dir, waterStill(this.tileWidth));
+    const artPerPx = (this.painted?.tileset.tile ?? BASE_TILE_PX) / this.tileWidth;
+    return this.waves.uniforms(strength, dir, artPerPx, this.waveMix, this.seaWeather);
   }
 
   private bindPaintedAtlas(gl: WebGL2RenderingContext, painted: LoadedPaintedTileset): void {

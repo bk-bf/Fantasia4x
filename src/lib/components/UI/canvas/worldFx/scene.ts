@@ -2,7 +2,7 @@ import type { Mob, Pawn, PawnOrder } from '$lib/game/core/types';
 import type { WebGLRenderer } from '$lib/webgl/renderer.js';
 import { conditionPriority } from '$lib/game/core/rules/body/conditions';
 import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
-import { bodyHealthShare } from '$lib/game/core/rules/body/bodyHealth';
+import { bloodFrac } from '$lib/components/UI/canvas/healthColors';
 import { PROGRESS_BAR_STATES } from '$lib/components/UI/canvas/selectionCard';
 import { HONEY } from '$lib/pixelArt/fx/glyphs';
 import { RAMP } from '$lib/pixelArt/fx/spr';
@@ -111,15 +111,8 @@ function addBars(
   if (health !== null) s.bars.push({ x: f.x, y, v: health, ramp, pegs: false });
 }
 
-const shares = new WeakMap<object, number>();
-
-const hurt = (limbs: Pawn['limbs']): number | null => {
-  if (!limbs) return null;
-  let share = shares.get(limbs);
-  if (share === undefined) {
-    share = bodyHealthShare(limbs);
-    shares.set(limbs, share);
-  }
+const bled = (e: { bloodVolume?: number; maxBloodVolume?: number }): number | null => {
+  const share = bloodFrac(e);
   return share < 1 ? share : null;
 };
 
@@ -218,7 +211,7 @@ export function collectScene(w: FxWorld, on: SceneOn): Scene {
     const drafted = on.draft && p.drafted && p.draftTarget;
     const mark = on.marks ? pawnMark(p, prio) : null;
     const working = on.work ? pawnWork(p) : null;
-    const hp = on.health && p.isAlive !== false ? hurt(p.limbs) : null;
+    const hp = on.health && p.isAlive !== false ? bled(p) : null;
     if (!mark && working === null && hp === null && !drafted) continue;
     if (w.hidden(cx, cy)) continue;
     const f = figureAt(w.renderer, cx, cy, rp.x, rp.y);
@@ -235,7 +228,7 @@ export function collectScene(w: FxWorld, on: SceneOn): Scene {
     if (!inView(w.view, cx, cy)) continue;
     const mark = on.marks ? mobMark(m, prio) : null;
     const eat = on.work && (m.eatProgress ?? 0) > 0 ? Math.min(1, m.eatProgress ?? 0) : null;
-    const hp = on.health ? hurt(m.limbs) : null;
+    const hp = on.health ? bled(m) : null;
     if (!mark && eat === null && hp === null) continue;
     if (w.hidden(cx, cy)) continue;
     const f = figureAt(w.renderer, cx, cy, rp.x, rp.y);

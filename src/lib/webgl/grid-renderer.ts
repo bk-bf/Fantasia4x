@@ -82,6 +82,7 @@ export class GridRenderer {
   chunksRebuiltLastRender = 0;
   private readonly paintTexel: [number, number] = [0, 0];
   skipBlendedGround = false;
+  skipWaterIce = false;
   private chunkDirty = new Map<string, number>();
   private snowChunkDirty = new Map<string, number>();
   private chunkDirtyCounter = 0;
@@ -287,7 +288,9 @@ export class GridRenderer {
     const tiles =
       this.skipBlendedGround && chunks === this.terrainChunks
         ? region.flatMap((t) => (t.ground ? tuftTiles(t) : [t]))
-        : region;
+        : this.skipWaterIce && chunks === this.snowChunks
+          ? region.filter((t) => t.waterIce === undefined)
+          : region;
     if (!chunk) {
       chunk = {
         vao: null,

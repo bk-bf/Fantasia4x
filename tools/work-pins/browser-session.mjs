@@ -215,6 +215,7 @@ async function loadGame(page, origin, query) {
   await page.getByRole('button', { name: 'Load Game', exact: true }).dispatchEvent('click');
   await page
     .getByRole('button', { name: 'Load', exact: true })
+    .or(page.locator('.row button.main'))
     .first()
     .dispatchEvent('click', {}, { timeout: 60_000 });
   await page.waitForFunction(

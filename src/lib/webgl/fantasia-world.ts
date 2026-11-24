@@ -433,7 +433,8 @@ export function applySnowToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     foreground: { r: SNOW_WHITE[0], g: SNOW_WHITE[1], b: SNOW_WHITE[2] },
     background: { r: bg[0], g: bg[1], b: bg[2] },
     backgroundAlpha: alpha,
-    position: { x: tile.x, y: tile.y }
+    position: { x: tile.x, y: tile.y },
+    ...(tile.type === 'water' && ai > 0 ? { waterIce: ice / 100 } : null)
   });
 }
 
