@@ -191,17 +191,25 @@ with no editor and no git UI, so an uncommitted tree there is invisible, and the
 that tree stop on it.
 
 **`dev` takes only crucial work until the look overhaul settles.** Crucial is a perf fix, a fix for
-a crash, a stuck sim or lost state, and tools, CI, tests, agent config, skills and mockups.
+a crash, a stuck sim or lost state, and tools, CI, tests, agent config and skills.
 Everything else is look work and lands on `test/look-overhaul`, where the owner plays and judges
 it: UI, rendering, art, item and recipe data, map generation, and any new feature. A change that is
 not plainly crucial is look work.
+
+**Mockups land on `mockups/live`, never on `dev`.** Change anything under `mockups/` on a branch
+from `origin/mockups/live` in a worktree, rebase onto it and push with
+`git push origin HEAD:mockups/live`; no chain runs there. The mockup server serves the worktree that
+has `mockups/live` checked out, which `git worktree list` names, so run
+`git -C <that worktree> pull --ff-only` after the push. Merge `origin/dev` into `mockups/live` when
+a mockup tool needs newer game data. A report of a mockup landing says it was a mockup and names
+the branch it went to.
 
 `main` is the branch the owner plays and builds from, and only his promotion changes it:
 `pnpm promote` and `.github/workflows/promote.yml` hold what a promotion runs. Nothing automated
 writes to `main`.
 
-Branch from `dev` for crucial work and from `test/look-overhaul` for look work, and never push
-`main`.
+Branch from `dev` for crucial work, from `test/look-overhaul` for look work and from `mockups/live`
+for mockups, and never push `main`.
 
 This applies to subagents you dispatch.
 

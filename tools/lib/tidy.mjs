@@ -4,7 +4,7 @@ import { basename, dirname, relative } from 'node:path';
 
 const RUNS_DIR = 'test-runs/Fantasia4x';
 const IDLE_MS = 60 * 60 * 1000;
-const KEEP_BRANCHES = new Set(['dev', 'main']);
+const KEEP_BRANCHES = new Set(['dev', 'main', 'mockups/live']);
 const SSH = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5'];
 
 const run = (cmd, args, cwd) =>
