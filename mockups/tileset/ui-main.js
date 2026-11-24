@@ -3,7 +3,7 @@
   const { $, el, st } = UI;
   await UI.load();
   const list = $('list'), search = $('q'), tabs = $('tabs');
-  const BREAKS = new Set(['item', 'building', 'ground', 'concept']);
+  const BREAKS = new Set(['item', 'building', 'ground', 'condition', 'concept']);
   let cursor = -1, typing = 0;
 
   const cover = tab => { const l = UI.objs.filter(o => tab.has(o) && !o.extra); return { total: l.length, done: l.filter(o => o.state === 'covered').length, skip: l.filter(o => o.state === 'skip').length }; };

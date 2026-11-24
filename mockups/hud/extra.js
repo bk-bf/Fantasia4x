@@ -1,6 +1,6 @@
 'use strict';
 (() => {
-  const D = HUD.data, { e, ico, gly, bdg, bar, btn, kv, meter, win } = HUD.ui;
+  const D = HUD.data, { e, ico, gly, bdg, cic, bar, btn, kv, meter, win } = HUD.ui;
   const chk = (on, label, extra) => `<label class="chk${on ? ' on' : ''}"><i class="box" data-skin="${on ? 'cellOn' : 'well'}"></i><span>${label}</span>${extra || ''}</label>`;
   const seg = (opts, on) => `<span class="seg">${opts.map((o, i) => `<button class="segb${i === on ? ' on' : ''}" data-skin="${i === on ? 'cellOn' : 'cell'}"><span>${o}</span></button>`).join('')}</span>`;
   const slider = v => `<div class="slider"><i class="track" data-skin="well"><i class="fill" style="width:${v}%"></i><i class="knob" data-skin="btn" style="left:${v}%"></i></i><b>${v}%</b></div>`;
@@ -35,7 +35,7 @@
       tip('x-anchor x-hovertip', 'Forest floor', `<p>rich soil under an oak, wet from the night's rain</p>${kv('Footing', 'slow')}${kv('Light', 'dappled')}${kv('Warmth', '8°')}${kv('Damp', 'soaked')}${kv('Wind', 'a breeze')}${kv('Soil', 'rich')}`).replace('<aside', '<aside data-at="pawn" data-dx="92" data-dy="-12"'),
 
     creature: () => card('x-creature', `<span class="well" data-skin="well">${thing('creature', 'wolf')}</span><div class="c-id"><h3>Grey Wolf</h3><p>hostile · a lone hunter</p><p class="job">Stalking the goat pen</p></div>`,
-      `<div class="c-bars">${meter(['Blood', .81, 'blood', '81%'])}${meter(['Pain', .22, 'ember', 'sharp'])}</div><div class="c-conds"><span class="cond warn">${bdg('paw', 'warn')}Left foreleg cut</span><span class="cond neg">${bdg('drop', 'neg')}Bleeding</span></div><div class="c-verbs">${btn('Hunt', { glyph: 'bow' })}${btn('Follow', { glyph: 'eye' })}${btn('Body', {})}</div>`),
+      `<div class="c-bars">${meter(['Blood', .81, 'blood', '81%'])}${meter(['Pain', .22, 'ember', 'sharp'])}</div><div class="c-conds"><span class="cond warn">${cic('hamstring')}Left foreleg cut</span><span class="cond neg">${cic('bleeding')}Bleeding</span></div><div class="c-verbs">${btn('Hunt', { glyph: 'bow' })}${btn('Follow', { glyph: 'eye' })}${btn('Body', {})}</div>`),
 
     item: () => card('x-item', `<span class="well" data-skin="well">${ico('oak_log', 'hd')}</span><div class="c-id"><h3>Oak Log ×12</h3><p>lying by the west fence</p><p class="job">Vex will haul it to the yard</p></div>`,
       `<div class="c-bars">${meter(['Weight', .4, 'honey', '18 kg'])}${meter(['Rot', 0, 'leaf', 'sound'])}</div><div class="c-verbs">${btn('Haul', {})}${btn('Forbid', {})}${btn('Pick up', {})}</div>`),

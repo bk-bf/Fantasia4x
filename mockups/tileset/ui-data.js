@@ -67,6 +67,7 @@
     const data = await (await fetch('catalog-data.json')).json();
     if (DBX.fromData) DBX.fromData(data.objects);
     const objs = data.objects.slice();
+    for (const r of CONDITION_ICONS.rows) objs.push({ cat: 'condition', group: r.kind, id: r.id, name: r.name, src: { kind: r.kind, icon: r.icon, mark: r.mark } });
     extras(objs);
     for (const o of objs) normalise(o, data.ages);
     UI.data = data;
