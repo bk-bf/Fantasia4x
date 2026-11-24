@@ -69,6 +69,15 @@ const MOTION_FX = (() => {
   function zzz(pen, x, y, t) {
     for (let k = 0; k < 2; k++) { const a = ((t / 2.2 + k * .5) % 1), zx = rnd(x + 4 + a * 7 + Math.sin(a * 6) * 1.5), zy = rnd(y - a * 13), big = a > .5 ? 1 : 0; if (a > .9) continue; for (let i = 0; i < 3 + big; i++) { pen.put(zx + i, zy, P.cloth[5], 180); pen.put(zx + i, zy + 2 + big, P.cloth[5], 180); pen.put(zx + 2 + big - i, zy + i, P.cloth[5], 180); } }
   }
+  const STAR_ARMS = [[1, 0], [-1, 0], [0, 1], [0, -1]], STAR_TURN = 3.4, STAR_GLOW = 220;
+  function star(pen, x, y, reach) {
+    for (let r = reach; r > 0; r--) for (const [dx, dy] of STAR_ARMS) pen.put(x + dx * r, y + dy * r, P.fire[r === reach ? 2 : 3], STAR_GLOW);
+    pen.put(x, y, P.fire[reach > 1 ? 4 : 3], STAR_GLOW);
+  }
+  function stars(pen, x, y, t) {
+    const ring = [0, 1, 2].map(k => { const a = (t / STAR_TURN + k / 3) * Math.PI * 2, near = Math.sin(a), dim = Math.floor(t * 2.5 + k * 1.3) % 5 === 0 ? 1 : 0; return { x: rnd(x + Math.cos(a) * 7), y: rnd(y + near * 2.6), near, reach: Math.max(0, (near > .3 ? 2 : 1) - dim) }; });
+    for (const s of ring.sort((a, b) => a.near - b.near)) star(pen, s.x, s.y, s.reach);
+  }
   function breath(pen, x, y, dir, t, seed) {
     const a = (t / 2.6 + seed) % 1;
     if (a > .42) return;
@@ -83,5 +92,5 @@ const MOTION_FX = (() => {
   function smoke(pen, x, y, t) {
     for (let i = 0; i < 9; i++) { const a = (t * .42 + i / 9) % 1, sx = x + Math.sin(a * 4 + i * 2.1) * (2 + a * 5) + a * 6, sy = y - a * 34; for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [-1, 0]]) { if (dith(rnd(sx) + dx, rnd(sy) + dy) < a * 1.1) continue; pen.put(sx + dx, sy + dy, P.furGrey[a < .4 ? 3 : 4]); } }
   }
-  return { burst, arrow, steps, bubble, zzz, breath, flame, smoke };
+  return { burst, arrow, steps, bubble, zzz, stars, breath, flame, smoke };
 })();

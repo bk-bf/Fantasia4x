@@ -18,6 +18,10 @@ import {
   watchPanelWrites
 } from './browser-session.mjs';
 
+/** @typedef {import('./browser-session.mjs').Page} Page */
+/** @typedef {import('./browser-session.mjs').CDPSession} CDPSession */
+/** @typedef {Awaited<ReturnType<typeof bucket>>} Bucket */
+
 const DAY_TICKS = 18_000;
 const SETTLE_FRAMES = 30;
 const PAUSE_CHECK_FRAMES = 25;
@@ -35,6 +39,7 @@ const { values: opts } = parseArgs({
 
 const log = logger('day');
 
+/** @param {Page} page @param {CDPSession} cdp @param {number} index @param {number} count @param {number} perFrame */
 async function bucket(page, cdp, index, count, perFrame) {
   const turn0 = await turnOf(page);
   const m0 = await metrics(cdp);
@@ -47,7 +52,7 @@ async function bucket(page, cdp, index, count, perFrame) {
   const p = await takePanelWrites(page);
   return {
     turns: [turn0, turn1],
-    timeOfDay: +((((turn0 % DAY_TICKS) + DAY_TICKS) % DAY_TICKS) / DAY_TICKS).toFixed(3),
+    timeOfDay: +(((((turn0 ?? 0) % DAY_TICKS) + DAY_TICKS) % DAY_TICKS) / DAY_TICKS).toFixed(3),
     panelStyleWrites: p.panelStyleWrites,
     tintMatrixWrites: p.tintMatrixWrites,
     recalcStyleCount: (m1.RecalcStyleCount ?? 0) - (m0.RecalcStyleCount ?? 0),
@@ -75,16 +80,20 @@ async function main() {
     await setPaused(page, false);
     await frames(page, SETTLE_FRAMES, perFrame);
     await takePanelWrites(page);
+    /** @type {Bucket[]} */
     const rows = [];
     for (let b = 0; b < buckets; b++) {
       rows.push(await bucket(page, cdp, b, bucketFrames, perFrame));
       log(`bucket ${b + 1}/${buckets} ${JSON.stringify(rows.at(-1))}`);
     }
+    /** @param {'panelStyleWrites' | 'tintMatrixWrites' | 'layoutCount' | 'recalcStyleCount'} k */
     const sum = (k) => rows.reduce((s, r) => s + r[k], 0);
+    const first = rows[0];
+    const last = rows.at(-1);
     const run = {
       scenario: 'browser day page',
-      ticks: rows.length ? rows.at(-1).turns[1] - rows[0].turns[0] : 0,
-      turn: rows.at(-1)?.turns[1] ?? null,
+      ticks: first && last ? (last.turns[1] ?? 0) - (first.turns[0] ?? 0) : 0,
+      turn: last?.turns[1] ?? null,
       functions: {},
       phases: null,
       messages: {},

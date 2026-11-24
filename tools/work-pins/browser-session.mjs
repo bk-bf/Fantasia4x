@@ -5,6 +5,12 @@ import { join, resolve } from 'node:path';
 import * as zlib from 'node:zlib';
 import { chromium } from 'playwright';
 
+/** @typedef {import('playwright').Page} Page */
+/** @typedef {import('playwright').CDPSession} CDPSession */
+/** @typedef {(line: string) => void} Log */
+/** @typedef {(() => void) | [(arg: string) => void, string]} InitScript */
+/** @typedef {{ tree: string, fixture: string, serverLog: string, log: Log, args?: string[], clock?: boolean, init?: InitScript[], workPins?: boolean, query?: string }} OpenGameOptions */
+
 const FRAME_MS = 16;
 export const DEFAULT_FIXTURE = 'tools/work-pins/fixtures/dev-save.json.gz';
 export const MAP = '[aria-label="World map"]';
@@ -22,9 +28,12 @@ const PANELS = 'aside.left-panel, aside.right-panel, .game-header, nav.bottom-na
 const CHRONICLE = 'aside.right-panel .log-list';
 const SERVE_WITHOUT_GIT = { GIT_DIR: '/dev/null' };
 
+/** @param {number} ms */
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** @param {string} prefix @returns {Log} */
 export const logger = (prefix) => (line) => process.stdout.write(`[${prefix}] ${line}\n`);
 
+/** @param {string} path */
 function readFixture(path) {
   const raw = readFileSync(path);
   if (path.endsWith('.gz')) return zlib.gunzipSync(raw);
@@ -33,17 +42,19 @@ function readFixture(path) {
   return raw;
 }
 
+/** @returns {Promise<number>} */
 function freePort() {
   return new Promise((done, fail) => {
     const s = createServer();
     s.on('error', fail);
     s.listen(0, '127.0.0.1', () => {
-      const { port } = s.address();
+      const { port } = /** @type {import('node:net').AddressInfo} */ (s.address());
       s.close(() => done(port));
     });
   });
 }
 
+/** @param {string} tree @param {number} port @param {string} logFile @param {boolean} workPins */
 async function startServer(tree, port, logFile, workPins) {
   const out = createWriteStream(logFile);
   const child = spawn(join(tree, 'dev.sh'), ['--browser', '--port', String(port)], {
@@ -71,24 +82,24 @@ async function startServer(tree, port, logFile, workPins) {
   throw new Error(`dev server never answered on ${port}, see ${logFile}`);
 }
 
+/** @param {import('node:child_process').ChildProcess} server */
 function stopServer(server) {
   try {
-    process.kill(-server.pid, 'SIGTERM');
+    process.kill(-(server.pid ?? 0), 'SIGTERM');
   } catch {
     server.kill('SIGTERM');
   }
 }
 
 function hideAudio() {
-  delete window.Audio;
-  delete window.AudioContext;
-  delete window.webkitAudioContext;
+  for (const name of ['Audio', 'AudioContext', 'webkitAudioContext']) Reflect.deleteProperty(window, name);
 }
 
 export function disableAutosave() {
   localStorage.setItem('fx.gameplay.autosave', 'false');
 }
 
+/** @param {string} loaded */
 function watchScenario(loaded) {
   const info = console.info.bind(console);
   console.info = (...a) => {
@@ -97,10 +108,14 @@ function watchScenario(loaded) {
   };
 }
 
+/** @param {string} id */
 const scenarioLoaded = (id) => `Loaded scenario preset '${id}'`;
+/** @param {string} id */
 export const scenarioQuery = (id) => `?scenario=${encodeURIComponent(id)}`;
+/** @param {string} id @returns {InitScript} */
 export const watchScenarioLoad = (id) => [watchScenario, scenarioLoaded(id)];
 
+/** @param {Page} page @param {string} id */
 export async function waitForScenario(page, id, timeoutMs = 600_000) {
   const start = Date.now();
   while (!(await page.evaluate(() => window.__f4xScenarioLoaded === true))) {
@@ -114,9 +129,10 @@ function disableAutoPause() {
   localStorage.setItem('fx.gameplay.autoPauseOnDeath', 'false');
 }
 
+/** @param {number} seed */
 function seedRandom(seed) {
   let s = seed;
-  window.__reseedRandom = (next) => {
+  window.__reseedRandom = (/** @type {number} */ next) => {
     s = next;
   };
   Math.random = () => {
@@ -127,6 +143,7 @@ function seedRandom(seed) {
   };
 }
 
+/** @param {Page} page @param {string} origin @param {Buffer} body @param {Log} log */
 async function seedSave(page, origin, body, log) {
   const route = `${origin}/__work-pins/**`;
   await page.route(route, (r) =>
@@ -161,13 +178,16 @@ async function seedSave(page, origin, body, log) {
   await page.unroute(route);
 }
 
+/** @param {import('playwright').Request} request */
 function loadsAsset(request) {
   return new URL(request.url()).pathname !== LOG_ENDPOINT;
 }
 
+/** @param {Page} page */
 function trackNetwork(page) {
   let inflight = 0;
   let lastChange = Date.now();
+  /** @param {import('playwright').Request} request @param {number} d */
   const bump = (request, d) => {
     if (!loadsAsset(request)) return;
     inflight += d;
@@ -176,11 +196,12 @@ function trackNetwork(page) {
   page.on('request', (r) => bump(r, 1));
   page.on('requestfinished', (r) => bump(r, -1));
   page.on('requestfailed', (r) => bump(r, -1));
-  return async (quietMs) => {
+  return async (/** @type {number} */ quietMs) => {
     while (inflight > 0 || Date.now() - lastChange < quietMs) await sleep(250);
   };
 }
 
+/** @param {Page} page @param {string} origin @param {string} query */
 async function loadGame(page, origin, query) {
   await page.goto(`${origin}/${query}`);
   await page.waitForFunction(
@@ -207,6 +228,7 @@ async function loadGame(page, origin, query) {
   );
 }
 
+/** @param {OpenGameOptions} options */
 export async function openGame({
   tree,
   fixture,
@@ -233,8 +255,12 @@ export async function openGame({
     await context.addInitScript(seedRandom, RANDOM_SEED);
     await context.addInitScript(hideAudio);
     await context.addInitScript(disableAutoPause);
-    for (const script of init) await context.addInitScript(...(Array.isArray(script) ? script : [script]));
+    for (const script of init) {
+      const [run, arg] = Array.isArray(script) ? script : [script, undefined];
+      await context.addInitScript(run, arg);
+    }
     const page = await context.newPage();
+    /** @type {string[]} */
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     const networkQuiet = trackNetwork(page);
@@ -250,12 +276,15 @@ export async function openGame({
   }
 }
 
+/** @param {Page} page */
 export async function freezeClock(page) {
   await page.clock.pauseAt(PAUSE_AT_MS);
   await page.evaluate((seed) => window.__reseedRandom(seed), RANDOM_SEED);
 }
 
+/** @template T @param {Promise<T>} promise @param {string} what */
 function withTimeout(promise, what) {
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
   let timer;
   const expire = new Promise((_, fail) => {
     timer = setTimeout(() => fail(new Error(`${what} timed out`)), STEP_TIMEOUT_MS);
@@ -263,10 +292,12 @@ function withTimeout(promise, what) {
   return Promise.race([promise, expire]).finally(() => clearTimeout(timer));
 }
 
+/** @param {Page} page */
 async function flushLayout(page) {
   await page.evaluate(() => document.documentElement.getBoundingClientRect().height);
 }
 
+/** @param {Page} page @param {number} [ticks] */
 export async function frame(page, ticks = 1) {
   await withTimeout(
     page.evaluate((n) => window.__f4xWorkPins.step(n), ticks),
@@ -277,20 +308,24 @@ export async function frame(page, ticks = 1) {
   await flushLayout(page);
 }
 
+/** @param {Page} page @param {number} n @param {number} [ticks] */
 export async function frames(page, n, ticks = 1) {
   for (let i = 0; i < n; i++) await frame(page, ticks);
 }
 
+/** @param {Page} page */
 export async function focusMap(page) {
-  await page.evaluate((map) => document.querySelector(map).focus(), MAP);
+  await page.evaluate((map) => /** @type {HTMLElement} */ (document.querySelector(map)).focus(), MAP);
 }
 
+/** @param {Page} page */
 export async function isPaused(page) {
   return ((await page.locator(PAUSE_BUTTON).first().getAttribute('class')) ?? '').includes(
     'is-paused'
   );
 }
 
+/** @param {Page} page @param {boolean} want */
 export async function setPaused(page, want) {
   if ((await isPaused(page)) !== want)
     await page.locator(PAUSE_BUTTON).first().dispatchEvent('click');
@@ -298,10 +333,12 @@ export async function setPaused(page, want) {
   if ((await isPaused(page)) !== want) throw new Error(`pause button did not reach paused=${want}`);
 }
 
+/** @param {Page} page */
 export async function turnOf(page) {
   return (await page.evaluate(() => window.__f4xWorkPins.stats())).worker?.turn ?? null;
 }
 
+/** @param {Page} page @param {string} what */
 export async function assertRunning(page, what) {
   if (!(await isPaused(page))) return;
   const chronicle = await page.evaluate((list) => {
@@ -313,12 +350,14 @@ export async function assertRunning(page, what) {
   );
 }
 
+/** @param {CDPSession} cdp @param {{ collectGarbage?: boolean }} [options] */
 export async function metrics(cdp, { collectGarbage = false } = {}) {
   if (collectGarbage) await cdp.send('HeapProfiler.collectGarbage');
   const { metrics: list } = await cdp.send('Performance.getMetrics');
   return Object.fromEntries(list.map((m) => [m.name, m.value]));
 }
 
+/** @param {string} selector */
 function watchPanels(selector) {
   const w = (window.__f4xPanelWrites = { panelStyleWrites: 0, tintMatrixWrites: 0 });
   const panels = [...document.querySelectorAll(selector)];
@@ -342,5 +381,7 @@ function takePanels() {
   return taken;
 }
 
+/** @param {Page} page */
 export const watchPanelWrites = (page) => page.evaluate(watchPanels, PANELS);
+/** @param {Page} page */
 export const takePanelWrites = (page) => page.evaluate(takePanels);
