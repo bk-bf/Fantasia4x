@@ -39,39 +39,39 @@ const FOLK_PIECES = (() => {
   const sexes = ['male', 'female'], sexWord = s => s === 'female' ? 'Woman' : 'Man';
   const skinKeys = Object.keys(SKINS);
   for (const sex of sexes) for (const [share, word] of [[.75, 'lean'], [1, 'average'], [1.4, 'heavy']]) add('Body', `body_${sex}_${word}`, `${sexWord(sex)}, ${word}`,
-    skinKeys.map(skin => () => drawLook(lookOf({ sex, weight: Math.round(typical(175) * share), look: { skin } }), 'f')), {
+    skinKeys.map(skin => () => FOLK_PARTS.look(lookOf({ sex, weight: Math.round(typical(175) * share), look: { skin } }), 'f')), {
       odds: `175 cm, ${Math.round(typical(175) * share)} kg`, seen: seen(x => x.p.sex === sex && buildWord(x.look.body.build) === buildWord(share)),
       detail: `bare, in every skin tone: ${listing(skinKeys.map(k => SKINS[k].word))}; a culture leans its tone`,
     });
   [.6, .75, .9, 1, 1.15, 1.35, 1.6].forEach((share, i) => {
     const kg = Math.round(typical(175) * share), word = buildWord(share), upTo = PHYSIQUES.find(([u]) => share < u)[0];
-    add('Build', `build_${kg}kg`, `${kg} kg, ${word}`, () => drawLook(lookOf({ weight: kg }), 'f'), {
+    add('Build', `build_${kg}kg`, `${kg} kg, ${word}`, () => FOLK_PARTS.look(lookOf({ weight: kg }), 'f'), {
       odds: `${pct(share, 1)} of typical weight`, seen: seen(x => buildWord(x.look.body.build) === word),
       detail: `${word} up to ${upTo === Infinity ? 'any weight' : pct(upTo, 1) + ' of typical'}`,
     });
   });
-  for (const cm of [90, 110, 130, 150, 175, 200, 230, 260, 290]) add('Height', 'height_' + cm, cm + ' cm', () => drawLook(lookOf({ height: cm, weight: typical(cm) }), 'f'), {
+  for (const cm of [90, 110, 130, 150, 175, 200, 230, 260, 290]) add('Height', 'height_' + cm, cm + ' cm', () => FOLK_PARTS.look(lookOf({ height: cm, weight: typical(cm) }), 'f'), {
     odds: `${typical(cm)} kg typical`, seen: seen(x => Math.abs(x.p.height - cm) <= 10),
     detail: `${sizeOf(cm)}, ${bodyOf({ height: cm, weight: typical(cm), sex: 'male' }).legs + bodyOf({ height: cm, weight: typical(cm), sex: 'male' }).tl + 10} px tall`,
   });
 
   for (const k of Object.keys(EYES)) add('Eye colour', 'eyes_' + k, cap(EYES[k].word), () => {
-    const a = drawLook(lookOf({ look: { eyes: k } }), 'f');
-    return isolate(a, withProbe(EYES, '__probe', { col: probe[3] }, () => drawLook(lookOf({ look: { eyes: '__probe' } }), 'f')));
+    const a = FOLK_PARTS.look(lookOf({ look: { eyes: k } }), 'f');
+    return isolate(a, withProbe(EYES, '__probe', { col: probe[3] }, () => FOLK_PARTS.look(lookOf({ look: { eyes: '__probe' } }), 'f')));
   }, { odds: 'even, leaned per culture', seen: seen(x => x.look.eyes === k || x.look.oddEye === k), detail: EYES[k].word + ', 4% of folk carry a second eye colour' });
 
   const hairColours = [...Object.keys(HAIRS), 'grey'];
   const colourNote = `in every hair colour: ${listing(hairColours)}; a culture leans its colour, and age greys it (10% from 38, 40% from 46, 80% from 58)`;
   const inColours = draw => hairColours.map(hair => () => draw(hair));
   const styleTotal = sex => STYLES.reduce((a, s) => a + (s.sexes[sex] || 0), 0);
-  const styleSprite = (sex, style) => hair => isolate(drawLook(lookOf({ sex, look: { style, hair } }), 'f'), drawLook(lookOf({ sex, look: { style: 'bald', hair } }), 'f'));
+  const styleSprite = (sex, style) => hair => isolate(FOLK_PARTS.look(lookOf({ sex, look: { style, hair } }), 'f'), FOLK_PARTS.look(lookOf({ sex, look: { style: 'bald', hair } }), 'f'));
   for (const st of STYLES) for (const sex of Object.keys(st.sexes)) add('Hair style', `style_${st.id}_${sex}`, cap(st.id) + ', ' + sexWord(sex).toLowerCase(),
-    st.id === 'bald' ? () => isolate(drawLook(lookOf({ sex, look: { style: 'bald' } }), 'f'), drawLook(lookOf({ sex, look: { style: 'short' } }), 'f')) : inColours(styleSprite(sex, st.id)),
+    st.id === 'bald' ? () => isolate(FOLK_PARTS.look(lookOf({ sex, look: { style: 'bald' } }), 'f'), FOLK_PARTS.look(lookOf({ sex, look: { style: 'short' } }), 'f')) : inColours(styleSprite(sex, st.id)),
     { odds: pct(st.sexes[sex], styleTotal(sex)) + ' of ' + (sex === 'female' ? 'women' : 'men'), seen: seen(x => x.p.sex === sex && x.look.style === st.id), detail: st.id === 'bald' ? 'the bare skull, in the skin tone' : colourNote + '; cut short under a hood, coif or tight straw brim' });
   for (const st of STYLES) if (st.trait) add('Hair style', `style_${st.id}`, cap(st.id), inColours(styleSprite('male', st.id)), {
     odds: 'every folk with ' + traitName(st.trait), seen: seen(x => x.look.style === st.id), who: carriers(st.trait), detail: colourNote,
   });
-  const beardSprite = k => hair => isolate(drawLook(lookOf({ look: { beard: k, hair } }), 'f'), drawLook(lookOf({ look: { hair } }), 'f'));
+  const beardSprite = k => hair => isolate(FOLK_PARTS.look(lookOf({ look: { beard: k, hair } }), 'f'), FOLK_PARTS.look(lookOf({ look: { hair } }), 'f'));
   for (const k of Object.keys(BEARDS)) if (k !== 'none') add('Beard', 'beard_' + k, cap(k), inColours(beardSprite(k)), {
     odds: pct(BEARDS[k], sum(BEARDS)) + ' of men', seen: seen(x => x.look.beard === k), detail: colourNote,
   });
@@ -81,10 +81,10 @@ const FOLK_PIECES = (() => {
   const markBases = [{}, { look: { style: 'bald' } }, { face: 's' }, { face: 's', look: { style: 'bald' } }];
   const markPiece = (fields, traits) => () => {
     for (const b of markBases) {
-      const face = b.face || 'f', withMark = drawLook(lookOf({ ...fields, look: b.look }, traits), face), s = isolate(withMark, drawLook(lookOf({ look: b.look }), face));
+      const face = b.face || 'f', withMark = FOLK_PARTS.look(lookOf({ ...fields, look: b.look }, traits), face), s = isolate(withMark, FOLK_PARTS.look(lookOf({ look: b.look }), face));
       if (!blank(s)) return s;
     }
-    return drawLook(lookOf(fields, traits), 'f');
+    return FOLK_PARTS.look(lookOf(fields, traits), 'f');
   };
   const folded = new Set([...STYLES.map(st => st.trait), ...Object.values(TRAIT_BEARDS)].filter(Boolean));
   for (const m of MARKS) for (const t of m.traits) if (FOLK_CAST.traitRarity[t] && !folded.has(t)) add('Mark', 'mark_' + t.replace(/-/g, '_'), traitName(t), markPiece({}, [t]), {

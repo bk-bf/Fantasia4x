@@ -4,7 +4,7 @@ const REGISTRY_SCRIPTS = [
   'db-core.js', 'db-mockup.js', 'db-flora.js', 'db-creatures.js', 'db-buildings.js', 'db-ground.js',
   'motion-rig-pawn.js', 'motion-rig-beast.js', 'motion-rig-quadfb.js', 'downgrade-data.js', 'db-downgrades.js', 'folk-cast.js', 'folk-look.js', 'folk-face.js', 'folk-body.js', 'folk-marks.js', 'folk-shape.js', 'folk-pieces.js', 'db-folk.js', 'conditions-data.js', 'db-conditions.js',
   'db-items.js', 'db-hd.js', 'db-tools.js', 'db-weapons.js', 'db-gear.js', 'db-goods.js', 'db-armor.js', 'db-rare.js', 'db-rot.js', 'db-stations.js', 'db-facings.js',
-  'pixel-kit.js', 'pixel-parts.js', 'pixel-icons.js',
+  'pixel-kit.js', 'pixel-parts.js', 'pixel-icons.js', 'folk-parts.js',
   'pixel-blades.js', 'pixel-axes.js', 'pixel-blunt.js', 'pixel-poles.js', 'pixel-tools.js', 'pixel-bows.js', 'pixel-armour-parts.js', 'pixel-armour-sets.js', 'pixel-armour-odd.js', 'pixel-shields.js', 'pixel-jewelry.js', 'pixel-flails.js', 'pixel-staffs.js', 'pixel-ranged.js', 'pixel-ammo.js', 'pixel-storage.js',
   'pixel-goods-parts.js', 'pixel-food.js', 'pixel-drinks.js', 'pixel-remedies.js',
   'db-pixel.js',
