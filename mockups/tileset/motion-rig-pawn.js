@@ -102,6 +102,7 @@ function rigHead(s, f, o, X, hTop, face, p) {
   return er;
 }
 
+const WRAP = [P.cloth[2], P.cloth[1]];
 const rimOf = (was, c) => !!(was && c) && c[0] === was[0] * .6 && c[1] === was[1] * .6;
 
 function rigPawn(o, p) {
@@ -113,10 +114,12 @@ function rigPawn(o, p) {
   const lx = j => rnd(lean * clamp(1 - j / f.tl, 0, 1)), kind = p.item === undefined ? o.tool : p.item, pts = s.pts = {}, sx0 = cx + rnd(lean);
   const fl = p.fl || [0, 0], fr = p.fr || [0, 0], SW = 2 * hw;
 
-  const legF = (sd, ft) => {
-    const dx = rnd(ft[0]), n = Math.max(3, f.legs - by - rnd(ft[1])), x0 = sd < 0 ? cx - hw + dx : cx + 1 + dx;
+  const legF = (sd, ft, lost) => {
+    const dx = rnd(ft[0]), n = Math.max(3, f.legs - by - rnd(ft[1])), x0 = sd < 0 ? cx - hw + dx : cx + 1 + dx, cut = Math.ceil(f.legs * .4);
     for (let j = 0; j < n; j++) {
       const y = legTop + j, jb = n - 1 - j, boot = jb < 3, sole = jb === 0;
+      if (lost && j >= cut) continue;
+      if (lost && j === cut - 1) { for (let i = 0; i < lw; i++) s.set(x0 + i, y, WRAP[(x0 + i) & 1]); if (sd < 0) s.set(x0 + lw, y, j < 2 ? pick3(pants, .6, -1) : P.ink); continue; }
       for (let i = 0; i < lw; i++) {
         const u = i / (lw - 1), R = boot ? P.leather : pants, d = boot ? (jb === 2 ? 1 : sole ? -2 : 0) : (j === Math.floor(f.legs * .4) ? 1 : 0);
         s.set(x0 + i, y, sd < 0 ? pick3(R, u * .7, d) : pick3(R, .3 + u * .7, d - 1));
@@ -159,20 +162,24 @@ function rigPawn(o, p) {
     if (!o.armor && !back && !side) { s.set(sx0 - 1, tTop - br, skin[sn - 2]); s.set(sx0, tTop - br, skin[sn - 3]); s.set(sx0 - 1, tTop + 1 - br, skin[sn - 2]); }
     for (let y = hTop + f.hh; y < tTop - br; y++) s.rect(HX - 2, y, side ? 3 : 4, 1, skin[clamp(sn - 3, 0, sn)]);
   };
-  const armCol = (lit, far) => (t, k) => {
+  const cuff = armLen - 4, bn = body.length - 1;
+  const armCol = (lit, far, lost) => (t, k, v, X) => {
     const j = rnd(t), hand = j >= armLen - 3, bare = o.sleeves === 0 || j > 6, L = hand || bare ? skin : body, last = j >= armLen - 1, e = k === aw - 1;
-    const c = L === skin ? skin[clamp(lit ? sn - 1 - (e ? 1 : 0) - (last ? 1 : 0) : sn - 3 + (e ? 1 : 0) - (last ? 1 : 0), 0, sn)] : lit ? pick3(L, k / aw * .5, j === 6 ? -1 : 0) : pick3(L, .7, (e ? 1 : 0) + (j === 6 ? -1 : 0));
+    if (lost && j > 2 + br) return null;
+    if (lost && j === 2 + br) return WRAP[X & 1];
+    let c = L === skin ? skin[clamp(lit ? sn - 1 - (e ? 1 : 0) - (last ? 1 : 0) : sn - 3 + (e ? 1 : 0) - (last ? 1 : 0), 0, sn)] : lit ? pick3(L, k / aw * .5, j === 6 ? -1 : 0) : pick3(L, .7, (e ? 1 : 0) + (j === 6 ? -1 : 0));
+    if (o.sleeves === 'long' && j > 6 && j <= cuff) c = body[clamp(bn - (j === cuff ? 4 : side ? 2 : lit ? 1 : 3), 0, bn)];
     return far ? dark(c, .8) : c;
   };
-  const arm = (ax, ay, tgt, lit, far, bend, rim, S) => {
+  const arm = (ax, ay, tgt, lit, far, bend, rim, S, lost) => {
     const tot = armLen - 1, l1 = Math.ceil(tot / 2), l2 = tot - l1, t = tgt || [0, tot];
     if (!side && Math.abs(t[0]) < 2.5 && t[1] > 4) {
-      const len = Math.hypot(t[0], t[1]), col = armCol(lit, far);
-      rigLimb(S || s, [[ax, ay], [ax + t[0], ay + t[1]]], aw, (d, k) => col(d * tot / len, k), rim ? shade : null);
+      const len = Math.hypot(t[0], t[1]), col = armCol(lit, far, lost);
+      rigLimb(S || s, [[ax, ay], [ax + t[0], ay + t[1]]], aw, (d, k, v, X) => col(d * tot / len, k, v, X), rim ? shade : null);
       return [rnd(ax + t[0]), rnd(ay + t[1])];
     }
     const [ex, ey, hx, hy] = ik2(ax, ay, ax + t[0], ay + t[1], l1, l2, bend);
-    rigLimb(S || s, [[ax, ay], [ex, ey], [hx, hy]], aw, armCol(lit, far), rim ? shade : null);
+    rigLimb(S || s, [[ax, ay], [ex, ey], [hx, hy]], aw, armCol(lit, far, lost), rim ? shade : null);
     return [rnd(hx), rnd(hy)];
   };
   const pad = (x0, lit) => { if (!o.armor) return; s.rect(x0, tTop - br, aw + 1, 4, o.armor[lit ? 4 : 2]); s.rect(x0, tTop - br, aw + 1, 1, o.armor[lit ? o.armor.length - 1 : 4]); s.rect(x0, tTop + 3 - br, aw + 1, 1, o.armor[1]); };
@@ -192,7 +199,7 @@ function rigPawn(o, p) {
     let htl = p.hl;
     const hr = p.hr || (TOOLS[kind] ? [2, armLen - 2] : null), ang = p.tool === undefined ? (TOOLS[kind] || {}).hold || 0 : p.tool;
     if (p.two && hr) { const a = ang * D2R; htl = [near[0] + hr[0] + Math.sin(a) * p.two - far[0], near[1] + hr[1] - Math.cos(a) * p.two - far[1]]; }
-    const fh = arm(far[0], far[1], htl, false, true, 1, false);
+    const fh = arm(far[0], far[1], htl, false, true, 1, false, null, o.oneArm);
     if (bowing) { toolAt(s, 'bow', fh[0] + 1, fh[1], 0, { pull: p.bow, arrow: p.arrow, twang: p.twang }); pts.tip = [fh[0] + 10, fh[1]]; }
     if (o.shield) shield(fh[0] + 2, fh[1] - 3);
     if (o.cape) for (let j = 0; j < capeLen; j++) { const k = j / capeLen, x = sx0 - (SW >> 1) - 2 - rnd(cs * k * k) - (j > 6 ? 1 : 0); s.rect(x, tTop + 1 + j, 3 + (j > 6 ? 1 : 0), 1, o.cape[j % 5 === 4 ? 1 : 2]); s.set(x, tTop + 1 + j, o.cape[3]); }
@@ -207,16 +214,16 @@ function rigPawn(o, p) {
     hand = [nh[0], nh[1] + 1]; holds = { light: hand, bulky: [nh[0] - 1, nh[1] + 2], heavy: [sx0 - 1, tTop + 1 - br] };
     if (!bowing && !p.carry) { grip(nh[0], nh[1], ang); if (pts.tip) knuckle(nh[0], nh[1]); }
     if (p.two && pts.tip) { const a = ang * D2R; knuckle(rnd(nh[0] + Math.sin(a) * p.two), rnd(nh[1] - Math.cos(a) * p.two)); }
-    pts.hand = nh; pts.mouth = [HX + f.hd + 2, hTop + Math.floor(f.hh * .5) + 3]; pts.head = [HX + 1, hTop - 3];
+    pts.hand = nh; pts.hands = [nh]; pts.mouth = [HX + f.hd + 2, hTop + Math.floor(f.hh * .5) + 3]; pts.head = [HX + 1, hTop - 3];
     pts.feet = [[cx + fl[0], base - fl[1]], [cx - 1 + fr[0], base - fr[1]]];
   } else {
     const xL = cx - hw - 1 - ((aw - 1) >> 1) + rnd(lean), xR = cx + hw + (aw >> 1) + rnd(lean), sy = tTop + 1 - br, tl = back ? p.hr : p.hl, tr = back ? p.hl : p.hr;
     const raised = t => t && (t[1] <= 4 || Math.abs(t[0]) >= 2.5);
     if (back && o.shield) shield(xR + 2, tTop + 7);
-    legF(-1, fl); legF(1, fr);
+    legF(-1, fl, !back && o.oneLeg); legF(1, fr, back && o.oneLeg);
     torso();
     let hL = null, hR = null;
-    const armL = (rim, S) => arm(xL, sy, tl, true, false, 1, rim, S), armR = (rim, S) => arm(xR, sy, tr, false, false, -1, rim, S);
+    const armL = (rim, S) => arm(xL, sy, tl, true, false, 1, rim, S, !back && o.oneArm), armR = (rim, S) => arm(xR, sy, tr, false, false, -1, rim, S, back && o.oneArm);
     if (!raised(tl)) hL = armL(false);
     if (!raised(tr)) hR = armR(false);
     if (!tl && !p.carry) s.set(xL - (aw >> 1), sy, null);
@@ -240,7 +247,7 @@ function rigPawn(o, p) {
     if (p.carry) pts.hold = hand;
     else if (kind === 'bow' && p.bow !== undefined) { const bh = back ? hR : hL; toolAt(s, 'bow', bh[0] + (back ? 1 : -1), bh[1] - 6, 0, { pull: p.bow, mirror: back ? 0 : 1 }); pts.tip = [bh[0], bh[1] - 6]; }
     else grip(th[0] + off, th[1] - 1 - (kind === 'bow' ? 6 : 0), p.tool, { mirror: back ? 1 : 0, under: p.under });
-    pts.hand = th; pts.mouth = [HX, hTop + Math.floor(f.hh * .5) + 4]; pts.head = [HX, hTop - 3];
+    pts.hand = th; pts.hands = [hL, hR].filter((h, i) => !(o.oneArm && i === (back ? 1 : 0))); pts.mouth = [HX, hTop + Math.floor(f.hh * .5) + 4]; pts.head = [HX, hTop - 3];
     pts.feet = [[cx - hw + 2, base - fl[1]], [cx + 3, base - fr[1]]];
   }
   pts.torso = [sx0, tTop - br, lean]; pts.hip = [cx, legTop];

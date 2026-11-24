@@ -137,26 +137,12 @@ function reink(pen, x0, y0, x1, y1) {
 }
 
 function paintLimbs(pen, g, look, skin, s) {
-  const m = look.marks, { cx, hw, aw, tTop, legTop, legs, base, face } = g, sn = skin.length - 1;
-  if (face === 's') return;
-  const wrap = [P.cloth[2], P.cloth[1]];
-  if (m.oneArm) {
-    const x0 = face === 'b' ? cx + hw : cx - hw - aw - 3, x1 = face === 'b' ? cx + hw + aw + 2 : cx - hw - 1, cut = tTop + 4;
-    for (let y = cut; y <= base; y++) for (let x = x0; x <= x1; x++) pen.put(x, y, null);
-    for (let x = x0; x <= x1; x++) if (pen.get(x, cut - 1) && pen.get(x, cut - 1) !== P.ink) pen.put(x, cut - 1, wrap[x & 1]);
-    reink(pen, x0 - 1, tTop - 2, x1 + 1, base + 1);
-  }
-  if (m.oneLeg) {
-    const x0 = face === 'b' ? cx : cx - hw - 2, x1 = face === 'b' ? cx + hw + 1 : cx - 2, cut = legTop + Math.ceil(legs * .4);
-    for (let y = cut; y <= base + 1; y++) for (let x = x0; x <= x1; x++) pen.put(x, y, null);
-    for (let x = x0; x <= x1; x++) if (pen.get(x, cut - 1) && pen.get(x, cut - 1) !== P.ink) pen.put(x, cut - 1, wrap[x & 1]);
-    reink(pen, x0 - 1, legTop - 1, x1 + 1, base + 1);
-  }
-  if ((m.claws || m.webbed) && s.pts.hand) {
-    const [hx, hy] = s.pts.hand, hands = face === 's' ? [hx] : [hx, 2 * cx - 1 - hx];
-    if (m.webbed) for (const x of hands) { pen.under(x - 1, hy + 2, skin[Math.max(0, sn - 2)]); pen.under(x + 1, hy + 2, skin[Math.max(0, sn - 2)]); pen.under(x, hy + 3, skin[Math.max(0, sn - 1)]); }
+  const m = look.marks, { cx, face } = g, sn = skin.length - 1;
+  if (face === 's' || !(m.claws || m.webbed) || !s.pts.hands) return;
+  for (const [x, hy] of s.pts.hands) {
+    if (m.webbed) { pen.under(x - 1, hy + 2, skin[Math.max(0, sn - 2)]); pen.under(x + 1, hy + 2, skin[Math.max(0, sn - 2)]); pen.under(x, hy + 3, skin[Math.max(0, sn - 1)]); }
     const n = m.claws >= 3 ? 3 : 2, len = m.claws >= 4 ? 4 : m.claws >= 3 ? 3 : 1;
-    if (m.claws) for (const x of hands) for (let c = 0; c < n; c++) {
+    if (m.claws) for (let c = 0; c < n; c++) {
       const dx = c - (n >> 1);
       for (let k = 0; k < len; k++) pen.under(x + dx + (k >= len - 1 && len > 2 ? (x < cx ? -1 : 1) : 0), hy + 2 + k, k === len - 1 ? P.bone[2] : P.bone[5 - (k >> 1)]);
     }

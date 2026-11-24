@@ -25,6 +25,9 @@ function paintSleeves(pen, g, look, skin, cloth, s) {
 function paintSkirt(pen, g, look, cloth) {
   const { legTop, legs, base, tTop, tl, cx, hw, face } = g, n = cloth.length - 1, gown = look.sex === 'female';
   const hem = gown ? base - 3 : legTop + Math.max(2, Math.round(legs * .35)), [left, right] = legSpan(pen, g);
+  const cut = look.marks.oneLeg && face !== 's' ? legTop + Math.ceil(legs * .4) : Infinity, lost = face === 'b' ? [cx, cx + hw + 1] : [cx - hw - 2, cx - 2];
+  const put = pen.put;
+  pen = { ...pen, put: (x, y, c, e) => x < lost[0] || x > lost[1] || y < cut - 1 ? put(x, y, c, e) : y === cut - 1 ? put(x, y, WRAP[x & 1]) : null };
   for (let y = legTop + 2; y <= hem; y++) {
     const flare = gown ? (y > legTop + legs * .55 && hw >= 5 ? 2 : 1) : 0, x0 = left - flare, x1 = right + (face === 's' ? 0 : flare);
     for (let x = x0; x <= x1; x++) {

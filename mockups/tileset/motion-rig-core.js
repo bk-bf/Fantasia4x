@@ -17,7 +17,7 @@ function rigLimb(s, pts, w, col, rim) {
     for (let k = 0; k < w; k++) {
       const X = rnd(vert ? x - half + k : x), Y = rnd(vert ? y : y - half + k);
       if (!s.ok(X, Y)) continue;
-      const c = col(t, k, vert);
+      const c = col(t, k, vert, X, Y);
       if (c) px.set(Y * s.w + X, c);
     }
   };

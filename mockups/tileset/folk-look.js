@@ -221,6 +221,9 @@ function lookRig(look) {
   if (look.cloak) o.cape = DYES[look.cloak];
   if (look.style === 'mohawk') o.mohawk = hair;
   if (look.beard === 'full' || look.beard === 'braided') o.beard = 1;
+  if (look.sleeves === 'long') o.sleeves = 'long';
+  if (m.oneArm) o.oneArm = 1;
+  if (m.oneLeg) o.oneLeg = 1;
   return { o, skin, hair };
 }
 
