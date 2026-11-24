@@ -6,9 +6,10 @@
   const DEN_TALL = { den: 15, cave: 22, camp: 19, nest: 12, spire: 30 }, DECAY = { 'lived in': 0, abandoned: 1, overgrown: 2, ruin: 3 };
   const PING = { death: '#f0564a', clash: '#f29a3c', found: '#7ad06a', gone: '#b8b2a6', in: '#6cb4f0', out: '#6cb4f0', raid: '#ecdc48', steal: '#b06a2c', split: '#c8a0f0', fire: '#ff7a1a', rise: '#ffd24a' };
   const TODAY = { wolf: 55, bear: 32, mire_crocodile: 24, goblin: 65, harpy: 85 }, MIX = [['mire_crocodile', .5], ['goblin', .14], ['bear', .14], ['harpy', .12], ['wolf', .1]];
-  const WX = { clear: 'Clear', rain: 'Rain', storm: 'Storm', snow: 'Snow', drought: 'Drought' }, ICON = new Map(), LAIRICON = {}, FACE = new Map(), STORE = 'f4x-region-runs';
+  const WX = { clear: 'Clear', rain: 'Rain', storm: 'Storm', snow: 'Snow', drought: 'Drought' }, ICON = new Map(), LAIRICON = {}, FACE = new Map(), STORE = 'f4x-region-runs', LEDGER = 'f4x-region-ledger';
   const q = new URLSearchParams(location.search);
-  let ui, S = null, LINES = null, LEFT = [], seed = +q.get('seed') || 7, frac = 0, last = 0, pick = null, cellMap = null, tone = null, img = null, drawnDay = -1, D = 600, still = null, pings = [], seen = 0, shownHour = -1, replay = null, note = '';
+  let ui, S = null, LINES = null, LEFT = [], seed = +q.get('seed') || 7, frac = 0, last = 0, pick = null, cellMap = null, tone = null, img = null, drawnDay = -1, D = 600, still = null, pings = [], seen = 0, shownHour = -1, replay = null, note = '', hoverId = null, view = { key: 'size', dir: -1, who: 'all', when: 'living' };
+  try { Object.assign(view, JSON.parse(localStorage.getItem(LEDGER) || '{}')); } catch {}
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -82,7 +83,7 @@
   }
 
   function fit() {
-    const side = innerWidth > 860 ? 444 : 0;
+    const side = innerWidth > 860 ? 504 : 0;
     D = Math.max(240, Math.floor(Math.min(innerWidth - 24 - side, innerHeight - 24)));
     map.style.width = map.style.height = D + 'px';
     life.width = life.height = Math.round(D * dpr);
@@ -128,6 +129,7 @@
       if (g === pick) ring(x, y + home, spread + 12 * dpr, '#ffffff', .9);
     }
     if (pick && pick.story) ring(pick.x * k, pick.y * k, 16 * dpr, '#ffffff', .9);
+    if (hoverId) mark(list, hoverId, k, now);
     pings = pings.filter(p => now - p.t < 2800);
     for (const p of pings) {
       const a = (now - p.t) / 2800, x = p.x * k, y = p.y * k;
@@ -135,6 +137,17 @@
       if (p.type === 'clash') { ctx.globalAlpha = 1 - a * .7; ctx.strokeStyle = PING.clash; ctx.lineWidth = 2.5 * dpr; ctx.beginPath(); ctx.moveTo(x - 7 * dpr, y - 7 * dpr); ctx.lineTo(x + 7 * dpr, y + 7 * dpr); ctx.moveTo(x + 7 * dpr, y - 7 * dpr); ctx.lineTo(x - 7 * dpr, y + 7 * dpr); ctx.stroke(); ctx.globalAlpha = 1; }
     }
     if (S.hour !== shownHour) { shownHour = S.hour; const el = $('hour'); if (el) el.textContent = String(S.hour).padStart(2, '0') + ':00'; for (const u of document.querySelectorAll('#now u')) u.style.left = (S.hour + .5) / 24 * 100 + '%'; }
+  }
+
+  function mark(list, id, k, now) {
+    const live = list.find(o => o.g.id === id), g = live ? live.g : S.gone.find(o => o.id === id);
+    if (!g) return;
+    const x = live ? live.x : g.x * k, y = live ? live.y : g.y * k, r = (20 + Math.sin(now / 180) * 3) * dpr;
+    if (live && g.lair) { ring(g.lair.x * k, g.lair.y * k, g.k.range * k, '#ffd24a', .8, [5 * dpr, 4 * dpr]); ctx.globalAlpha = .7; ctx.strokeStyle = '#ffd24a'; ctx.lineWidth = dpr; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(g.lair.x * k, g.lair.y * k); ctx.stroke(); ctx.globalAlpha = 1; }
+    ctx.globalAlpha = .18; ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.lineWidth = 3 * dpr; ctx.strokeStyle = '#17131a'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 2 * dpr; ctx.strokeStyle = live ? '#ffd24a' : '#b8b2a6'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+    label(`${ECO.variant(g).name} ${g.id}${live ? '' : ' · ' + g.fate}`, x + r + 4 * dpr, y - r * .4, live ? '#ffd24a' : '#d8d2c6');
   }
 
   function chart() {
@@ -156,6 +169,67 @@
   const head = g => `${g.n}${g.young ? ' and ' + g.young + ' young' : ''}`, pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '–';
   const strip = kind => `<i style="background:linear-gradient(90deg,${LINES[kind].clock.map((a, h) => `color-mix(in srgb, #e0c48a ${Math.round(a * 100)}%, #1c1920) ${h / 24 * 100}% ${(h + 1) / 24 * 100}%`).join(',')})"><u></u></i>`;
   const tierText = list => { const c = {}; for (const g of list) c[g.tier] = (c[g.tier] || 0) + g.n; return Object.keys(c).sort().map(t => `<b class="t${t}">${t}</b>${c[t]}`).join(' '); };
+
+  const COLS = [['rank', '#'], ['name', 'Group'], ['size', 'Size'], ['tier', 'T'], ['kills', 'Kills'], ['lost', 'Lost'], ['born', 'Born'], ['fed', 'Fed'], ['age', 'Age'], ['threat', 'Threat']];
+  const UP = { name: 1, fed: 1 };
+  const span = g => (g.end === undefined ? S.day : g.end) - g.from, ago = d => d < ECO.YEAR ? d + 'd' : Math.floor(d / ECO.YEAR) + 'y ' + d % ECO.YEAR + 'd';
+  const VAL = {
+    name: g => ECO.variant(g).name + ' ' + String(g.id).padStart(5, '0'), size: g => g.end === undefined ? g.n + g.young : g.peak, tier: g => g.tier, kills: g => g.kills, lost: g => g.lost, born: g => g.born,
+    fed: g => g.end === undefined ? g.cond : 9, age: span, threat: g => g.end === undefined ? ECO.danger(g) : 0,
+  };
+  const TITLES = {
+    hunter: [['biggest', 'size', -1], ['deadliest', 'kills', -1], ['most lost', 'lost', -1], ['hungriest', 'fed', 1, .7], ['eldest', 'age', -1], ['most feared', 'threat', -1], ['top tier', 'tier', -1, 3]],
+    prey: [['biggest', 'size', -1], ['most lost', 'lost', -1], ['most born', 'born', -1], ['hungriest', 'fed', 1, .7], ['eldest', 'age', -1]],
+  };
+  function titles() {
+    const out = new Map();
+    for (const role of ['hunter', 'prey']) {
+      const pool = S.groups.filter(g => !!g.k.prey === (role === 'prey') && g.n > 0);
+      for (const [name, key, dir, bar] of TITLES[role]) {
+        let best = null;
+        for (const g of pool) if (!best || (VAL[key](best) - VAL[key](g)) * dir > 0) best = g;
+        if (!best) continue;
+        const v = VAL[key](best);
+        if (key === 'fed' ? v >= bar : key === 'tier' ? v < bar : v <= 0) continue;
+        if (!out.has(best.id)) out.set(best.id, []);
+        out.get(best.id).push(name);
+      }
+    }
+    return out;
+  }
+  const pickedId = () => !pick ? null : pick.story ? (S.groups.find(o => o.lair === pick) || {}).id : pick.id;
+  function ledger() {
+    const el = $('ledger'); if (!el || !S) return;
+    for (const b of document.querySelectorAll('#lfilter button')) b.classList.toggle('on', view[b.dataset.f] === b.dataset.v);
+    const src = view.when === 'gone' ? S.gone : S.groups.filter(g => g.n > 0), rows = src.filter(g => view.who === 'all' || (view.who === 'prey') === !!g.k.prey);
+    const f = VAL[view.key] || VAL.size, dir = view.dir;
+    rows.sort((a, b) => { const x = f(a), y = f(b); return (typeof x === 'string' ? x.localeCompare(y) : x - y) * dir || b.id - a.id; });
+    const T = titles(), me = pickedId();
+    const where = g => g.end !== undefined ? g.fate : g.lair ? g.lair.name : g.k.prey ? g.state : g.state + ', no lair';
+    el.innerHTML = '<thead><tr>' + COLS.map(([key, name]) => key === 'rank' ? `<th>${name}</th>` : `<th data-sort="${key}" class="${view.key === key ? 'on' : ''}">${name}${view.key === key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '</tr></thead><tbody>' +
+      rows.map((g, i) => {
+        const gone = g.end !== undefined, tags = (T.get(g.id) || []).map(t => `<span class="tag">${t}</span>`).join(''), fed = Math.round(g.cond * 100);
+        const tip = `${ECO.variant(g).name} ${g.id} · ${g.came} · peak ${g.peak}${g.won || g.beat ? ` · fights won ${g.won}, lost ${g.beat}` : ''}${!g.k.prey && !gone ? ` · ${ECO.stockDays(g).toFixed(1)} days of food` : ''}${!gone ? ' · ' + g.state : ''}`;
+        return `<tr data-id="${g.id}" class="${g.k.prey ? 'prey' : 'hunter'}${gone ? ' gone' : ''}${g.id === me ? ' picked' : ''}${g.id === hoverId ? ' hover' : ''}" title="${esc(tip)}"><td>${i + 1}</td>` +
+          `<td class="who"><div><img src="${icon(ECO.variant(g).id).url}" alt=""><span><b>${esc(ECO.variant(g).name)}</b> <em>${g.id} · ${esc(where(g))}</em>${tags ? '<br>' + tags : ''}</span></div></td>` +
+          `<td>${VAL.size(g)}${g.young && !gone ? `<em>+${g.young}</em>` : ''}</td><td><b class="t${g.tier}">${g.tier}</b></td><td>${g.k.prey ? '' : g.kills}</td><td>${g.lost}</td><td>${g.born}</td>` +
+          `<td class="${!gone && fed < 40 ? 'low' : ''}">${gone ? '' : fed + '%'}</td><td>${ago(span(g))}</td><td>${gone ? '' : Math.round(ECO.danger(g))}</td></tr>`;
+      }).join('') + '</tbody>';
+    $('lcount').textContent = `${rows.length} ${view.when === 'gone' ? 'gone, latest ' + S.gone.length + ' kept' : 'groups'}`;
+  }
+  const saveView = () => { try { localStorage.setItem(LEDGER, JSON.stringify(view)); } catch {} };
+  $('lfilter').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; view[b.dataset.f] = b.dataset.v; saveView(); ledger(); });
+  $('ledger').addEventListener('click', ev => {
+    const th = ev.target.closest('th[data-sort]');
+    if (th) { const key = th.dataset.sort; view.dir = view.key === key ? -view.dir : UP[key] ? 1 : -1; view.key = key; saveView(); ledger(); return; }
+    const tr = ev.target.closest('tr[data-id]'); if (!tr || !S) return;
+    const id = +tr.dataset.id, g = S.groups.find(o => o.id === id) || S.gone.find(o => o.id === id);
+    if (!g) return;
+    pick = g.lair && g.end === undefined ? g.lair : g;
+    side();
+  });
+  $('ledger').addEventListener('mouseover', ev => { const tr = ev.target.closest('tr[data-id]'); const id = tr ? +tr.dataset.id : null; if (id === hoverId) return; hoverId = id; for (const r of document.querySelectorAll('#ledger tr.hover')) r.classList.remove('hover'); if (tr) tr.classList.add('hover'); });
+  $('ledger').addEventListener('mouseleave', () => { hoverId = null; for (const r of document.querySelectorAll('#ledger tr.hover')) r.classList.remove('hover'); });
 
   function side() {
     const when = $('when');
@@ -189,12 +263,15 @@
     const p = $('pick');
     if (pick && pick.story) {
       const g = S.groups.find(o => o.lair === pick), state = ECO.age(S, pick);
-      p.innerHTML = `<h2>${esc(pick.name)}</h2><p>${g ? `Lived in by ${head(g)} ${esc(ECO.variant(g).name.toLowerCase())}s · ${esc(g.state)}` : esc(state[0].toUpperCase() + state.slice(1))}${pick.burnt ? ' · burnt' : ''}</p>` +
+      p.innerHTML = `<h2>${esc(pick.name)}</h2><p>${g ? `Lived in by ${head(g)} ${esc(ECO.variant(g).name.toLowerCase())}s (group ${g.id}) · ${esc(g.state)}` : esc(state[0].toUpperCase() + state.slice(1))}${pick.burnt ? ' · burnt' : ''}</p>` +
         (g ? `<div class="bar"><i style="width:${clamp(ECO.stockDays(g) / 4, 0, 1) * 100}%"></i></div><p>${ECO.stockDays(g).toFixed(1)} days of food in the larder${g.hungry ? ' · hungry for ' + g.hungry + ' days' : ''} · tier ${g.tier}, ${g.held} good seasons</p>` : '') +
         `<p>Bones of ${pick.kills} kills · most it ever held: ${pick.peak}</p><ul>${pick.story.slice(-10).map(t => `<li>${esc(t)}</li>`).join('')}</ul>`;
     } else if (pick && S.groups.includes(pick)) {
-      p.innerHTML = `<h2>${esc(ECO.variant(pick).name)}</h2><p>${head(pick)} · ${esc(pick.state)} · tier ${pick.tier}</p><p>${pick.k.prey ? 'Condition ' + (pick.cond > .7 ? 'good' : pick.cond > .4 ? 'lean' : 'starving') : ECO.stockDays(pick).toFixed(1) + ' days of food, looking for ground'}</p>`;
+      p.innerHTML = `<h2>${esc(ECO.variant(pick).name)} ${pick.id}</h2><p>${head(pick)} · ${esc(pick.state)} · tier ${pick.tier} · ${esc(pick.came)}</p><p>${pick.k.prey ? 'Condition ' + (pick.cond > .7 ? 'good' : pick.cond > .4 ? 'lean' : 'starving') : ECO.stockDays(pick).toFixed(1) + ' days of food, looking for ground'}</p><p>${pick.k.prey ? '' : pick.kills + ' kills · '}${pick.lost} lost · ${pick.born} born · most it ever held: ${pick.peak}</p>`;
+    } else if (pick && S.gone.includes(pick)) {
+      p.innerHTML = `<h2>${esc(ECO.variant(pick).name)} ${pick.id}</h2><p>Gone: ${esc(pick.fate)} · ${esc(pick.came)} · lasted ${ago(span(pick))}</p><p>${pick.k.prey ? '' : pick.kills + ' kills · '}${pick.lost} lost · ${pick.born} born · most it ever held: ${pick.peak}</p>`;
     } else { pick = null; p.innerHTML = '<h3>Pick</h3><p>Click a lair or a group on the map for its story.</p>'; }
+    ledger();
     runs();
   }
 
