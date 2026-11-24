@@ -11,6 +11,7 @@ export async function loadArt(TREE) {
 export function brushes(A) {
   const { clamp, noise, rp, dark, LV, rng } = A;
 
+  const mode = { k: 2, p: 0 };
   const put = (s, x, y, c, z) => {
     x = Math.round(x);
     y = Math.round(y);
@@ -20,7 +21,42 @@ export function brushes(A) {
     s.z[i] = z;
     s.c[i] = c;
     s.e[i] = 0;
+    if (s.kind) {
+      s.kind[i] = mode.k;
+      s.ph[i] = mode.p;
+    }
     return true;
+  };
+  const tag = (s) => {
+    s.kind = new Uint8Array(s.w * s.h);
+    s.ph = new Uint8Array(s.w * s.h);
+    return s;
+  };
+  const as = (k, p, fn) => {
+    const was = { ...mode };
+    mode.k = k;
+    mode.p = p & 255;
+    fn();
+    Object.assign(mode, was);
+  };
+  const stamp = (s, box, kind, ph, fn) => {
+    const x0 = Math.max(0, Math.floor(box[0])),
+      y0 = Math.max(0, Math.floor(box[1])),
+      x1 = Math.min(s.w - 1, Math.ceil(box[2])),
+      y1 = Math.min(s.h - 1, Math.ceil(box[3]));
+    const before = [];
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) before.push(s.c[y * s.w + x]);
+    fn();
+    if (!s.kind) return;
+    let n = 0;
+    for (let y = y0; y <= y1; y++)
+      for (let x = x0; x <= x1; x++, n++) {
+        const i = y * s.w + x;
+        if (s.c[i] !== before[n]) {
+          s.kind[i] = kind;
+          s.ph[i] = ph & 255;
+        }
+      }
   };
 
   const furrow = (dx, y, seed, fx, fy, bands, edge) => {
@@ -46,7 +82,7 @@ export function brushes(A) {
       for (let x = x0; x < x1; x++) {
         const u = (x - x0 + 0.5) / Math.max(1, x1 - x0),
           round = Math.sqrt(Math.max(0, 1 - (2 * u - 1) ** 2));
-        put(s, x, y, o.skin(x, y, u, j, x - c, t), z0 + (round * w) / 2);
+        as(o.kind ?? 1, 0, () => put(s, x, y, o.skin(x, y, u, j, x - c, t), z0 + (round * w) / 2));
       }
     }
     return (j) => at[clamp(Math.round(j), 0, h)];
@@ -76,6 +112,12 @@ export function brushes(A) {
   }
 
   function clump(s, cl, ramp, crown, o) {
+    const pad = cl.r * 1.6 + o.cr * 2;
+    const ph = cl.ph ?? Math.floor(((cl.x * 0.045 + cl.y * 0.02 + (cl.seed % 97) * 0.013) % 1) * 255);
+    stamp(s, [cl.x - pad, cl.y - pad, cl.x + pad, cl.y + pad], o.kind ?? 3, ph, () => clumpRaw(s, cl, ramp, crown, o));
+  }
+
+  function clumpRaw(s, cl, ramp, crown, o) {
     const r = rng(cl.seed),
       sq = o.squash ?? 0.84,
       R = cl.r,
@@ -98,6 +140,13 @@ export function brushes(A) {
   }
 
   function heart(s, crown, ramp, o, seed) {
+    const pad = o.cr * 4;
+    stamp(s, [crown.x - crown.rx - pad, crown.y - crown.ry - pad, crown.x + crown.rx + pad, crown.y + crown.ry + pad], 3, 0, () => heartRaw(s, crown, ramp, o, seed));
+    if (!s.kind) return;
+    for (let i = 0; i < s.c.length; i++) if (s.kind[i] === 3 && s.ph[i] === 0) s.ph[i] = Math.floor((((i % s.w) >> 3) * 37 + ((i / s.w) >> 3) * 53) % 255);
+  }
+
+  function heartRaw(s, crown, ramp, o, seed) {
     const r = rng(seed * 7 + 3),
       N = Math.round(((crown.rx * crown.ry) / (o.cr * o.cr)) * 0.9);
     for (let i = 0; i < N; i++) {
@@ -148,16 +197,30 @@ export function brushes(A) {
         const i = y * w + x;
         if (c[i]) continue;
         const nb = (y > 0 && c[i - w]) || (x > 0 && c[i - 1]) || (x < w - 1 && c[i + 1]) || (y < h - 1 && c[i + w]);
-        if (nb) add.push([i, dark(nb, k)]);
+        if (!nb) continue;
+        const j = y > 0 && c[i - w] ? i - w : x > 0 && c[i - 1] ? i - 1 : x < w - 1 && c[i + 1] ? i + 1 : i + w;
+        add.push([i, dark(nb, k), j]);
       }
-    for (const [i, col] of add) c[i] = col;
+    for (const [i, col, j] of add) {
+      c[i] = col;
+      if (s.kind) {
+        s.kind[i] = s.kind[j];
+        s.ph[i] = s.ph[j];
+      }
+    }
   }
 
   function seal(s) {
     for (let y = 1; y < s.h - 1; y++)
       for (let x = 1; x < s.w - 1; x++) {
         const i = y * s.w + x;
-        if (!s.c[i] && s.c[i - 1] && s.c[i + 1] && s.c[i - s.w] && s.c[i + s.w]) s.c[i] = dark(s.c[i - s.w], 0.7);
+        if (!s.c[i] && s.c[i - 1] && s.c[i + 1] && s.c[i - s.w] && s.c[i + s.w]) {
+          s.c[i] = dark(s.c[i - s.w], 0.7);
+          if (s.kind) {
+            s.kind[i] = s.kind[i - s.w];
+            s.ph[i] = s.ph[i - s.w];
+          }
+        }
       }
   }
 
@@ -169,5 +232,5 @@ export function brushes(A) {
   const fresh = (ramp, k = 0.17) => ramp.map((c) => [c[0] * (1 - k) + 170 * k, c[1] * (1 - k) + 198 * k, c[2] * (1 - k) + 96 * k].map((v) => Math.min(255, v * 1.04)));
   const blend = (a, b, k) => [0, 1, 2].map((i) => a[i] * (1 - k) + b[i] * k);
 
-  return { put, furrow, bole, wood, clump, heart, scatter, shadeUnder, rim, seal, crownMask, fresh, blend };
+  return { put, tag, as, stamp, mode, furrow, bole, wood, clump, heart, scatter, shadeUnder, rim, seal, crownMask, fresh, blend };
 }

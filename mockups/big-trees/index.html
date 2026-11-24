@@ -14,20 +14,24 @@
   #stage { position: fixed; inset: 0; padding: 6px; box-sizing: border-box; touch-action: none; cursor: grab; }
   #stage.held { cursor: grabbing; }
   .pane { position: relative; margin: 0; width: 100%; height: 100%; overflow: hidden; outline: 1px solid var(--frame); background: var(--bg); }
-  .pane img { position: absolute; left: 0; top: 0; transform-origin: 0 0; image-rendering: pixelated; user-select: none; -webkit-user-drag: none; max-width: none; }
+  .pane canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; image-rendering: pixelated; }
   #mock .grp[hidden] { display: none; }
   #mock .brk { flex-basis: 100%; height: 0; }
 </style>
 </head>
 <body>
-<main id="stage"><figure class="pane"><img alt="" draggable="false"></figure></main>
+<main id="stage"><figure class="pane"><canvas></canvas></figure></main>
 <header id="mock">
   <div class="mrow"><strong>Big trees</strong><button id="mockhide">Hide · `</button></div>
   <div class="mrow"><span class="grp" data-k="show" data-def="trees"><span class="lab">Show</span><button data-v="trees">Young and mature</button><button data-v="magic">Magical</button><button data-v="forest">Forest</button></span></div>
-  <div class="mrow"><span class="grp" data-k="young" data-def="new"><span class="lab">Young</span><button data-v="new">Tweaked</button><button data-v="today">Today</button></span><span class="grp" data-k="light" data-def="day"><span class="lab">Light</span><button data-v="day">Day</button><button data-v="night">Night</button></span><span class="grp" data-k="cut" data-def="on"><span class="lab">Cutaway</span><button data-v="on">On</button><button data-v="off">Off</button></span><span class="grp" data-k="zoom" data-def="2"><span class="lab">Zoom</span><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="3">3×</button></span></div>
+  <div class="mrow"><span class="grp" data-k="young" data-def="new"><span class="lab">Young</span><button data-v="new">Tweaked</button><button data-v="today">Today</button></span><span class="grp" data-k="wind" data-def="breeze"><span class="lab">Wind</span><button data-v="still">Still</button><button data-v="breeze">Breeze</button><button data-v="windy">Windy</button><button data-v="gale">Gale</button></span><span class="grp" data-k="play" data-def="on"><button data-v="on">Play</button><button data-v="off">Pause</button></span></div>
+  <div class="mrow"><span class="grp" data-k="light" data-def="day"><span class="lab">Light</span><button data-v="day">Day</button><button data-v="night">Night</button></span><span class="grp" data-k="cut" data-def="on"><span class="lab">Cutaway</span><button data-v="on">On</button><button data-v="off">Off</button></span><span class="grp" data-k="zoom" data-def="2"><span class="lab">Zoom</span><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="3">3×</button></span></div>
   <div class="mrow"><span class="grp" data-k="at" data-def="all"><span class="lab">Look at</span><button data-v="all">All</button><button data-v="oak">Oak</button><button data-v="ash">Ash</button><button data-v="apple">Apple</button><button data-v="yew">Yew</button><button data-v="birch">Birch</button><button data-v="willow">Willow</button><button data-v="pine">Pine</button><button data-v="dead">Dead</button></span></div>
   <div class="mrow"><span class="grp" data-k="see" data-def="all"><span class="lab">Look at</span><button data-v="all">All</button><button data-v="heartwood">Heartwood</button><button data-v="frostheart">Frostheart</button><button data-v="moonwood">Moonwood</button><button data-v="ironwood">Ironwood</button><button data-v="emberwood">Emberwood</button><button data-v="soulwood">Soulwood</button><button data-v="witchwood">Witchwood</button><button data-v="bonewood">Bonewood</button><span class="brk"></span><span class="lab">Elder</span><button data-v="heartwood-elder">Heartwood</button><button data-v="frostheart-elder">Frostheart</button><button data-v="moonwood-elder">Moonwood</button><button data-v="ironwood-elder">Ironwood</button><button data-v="emberwood-elder">Emberwood</button><button data-v="soulwood-elder">Soulwood</button><button data-v="witchwood-elder">Witchwood</button><button data-v="bonewood-elder">Bonewood</button></span></div>
 </header>
+<script src="wind.js"></script>
+<script src="engine.js"></script>
+<script src="fx.js"></script>
 <script src="view.js"></script>
 </body>
 </html>

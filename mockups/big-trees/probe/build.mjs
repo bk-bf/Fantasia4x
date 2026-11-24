@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadArt } from './paint.mjs';
@@ -7,27 +7,41 @@ import { forest } from './trees.mjs';
 
 const [, , TREE, WORK] = process.argv;
 const HERE = dirname(fileURLToPath(import.meta.url));
-const IMG = join(HERE, '..', 'img');
+const PAGE = join(HERE, '..');
+const IMG = join(PAGE, 'img');
 const { encodePng, decodePng } = await import(`${TREE}/tools/tileset/png.mjs`);
 const A = await loadArt(TREE);
 const F = forest(A);
 const painted = `${TREE}/static/tilesets/painted`;
 const manifest = JSON.parse(readFileSync(`${painted}/manifest.json`, 'utf8'));
 const sheet = decodePng(readFileSync(`${painted}/atlas.png`));
-const TILE = manifest.tile;
 
 const SPECIES = ['oak', 'ash', 'apple', 'yew', 'birch', 'willow', 'pine', 'dead'];
 const FOLK = ['woodcutter', 'farmer', 'hunter', 'cook', 'miner', 'weaver', 'guard', 'smith'];
+const MAGIC = ['heartwood', 'frostheart', 'moonwood', 'ironwood', 'emberwood', 'soulwood', 'witchwood', 'bonewood'];
+const MAGIC_FOLK = ['mage', 'watch', 'hunter', 'smith', 'guard', 'weaver', 'trader', 'miner'];
 
-function canvas(w, h, ground) {
-  const g = manifest.sprites[manifest.map.subterrain[ground][0]];
+mkdirSync(WORK, { recursive: true });
+mkdirSync(IMG, { recursive: true });
+
+const sprites = [];
+const keep = (s) => {
+  if (s.id === undefined) {
+    s.id = sprites.length;
+    sprites.push(s);
+  }
+  return s.id;
+};
+
+function ground(w, h, name) {
+  const g = manifest.sprites[manifest.map.subterrain[name][0]];
   const px = new Float32Array(w * h * 3);
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       const o = ((g.y + (y % g.h)) * sheet.w + g.x + (x % g.w)) * 4;
       for (let k = 0; k < 3; k++) px[(y * w + x) * 3 + k] = sheet.rgba[o + k];
     }
-  return { w, h, px, em: new Float32Array(w * h), lights: [] };
+  return { w, h, px };
 }
 
 function shadow(cv, s, x, base) {
@@ -43,88 +57,70 @@ function shadow(cv, s, x, base) {
     }
 }
 
-function compose(cv, items, cut) {
-  for (const it of items) if (it.sprite.sh && it.tree) shadow(cv, it.sprite, it.x, it.base);
-  const folk = items.filter((it) => it.folk);
-  items.sort((a, b) => a.base - b.base);
+function lights(cv, items, breathing) {
+  const L = new Float32Array(cv.w * cv.h * 3);
   for (const it of items) {
-    const s = it.sprite,
-      ox = it.x - s.ax,
-      oy = it.base - s.ay;
-    const over = cut && it.tree ? folk.filter((f) => f.base < it.base) : [];
-    if (s.emit) cv.lights.push({ x: it.x + s.emit.dx, y: it.base + s.emit.dy, rad: s.emit.rad, col: s.emit.col });
-    for (let sy = 0; sy < s.h; sy++)
-      for (let sx = 0; sx < s.w; sx++) {
-        const c = s.c[sy * s.w + sx];
-        if (!c) continue;
-        const x = ox + sx,
-          y = oy + sy;
-        if (x < 0 || y < 0 || x >= cv.w || y >= cv.h) continue;
-        let a = 1;
-        if (over.length && s.crown[sy * s.w + sx]) {
-          let d = 1e9;
-          for (const f of over) d = Math.min(d, Math.hypot(x - f.x, (y - (f.base - 16)) * 1.1));
-          const edge = 34 + (A.noise(x / 7, y / 7, 91) - 0.5) * 12;
-          if (d < edge) a = d < edge - 6 ? 0.14 : 0.14 + ((d - edge + 6) / 6) * 0.86;
-        }
-        const i = (y * cv.w + x) * 3;
-        for (let k = 0; k < 3; k++) cv.px[i + k] = cv.px[i + k] * (1 - a) + c[k] * a;
-        cv.em[y * cv.w + x] = cv.em[y * cv.w + x] * (1 - a) + ((s.e[sy * s.w + sx] || 0) / 255) * a;
+    const e = it.sprite.emit;
+    if (!e || Boolean(it.sprite.anim?.heart) !== breathing) continue;
+    const lx = it.x + e.dx,
+      ly = it.base + e.dy;
+    for (let y = Math.max(0, Math.floor(ly - e.rad)); y < Math.min(cv.h, ly + e.rad); y++)
+      for (let x = Math.max(0, Math.floor(lx - e.rad)); x < Math.min(cv.w, lx + e.rad); x++) {
+        const d = Math.hypot(x - lx, (y - ly) * 1.25) + (A.noise(x / 9, y / 9, 61) - 0.5) * 14;
+        if (d >= e.rad) continue;
+        const f = Math.floor(Math.pow(1 - d / e.rad, 1.6) * 5) / 5;
+        for (let k = 0; k < 3; k++) L[(y * cv.w + x) * 3 + k] += f * e.col[k] * 0.95;
       }
   }
+  return L;
 }
 
-const GRADE = [0.26, 0.31, 0.46];
-function night(cv) {
-  const out = new Float32Array(cv.px.length);
-  for (let y = 0; y < cv.h; y++)
-    for (let x = 0; x < cv.w; x++) {
-      const i = y * cv.w + x;
-      const add = [0, 0, 0];
-      for (const l of cv.lights) {
-        const d = Math.hypot(x - l.x, (y - l.y) * 1.25) + (A.noise(x / 9, y / 9, 61) - 0.5) * 14;
-        if (d >= l.rad) continue;
-        const f = Math.floor(Math.pow(1 - d / l.rad, 1.6) * 5) / 5;
-        for (let k = 0; k < 3; k++) add[k] += f * l.col[k] * 0.95;
-      }
-      const e = cv.em[i];
-      for (let k = 0; k < 3; k++) {
-        const b = cv.px[i * 3 + k];
-        out[i * 3 + k] = (b * (GRADE[k] + add[k] * 0.55) + add[k] * 34) * (1 - e) + b * 1.12 * e;
-      }
-    }
-  return { ...cv, px: out };
-}
-
-function save(cv, name) {
-  const out = new Uint8Array(cv.w * cv.h * 4);
-  for (let i = 0; i < cv.w * cv.h; i++) {
-    for (let k = 0; k < 3; k++) out[i * 4 + k] = Math.max(0, Math.min(255, Math.round(cv.px[i * 3 + k])));
+function writeRgb(w, h, get, name) {
+  const out = new Uint8Array(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    for (let k = 0; k < 3; k++) out[i * 4 + k] = Math.max(0, Math.min(255, Math.round(get(i, k))));
     out[i * 4 + 3] = 255;
   }
   const png = `${WORK}/${name}.png`;
-  writeFileSync(png, encodePng(cv.w, cv.h, out, 6));
-  execFileSync('cwebp', ['-quiet', '-lossless', '-z', '9', png, '-o', join(IMG, `${name}.webp`)]);
-  console.log('wrote', name, cv.w, cv.h);
+  writeFileSync(png, encodePng(w, h, out, 6));
+  execFileSync('cwebp', ['-quiet', '-lossless', '-exact', '-z', '9', png, '-o', join(IMG, `${name}.webp`)]);
 }
 
-const pawn = (kind, flip) => {
-  const s = A.mkPawn(A.PAWNS[kind].o);
-  return flip ? s.flip() : s;
-};
+function view(name, w, h, items) {
+  const cv = ground(w, h, 'deep_grass');
+  for (const it of items) if (it.tree && it.sprite.sh) shadow(cv, it.sprite, it.x, it.base);
+  writeRgb(w, h, (i, k) => cv.px[i * 3 + k], `${name}-ground`);
+  const lit = items.some((it) => it.sprite.emit);
+  if (lit) {
+    const still = lights(cv, items, false),
+      breath = lights(cv, items, true);
+    writeRgb(w, h, (i, k) => still[i * 3 + k] * 120, `${name}-light`);
+    writeRgb(w, h, (i, k) => breath[i * 3 + k] * 120, `${name}-breath`);
+  }
+  const folk = items.filter((it) => it.folk);
+  return {
+    w,
+    h,
+    lit,
+    items: items
+      .sort((a, b) => a.base - b.base)
+      .map((it) => ({
+        s: keep(it.sprite),
+        alt: it.alt ? keep(it.alt) : undefined,
+        x: it.x,
+        b: it.base,
+        cut: it.cut ? folk.filter((f) => f.base < it.base).map((f) => [f.x, f.base - 16]) : undefined
+      }))
+  };
+}
 
-mkdirSync(WORK, { recursive: true });
-mkdirSync(IMG, { recursive: true });
+const views = {};
+const at = {};
 
-const cells = SPECIES.map((kind, i) => {
-  const seed = 3 + i;
-  return { kind, today: F.today(kind, 1), young: F.young(kind, 1), mature: F.mature(kind, seed) };
-});
+const cells = SPECIES.map((kind, i) => ({ kind, today: F.today(kind, 1), young: F.young(kind, 1), mature: F.mature(kind, 3 + i) }));
 const COLS = 4;
 const cellW = Math.max(...cells.map((c) => c.today.w * 0.7 + c.young.w * 0.7 + 34 + c.mature.w * 0.92)) | 0;
 const rowH = Math.max(...cells.map((c) => c.mature.h)) + 26;
-const layout = {};
-const sheetCv = canvas(cellW * COLS + 40, rowH * Math.ceil(cells.length / COLS) + 20, 'deep_grass');
 const items = [];
 for (const [i, c] of cells.entries()) {
   const x0 = 20 + (i % COLS) * cellW,
@@ -132,27 +128,12 @@ for (const [i, c] of cells.entries()) {
   const youngX = x0 + Math.round(c.young.w * 0.38),
     pawnX = youngX + Math.round(c.young.w * 0.45) + 6,
     matureX = pawnX + 16 + Math.round(c.mature.w * 0.46);
-  items.push({ sprite: c.young, x: youngX, base, tree: true });
-  items.push({ sprite: pawn(FOLK[i]), x: pawnX, base: base + 2, folk: true });
+  items.push({ sprite: c.young, alt: c.today, x: youngX, base, tree: true });
+  items.push({ sprite: F.pawn(FOLK[i]), x: pawnX, base: base + 2, folk: true });
   items.push({ sprite: c.mature, x: matureX, base, tree: true });
-  layout[c.kind] = [Math.round((youngX + matureX) / 2), base - 80];
+  at[c.kind] = [Math.round((youngX + matureX) / 2), base - 80];
 }
-compose(sheetCv, items, false);
-save(sheetCv, 'species');
-
-const todayCv = canvas(sheetCv.w, sheetCv.h, 'deep_grass');
-const todayItems = [];
-for (const [i, c] of cells.entries()) {
-  const x0 = 20 + (i % COLS) * cellW,
-    base = 10 + Math.floor(i / COLS) * rowH + rowH - 22;
-  const youngX = x0 + Math.round(c.young.w * 0.38),
-    pawnX = youngX + Math.round(c.young.w * 0.45) + 6;
-  todayItems.push({ sprite: c.today, x: youngX, base, tree: true });
-  todayItems.push({ sprite: pawn(FOLK[i]), x: pawnX, base: base + 2, folk: true });
-  todayItems.push({ sprite: c.mature, x: pawnX + 16 + Math.round(c.mature.w * 0.46), base, tree: true });
-}
-compose(todayCv, todayItems, false);
-save(todayCv, 'species-today');
+views.trees = view('trees', cellW * COLS + 40, rowH * Math.ceil(cells.length / COLS) + 20, items);
 
 const STAND = [
   ['oak', 'm', 330, 340, 11],
@@ -177,27 +158,21 @@ const WALK = [
   ['cook', 410, 430, true],
   ['weaver', 150, 580, false]
 ];
-const forestMade = new Map();
+const made = new Map();
 const grown = (kind, age, seed) => {
   const key = `${kind}${age}${seed}`;
-  if (!forestMade.has(key)) forestMade.set(key, age === 'm' ? F.mature(kind, seed) : F.young(kind, seed));
-  return forestMade.get(key);
+  if (!made.has(key)) made.set(key, age === 'm' ? F.mature(kind, seed) : F.young(kind, seed));
+  return made.get(key);
 };
-for (const cut of [true, false]) {
-  const cv = canvas(980, 660, 'deep_grass');
-  const list = STAND.map(([kind, age, x, base, seed]) => ({ sprite: grown(kind, age, seed), x, base, tree: true }));
-  for (const [kind, x, base, flip] of WALK) list.push({ sprite: pawn(kind, flip), x, base, folk: true });
-  compose(cv, list, cut);
-  save(cv, cut ? 'forest' : 'forest-open');
-}
-const MAGIC = ['heartwood', 'frostheart', 'moonwood', 'ironwood', 'emberwood', 'soulwood', 'witchwood', 'bonewood'];
-const MAGIC_FOLK = ['mage', 'watch', 'hunter', 'smith', 'guard', 'weaver', 'trader', 'miner'];
+const stand = STAND.map(([kind, age, x, base, seed]) => ({ sprite: grown(kind, age, seed), x, base, tree: true, cut: true }));
+for (const [kind, x, base, flip] of WALK) stand.push({ sprite: F.pawn(kind, flip), x, base, folk: true });
+views.forest = view('forest', 980, 660, stand);
+
 const magicCells = MAGIC.map((kind, i) => ({ kind, young: F.young(kind, 1), mature: F.mature(kind, 21 + i), elder: F.elder(kind, 41 + i) }));
 const MCOLS = 2;
 const mCellW = Math.max(...magicCells.map((c) => c.young.w * 0.8 + 40 + c.mature.w * 0.95 + c.elder.w * 0.92)) | 0;
 const mRowH = Math.max(...magicCells.map((c) => c.elder.h)) + 20;
 const magicAt = {};
-const magicCv = canvas(mCellW * MCOLS + 40, mRowH * Math.ceil(magicCells.length / MCOLS) + 20, 'deep_grass');
 const mItems = [];
 for (const [i, c] of magicCells.entries()) {
   const x0 = 20 + (i % MCOLS) * mCellW,
@@ -207,14 +182,57 @@ for (const [i, c] of magicCells.entries()) {
     matureX = pawnX + 16 + Math.round(c.mature.w * 0.46),
     elderX = matureX + Math.round(c.mature.w * 0.5 + c.elder.w * 0.44);
   mItems.push({ sprite: c.young, x: youngX, base, tree: true });
-  mItems.push({ sprite: pawn(MAGIC_FOLK[i]), x: pawnX, base: base + 2, folk: true });
+  mItems.push({ sprite: F.pawn(MAGIC_FOLK[i]), x: pawnX, base: base + 2, folk: true });
   mItems.push({ sprite: c.mature, x: matureX, base, tree: true });
   mItems.push({ sprite: c.elder, x: elderX, base, tree: true });
-  mItems.push({ sprite: pawn(MAGIC_FOLK[(i + 3) % 8], true), x: elderX - Math.round(c.elder.w * 0.3), base: base + 6, folk: true });
+  mItems.push({ sprite: F.pawn(MAGIC_FOLK[(i + 3) % 8], true), x: elderX - Math.round(c.elder.w * 0.3), base: base + 6, folk: true });
   magicAt[c.kind] = [Math.round((youngX + matureX) / 2), base - 90];
   magicAt[`${c.kind}-elder`] = [elderX, base - Math.round(c.elder.h * 0.5)];
 }
-compose(magicCv, mItems, false);
-save(magicCv, 'magic');
-save(night(magicCv), 'magic-night');
-writeFileSync(join(HERE, '..', 'layout.json'), JSON.stringify({ sheet: [sheetCv.w, sheetCv.h], forest: [980, 660], magic: [magicCv.w, magicCv.h], at: layout, magicAt }) + '\n');
+views.magic = view('magic', mCellW * MCOLS + 40, mRowH * Math.ceil(magicCells.length / MCOLS) + 20, mItems);
+
+const ATLAS_W = 2048;
+const order = sprites.map((s, i) => i).sort((a, b) => sprites[b].h - sprites[a].h);
+const place = [];
+let cx = 0,
+  cy = 0,
+  shelf = 0;
+for (const i of order) {
+  const s = sprites[i];
+  if (cx + s.w + 1 > ATLAS_W) {
+    cx = 0;
+    cy += shelf + 1;
+    shelf = 0;
+  }
+  place[i] = [cx, cy];
+  cx += s.w + 1;
+  shelf = Math.max(shelf, s.h);
+}
+const ATLAS_H = cy + shelf + 1;
+const rgba = new Uint8Array(ATLAS_W * ATLAS_H * 4);
+const attr = new Uint8Array(ATLAS_W * ATLAS_H * 4);
+for (let i = 3; i < attr.length; i += 4) attr[i] = 255;
+for (const [n, s] of sprites.entries()) {
+  const [ox, oy] = place[n];
+  for (let y = 0; y < s.h; y++)
+    for (let x = 0; x < s.w; x++) {
+      const j = y * s.w + x,
+        c = s.c[j];
+      if (!c) continue;
+      const o = ((oy + y) * ATLAS_W + ox + x) * 4;
+      for (let k = 0; k < 3; k++) rgba[o + k] = Math.max(0, Math.min(255, Math.round(c[k])));
+      rgba[o + 3] = 255;
+      attr[o] = s.kind[j];
+      attr[o + 1] = s.ph[j];
+      attr[o + 2] = s.e[j];
+    }
+}
+writeFileSync(`${WORK}/atlas.png`, encodePng(ATLAS_W, ATLAS_H, rgba, 6));
+writeFileSync(`${WORK}/parts.png`, encodePng(ATLAS_W, ATLAS_H, attr, 6));
+for (const name of ['atlas', 'parts']) execFileSync('cwebp', ['-quiet', '-lossless', '-exact', '-z', '9', `${WORK}/${name}.png`, '-o', join(IMG, `${name}.webp`)]);
+
+const meta = sprites.map((s, n) => ({ x: place[n][0], y: place[n][1], w: s.w, h: s.h, ax: s.ax, ay: s.ay, a: s.anim ?? null, emit: s.emit ?? null }));
+for (const old of ['species', 'species-today', 'forest', 'forest-open', 'magic', 'magic-night']) rmSync(join(IMG, `${old}.webp`), { force: true });
+rmSync(join(PAGE, 'layout.json'), { force: true });
+writeFileSync(join(PAGE, 'scene.json'), JSON.stringify({ atlas: [ATLAS_W, ATLAS_H], sprites: meta, views, at, magicAt }) + '\n');
+console.log('sprites', sprites.length, 'atlas', ATLAS_W, ATLAS_H);

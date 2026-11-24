@@ -107,13 +107,14 @@ export function forest(A) {
         for (let c = 0; c < width; c++) {
           const len = L * (0.75 + hash(x0 + c, seed, 3) * 0.3),
             cu = c / Math.max(1, width - 1);
+          const ph = Math.floor(hash(x0, layer, seed) * 255);
           for (let j = 0; j < len; j++) {
             const out = side * Math.abs(u) * (1 - Math.exp(-j / 10)) * 4,
               x = x0 + c + Math.round(out + Math.sin(j / 13 + bx) * 0.8),
               y = start + j,
               k = 0.62 + tone - cu * 0.26 - (j / len) * 0.14 + (j < 3 ? 0.08 : 0) + (c & 1 ? -0.05 : 0);
             if (y >= base - 2) break;
-            B.put(s, x, y, leaf[clamp(Math.round(k * n), 0, n)], z);
+            B.as(j > len - 4 ? 7 : 4, ph, () => B.put(s, x, y, leaf[clamp(Math.round(k * n), 0, n)], z));
           }
         }
       }
@@ -146,6 +147,7 @@ export function forest(A) {
         else if (s.c[i] === leaf[n - 1]) s.e[i] = 110;
       }
     const r = rng(base * 7 + 13);
+    s.orbs = [];
     if (k.moon) {
       const orb = A.R('#fff6c8 #e6d98f');
       for (let i = 0, tries = 0; i < (big ? 44 : 20) && tries < 4000; tries++) {
@@ -154,21 +156,11 @@ export function forest(A) {
         const leafy = (dx, dy) => s.ok(x + dx, y + dy) && s.c[(y + dy) * s.w + x + dx] && s.c[(y + dy) * s.w + x + dx] !== snap[(y + dy) * s.w + x + dx];
         if (!leafy(0, 0) || !leafy(2, 3) || !leafy(-1, 0) || s.e[y * s.w + x]) continue;
         i++;
-        for (const [dx, dy] of [[1, 0], [0, 1], [2, 1], [1, 2]]) {
-          s.set(x + dx, y + dy, orb[1], 210);
-        }
-        s.set(x + 1, y + 1, orb[0], 255);
+        s.orbs.push([x + 1, y + 1, Math.floor(r() * 255)]);
       }
     }
-    if (k.sparks)
-      for (let i = 0; i < (big ? 70 : 34); i++) {
-        const x = Math.floor(crown.x + (r() * 2 - 1) * crown.rx * 1.1),
-          y = Math.floor(crown.y - crown.ry * (0.2 + r() * 1.2));
-        if (!s.ok(x, y - 1)) continue;
-        s.set(x, y, P.fire[3 + (i & 1)], 255);
-        if (i % 3 === 0) s.set(x, y - 1, P.fire[2], 255);
-      }
-    if (k.glow) s.emit = { dx: 0, dy: Math.round(crown.y - base), rad: Math.round(crown.rx * (big ? 2.6 : 2.2)), col: k.glow, pulse: 1 };
+    if (k.glow) s.emit = { dx: 0, dy: Math.round(crown.y - base), rad: Math.round(crown.rx * (big ? 2.6 : 2.2)), col: k.sparks ? [1, 0.42, 0.62] : k.glow, pulse: 1 };
+    s.crownBox = [Math.round(crown.x - crown.rx), Math.round(crown.y - crown.ry), Math.round(crown.x + crown.rx), Math.round(crown.y + crown.ry)];
   }
 
   function roots(s, at, base, w0, ramp, seed, count) {
@@ -181,7 +173,7 @@ export function forest(A) {
         y1 = base + (r() - 0.25) * 6,
         x0 = cx + side * w0 * 0.25,
         y0 = base - 4 - r() * 6;
-      B.wood(s, x0, y0, x1, y1, w0 * 0.26, 2, ramp, 1 + (r() - 0.5) * 6, -2 + r() * 6, seed + 70 + i, side * (2 + r() * 4), 0.02);
+      B.as(1, 0, () => B.wood(s, x0, y0, x1, y1, w0 * 0.26, 2, ramp, 1 + (r() - 0.5) * 6, -2 + r() * 6, seed + 70 + i, side * (2 + r() * 4), 0.02));
     }
   }
 
@@ -252,10 +244,14 @@ export function forest(A) {
           y = base - j;
         if (!s.ok(x, y) || !s.c[y * s.w + x]) continue;
         if (hash(j >> 3, v, seed) < 0.18) continue;
+        s.kind[y * s.w + x] = 6;
+        s.ph[y * s.w + x] = j & 255;
         s.c[y * s.w + x] = col;
         if (glow) s.e[y * s.w + x] = 230;
         if (s.ok(x + 1, y) && s.c[y * s.w + x + 1]) {
           s.c[y * s.w + x + 1] = soft;
+          s.kind[y * s.w + x + 1] = 6;
+          s.ph[y * s.w + x + 1] = j & 255;
           if (glow) s.e[y * s.w + x + 1] = 90;
         }
       }
@@ -291,12 +287,12 @@ export function forest(A) {
       E = elder ? ELDER : 1,
       o = { ...m, trunkH: m.trunkH * (elder ? 1.4 : 1), w0: m.w0 * (elder ? 2.6 : 1), w1: m.w1 * (elder ? 1.8 : 1), rx: m.rx * E, ry: m.ry * E, lift: m.lift * E, boughs: m.boughs + (elder ? 3 : 0), clumpR: elder ? [m.clumpR[0] + 1, m.clumpR[1] + 3] : m.clumpR },
       r = rng(seed * 31 + 7),
-      leaf = k.leaf;
+      leaf = kind === 'emberwood' ? A.R('#260a0a #461210 #6e1c14 #982a18 #bc3c20 #d65634 #e8744e') : k.leaf;
     const W = Math.ceil(o.rx * 2 + o.clumpR[1] * 2 + (elder ? 70 : 30)),
       H = Math.ceil(o.trunkH + o.lift + o.ry * (elder ? 1.5 : 1) + o.clumpR[1] + (o.weep ? 30 : 26)),
       base = H - 8,
       cx = W >> 1;
-    const s = new Spr(W, H, cx, base);
+    const s = B.tag(new Spr(W, H, cx, base));
     const at = B.bole(s, { cx, base, h: o.trunkH + 6, w0: o.w0, w1: o.w1, seed, lean: o.lean ?? 0, flare: elder ? 16 : 7, root: elder ? 1.3 : 0.9, wander: elder ? 6 : 2.4, skin: skin(o.bark, k.trunk, seed) });
     if (elder) roots(s, at, base, o.w0, k.trunk, seed, 7);
     const forkY = base - o.trunkH,
@@ -319,8 +315,9 @@ export function forest(A) {
       c.seed = seed * 97 + i;
     }
     if (elder) {
-      hollow(s, at, base, o.w0, o.trunkH * 0.42, k.trunk, k.glow ? leaf.slice(-3) : null, seed);
-      veins(s, at, base, o.trunkH, k, leaf, seed, sapOf(kind));
+      const glow = kind === 'emberwood' ? A.R('#5a2a8a #a8255e #d84a78 #f08cb0 #fde2ee') : leaf;
+      hollow(s, at, base, o.w0, o.trunkH * 0.42, k.trunk, k.glow ? glow.slice(-3) : null, seed);
+      veins(s, at, base, o.trunkH, k, glow, seed, sapOf(kind));
     }
     s.wood = new Uint8Array(s.w * s.h);
     for (let i = 0; i < s.c.length; i++) if (s.c[i]) s.wood[i] = 1;
@@ -345,7 +342,7 @@ export function forest(A) {
       H = 176,
       base = H - 8,
       cx = W >> 1;
-    const s = new Spr(W, H, cx, base);
+    const s = B.tag(new Spr(W, H, cx, base));
     const stems = [
       { dx: -3, lean: -9, h: 148, w0: 10, w1: 3, flare: 7 },
       { dx: 4, lean: 15, h: 122, w0: 8, w1: 2, flare: 3 }
@@ -384,7 +381,7 @@ export function forest(A) {
       H = o.tall + 22,
       base = H - 8,
       cx = W >> 1;
-    const s = new Spr(W, H, cx, base);
+    const s = B.tag(new Spr(W, H, cx, base));
     const plate = kind === 'frostheart' ? skin('ridge', k.trunk, seed) : skin('plate', k.trunk, seed);
     const at = B.bole(s, { cx, base, h: o.tall - 8, w0: o.w0, w1: o.w1, seed, lean: o.lean ?? 0, flare: o.young ? 3 : 7, root: o.young ? 0.5 : 0.9, wander: 1.4, skin: plate });
     const bottom = base - o.bare,
@@ -423,7 +420,11 @@ export function forest(A) {
     const snap = s.c.slice();
     const crown = { x: cx, y: (bottom + top) / 2, rx: o.half, ry: (bottom - top) / 2, Z: o.half };
     for (const b of boughs.sort((a, c) => a.dz - c.dz)) {
-      const steps = Math.ceil(b.L / (o.cr * 0.8));
+      const steps = Math.ceil(b.L / (o.cr * 0.8)),
+        bph = Math.floor(((b.y * 0.11 + b.dx * 0.01 + 7) % 1) * 255),
+        reachX = Math.abs(b.dx) + o.pad * 3 + 8,
+        x0b = at(base - b.y);
+      B.stamp(s, [x0b - reachX, b.y - o.pad * 3 - 6, x0b + reachX, b.y + b.L * o.droop + Math.abs(b.dz) * 0.3 + o.pad * 3 + 8], 5, bph, () => {
       for (let i = 2; i <= steps; i++) {
         const t = i / steps,
           [px, py] = path(b, t),
@@ -442,14 +443,17 @@ export function forest(A) {
           ox = (r() - 0.5) * 4;
         for (let j = 0; j < len; j++) B.put(s, tx + ox + side * (j * 0.6 + 1), ty + 1 + j, leaf[clamp(2 - (j >> 1), 0, n)], b.dz + o.cr + 1);
       }
+      });
     }
     for (const off of o.elder ? [-5, 6] : [0])
       for (let j = 0; j < o.leader; j++) {
         const y = top - 2 - j + Math.abs(off) * 0.6,
           x = at(o.tall - 8) + off * Math.min(1, j / 6) + Math.round(Math.sin(j / 5) * 0.6),
           tip = j > o.leader - 4;
-        B.put(s, x, y, tip ? leaf[n] : leaf[3], o.half);
-        if (j < o.leader * 0.5) B.put(s, x - 1, y, leaf[4], o.half);
+        B.as(5, 200, () => {
+          B.put(s, x, y, tip ? leaf[n] : leaf[3], o.half);
+          if (j < o.leader * 0.5) B.put(s, x - 1, y, leaf[4], o.half);
+        });
       }
     if (o.elder) {
       veins(s, at, base, o.bare + 20, k, leaf, seed);
@@ -472,7 +476,7 @@ export function forest(A) {
       base = H - 8,
       cx = W >> 1,
       tall = 96 * S;
-    const s = new Spr(W, H, cx, base);
+    const s = B.tag(new Spr(W, H, cx, base));
     const at = B.bole(s, { cx, base, h: tall, w0: 18 * S * (elder ? 1.3 : 1), w1: 10 * S, seed, lean: 5 * S, flare: elder ? 14 : 7, root: elder ? 1.2 : 0.9, wander: elder ? 7 : 2.4, skin: skin(dead ? 'snag' : 'ridge', bark, seed) });
     if (elder) roots(s, at, base, 18 * S * 1.3, bark, seed, 6);
     const scar = dead ? P.bone : kind === 'witchwood' ? P.woodGrey : bark;
@@ -554,6 +558,67 @@ export function forest(A) {
 
   const brighten = (ramp) => ramp.map((c) => B.blend(c, [255, 255, 255], 0.1));
 
+  const LEAFY = new Set([3, 4, 5, 7]);
+  const hex = (c) => '#' + c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+
+  function classify(s) {
+    B.tag(s);
+    s.crown = new Uint8Array(s.w * s.h);
+    for (let i = 0; i < s.c.length; i++) {
+      if (!s.c[i]) continue;
+      const leafy = s.z[i] > -1e8;
+      s.kind[i] = leafy ? 3 : 1;
+      s.ph[i] = leafy ? Math.floor(hash((i % s.w) >> 3, Math.floor(i / s.w / 6), 5) * 255) : 0;
+      if (leafy) s.crown[i] = 1;
+    }
+    return s;
+  }
+
+  function dress(s, kind, age, from) {
+    const k = TREES[kind],
+      shape = k.shape,
+      name = from ?? kind;
+    let x0 = 1e9,
+      y0 = 1e9,
+      x1 = -1,
+      y1 = -1;
+    for (let i = 0; i < s.c.length; i++) {
+      if (!s.c[i] || !LEAFY.has(s.kind[i])) continue;
+      const x = i % s.w,
+        y = Math.floor(i / s.w);
+      x0 = Math.min(x0, x);
+      y0 = Math.min(y0, y);
+      x1 = Math.max(x1, x);
+      y1 = Math.max(y1, y);
+    }
+    if (x1 < 0) [x0, y0, x1, y1] = [0, 0, s.w - 1, Math.round(s.h * 0.4)];
+    const big = age === 'elder' ? 1 : 0;
+    const sway = age === 'young' ? s.sway ?? 2.6 : shape === 'pine' ? 2.2 + big * 0.4 : shape === 'dead' ? 1.1 + big * 0.2 : 3.4 + big * 0.6;
+    const leaf = k.leaf ?? k.tuft;
+    s.anim = {
+      kind: name,
+      age,
+      sway,
+      box: [x0, y0, x1, y1],
+      shape,
+      ever: Boolean(k.ever),
+      weep: shape === 'willow',
+      glow: k.glow ?? null,
+      moon: Boolean(k.moon) && age !== 'young',
+      ember: Boolean(k.sparks) && age !== 'young',
+      heart: name === 'heartwood',
+      soul: name === 'soulwood',
+      frost: Boolean(k.frosted),
+      apple: name === 'apple' && age !== 'young',
+      iron: name === 'ironwood',
+      witch: name === 'witchwood',
+      bone: name === 'bonewood',
+      leaf: leaf ? leaf.map(hex) : null,
+      orbs: s.orbs ?? []
+    };
+    return s;
+  }
+
   function young(kind, seed) {
     const k = TREES[kind];
     const id = `young_${kind}`;
@@ -563,33 +628,30 @@ export function forest(A) {
       else if (k.shape === 'birch' || k.shape === 'pine') TREES[id] = { ...k, leaf };
       else TREES[id] = { ...k, tw: Math.max(3, k.tw - 3), th: Math.round(k.th * 0.92), rx: Math.round(k.rx * 0.86), ry: Math.round(k.ry * 0.86), leaf, fruit: undefined };
     }
-    const s = A.mkTree(id, seed, 'summer');
-    s.crown = new Uint8Array(s.w * s.h);
-    for (let i = 0; i < s.c.length; i++) if (s.c[i] && s.z[i] > -1e8) s.crown[i] = 1;
-    return s;
+    return dress(classify(A.mkTree(id, seed, 'summer')), id, 'young', kind);
   }
 
   function mature(kind, seed) {
     const k = TREES[kind];
-    if (k.shape === 'pine') return conifer(kind, seed, OLD_PINE);
-    if (k.shape === 'birch') return birch(kind, seed);
-    if (k.shape === 'dead') return snag(kind, seed);
-    return broad(kind, seed);
+    const s = k.shape === 'pine' ? conifer(kind, seed, OLD_PINE) : k.shape === 'birch' ? birch(kind, seed) : k.shape === 'dead' ? snag(kind, seed) : broad(kind, seed);
+    return dress(s, kind, 'mature');
   }
 
   function elder(kind, seed) {
     const k = TREES[kind];
-    if (k.shape === 'pine') return conifer(kind, seed, ELDER_PINE);
-    if (k.shape === 'dead') return snag(kind, seed, true);
-    return broad(kind, seed, true);
+    const s = k.shape === 'pine' ? conifer(kind, seed, ELDER_PINE) : k.shape === 'dead' ? snag(kind, seed, true) : broad(kind, seed, true);
+    return dress(s, kind, 'elder');
   }
 
-  const today = (kind, seed) => {
-    const s = A.mkTree(kind, seed, 'summer');
-    s.crown = new Uint8Array(s.w * s.h);
-    for (let i = 0; i < s.c.length; i++) if (s.c[i] && s.z[i] > -1e8) s.crown[i] = 1;
-    return s;
+  const today = (kind, seed) => dress(classify(A.mkTree(kind, seed, 'summer')), kind, 'young');
+
+  const pawn = (kind, flip) => {
+    const s = A.mkPawn(A.PAWNS[kind].o);
+    const t = flip ? s.flip() : s;
+    B.tag(t);
+    t.crown = new Uint8Array(t.w * t.h);
+    return t;
   };
 
-  return { young, mature, elder, today, MAGIC };
+  return { young, mature, elder, today, pawn, MAGIC };
 }
