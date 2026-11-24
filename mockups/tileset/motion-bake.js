@@ -103,7 +103,7 @@ function fitted(A, pose) {
 function frameOf(A, st, lvl, smooth) {
   const def = animOf(A, st.anim), n = (def.n || 6) * (smooth ? 3 : 1), u0 = clamp(st.u - Math.floor(st.u), 0, .9999), u = (Math.floor(u0 * n) + .5) / n;
   if (lvl < 2 || A.rig === 'plain') return procFrame(A, st, def, lvl ? u : u0, lvl);
-  const c = { face: st.face || 's', lvl, t: st.t || 0, seed: A.seed, tool: A.o && A.o.tool, bulk: A.load ? A.load.bulk : 'bulky', o: A.rig === 'quad' ? BEASTS[A.kind].o : null }, ang = smooth ? 2 : 5;
+  const c = { face: st.face || 's', lvl, t: st.t || 0, seed: A.seed, tool: A.o && A.o.tool, hold: A.load ? A.load.hold : 'chest', o: A.rig === 'quad' ? BEASTS[A.kind].o : null }, ang = smooth ? 2 : 5;
   let flip = !!st.flip, make, pose;
   if (A.rig === 'pawn') {
     pose = c.face !== 's' && FB_POSES[st.anim] ? fbPose(st.anim, u, c) : def.pose(u, c);
@@ -119,7 +119,7 @@ function frameOf(A, st, lvl, smooth) {
   else { pose = def.pose(u, c); make = () => (A.rig === 'fowl' ? rigFowl : rigRabbit)(JSON.parse(key0)); }
   const layer = pose.carry && A.load ? HAUL.layer(A.load, pose.carry, c.face) : null;
   const key0 = quant(pose, ang), key = A.look + '|' + lvl + (c.face !== 's' ? c.face : '') + (flip ? 'F' : '') + key0 + (layer ? '|' + layer.key : '');
-  return { s: cachedFrame(key, () => { const bare = make(), s = layer ? MOTION_LOAD.put(bare, layer) : bare; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
+  return { s: cachedFrame(key, () => { const bare = make(), s = layer && bare.mask ? MOTION_LOAD.put(bare, layer) : bare; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
 }
 
 function rotated(src, deg, dir) {

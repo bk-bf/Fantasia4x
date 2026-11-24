@@ -118,5 +118,5 @@ const WORLD_ITEMS = (() => {
   }
 
   const add = drawings => Object.assign(DRAWN, drawings);
-  return { has: id => id in DRAWN, ids: () => Object.keys(DRAWN), cells, add, parts: { POMMEL, BLADE, grip, wrapped, guard, shaped } };
+  return { has: id => id in DRAWN, ids: () => Object.keys(DRAWN), headUp: id => !!DRAWN[id].headUp, cells, add, parts: { POMMEL, BLADE, grip, wrapped, guard, shaped } };
 })();

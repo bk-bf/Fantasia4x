@@ -113,16 +113,22 @@ function toolAt(s, kind, gx, gy, ang, o) {
 }
 
 const RIG_OVER = {
-  light: { s: ['near arm'], f: ['carrying arm'], b: ['carrying arm'] },
-  bulky: { s: ['near arm'], f: ['head', 'hands'], b: ['body'] },
-  heavy: { s: ['head', 'near arm'], f: ['head', 'arms'], b: ['arms'] },
+  hip: { s: ['near arm'], f: ['carrying arm'], b: ['body'] },
+  chest: { s: ['near arm'], f: ['hands'], b: ['body'] },
+  low: { s: ['near arm'], f: ['hands'], b: ['body'] },
+  shoulder: { s: ['near arm'], f: ['grips'], b: ['grips'] },
+  yoke: { s: ['head', 'near arm'], f: ['head', 'arms'], b: ['elbows'] },
+  cradle: { s: ['head', 'near arm'], f: ['grips'], b: ['body'] },
 };
+const RIG_FLAT = ['grips'];
 function rigMask(s, names, parts) {
   const m = new Uint8Array(s.w * s.h);
   if (names.includes('body')) { for (let i = 0; i < m.length; i++) m[i] = s.c[i] ? 1 : 0; return m; }
-  const t = new Spr(s.w, s.h, s.ax, s.ay);
-  for (const name of names) for (const draw of parts[name]) draw(t);
-  for (let i = 0; i < m.length; i++) m[i] = t.c[i] ? 1 : 0;
+  for (const name of names) {
+    const t = new Spr(s.w, s.h, s.ax, s.ay), mark = RIG_FLAT.includes(name) ? 2 : 1;
+    for (const draw of parts[name]) draw(t);
+    for (let i = 0; i < m.length; i++) if (t.c[i]) m[i] = mark;
+  }
   return m;
 }
 

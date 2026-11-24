@@ -172,17 +172,18 @@ function rigPawn(o, p) {
     if (o.sleeves === 'long' && j > 6 && j <= cuff) c = body[clamp(bn - (j === cuff ? 4 : side ? 2 : lit ? 1 : 3), 0, bn)];
     return far ? dark(c, .8) : c;
   };
-  const arm = (ax, ay, tgt, lit, far, bend, rim, S, lost) => {
-    const tot = armLen - 1, l1 = Math.ceil(tot / 2), l2 = tot - l1, t = tgt || [0, tot];
-    if (!side && Math.abs(t[0]) < 2.5 && t[1] > 4) {
-      const len = Math.hypot(t[0], t[1]), col = armCol(lit, far, lost);
-      rigLimb(S || s, [[ax, ay], [ax + t[0], ay + t[1]]], aw, (d, k, v, X) => col(d * tot / len, k, v, X), rim ? shade : null);
-      return [rnd(ax + t[0]), rnd(ay + t[1])];
-    }
-    const [ex, ey, hx, hy] = ik2(ax, ay, ax + t[0], ay + t[1], l1, l2, bend);
-    rigLimb(S || s, [[ax, ay], [ex, ey], [hx, hy]], aw, armCol(lit, far, lost), rim ? shade : null);
-    return [rnd(hx), rnd(hy)];
+  const TOT = armLen - 1;
+  const reach = (ax, ay, tgt, bend, crook) => {
+    const l1 = Math.ceil(TOT / 2), t = tgt || [0, TOT];
+    if (!side && !crook && Math.abs(t[0]) < 2.5 && t[1] > 4) return [[ax, ay], [ax + t[0], ay + t[1]]];
+    const [ex, ey, hx, hy] = ik2(ax, ay, ax + t[0], ay + t[1], l1, TOT - l1, bend);
+    return [[ax, ay], [ex, ey], [hx, hy]];
   };
+  const spanOf = path => path.length === 2 ? Math.hypot(path[1][0] - path[0][0], path[1][1] - path[0][1]) : 0;
+  const limb = (S, path, lit, far, rim, span, lost) => { const col = armCol(lit, far, lost), k = span ? TOT / span : 1; rigLimb(S, path, aw, (d, e, v, X) => col(d * k, e, v, X), rim ? shade : null); };
+  const handOf = path => path[path.length - 1].map(rnd);
+  const upper = path => { if (path.length === 3) return path.slice(0, 2); const k = .55; return [path[0], [mix(path[0][0], path[1][0], k), mix(path[0][1], path[1][1], k)]]; };
+  const arm = (ax, ay, tgt, lit, far, bend, rim, S, lost) => { const path = reach(ax, ay, tgt, bend); limb(S || s, path, lit, far, rim, spanOf(path), lost); return handOf(path); };
   const pad = (x0, lit) => { if (!o.armor) return; s.rect(x0, tTop - br, aw + 1, 4, o.armor[lit ? 4 : 2]); s.rect(x0, tTop - br, aw + 1, 1, o.armor[lit ? o.armor.length - 1 : 4]); s.rect(x0, tTop + 3 - br, aw + 1, 1, o.armor[1]); };
   const shield = (x, y) => { if (!o.shield) return; s.oval(x, y, 6, 7.4, (px, py, nx, ny) => { const q = Math.hypot(nx, ny); return q > .84 ? P.iron[nx + ny < 0 ? 5 : 2] : Math.abs(nx) < .16 || Math.abs(ny) < .13 ? P.cloth[4] : o.shield[nx < -.2 ? 4 : nx < .4 ? 3 : 2]; }); s.oval(x, y, 1.6, 1.6, () => P.iron[6]); };
   const grip = (hx, hy, ang, opt) => {
@@ -210,10 +211,12 @@ function rigPawn(o, p) {
     rigHead(s, f, o, HX + 1, hTop, 's', p);
     headDone = s.c.slice();
     pad(sx0 - 3, true);
-    const nearArm = S => arm(near[0], near[1], hr, true, false, 1, true, S), nh = nearArm(s);
+    const nearArm = S => arm(near[0], near[1], hr, true, false, 1, true, S), tucked = p.tuck && !bowing;
+    if (tucked) grip(...handOf(reach(near[0], near[1], hr, 1)), ang);
+    const nh = nearArm(s);
     parts = { head: [S => rigHead(S, f, o, HX + 1, hTop, 's', p)], 'near arm': [nearArm] };
-    hand = [nh[0], nh[1] + 1]; holds = { light: hand, bulky: [nh[0] - 1, nh[1] + 2], heavy: [sx0 - 1, tTop + 1 - br] };
-    if (!bowing && !p.carry) { grip(nh[0], nh[1], ang); if (pts.tip) knuckle(nh[0], nh[1]); }
+    hand = [nh[0], nh[1] + 1]; holds = { hip: hand, chest: nh, low: nh, shoulder: [sx0 + 1, tTop + 1 - br], cradle: [sx0 + 1, tTop + 1 - br], yoke: [sx0 - 1, tTop + 2 - br] };
+    if (!bowing && !p.carry && !tucked) { grip(nh[0], nh[1], ang); if (pts.tip) knuckle(nh[0], nh[1]); }
     if (p.two && pts.tip) { const a = ang * D2R; knuckle(rnd(nh[0] + Math.sin(a) * p.two), rnd(nh[1] - Math.cos(a) * p.two)); }
     pts.hand = nh; pts.hands = [nh]; pts.mouth = [HX + f.hd + 2, hTop + Math.floor(f.hh * .5) + 3]; pts.head = [HX + 1, hTop - 3];
     pts.feet = [[cx + fl[0], base - fl[1]], [cx - 1 + fr[0], base - fr[1]]];
@@ -223,10 +226,12 @@ function rigPawn(o, p) {
     if (back && o.shield) shield(xR + 2, tTop + 7);
     legF(-1, fl, !back && o.oneLeg); legF(1, fr, back && o.oneLeg);
     torso();
-    let hL = null, hR = null;
-    const armL = (rim, S) => arm(xL, sy, tl, true, false, 1, rim, S, !back && o.oneArm), armR = (rim, S) => arm(xR, sy, tr, false, false, -1, rim, S, back && o.oneArm);
-    if (!raised(tl)) hL = armL(false);
-    if (!raised(tr)) hR = armR(false);
+    const keyL = back ? 'hr' : 'hl', keyR = back ? 'hl' : 'hr', crooked = key => (p.crook || []).includes(key), winged = t => p.wing && t && t[1] < 0 ? -1 : 1;
+    const pathL = reach(xL, sy, tl, winged(tl), crooked(keyL)), pathR = reach(xR, sy, tr, -winged(tr), crooked(keyR)), hL = handOf(pathL), hR = handOf(pathR);
+    const seen = (path, key) => back && (p.fore || []).includes(key) ? upper(path) : path;
+    const armL = (rim, S) => limb(S || s, seen(pathL, keyL), true, false, rim, spanOf(pathL), !back && o.oneArm), armR = (rim, S) => limb(S || s, seen(pathR, keyR), false, false, rim, spanOf(pathR), back && o.oneArm);
+    if (!raised(tl)) armL(false);
+    if (!raised(tr)) armR(false);
     if (!tl && !p.carry) s.set(xL - (aw >> 1), sy, null);
     pad(cx - hw - aw + rnd(lean), true); pad(cx + hw - 1 + rnd(lean), false);
     if (f.tail) for (let k = 0; k < 9; k++) s.rect(cx + hw + aw + k, legTop + 1 + rnd(Math.sin(k * .5 + (p.tail || 0)) * 2) + (k >> 2), 1, k < 5 ? 3 : 2, skin[k < 5 ? sn - 2 : sn - 3]);
@@ -237,14 +242,18 @@ function rigPawn(o, p) {
     }
     rigHead(s, f, o, HX, hTop, face, p);
     headDone = s.c.slice();
-    if (raised(tl)) hL = armL(true);
-    if (raised(tr)) hR = armR(true);
+    if (raised(tl)) armL(true);
+    if (raised(tr)) armR(true);
     if (!back && o.shield) shield(hL[0] - 1, hL[1] - 3);
     const th = back ? hL : hR, off = (back ? -1 : 1) * (aw - (aw >> 1));
     const head = S => rigHead(S, f, o, HX, hTop, face, p), arms = [S => armL(true, S), S => armR(true, S)], mid = cx + rnd(lean);
-    const gripped = draw => S => { const t = new Spr(s.w, s.h), h = draw(t); for (let y = h[1] - 2; y <= h[1] + 2; y++) for (let x = h[0] - 2; x <= h[0] + 2; x++) if (t.get(x, y)) S.set(x, y, t.get(x, y)); };
-    parts = { head: [head], arms, hands: arms.map(gripped), 'carrying arm': [arms[back ? 0 : 1]] };
-    hand = p.carry === 'light' ? [th[0], th[1] + 1] : [mid, Math.max(hL[1], hR[1]) + 2]; holds = { light: hand, bulky: hand, heavy: [mid, tTop + (back ? 5 : 2) - br] };
+    const near = (draw, at, r) => S => { const t = new Spr(s.w, s.h); draw(t); for (let y = at[1] - r; y <= at[1] + r; y++) for (let x = at[0] - r; x <= at[0] + r; x++) if (t.get(x, y)) S.set(x, y, t.get(x, y)); };
+    const grips = S => { for (const g of [-9, 6]) { S.rect(cx + g, tTop + 5, 3, 3, skin[sn - 1]); S.rect(cx + g, tTop + 7, 3, 1, skin[Math.max(0, sn - 3)]); } };
+    const elbows = [S => limb(S, upper(pathL), true, false, false, spanOf(pathL)), S => limb(S, upper(pathR), false, false, false, spanOf(pathR))];
+    if (p.carry === 'shoulder' || (p.carry === 'cradle' && !back)) grips(s);
+    parts = { head: [head], arms, hands: [near(arms[0], hL, 2), near(arms[1], hR, 2)], 'carrying arm': [arms[back ? 0 : 1]], grips: [grips], elbows };
+    const low = Math.max(hL[1], hR[1]);
+    hand = p.carry === 'hip' ? [th[0], th[1] + 1] : [mid, low + 2]; holds = { hip: hand, chest: [mid, low], low: [mid, low], shoulder: [cx, tTop + 10], cradle: [cx, tTop + 12], yoke: [mid, tTop + (back ? 4 : 2) - br] };
     if (p.carry) pts.hold = hand;
     else if (kind === 'bow' && p.bow !== undefined) { const bh = back ? hR : hL; toolAt(s, 'bow', bh[0] + (back ? 1 : -1), bh[1] - 6, 0, { pull: p.bow, mirror: back ? 0 : 1 }); pts.tip = [bh[0], bh[1] - 6]; }
     else grip(th[0] + off, th[1] - 1 - (kind === 'bow' ? 6 : 0), p.tool, { mirror: back ? 1 : 0, under: p.under });
@@ -254,8 +263,9 @@ function rigPawn(o, p) {
   pts.torso = [sx0, tTop - br, lean]; pts.hip = [cx, legTop];
   if (p.carry) { const cu = p.cu === undefined ? 1 : p.cu, to = holds[p.carry]; pts.carry = [rnd(mix(hand[0], to[0], cu)), rnd(mix(hand[1], to[1], cu))]; }
   s.front = s.c.map((c, i) => c !== headDone[i] && !rimOf(headDone[i], c) ? 1 : 0);
+  const bare = p.carry ? { c: s.c.slice(), e: s.e.slice() } : null;
   s.outline();
-  if (p.carry) s.mask = rigMask(s, RIG_OVER[p.carry][face], parts);
+  if (p.carry) Object.assign(s, { bare, mask: rigMask(s, RIG_OVER[p.carry][face], parts), tilt: p.tilt || 0, clipRow: tTop + 1 - br });
   s.sh = { rx: 9, ry: 3.4, dx: 4, dy: 0 };
   return s;
 }

@@ -422,15 +422,24 @@ const PROPS = (() => {
     const s = own ? WORLD_GEAR.sprite(own, kind === 'shieldUp' ? 'lean' : 'ground', quantity) : generic(kind, ramps);
     return flip ? s.flip() : s;
   }
+  const SHOULDERED = { half: 14, tones: [5, 4, 3, 3, 2, 1] };
+  function shouldered(s, bark, end) {
+    const { half, tones } = SHOULDERED, top = B - tones.length + 1;
+    for (let i = -half; i <= half; i++) tones.forEach((tone, j) => s.set(CX + i, top + j, at(bark, tone - (noise(i * .3, j, 3) > .68 ? 1 : 0))));
+    s.oval(CX + half, top + 2.5, 2, 3, (px, py, nx, ny) => at(end, Math.hypot(nx, ny) < .5 ? 3 : 5));
+  }
   const CARRIED = {
-    logs: (s, r, seed) => log(s, CX - 14, B - 6, 28, 1 + seed % 5, r.a, r.b),
+    logs: (s, r) => shouldered(s, r.a, r.b),
+    planks: (s, r, seed) => s.slab(CX - SHOULDERED.half, B - 5, SHOULDERED.half * 2 + 1, 4, 2, M.wood(r.a, { pw: 4, seed, b: 3 }), M.flat(r.a, 2, seed + 1, .04)),
     rubble: (s, r, seed) => basket(s, CX, B, 8, 9, r.a, seed),
     heap: (s, r, seed) => basket(s, CX, B, 8, 9, r.a, seed)
   };
+  const SHOULDER_FORMS = ['logs', 'planks'];
   function carried(cls, ramps, seed) {
     const s = new Spr(48, HIGH, CX, B);
     CARRIED[cls](s, ramps, seed);
     s.outline();
+    if (SHOULDER_FORMS.includes(cls)) s.hold = [CX, B + 1];
     return s;
   }
   function generic(kind, ramps) {
@@ -472,5 +481,6 @@ const PROPS = (() => {
     }
     return s;
   }
-  return { B, rampOf, mixed, pile, long, worn, carried, tucked, bedded, undersides, PILES: Object.keys(PILES), LONG: Object.keys(LONG), CARRIED: Object.keys(CARRIED), lengthOf: k => LONG[k].L };
+  const headUp = (kind, id) => id && WORLD_ITEMS.has(id) ? WORLD_ITEMS.headUp(id) : !!LONG[kind].headUp;
+  return { B, rampOf, mixed, pile, long, worn, carried, headUp, tucked, bedded, undersides, PILES: Object.keys(PILES), LONG: Object.keys(LONG), CARRIED: Object.keys(CARRIED), lengthOf: k => LONG[k].L };
 })();
