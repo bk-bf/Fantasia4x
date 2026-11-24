@@ -11,7 +11,7 @@ import { setSimLogSink, simLog, setVerboseLogging, type SimLogSink } from '../co
 import { applySimCommand } from './commands';
 import { projectSentEntity } from './entityProjection';
 import type { SimLogEvent, EntitySync } from './simProtocol';
-import { drainTileDeltasBudgeted, clearTileDeltas } from '../core/state/tileDeltas';
+import { drainTerrainDeltas, drainSnowDeltas, clearTileDeltas } from '../core/state/tileDeltas';
 import { carcassConditionByType } from '../core/rules/world/carcassCondition';
 import { buildingsVisualSig } from '../core/state/buildingSig';
 import { gameLogger } from '../debug/gameLogger';
@@ -44,9 +44,9 @@ let prevWM: unknown,
   prevDesignations: unknown,
   prevZoneTiles: unknown;
 
-function post(msg: unknown) {
+function post(msg: unknown, transfer: Transferable[] = []) {
   if (WORK_PINS) tallyMessage(msg);
-  (self as unknown as Worker).postMessage(msg);
+  (self as unknown as Worker).postMessage(msg, transfer);
 }
 
 let logBuffer: SimLogEvent[] = [];
@@ -271,13 +271,13 @@ function publish(state: GameState, flush: boolean, commit = false) {
   if (!flush) return;
   const worldMapChanged = state.worldMap !== lastWorldMap;
   lastWorldMap = state.worldMap;
-  const tileDeltas = worldMapChanged
-    ? (clearTileDeltas(), null)
-    : drainTileDeltasBudgeted(SNOW_DELTA_BUDGET_PER_FLUSH);
+  if (worldMapChanged) clearTileDeltas();
+  const tileDeltas = worldMapChanged ? null : drainTerrainDeltas();
+  const snowDelta = worldMapChanged ? null : drainSnowDeltas(SNOW_DELTA_BUDGET_PER_FLUSH);
   const bSig = buildingsVisualSig(state.buildings);
   const cWM = state.worldMap !== prevWM;
-  const cDelta = tileDeltas !== null && tileDeltas.some((d) => d.kind === 'terrain');
-  const cSnow = tileDeltas !== null && tileDeltas.some((d) => d.kind === 'snow');
+  const cDelta = tileDeltas !== null;
+  const cSnow = snowDelta !== null;
   const cBSig = bSig !== prevBuildingsSig;
   const cZone = state.zoneTiles !== prevZoneTiles;
   if (cWM || cDelta || cBSig) {
@@ -336,11 +336,7 @@ function publish(state: GameState, flush: boolean, commit = false) {
   }
   const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, lastMobCold, MOB_VOLATILE);
   const wmDelta = tileDeltas
-    ? tileDeltas.map((d) =>
-        d.kind === 'snow'
-          ? { y: d.y, x: d.x, tile: slimTile(d.tile), k: 1 as const }
-          : { y: d.y, x: d.x, tile: slimTile(d.tile) }
-      )
+    ? tileDeltas.map((d) => ({ y: d.y, x: d.x, tile: slimTile(d.tile) }))
     : undefined;
 
   if (SNAP_SIZE_LOG && flushSeq % 30 === 0) {
@@ -384,17 +380,21 @@ function publish(state: GameState, flush: boolean, commit = false) {
     _trigWM = _trigDelta = _trigBSig = _trigZone = _trigDesig = 0;
   }
 
-  post({
-    kind: 'snapshot',
-    state: delta,
-    pawns,
-    mobs,
-    drops,
-    worldMap: worldMapChanged ? state.worldMap : undefined,
-    worldMapDelta: wmDelta,
-    flush,
-    commit
-  });
+  post(
+    {
+      kind: 'snapshot',
+      state: delta,
+      pawns,
+      mobs,
+      drops,
+      worldMap: worldMapChanged ? state.worldMap : undefined,
+      worldMapDelta: wmDelta,
+      snowDelta: snowDelta ?? undefined,
+      flush,
+      commit
+    },
+    snowDelta ? [snowDelta.buffer] : []
+  );
 }
 
 function batch() {

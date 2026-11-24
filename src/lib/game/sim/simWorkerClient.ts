@@ -5,6 +5,7 @@ import {
   markSnowRenderTileDirty,
   clearRenderTileDeltas
 } from '../../components/UI/canvas/mainTileDeltas';
+import { applySnowDeltas } from '../core/state/snowDeltaPack';
 import { batchLogReplay } from '../../stores/Log';
 import { vlog, setVerboseLogging } from '../core/util/logSink';
 import { WORK_PINS } from '../../workPins/flag';
@@ -143,6 +144,9 @@ class SimWorkerBridge {
     this.w?.postMessage({ kind: 'requestSave' });
   }
 
+  private markSnow = (y: number, x: number): void =>
+    markSnowRenderTileDirty(y, x, this.worldMap[0]?.length ?? 0, this.worldMap.length);
+
   private handle(m: {
     kind: string;
     state?: GameState;
@@ -150,7 +154,8 @@ class SimWorkerBridge {
     mobs?: EntitySync<Mob>;
     drops?: EntitySync<DroppedItem>;
     worldMap?: GameState['worldMap'];
-    worldMapDelta?: Array<{ y: number; x: number; tile: Partial<WorldTile>; k?: 1 }>;
+    worldMapDelta?: Array<{ y: number; x: number; tile: Partial<WorldTile> }>;
+    snowDelta?: Float64Array;
     flush?: boolean;
     commit?: boolean;
     error?: string;
@@ -161,20 +166,18 @@ class SimWorkerBridge {
       if (m.worldMap) {
         this.worldMap = m.worldMap;
         clearRenderTileDeltas();
-      } else if (m.worldMapDelta) {
-        for (const d of m.worldMapDelta) {
-          const row = this.worldMap[d.y];
-          if (row) {
-            if (!sameResources(row[d.x]?.resources, d.tile.resources)) this.resourceRev++;
-            if (d.k === 1) {
-              Object.assign(row[d.x], d.tile);
-              markSnowRenderTileDirty(d.y, d.x);
-            } else {
+      } else {
+        if (m.worldMapDelta) {
+          for (const d of m.worldMapDelta) {
+            const row = this.worldMap[d.y];
+            if (row) {
+              if (!sameResources(row[d.x]?.resources, d.tile.resources)) this.resourceRev++;
               row[d.x] = { ...row[d.x], ...d.tile };
               markRenderTileDirty(d.y, d.x);
             }
           }
         }
+        if (m.snowDelta) applySnowDeltas(this.worldMap, m.snowDelta, this.markSnow);
       }
       this.lastState = { ...this.lastState, ...(m.state as object) };
 
