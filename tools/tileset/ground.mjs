@@ -256,7 +256,7 @@ function stamp(draw = (d = dot) => d()) {
 
 export function groundKinds(GROUND = [{ id: '', f: GROUND_TEXTURE, dec: [DEC[0]].slice(0) }]) {
   return GROUND.flatMap((g) =>
-    g.dec ? [{ id: g.id, f: g.f, ragged: g.ragged ?? 0, layers: fieldLayers(g.f), ...kindPieces(g.dec) }] : []
+    g.dec ? [{ id: g.id, f: g.f, ragged: 'ragged' in g && g.ragged ? 1 : 0, layers: fieldLayers(g.f), ...kindPieces(g.dec) }] : []
   );
 }
 
