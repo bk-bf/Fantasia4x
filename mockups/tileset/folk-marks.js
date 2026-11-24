@@ -157,19 +157,20 @@ function paintLimbs(pen, g, look, skin, s) {
 
 function paintBack(pen, g, look, skin, hair) {
   const m = look.marks, { cx, hw, aw, legTop, legs, base, face, pose } = g, tTop = g.sTop, back = face === 'b', side = face === 's';
-  const tailCol = m.fur ? hair : m.scales >= 3 || m.chitin ? skin : skin;
+  const tailCol = m.fur ? hair : skin, size = clamp((legs + g.tl + g.hh) / 32, .6, 1.7);
   if (m.tail) {
     const pts = back ? [[cx - 1, legTop - 1], [cx - 1, legTop + 3], [cx + 2, legTop + 6], [cx + 6, legTop + 6], [cx + 9, legTop + 3], [cx + 9, legTop]]
       : side ? [[cx - hw - 1, legTop + 1], [cx - hw - 4, legTop + 4], [cx - hw - 8, legTop + 4], [cx - hw - 10, legTop + 1], [cx - hw - 9, legTop - 2]]
         : [[cx + hw - 1, legTop + 3], [cx + hw + 3, legTop + 6], [cx + hw + 7, legTop + 5], [cx + hw + 9, legTop + 2], [cx + hw + 8, legTop - 1]];
-    const n = tailCol.length - 1;
+    const n = tailCol.length - 1, [rootX, rootY] = pts[0];
+    for (const pt of pts) { pt[0] = rootX + Math.round((pt[0] - rootX) * size); pt[1] = rootY + Math.round((pt[1] - rootY) * size); }
     pts.forEach((pt, j) => { if (j > 1) pt[side ? 1 : 0] += Math.round(pose.wave(-j * .08) * (j - 1) * .7); });
     pts.slice(1).forEach(([x1, y1], i) => {
       const [x0, y0] = pts[i], w = i < 2 ? 2 : 1;
       for (let d = 0; d < w; d++) pen.line(x0, y0 + d, x1, y1 + d, tailCol[clamp(n - 1 - (d ? 1 : 0), 0, n)], 0, !back);
     });
     if (m.fur) { const [tx, ty] = pts[pts.length - 1]; pen.rect(tx - 1, ty - 1, 3, 2, hair[n]); }
-    reink(pen, cx - hw - 12, legTop - 4, cx + hw + 12, legTop + 9);
+    reink(pen, cx - hw - Math.round(12 * size) - 3, legTop - Math.round(4 * size) - 3, cx + hw + Math.round(12 * size) + 3, legTop + Math.round(9 * size) + 3);
   }
   if (m.membrane && !side) for (const sd of [-1, 1]) for (let y = tTop + 3; y < legTop + 4; y++) {
     const w = (pose.still ? y < legTop : (y + pose.i) % 6 < 4) ? 2 : 1;
@@ -179,12 +180,12 @@ function paintBack(pen, g, look, skin, hair) {
   const leathery = (m.scales >= 3 || m.chitin || m.emberSkin >= 3) && !m.feathers;
   const plumes = [P.furWhite, P.furGrey, P.furDark, P.hay, P.furBrown].filter(r => r !== hair);
   const ramp = leathery ? skin : m.feathers ? P.furWhite : plumes[seedOf(look.id + ':plume') % plumes.length], rn = ramp.length - 1;
-  const great = look.from.wings === 'great-wings', beat = pose.wave(), span = m.wings <= 3 ? 5 : great ? 19 : 13;
-  const rise = (m.wings <= 3 ? 4 : great ? 17 : 12) + Math.round(beat * (m.wings <= 3 ? 1 : great ? 3 : 2));
+  const great = look.from.wings === 'great-wings', beat = pose.wave(), span = Math.round((m.wings <= 3 ? 5 : great ? 19 : 13) * size);
+  const rise = Math.min(tTop - 5, Math.round((m.wings <= 3 ? 4 : great ? 17 : 12) * size) + Math.round(beat * (m.wings <= 3 ? 1 : great ? 3 : 2)));
   const drop = (m.wings === 3 ? 6 : legTop + Math.round(legs * .4) - tTop) - Math.round(beat * (m.wings <= 3 ? 1 : 2));
   const draw = back ? pen.put : pen.under;
   if (side) {
-    const w = (m.wings <= 3 ? 3 : great ? 7 : 5) + (beat > .5 ? 1 : 0), top = tTop - Math.round(rise * .6), low = m.wings <= 3 ? tTop + 4 : legTop + Math.round(legs * (great ? .7 : .45));
+    const w = Math.max(2, Math.round((m.wings <= 3 ? 3 : great ? 7 : 5) * size)) + (beat > .5 ? 1 : 0), top = tTop - Math.round(rise * .6), low = m.wings <= 3 ? tTop + 4 : legTop + Math.round(legs * (great ? .7 : .45));
     for (let k = 0; k < w; k++) {
       const x = cx - hw + 2 - k, y0 = top + Math.round(k * k * .4), y1 = low - (leathery && k % 2 ? 2 : 0) - Math.round(k * .5);
       for (let y = y0; y <= y1; y++) pen.put(x, y, y - y0 < 2 ? ramp[rn] : y > y1 - 2 ? ramp[Math.max(0, rn - 3)] : ramp[clamp(rn - 1 - (k & 1), 0, rn)]);

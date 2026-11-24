@@ -146,12 +146,12 @@ function buildOf(p) {
 }
 
 function bodyOf(p) {
-  const k = Math.pow(p.height / 175, .75), girth = clamp(Math.sqrt(buildOf(p)), .78, 1.3);
-  const total = clamp(Math.round(32 * k), 18, 48);
-  const hh = clamp(Math.round(total * (.31 + .05 * (1 - k))), 6, 13);
+  const tall = p.height / 175, k = tall >= 1 ? tall : Math.pow(tall, .75), girth = clamp(Math.sqrt(buildOf(p)), .78, 1.3);
+  const total = clamp(Math.round(32 * k), 21, 58);
+  const hh = clamp(Math.round(10 + 2.2 * (k - 1)), 9, 11), hd = hh >= 11 ? 6 : k < .72 ? 4 : 5;
   const rest = total - hh, legs = Math.max(5, Math.round(rest * .46)), tl = rest - legs;
   const hw = clamp(Math.round(6 * k * girth - (p.sex === 'female' ? .4 : 0)), 3, 11);
-  const aw = clamp(Math.round(hw / 2), 2, 5), hd = clamp(Math.round(hh / 2), 3, 7);
+  const aw = clamp(Math.round(hw / 2), 2, 5);
   return { legs, tl, hw, aw, hh, hd };
 }
 
