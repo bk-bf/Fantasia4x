@@ -13,8 +13,8 @@ const vite = await createServer({
 try {
   const { folkData } = await vite.ssrLoadModule('/mockups/tileset/folk-gen.ts');
   const data = folkData(431);
-  writeFileSync(join(here, 'folk-data.json'), JSON.stringify(data));
-  console.log(data.cultures.length, 'cultures written to folk-data.json');
+  writeFileSync(join(here, 'folk-cast.js'), `'use strict';\nconst FOLK_CAST = ${JSON.stringify(data)};\n`);
+  console.log(data.cultures.length, 'cultures written to folk-cast.js');
 } finally {
   await vite.close();
 }
