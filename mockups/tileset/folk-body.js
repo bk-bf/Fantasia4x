@@ -38,24 +38,29 @@ function paintWaist(pen, g, look) {
   reink(pen, cx - hw - 2, waistTop - 2, cx + hw, belt + 3);
 }
 
-function paintBuild(pen, g, look, skin) {
-  const { cx, hw, tTop, tl, face } = g, build = look.body.build, n = skin.length - 1;
+function paintBuild(pen, g, look) {
+  const { cx, hw, tTop, tl, face } = g, build = look.body.build;
   if (build < 1.3) return;
+  const under = (x, y) => { const c = pen.get(x, y); return c && c !== P.ink ? c : null; };
+  const tint = (x, y, k, from) => { const c = from || under(x, y); if (c) pen.put(x, y, k < 1 ? dark(c, k) : c.map(v => v + (255 - v) * (k - 1))); };
   if (face === 's') {
     const front = cx + hw - 1, deep = build >= 1.5 ? 2 : 1, top = tTop + 3, low = tTop + tl - 3;
-    for (let y = top; y <= low; y++) for (let d = 0; d < deep; d++) {
-      if (d === deep - 1 && deep > 1 && (y === top || y === low)) continue;
-      pen.put(front + d, y, skin[clamp(n - 2 - d, 0, n)]);
+    for (let y = top; y <= low; y++) {
+      const base = under(front - 1, y);
+      for (let d = 0; d < deep; d++) {
+        if (d === deep - 1 && deep > 1 && (y === top || y === low)) continue;
+        tint(front + d, y, .9 - .08 * d, base);
+      }
     }
     reink(pen, front - 1, top - 2, front + deep + 1, low + 2);
     return;
   }
-  for (let y = tTop + 6; y < tTop + tl - 2; y++) { pen.put(cx - hw, y, skin[clamp(n - 1, 0, n)]); pen.put(cx + hw - 1, y, skin[clamp(n - 3, 0, n)]); }
-  for (let x = cx - hw + 2; x < cx + hw - 2; x++) pen.put(x, tTop + tl - 3, skin[clamp(n - 4, 0, n)]);
+  for (let y = tTop + 6; y < tTop + tl - 2; y++) { tint(cx - hw, y, 1.12); tint(cx + hw - 1, y, .82); }
+  for (let x = cx - hw + 2; x < cx + hw - 2; x++) tint(x, tTop + tl - 3, .84);
 }
 
 function paintBody(body, g, look, skin) {
   paintFigure(body, g, look, skin);
   paintWaist(body, g, look);
-  paintBuild(body, g, look, skin);
+  paintBuild(body, g, look);
 }
