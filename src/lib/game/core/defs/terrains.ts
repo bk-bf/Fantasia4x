@@ -21,6 +21,7 @@ export interface SubterrainDef {
   bg: [number, number, number];
   chars: string[];
   biomes?: Record<string, [number | null, number | null]>;
+  pools?: Record<string, [number | null, number | null]>;
 }
 
 const T = (n: number): string =>
@@ -198,7 +199,8 @@ export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(
       fg: hexToRgb01(sub.fg, [0.5, 0.5, 0.5]),
       bg: hexToRgb01(sub.bg, [0.03, 0.03, 0.03]),
       chars: resolveCharSpans(sub.charSpans as CharSpan[]),
-      biomes: sub.biomes as Record<string, [number | null, number | null]> | undefined
+      biomes: sub.biomes as Record<string, [number | null, number | null]> | undefined,
+      pools: sub.pools as Record<string, [number | null, number | null]> | undefined
     } satisfies SubterrainDef
   ])
 );
@@ -212,15 +214,31 @@ export const SUBTERRAIN_FALLBACK: SubterrainDef = {
   bg: [0.03, 0.03, 0.03]
 };
 
-export function pickSubterrain(biomeName: string, detailNoise: number): string {
+type Range = [number | null, number | null];
+
+const within = (v: number, [min, max]: Range): boolean =>
+  (min === null || v >= min) && (max === null || v < max);
+
+export function pickSubterrain(
+  biomeName: string,
+  detailNoise: number,
+  poolNoise?: () => number
+): string {
   const parent = BIOMES[biomeName]?.parent;
+  const rangeOf = (ranges: Record<string, Range> | undefined) =>
+    ranges?.[biomeName] ?? (parent ? ranges?.[parent] : undefined);
+  let pool: number | undefined;
   for (const [id, def] of Object.entries(SUBTERRAINS)) {
-    const range = def.biomes?.[biomeName] ?? (parent ? def.biomes?.[parent] : undefined);
-    if (!range) continue;
-    const [min, max] = range;
-    if ((min === null || detailNoise >= min) && (max === null || detailNoise < max)) {
-      return id;
-    }
+    const pools = rangeOf(def.pools);
+    const range = rangeOf(def.biomes);
+    if (!pools || !range || !within(detailNoise, range)) continue;
+    pool ??= poolNoise?.() ?? Number.NEGATIVE_INFINITY;
+    if (within(pool, pools)) return id;
+  }
+  for (const [id, def] of Object.entries(SUBTERRAINS)) {
+    if (rangeOf(def.pools)) continue;
+    const range = rangeOf(def.biomes);
+    if (range && within(detailNoise, range)) return id;
   }
   return 'dirt';
 }
