@@ -34,6 +34,7 @@ const FOLK_PIECES = (() => {
   const even = table => Object.fromEntries(Object.keys(table).map(k => [k, 1]));
   const traitName = t => FOLK_CAST.traitNames[t] || t;
 
+  const carriers = t => archetypes.filter(a => a.traits.includes(t)).map(a => a.name).join(', ');
   const rows = [];
   const add = (group, id, name, make, src) => rows.push({ group, id, name, make, src: src || {} });
 
@@ -59,24 +60,28 @@ const FOLK_PIECES = (() => {
     const a = drawLook(lookOf({ look: { skin: k } }), 'f');
     return isolate(a, withProbe(SKINS, '__probe', { ramp: probe }, () => drawLook(lookOf({ look: { skin: '__probe' } }), 'f')));
   }, { odds: 'even, leaned per culture', seen: seen(x => x.look.skin === k), detail: SKINS[k].word });
-  for (const k of [...Object.keys(HAIRS), 'grey']) add('Hair colour', 'hair_' + k, cap(k) + ' hair', () => {
-    const fields = { look: { hair: k, style: 'long', beard: 'full' } }, a = drawLook(lookOf(fields), 'f');
-    return isolate(a, withProbe(HAIRS, '__probe', { ramp: probe }, () => drawLook(lookOf({ look: { ...fields.look, hair: '__probe' } }), 'f')));
-  }, k === 'grey'
-    ? { odds: 'greying: 10% from 38, 40% from 46, 80% from 58', seen: seen(x => x.look.hair === k), detail: 'age, over any colour' }
-    : { odds: 'even, leaned per culture', seen: seen(x => x.look.hair === k), detail: HAIRS[k].word });
   for (const k of Object.keys(EYES)) add('Eye colour', 'eyes_' + k, cap(EYES[k].word), () => {
     const a = drawLook(lookOf({ look: { eyes: k } }), 'f');
     return isolate(a, withProbe(EYES, '__probe', { col: probe[3] }, () => drawLook(lookOf({ look: { eyes: '__probe' } }), 'f')));
   }, { odds: 'even, leaned per culture', seen: seen(x => x.look.eyes === k || x.look.oddEye === k), detail: EYES[k].word + ', 4% of folk carry a second eye colour' });
 
+  const hairColours = [...Object.keys(HAIRS), 'grey'];
+  const colourNote = `in every hair colour: ${listing(hairColours)}; a culture leans its colour, and age greys it (10% from 38, 40% from 46, 80% from 58)`;
+  const inColours = draw => hairColours.map(hair => () => draw(hair));
   const styleTotal = sex => STYLES.reduce((a, s) => a + (s.sexes[sex] || 0), 0);
-  for (const st of STYLES) for (const sex of Object.keys(st.sexes)) add('Hair style', `style_${st.id}_${sex}`, cap(st.id) + ', ' + sexWord(sex).toLowerCase(), () => {
-    const look = { style: st.id, hair: 'brown' }, a = drawLook(lookOf({ sex, look }), 'f');
-    return st.id === 'bald' ? a : isolate(a, drawLook(lookOf({ sex, look: { ...look, style: 'bald' } }), 'f'));
-  }, { odds: pct(st.sexes[sex], styleTotal(sex)) + ' of ' + (sex === 'female' ? 'women' : 'men'), seen: seen(x => x.p.sex === sex && x.look.style === st.id), detail: 'cut short under a hood, coif or tight straw brim' });
-  for (const k of Object.keys(BEARDS)) if (k !== 'none') add('Beard', 'beard_' + k, cap(k), () => isolate(drawLook(lookOf({ look: { beard: k } }), 'f'), drawLook(lookOf({}), 'f')), {
-    odds: pct(BEARDS[k], sum(BEARDS)) + ' of men', seen: seen(x => x.look.beard === k),
+  const styleSprite = (sex, style) => hair => isolate(drawLook(lookOf({ sex, look: { style, hair } }), 'f'), drawLook(lookOf({ sex, look: { style: 'bald', hair } }), 'f'));
+  for (const st of STYLES) for (const sex of Object.keys(st.sexes)) add('Hair style', `style_${st.id}_${sex}`, cap(st.id) + ', ' + sexWord(sex).toLowerCase(),
+    st.id === 'bald' ? () => drawLook(lookOf({ sex, look: { style: 'bald' } }), 'f') : inColours(styleSprite(sex, st.id)),
+    { odds: pct(st.sexes[sex], styleTotal(sex)) + ' of ' + (sex === 'female' ? 'women' : 'men'), seen: seen(x => x.p.sex === sex && x.look.style === st.id), detail: st.id === 'bald' ? '' : colourNote + '; cut short under a hood, coif or tight straw brim' });
+  for (const st of STYLES) if (st.trait) add('Hair style', `style_${st.id}`, cap(st.id), inColours(styleSprite('male', st.id)), {
+    odds: 'every folk with ' + traitName(st.trait), seen: seen(x => x.look.style === st.id), who: carriers(st.trait), detail: colourNote,
+  });
+  const beardSprite = k => hair => isolate(drawLook(lookOf({ look: { beard: k, hair } }), 'f'), drawLook(lookOf({ look: { hair } }), 'f'));
+  for (const k of Object.keys(BEARDS)) if (k !== 'none') add('Beard', 'beard_' + k, cap(k), inColours(beardSprite(k)), {
+    odds: pct(BEARDS[k], sum(BEARDS)) + ' of men', seen: seen(x => x.look.beard === k), detail: colourNote,
+  });
+  for (const k of Object.keys(TRAIT_BEARDS)) add('Beard', 'beard_' + k, cap(k), inColours(beardSprite(k)), {
+    odds: 'every folk with ' + traitName(TRAIT_BEARDS[k]) + ', women too', seen: seen(x => x.look.beard === k), who: carriers(TRAIT_BEARDS[k]), detail: colourNote,
   });
   for (const k of Object.keys(HEADWEAR)) if (k !== 'none') add('Headwear', 'hat_' + k, cap(k), () => isolate(drawLook(lookOf({ look: { hat: k, hood: 'walnut' } }), 'f'), drawLook(lookOf({}), 'f')), {
     odds: pct(HEADWEAR[k], sum(HEADWEAR)) + ', more where a culture favours it, and its homeland leans it', seen: seen(x => x.look.hat === k), who: dressedIn('headwear', k), detail: k === 'straw' ? 'woven straw' : 'dyed from the culture’s cloth',
@@ -108,8 +113,8 @@ const FOLK_PIECES = (() => {
     }
     return drawLook(lookOf(fields, traits), 'f');
   };
-  const carriers = t => archetypes.filter(a => a.traits.includes(t)).map(a => a.name).join(', ');
-  for (const m of MARKS) for (const t of m.traits) if (FOLK_CAST.traitRarity[t]) add('Mark', 'mark_' + t.replace(/-/g, '_'), traitName(t), markPiece({}, [t]), {
+  const folded = new Set([...STYLES.map(st => st.trait), ...Object.values(TRAIT_BEARDS)].filter(Boolean));
+  for (const m of MARKS) for (const t of m.traits) if (FOLK_CAST.traitRarity[t] && !folded.has(t)) add('Mark', 'mark_' + t.replace(/-/g, '_'), traitName(t), markPiece({}, [t]), {
     odds: FOLK_CAST.traitRarity[t], seen: seen(x => x.p.traits.includes(t)), who: carriers(t),
     detail: `drawn as ${m.id.replace(/[A-Z]/g, ch => ' ' + ch.toLowerCase())} at strength ${RANK[FOLK_CAST.traitRarity[t]] || 1} of 5`,
   });

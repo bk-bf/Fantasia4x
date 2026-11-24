@@ -71,8 +71,10 @@ const STYLES = [
   { id: 'fringe', sexes: { male: 1, female: 2 } },
   { id: 'mohawk', sexes: { male: 1, female: 1 } },
   { id: 'bald', sexes: { male: 2 }, o: { bald: 1 } },
+  { id: 'plumed', sexes: {}, o: { bald: 1 }, trait: 'feathered' },
 ];
 const BEARDS = { none: 5, full: 3, moustache: 2, goatee: 2, stubble: 3, braided: 1 };
+const TRAIT_BEARDS = { downy: 'downy-coat' };
 
 const RANK = { negative: 1, common: 1, uncommon: 2, rare: 3, epic: 4, mythic: 5, legendary: 5 };
 
@@ -195,15 +197,18 @@ function pawnLookOf(p, pref, rarity) {
   const skin = weighted(r, pref.skin), eyes = weighted(r, pref.eyes);
   const odd = r() < .04 ? Object.keys(EYES)[Math.floor(r() * Object.keys(EYES).length)] : null;
   const hair = greying(r, p.age, weighted(r, pref.hair));
-  const style = weighted(r, Object.fromEntries(STYLES.filter(s => s.sexes[p.sex]).map(s => [s.id, s.sexes[p.sex]])));
-  const beard = p.sex === 'male' ? weighted(r, BEARDS) : 'none';
+  let style = weighted(r, Object.fromEntries(STYLES.filter(s => s.sexes[p.sex]).map(s => [s.id, s.sexes[p.sex]])));
+  let beard = p.sex === 'male' ? weighted(r, BEARDS) : 'none';
   const garb = weighted(r, pref.garb), legwear = weighted(r, pref.legwear);
   const { marks, from } = lookMarks(p.traits, rarity);
   if (p.blind) { marks.blind = 1; delete marks.oneEye; }
   const hat = weighted(r, pref.headwear || { none: 1 }), hood = weighted(r, pref.garb), cloak = r() < .12 ? weighted(r, pref.garb) : null;
   const marked = marks.scales || marks.fur || marks.chitin || marks.ironSkin || marks.emberSkin || marks.leafSkin || marks.slick || marks.feathers >= 3;
   const sleeves = marked || r() < .5 ? 'rolled' : 'long', apron = p.sex === 'female' && r() < .35, pouch = r() < .5;
-  const capped = hat === 'hood' || hat === 'coif', underBrim = hat === 'straw' && ['topknot', 'bun', 'mohawk', 'curls', 'crop', 'bald'].includes(style);
+  const plumed = STYLES.find(s => s.trait && p.traits.includes(s.trait)), downy = Object.keys(TRAIT_BEARDS).find(k => p.traits.includes(TRAIT_BEARDS[k]));
+  if (plumed) style = plumed.id;
+  if (downy) beard = downy;
+  const capped = hat === 'hood' || hat === 'coif', underBrim = hat === 'straw' && ['topknot', 'bun', 'mohawk', 'curls', 'crop', 'bald', 'plumed'].includes(style);
   return {
     id: p.id, sex: p.sex, body: bodyOf(p), skin, hair, eyes, oddEye: odd !== eyes ? odd : null, style: capped || underBrim ? 'short' : style, beard,
     garb, legwear, trim: pref.trim, hat, hood, cloak, sleeves, apron, pouch, marks, from,
