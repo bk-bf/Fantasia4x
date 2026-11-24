@@ -85,7 +85,3 @@ export function conditionIconSheet(): IconSheet {
     });
   return { icons: Object.fromEntries(ICON_IDS.map((id) => [id, sheetSprite(icon(id)[0])])), rows };
 }
-
-export const SHEET_PREFIX = "'use strict';\nconst CONDITION_ICONS = ";
-
-export const sheetFile = (sheet: IconSheet): string => `${SHEET_PREFIX}${JSON.stringify(sheet)};\n`;
