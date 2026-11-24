@@ -10,6 +10,11 @@
     const ground = [['map-ground', () => PROPS.worn(k.worn, ramps(), false, o)]];
     return k.worn === 'shield' ? [...ground, ['map-lean', () => PROPS.worn('shieldUp', ramps(), false, o)]] : ground;
   }
+  function carryForm(o) {
+    const k = RULES.classify(o), own = WORLD_GEAR.of(o);
+    if (k.pile && PROPS.CARRIED.includes(k.pile)) return () => PROPS.carried(k.pile, RULES.rampsFor(k, o), 1);
+    return own && own.carried;
+  }
   const drawn = o => X.of('item', o.id).length > 0, mapped = o => X.of('item', o.id).some(e => e.inWorld);
   const prev = X.fromData;
   X.fromData = objects => {
@@ -17,6 +22,10 @@
     for (const o of objects) {
       if (o.cat !== 'item' || !(drawn(o) || WORLD_GEAR.of(o)) || mapped(o)) continue;
       for (const [variant, make] of variants(o)) X.reg('item', o.id, variant, make, { inWorld: true });
+    }
+    for (const o of objects) {
+      const make = o.cat === 'item' && (drawn(o) || WORLD_GEAR.of(o)) && carryForm(o);
+      if (make) X.reg('item', o.id, 'map-carry', make);
     }
   };
 })();

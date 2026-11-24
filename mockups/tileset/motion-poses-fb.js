@@ -27,7 +27,7 @@ const FB_POSES = {
   },
   stir(u, c) { return { item: 'ladle', hl: [4, 8], hr: [-4 + cs(u) * 2, 9 + sn(u) * 1], tool: 180 + sn(u) * 14, by: 1, hd: [cs(u) > .6 ? 1 : 0, 1], uf: 0, nb: 1, blink: c.lvl > 2 && u > .9 ? 1 : 0 }; },
   gather(u) { return { item: null, by: 5, hl: [4 + sn(u), 10 - Math.max(0, sn(u)) * 2], hr: [-4 + sn(u), 10 - Math.max(0, -sn(u)) * 2], hd: [0, 2], nb: 1 }; },
-  lift(u) { return keyed(u, { item: null, hl: HANG, hr: HANG, by: 0, hd: [0, 0] }, [[0, {}], [.4, { by: 5, hl: [3, 10], hr: [-3, 10], hd: [0, 2] }], [.55, { by: 5, hl: [3, 10], hr: [-3, 10], hd: [0, 2] }], [.8, { by: 1.5, carry: 'log', hl: [4, 6], hr: [-4, 6] }, 'o'], [1, { by: .7, carry: 'log' }]]); },
+  lift(u, c) { const crouch = { by: 5, hl: [3, 10], hr: [-3, 10], hd: [0, 2] }; return keyed(u, { item: null, hl: HANG, hr: HANG, by: 0, hd: [0, 0], fl: [0, 0], fr: [0, 0], cu: 0 }, [[0, {}], [.4, crouch], [.55, { ...crouch, carry: c.bulk }], [1, { ...carried(c.bulk, 0, { ...c, face: 'f' }, 0), cu: 1 }, 'o']]); },
   draw(u) { const a = sn(u); return { item: null, hl: [6, 1 + a * 4], hr: [-6, 3 - a * 4], by: .5 + Math.max(0, a) * .8, hd: [0, 0] }; },
   drink(u) { return keyed(u, { item: 'cup', hr: [-2, 6], tool: 0, hd: [0, 0], hl: HANG }, [[0, {}], [.28, { hr: [-7, -2], tool: -10, hd: [0, -1] }], [.66, { hr: [-7, -2.5], tool: -30, hd: [0, -1] }], [.82, { hr: [-2, 6] }], [1, {}]]); },
   eat(u) {

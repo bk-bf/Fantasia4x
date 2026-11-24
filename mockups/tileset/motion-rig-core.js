@@ -112,16 +112,18 @@ function toolAt(s, kind, gx, gy, ang, o) {
   return [gx + m * (ux * T.tip[0] + vx * T.tip[1]), gy + uy * T.tip[0] + vy * T.tip[1]];
 }
 
-function logOn(s, x, y, len, tilt) {
-  for (let i = -len; i <= len; i++) {
-    const yy = y + rnd(i * (tilt || 0) / len);
-    for (let j = 0; j < 6; j++) s.set(x + i, yy + j, P.wood[clamp([5, 4, 3, 3, 2, 1][j] - (noise(i * .3, j, 3) > .68 ? 1 : 0), 0, 5)]);
-  }
-  s.oval(x + len, y + rnd(tilt || 0) + 2.5, 2, 3, (px, py, nx, ny) => P.plank[Math.hypot(nx, ny) < .5 ? 3 : 5]);
-}
-function sackOn(s, x, y) {
-  s.ball(x, y, 6, 5, 4, P.cloth, { d: .2, n: .25, ns: .8, seed: 5 });
-  s.rect(x - 1, y - 6, 3, 2, P.cloth[2]); s.set(x, y - 7, P.leather[3]);
+const RIG_OVER = {
+  light: { s: ['near arm'], f: ['carrying arm'], b: ['carrying arm'] },
+  bulky: { s: ['near arm'], f: ['head', 'hands'], b: ['body'] },
+  heavy: { s: ['head', 'near arm'], f: ['head', 'arms'], b: ['arms'] },
+};
+function rigMask(s, names, parts) {
+  const m = new Uint8Array(s.w * s.h);
+  if (names.includes('body')) { for (let i = 0; i < m.length; i++) m[i] = s.c[i] ? 1 : 0; return m; }
+  const t = new Spr(s.w, s.h, s.ax, s.ay);
+  for (const name of names) for (const draw of parts[name]) draw(t);
+  for (let i = 0; i < m.length; i++) m[i] = t.c[i] ? 1 : 0;
+  return m;
 }
 
 function turn(spr) {
