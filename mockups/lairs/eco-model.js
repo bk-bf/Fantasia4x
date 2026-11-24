@@ -14,7 +14,7 @@ const ECO = (() => {
   let KINDS = {};
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const dice = seed => { let a = seed | 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
-  const fresh = () => ({ kills: 0, tried: 0, won: 0, preyBorn: 0, preyStarved: 0, preyAged: 0, preyHunted: 0, predBorn: 0, predStarved: 0, predHunting: 0, predFight: 0, predAged: 0, predColony: 0, herdsIn: 0, herdsOut: 0, packsIn: 0, packsOut: 0, founded: 0, reoccupied: 0, abandoned: 0, fights: 0, stolen: 0, raids: 0, fires: 0, risen: 0, passed: 0, breakups: 0, adopted: 0, aged: 0, downgraded: 0, takeovers: 0, contests: 0, migOut: 0, migBack: 0, winterIn: 0, shifted: 0, winterKill: 0, gored: 0, injured: 0, grassLow: 1 });
+  const fresh = () => ({ kills: 0, tried: 0, won: 0, preyBorn: 0, preyStarved: 0, preyAged: 0, preyHunted: 0, predBorn: 0, predStarved: 0, predHunting: 0, predFight: 0, predAged: 0, predColony: 0, herdsIn: 0, herdsOut: 0, packsIn: 0, packsOut: 0, founded: 0, reoccupied: 0, abandoned: 0, fights: 0, stolen: 0, raids: 0, fires: 0, risen: 0, passed: 0, breakups: 0, adopted: 0, aged: 0, downgraded: 0, takeovers: 0, contests: 0, migOut: 0, migBack: 0, winterIn: 0, shifted: 0, herdMoves: 0, winterKill: 0, gored: 0, injured: 0, grassLow: 1 });
   const CUNNING = /alpha|matriarch|matron|elder|mother|queen|shaman|chief|stalker|vixen|harrier|ermine/i, FORM = { gaunt: 'Gaunt', crippled: 'Crippled', grizzled: 'Grizzled' };
   const OUTSIDE = { pack: [.7, .3], pair: [.7, .3], tribe: [.4, .2], flock: [.5, .15] }, BREAKUP = { pack: [.2, .55], pair: [.2, .55], tribe: [.08, .3], flock: [.1, .3] };
   function pickTier(g, tier, branch) {
@@ -554,6 +554,7 @@ const ECO = (() => {
         if (d === 0) g.calves = 0;
         if (s === 3 && g.calves > 0) { const lost = Math.min(g.calves, g.n, Math.floor(g.calves * (.02 + .035 * (S.snow || 0)) * (1.2 - g.fat) * (g.cond < .5 ? 1.6 : 1) * (k.cold ? .4 : 1) + S.r())); g.n -= lost; g.calves -= lost; g.lost += lost; T.preyStarved += lost; T.winterKill += lost; count(S, g.kind, 'starved young', lost); if (k.mass >= 5) carcass(S, g, k.mass * lost * .6, YEAR - d + 10); }
         g.lean = fed < .6 ? g.lean + 1 : 0;
+        if (g.cond < .2 && S.trace) trace(S, 'starving', { kind: g.kind, season: s, here: grassNear(S, g, 0), roam: grassNear(S, g, k.roam * CELL), wide: grassNear(S, g, 100), map: S.hist.length ? S.hist[S.hist.length - 1].grass : 1, state: g.state, n: g.n });
         if (g.cond < .2) { const lost = Math.min(g.n, Math.max(1, Math.round(g.n * .05 * (1 + S.r())))); g.n -= lost; g.calves = Math.max(0, g.calves - lost); g.lost += lost; T.preyStarved += lost; count(S, g.kind, 'starved', lost); count(S, g.kind, 'starved in ' + SEASONS[s], lost); if (s === 3) T.winterKill += lost; if (k.mass >= 5) carcass(S, g, k.mass * lost * .6, s === 3 ? YEAR - d + 10 : 4); }
         if (S.r() < g.n * (k.burrow ? .01 : .0017)) { g.n--; g.lost++; T.preyAged++; count(S, g.kind, 'aged', 1); }
         if ((s === 0 || (k.burrow && s === 1)) && d % 3 === 0) { const born = Math.max(0, Math.round(g.n * k.fec * g.cond / 5 + S.r() * .6 - .1)); g.n += born; g.calves += born; g.born += born; T.preyBorn += born; count(S, g.kind, 'born', born); S.bornKg += born * k.mass; S.bornBy[g.kind] = (S.bornBy[g.kind] || 0) + born * k.mass; }
@@ -565,7 +566,7 @@ const ECO = (() => {
         const mate = g.n > 0 && g.state !== 'wintering' && g.n < k.cap * .4 && S.groups.find(q => q !== g && q.kind === g.kind && q.n > 0 && q.state !== 'wintering' && q.n + g.n <= k.cap * .8 && dist(q, g) < 30);
         if (mate) { mate.n += g.n; mate.cond = (mate.cond + g.cond) / 2; g.n = 0; g.fate = 'joined herd ' + mate.id; continue; }
         if (g.n > k.cap) { const half = Math.floor(g.n / 2); g.n -= half; if (counts[g.kind] < k.want * S.fit[g.kind] * C2 / 10000 * 8) { const o = group(S, g.kind, g, half); o.came = 'split from herd ' + g.id; o.cond = g.cond; o.home = pasture(S, o, g, k.burrow ? 9 : 26, true); o.goal = o.home; o.state = 'arriving'; counts[g.kind]++; } else { T.herdsOut++; count(S, g.kind, 'capped', half); } }
-        if (g.lean > 5 && g.state !== 'migrating' && !k.burrow) { const far = pasture(S, g, g, 30, true); if (S.grass[cellOf(S, far.x, far.y)] * HEAD_DAYS > 2.5) { g.home = far; g.goal = far; g.state = 'arriving'; g.lean = 0; } else if (g.lean > 9) { g.goal = nearestEdge(S, g); g.state = 'migrating'; g.fate = 'moved off the map'; count(S, g.kind, 'emigrated', g.n); T.herdsOut++; say(S, 'out', g); } }
+        if (g.lean >= 2 && g.state !== 'migrating' && g.state !== 'wintering' && g.state !== 'arriving' && grassNear(S, g.home || g, k.roam * CELL) < .3) { const far = pasture(S, g, g, k.burrow ? 14 : 30, true); if (grassNear(S, far, k.roam * CELL) > .4) { g.home = far; g.goal = far; g.state = 'arriving'; g.lean = 0; g.moved = (g.moved || 0) + 1; T.herdMoves++; } else if (g.lean > 9 && !k.burrow) { g.goal = nearestEdge(S, g); g.state = 'migrating'; g.fate = 'moved off the map'; count(S, g.kind, 'emigrated', g.n); T.herdsOut++; say(S, 'out', g); } }
         continue;
       }
       const inst = Math.min(plentyOf(S, g), Math.max(.2, g.recent * 1.5));
@@ -636,6 +637,7 @@ const ECO = (() => {
     if (d === YEAR - 1) { S.years.push({ year: year(S), ...T, ...row }); S.tally = fresh(); if (S.years.length > 60) S.years.shift(); }
   }
   function mastNear(S, at, range) { let m = 0, c = 0; const r = Math.ceil(range / CELL), cx = Math.floor(at.x / CELL), cy = Math.floor(at.y / CELL); for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const X = cx + dx, Y = cy + dy; if (X >= 0 && Y >= 0 && X < S.C && Y < S.C && dx * dx + dy * dy <= r * r) { m += S.mast[Y * S.C + X]; c++; } } return c ? m / c : 0; }
+  function grassNear(S, at, r) { let G = 0, K = 0; const c = Math.ceil(r / CELL), cx = Math.floor(at.x / CELL), cy = Math.floor(at.y / CELL); for (let dy = -c; dy <= c; dy++) for (let dx = -c; dx <= c; dx++) { const X = cx + dx, Y = cy + dy; if (X < 0 || Y < 0 || X >= S.C || Y >= S.C || dx * dx + dy * dy > c * c) continue; const i = Y * S.C + X; G += S.grass[i]; K += S.K[i]; } return K ? G / K : 0; }
   const plentyOf = (S, g) => g.lair ? foodAt(S, g, g.lair.x, g.lair.y) : 1;
   function eatable(S, k) {
     const probe = { k, n: Math.round((k.size[0] + k.size[1]) / 2), tier: 2, id: 0, hungry: 0 };
