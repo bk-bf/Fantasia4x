@@ -205,7 +205,7 @@
     const f = VAL[view.key] || VAL.size, dir = view.dir;
     rows.sort((a, b) => { const x = f(a), y = f(b); return (typeof x === 'string' ? x.localeCompare(y) : x - y) * dir || b.id - a.id; });
     const T = titles(), me = pickedId();
-    const where = g => g.end !== undefined ? g.fate : g.lair ? g.lair.name : g.k.prey ? g.state : g.state + ', no lair';
+    const where = g => g.end !== undefined ? g.fate : g.lair ? g.lair.name + ' · ' + g.mood : g.k.prey ? g.state : g.state + ', no lair';
     el.innerHTML = '<thead><tr>' + COLS.map(([key, name]) => key === 'rank' ? `<th>${name}</th>` : `<th data-sort="${key}" class="${view.key === key ? 'on' : ''}">${name}${view.key === key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '</tr></thead><tbody>' +
       rows.map((g, i) => {
         const gone = g.end !== undefined, tags = (T.get(g.id) || []).map(t => `<span class="tag">${t}</span>`).join(''), fed = Math.round(g.cond * 100);
@@ -253,12 +253,12 @@
     const absent = Object.keys(LINES).filter(id => !S.cast[id]).map(id => LINES[id].name);
     $('absent').innerHTML = `<b>Not in this region:</b> ${esc(absent.join(', ')) || 'none'}. <b>Not in the food web:</b> ${esc(LEFT.map(l => l.name).join(', '))}.`;
     const B = S.bal, reach = col ? S.groups.filter(g => Math.hypot(g.x - col.x, g.y - col.y) < col.r + 130).reduce((s, g) => s + ECO.danger(g), 0) : 0, Dm = S.groups.reduce((s, g) => s + ECO.danger(g), 0);
-    $('bal').innerHTML = `<dt>Map danger now</dt><dd>${Math.round(Dm)}</dd><dt>Season average</dt><dd>${Math.round(B.ema)}</dd><dt>Target</dt><dd>${Math.round(B.target)}</dd>${col ? `<dt>Inside the colony’s reach</dt><dd>${Math.round(reach)}</dd>` : ''}<dt>Arrivals from the edge</dt><dd>×${B.mult.toFixed(2)}${B.dull > ECO.SEASON_DAYS ? ' · too quiet' : ''}</dd>`;
+    $('bal').innerHTML = `<dt>Map danger now</dt><dd>${Math.round(Dm)}</dd><dt>From hunters, which the balance steers</dt><dd>${Math.round(S.groups.filter(g => !g.k.prey).reduce((s, g) => s + ECO.danger(g), 0))}</dd><dt>Season average</dt><dd>${Math.round(B.ema)}</dd><dt>Target</dt><dd>${Math.round(B.target)}</dd>${col ? `<dt>Inside the colony’s reach</dt><dd>${Math.round(reach)}</dd>` : ''}<dt>Arrivals from the edge</dt><dd>×${B.mult.toFixed(2)}${B.dull > ECO.SEASON_DAYS ? ' · too quiet' : ''}</dd><dt>Prey on the map</dt><dd>${Math.round(S.bounty.kg).toLocaleString()} kg</dd><dt>Prey born per day · eaten by hunters</dt><dd>${Math.round(S.bounty.yield)} · ${Math.round(S.bounty.demand)} kg</dd><dt>Room for more packs</dt><dd>${S.bounty.spare > 0 ? S.bounty.spare.toFixed(1) : 'none'}</dd>`;
     const T = S.tally, lived = S.lairs.filter(l => l.owner).length, pair = (a, b) => `<dt>${a}</dt><dd>${b}</dd>`;
     $('tally').innerHTML = pair('Lairs lived in · empty', `${lived} · ${S.lairs.length - lived}`) + pair('Hunts won', `${T.won} of ${T.tried} (${pct(T.won, T.tried)})`) + pair('Prey killed · born', `${T.kills} · ${T.preyBorn}`) + pair('Prey starved · aged', `${T.preyStarved} · ${T.preyAged}`) +
       (col ? pair('Prey taken by colonists', T.preyHunted) : '') + pair('Predators born', T.predBorn) + pair('Predators starved · aged', `${T.predStarved} · ${T.predAged}`) + pair('Lost hunting · in fights', `${T.predHunting} · ${T.predFight}`) + pair('Fights over ground', T.fights) +
-      pair('Leaders risen', T.risen) + pair('Wildfires', T.fires) + pair('Herds in · out', `${T.herdsIn} · ${T.herdsOut}`) + pair('Packs in · out', `${T.packsIn} · ${T.packsOut}`) + pair('Lairs founded · retaken · left', `${T.founded} · ${T.reoccupied} · ${T.abandoned}`) + pair('Kills stolen by bears', T.stolen) + (col ? pair('Raids on the colony · killed there', `${T.raids} · ${T.predColony}`) : '');
-    $('years').innerHTML = '<tr><th>Yr</th><th>Prey</th><th>Pred</th><th>Lairs</th><th>Empty</th><th>Kills</th><th>Hunts</th><th title="prey · predators">Starved</th><th>Fights</th><th title="groups led by tier 3 or higher">T3+</th><th>Fires</th><th>Danger</th><th title="lowest of the year">Grass</th></tr>' +
+      pair('Leaders risen', T.risen) + pair('Wildfires', T.fires) + pair('Herds in · out', `${T.herdsIn} · ${T.herdsOut}`) + pair('Packs in · out · looked and moved on', `${T.packsIn} · ${T.packsOut} · ${T.passed}`) + pair('Lairs founded · retaken · left', `${T.founded} · ${T.reoccupied} · ${T.abandoned}`) + pair('Kills stolen by bears', T.stolen) + (col ? pair('Raids on the colony · killed there', `${T.raids} · ${T.predColony}`) : '');
+    $('years').innerHTML = '<tr><th>Yr</th><th>Prey</th><th>Pred</th><th>Lairs</th><th>Empty</th><th>Kills</th><th>Hunts</th><th title="prey · predators">Starved</th><th>Fights</th><th title="groups led by tier 3 or higher">T3+</th><th>Fires</th><th title="from hunters">Danger</th><th title="lowest of the year">Grass</th></tr>' +
       S.years.slice().reverse().map(y => `<tr><td>${y.year}</td><td>${y.prey}</td><td>${y.pred}</td><td>${y.lairs}</td><td>${y.empty}</td><td>${y.kills}</td><td>${pct(y.won, y.tried)}</td><td>${y.preyStarved} · ${y.predStarved}</td><td>${y.fights}</td><td>${y.high}</td><td>${y.fires}</td><td>${y.danger}</td><td>${Math.round(y.grassLow * 100)}%</td></tr>`).join('');
     const p = $('pick');
     if (pick && pick.story) {
@@ -275,7 +275,7 @@
     runs();
   }
 
-  const code = () => btoa(JSON.stringify({ v: 1, seed, map: +ui.state.map, colony: ui.state.colony, hist: +ui.state.hist, at: S.t, log: S.log }));
+  const code = () => btoa(JSON.stringify({ v: 2, seed, map: +ui.state.map, colony: ui.state.colony, hist: +ui.state.hist, at: S.t, log: S.log }));
   const saved = () => { try { return JSON.parse(localStorage.getItem(STORE) || '[]'); } catch { return []; } };
   const keep = list => { try { localStorage.setItem(STORE, JSON.stringify(list)); } catch {} };
   function runs() {
@@ -293,7 +293,7 @@
   function load(c) {
     let r;
     try { r = JSON.parse(atob(c)); } catch { note = 'That run could not be read.'; return; }
-    seed = r.seed; replay = r;
+    seed = r.seed; replay = r; if (r.v !== 2) note = 'This run was saved under older rules, so it plays out differently now.';
     for (const [k, v] of [['map', r.map], ['colony', r.colony], ['hist', r.hist]]) ui.state[k] = String(v);
     ui.set('speed', '0');
     start();
@@ -311,7 +311,7 @@
       }
       if (made.t >= histH && !made.colony) ECO.land(made, s.colony);
       if (r) made.log = r.log.slice();
-      S = made; seen = S.said; pick = null; drawnDay = -1; frac = 0; FACE.clear(); note = r ? `Replayed to year ${ECO.year(S)}, ${S.log.length} things sent.` : ''; replay = null;
+      S = made; seen = S.said; pick = null; drawnDay = -1; frac = 0; FACE.clear(); note = r ? (r.v !== 2 ? 'Saved under older rules, so it played out differently. ' : '') + `Replayed to year ${ECO.year(S)}, ${S.log.length} things sent.` : ''; replay = null;
       F4X.write({ seed, run: null });
       tiles(S.N); still = s.counts === 'today' ? crowd(S.N) : null;
       document.body.classList.toggle('still', !!still);

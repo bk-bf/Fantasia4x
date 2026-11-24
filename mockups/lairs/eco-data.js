@@ -37,6 +37,7 @@ const ECO_DATA = (() => {
   function lines(objects) {
     const objs = new Map(objects.map(o => [o.cat + '/' + o.id, o])), by = new Map(), out = {}, left = [];
     for (const o of objects) if (o.cat === 'creature' && o.raw && o.raw.species && o.raw.tier) { if (!by.has(o.raw.species)) by.set(o.raw.species, []); by.get(o.raw.species).push(o); }
+    const YOUNG = /\b(pup|cub|kit|kid|chick|fawn|piglet|whelp|yearling|hatchling|spiderling|stirgeling)\b/i;
     for (const [sp, list] of by) {
       const P = PROFILE[sp];
       if (!P) { left.push(list.find(o => o.raw.tier === 2) || list[0]); continue; }
@@ -45,7 +46,7 @@ const ECO_DATA = (() => {
       const top = Object.entries(bw).sort((a, b) => b[1] - a[1])[0][0], carcass = objs.get('item/' + r.carcassItemId), mass = (carcass && carcass.raw.weightKg) || 20;
       const pack = [Math.max(1, (r.pack || [1, 2])[0]), Math.max(1, (r.pack || [1, 2])[1])], threat = r.threatLevel || 1;
       const temper = ({ passive: .2, neutral: .6, aggressive: 1 }[r.behaviour] || .6) + (r.chargesWhenWounded ? .25 : 0);
-      const tiers = list.map(o => ({ tier: o.raw.tier, id: o.id, name: o.name, threat: o.raw.threatLevel || threat }));
+      const tiers = list.map(o => ({ tier: o.raw.tier, id: o.id, name: o.name, threat: o.raw.threatLevel || threat, young: YOUNG.test(o.name) }));
       const k = { id: sp, name: base.name, tiers, top: Math.max(...tiers.map(t => t.tier)), biomes: bw, land: BIOME[top], mass, threat, temper, behaviour: r.behaviour, rarity: P.rarity, active: P.active, src: { pack: r.pack, lairRange: r.lairRange, lair: r.lair, diet: r.diet, kg: mass } };
       if (!P.style) Object.assign(k, {
         prey: 1, size: pack, cap: Math.max(6, pack[1] * 3), fec: mass < 5 ? 1.5 : mass < 30 ? .55 : mass < 60 ? .35 : .15, speed: mass > 80 ? 35 : mass < 5 ? 40 : 55,
@@ -56,7 +57,7 @@ const ECO_DATA = (() => {
         Object.assign(k, {
           style: P.style, lair: site ? site.name : 'Lair', den: DEN[r.lair] || 'den', site: BIOME[top], need, size: P.solo ? [1, Math.min(P.solo, pack[1])] : pack, cap: P.solo || pack[1] * 2 + 2,
           range: (r.lairRange || 50) * 2.5, speed: P.air ? 110 : P.style === 'ambush' ? 22 : mass > 50 ? 42 : 62, skill: clamp(.28 + threat / 40, .28, .75), litter: [1, Math.max(1, pack[1] - 1)],
-          breed: .65, floor: clamp(need * .55, .3, 1.8), share: SHARE[P.rarity], small: P.small || 0, scav: P.scav || 0, air: P.air || 0, sleeps: P.sleeps || 0, waits: P.waits || null, grounded: P.grounded || null, thief: P.thief || 0,
+          breed: .65, floor: P.style === 'forage' ? .7 : clamp(need * .55, .3, 1.8), share: SHARE[P.rarity], small: P.small || 0, scav: P.scav || 0, air: P.air || 0, sleeps: P.sleeps || 0, waits: P.waits || null, grounded: P.grounded || null, thief: P.thief || 0,
         });
       }
       out[sp] = k;
