@@ -1,7 +1,15 @@
 import type { CombatTextEvent } from '$lib/stores/fx/combatFeedback';
 import { COLD, CRIT, DULL, GORE, HURT, tint, word, type Pair } from '$lib/pixelArt/fx/glyphs';
 import { BADGE_TTL, badge, badgeDy, float, floatDy, type Anchor } from '$lib/pixelArt/fx/effects';
-import { floater, strikeOf, type Trend } from '$lib/pixelArt/fx/icons';
+import {
+  STRIKE_LIGHT,
+  crumbled,
+  floater,
+  strikeOf,
+  withIcon,
+  type Trend
+} from '$lib/pixelArt/fx/icons';
+import { mix } from '$lib/pixelArt/noise';
 import { P, hex } from '$lib/pixelArt/fx/spr';
 import type { FxPainter } from '$lib/pixelArt/fx/painter';
 import type { WebGLRenderer } from '$lib/webgl/renderer.js';
@@ -26,7 +34,7 @@ interface Placed {
   ttl: number;
   shake: boolean;
   badge: boolean;
-  strike: boolean;
+  lost: boolean;
 }
 
 interface Hit {
@@ -66,13 +74,21 @@ const TIERS = [0, 20, 38, 56];
 const BADGE_STEP = 18;
 const GAP = 2;
 const SETTLE_PX_S = 24;
-const STRIKE_IN_S = 0.25;
-const STRIKE_LIGHT = hex('#f4ecd8');
+const TICK_FROM = 6;
+const TICK_LIGHT = hex('#e8dcc4');
+const LOSS_IN_S = 0.6;
+const LOSS_FROM = -18;
+const LOSS_TO = -8;
+const LOSS_SINK = -5;
+const STRIKE_FROM_S = 0.6;
+const STRIKE_IN_S = 0.35;
+const CRUMBLE_FROM_S = 1.9;
 
 const items: Item[] = [];
 const waiting = new Map<string, Waiting[]>();
 const seen = new Set<number>();
 let modeKey = '';
+let shown: FloaterMode = { icons: true, text: true, words: true };
 
 const keyOf = (e: CombatTextEvent) => e.entityId ?? `${e.worldX},${e.worldY}`;
 const isHit = (e: CombatTextEvent) => e.kind === 'damage' || e.kind === 'crit';
@@ -99,8 +115,18 @@ function trend(e: CombatTextEvent): Trend {
 
 function hitPair(h: Hit): Pair {
   const text = `-${h.total}${h.bang ? '!' : ''}`;
-  return h.crit ? word(text, CRIT, { big: true }) : word(text, HURT);
+  const look = h.crit ? word(text, CRIT, { big: true }) : word(text, HURT);
+  if (!h.crit || !shown.icons) return look;
+  return withIcon('crit', shown.words ? look : null);
 }
+
+export function lossDy(u: number): number {
+  if (u < LOSS_IN_S) return mix(LOSS_FROM, LOSS_TO, 1 - (1 - u / LOSS_IN_S) ** 2);
+  return mix(LOSS_TO, LOSS_SINK, Math.min(1, (u - LOSS_IN_S) / (BADGE_TTL - LOSS_IN_S)));
+}
+
+const dyOf = (q: Placed, u: number) =>
+  q.lost ? lossDy(u) : q.badge ? badgeDy(u) : floatDy(u, q.ttl);
 
 function textLook(e: CombatTextEvent): [Pair, number, number, boolean] {
   switch (e.kind) {
@@ -113,7 +139,7 @@ function textLook(e: CombatTextEvent): [Pair, number, number, boolean] {
     case 'dodge':
       return [word(e.text, COLD), -6, WORD_TTL, false];
     case 'bleed':
-      return [word(e.text, GORE, { icon: 'drop' }), 4, WORD_TTL, false];
+      return [word(e.text, GORE), 4, WORD_TTL, false];
     case 'fracture':
       return [word(e.text, tint('#ff9944')), 0, WORD_TTL, false];
     default:
@@ -129,26 +155,30 @@ function textLook(e: CombatTextEvent): [Pair, number, number, boolean] {
 function place(e: CombatTextEvent, f: Figure, mode: FloaterMode): Placed | null {
   const tier = Math.min(TIERS.length - 1, Math.round((e.dy ?? 0) / 13));
   const id = iconFor(e);
-  const switched = e.kind === 'condition' || id !== undefined;
-  if (!switched && !mode.words) return null;
-  if (id && mode.icons) {
-    const col = e.color ?? (e.kind === 'fracture' ? '#ff9944' : '#dddddd');
-    return anchor(f, {
-      pair: floater(id.id, mode.text ? e.text : null, col, id.mark, trend(e), !!e.lost),
-      x: 0,
-      y: 0,
-      ox: 0,
-      oy: -tier * BADGE_STEP,
-      ttl: BADGE_TTL,
-      shake: false,
-      badge: true,
-      strike: !!e.lost
-    });
+  const lost = !!e.lost;
+  const cond = e.kind === 'condition' || e.kind === 'fracture';
+  if (cond) {
+    if (id && mode.icons) {
+      const col = e.color ?? (e.kind === 'fracture' ? '#ff9944' : '#dddddd');
+      return anchor(f, {
+        pair: floater(id.id, mode.text ? e.text : null, col, id.mark, trend(e), lost),
+        x: 0,
+        y: 0,
+        ox: 0,
+        oy: -tier * BADGE_STEP,
+        ttl: BADGE_TTL,
+        shake: false,
+        badge: true,
+        lost
+      });
+    }
+    if (!mode.text) return null;
   }
-  if (switched && !mode.text) return null;
-  const [pair, dx, ttl, shake] = textLook(e);
+  const mark = !cond && id && mode.icons ? id.id : null;
+  if (!cond && !mark && !mode.words) return null;
+  const [look, dx, ttl, shake] = textLook(e);
   return anchor(f, {
-    pair,
+    pair: mark ? withIcon(mark, mode.words ? look : null) : look,
     x: 0,
     y: 0,
     ox: dx,
@@ -156,7 +186,7 @@ function place(e: CombatTextEvent, f: Figure, mode: FloaterMode): Placed | null 
     ttl,
     shake,
     badge: false,
-    strike: !!e.lost
+    lost
   });
 }
 
@@ -168,7 +198,7 @@ function anchor(f: Figure, q: Placed): Placed {
 
 function box(q: Placed, u: number, r: number, lift: number): Box {
   const s = q.pair[0];
-  const dy = q.badge ? badgeDy(u) : floatDy(u, q.ttl);
+  const dy = dyOf(q, u);
   const left = q.x + (q.ox - s.ax) * r;
   const top = q.y + (q.oy + lift + dy - s.ay) * r;
   return [left, top, left + s.w * r, top + s.h * r];
@@ -265,6 +295,7 @@ export function drawFloats(
   blocked: readonly Box[] = [],
   locate?: Locate
 ): void {
+  shown = mode;
   remode(mode);
   const ids = new Set<number>();
   for (const e of list) {
@@ -291,9 +322,10 @@ export function drawFloats(
     at.y = it.q.y;
     at.ox = it.q.ox;
     at.oy = it.q.oy + it.lift;
-    if (it.q.badge) badge(p, at, it.q.pair, u);
+    if (it.q.lost) loss(p, it.q, at, u);
+    else if (it.q.badge) badge(p, at, it.q.pair, u);
     else float(p, at, it.q.pair, u, it.q.ttl, it.q.shake);
-    if (it.q.strike) strike(p, it.q, at, u);
+    if (it.lift <= -TICK_FROM) tick(p, it.q, at, u, -it.lift);
   }
 }
 
@@ -306,15 +338,43 @@ function follow(r: WebGLRenderer | null, locate: Locate): void {
   }
 }
 
-function strike(p: FxPainter, q: Placed, at: Anchor, u: number): void {
+function tick(p: FxPainter, q: Placed, at: Anchor, u: number, len: number): void {
   if (u > q.ttl) return;
   const s = q.pair[0];
+  const y = Math.round(at.oy + dyOf(q, u)) - s.ay + s.h;
+  const h = Math.round(len);
+  p.fill(P.ink, 255);
+  p.band(at.x, at.y, -1, y, 3, h);
+  p.fill(TICK_LIGHT, 255);
+  p.band(at.x, at.y, 0, y, 1, h);
+}
+
+function loss(p: FxPainter, q: Placed, at: Anchor, u: number): void {
+  if (u > q.ttl) return;
+  const oy = Math.round(at.oy + lossDy(u));
+  if (u >= CRUMBLE_FROM_S) {
+    const frames = crumbled(q.pair[0]);
+    const f = (u - CRUMBLE_FROM_S) / (q.ttl - CRUMBLE_FROM_S);
+    p.label(
+      frames[Math.min(frames.length - 1, Math.floor(f * frames.length))],
+      at.x,
+      at.y,
+      at.ox,
+      oy
+    );
+    return;
+  }
+  p.label(q.pair[u < LOSS_IN_S / 6 ? 1 : 0], at.x, at.y, at.ox, oy);
+  if (u >= STRIKE_FROM_S) strike(p, q, at, oy, (u - STRIKE_FROM_S) / STRIKE_IN_S);
+}
+
+function strike(p: FxPainter, q: Placed, at: Anchor, oy: number, f: number): void {
+  const s = q.pair[0];
   const line = strikeOf(s);
-  const w = Math.round(line.w * Math.min(1, u / STRIKE_IN_S));
+  const w = Math.round(line.w * Math.min(1, f));
   if (w <= 0) return;
-  const dy = q.badge ? badgeDy(u) : floatDy(u, q.ttl);
   const x = Math.round(at.ox) - s.ax + line.x;
-  const y = Math.round(at.oy + dy) - s.ay + line.y;
+  const y = oy - s.ay + line.y;
   p.fill(P.ink, 255);
   p.band(at.x, at.y, x - 1, y, w + 2, 2);
   p.fill(STRIKE_LIGHT, 255);

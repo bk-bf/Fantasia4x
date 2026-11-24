@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { RightPress, releaseClicks } from './rightPress';
   import { onMount, onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { browser } from '$app/environment';
@@ -423,7 +424,7 @@
   let moveAimEndX = 0;
   let moveAimEndY = 0;
   let moveAimSlots: { x: number; y: number }[] = [];
-  let _aimCommitted = false;
+  const rightPress = new RightPress();
 
   let zoneAnchorX = 0;
   let zoneAnchorY = 0;
@@ -1671,35 +1672,6 @@
       dragBox(mctx, tileBoxRect(minX, minY, maxX, maxY));
     }
 
-    if (moveAimActive) {
-      const ax = (moveAimAnchorX - viewX + 0.5) * tileWidth;
-      const ay = (moveAimAnchorY - viewY + 0.5) * tileHeight;
-      const bx = (moveAimEndX - viewX + 0.5) * tileWidth;
-      const by = (moveAimEndY - viewY + 0.5) * tileHeight;
-      ctx.save();
-      ctx.strokeStyle = 'rgba(255, 200, 90, 0.85)';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([5, 4]);
-      ctx.beginPath();
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(bx, by);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      const r = Math.max(2, tileWidth * 0.22);
-      for (const s of moveAimSlots) {
-        const dx = (s.x - viewX + 0.5) * tileWidth;
-        const dy = (s.y - viewY + 0.5) * tileHeight;
-        ctx.beginPath();
-        ctx.arc(dx, dy, r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 200, 90, 0.35)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 220, 120, 0.95)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
     const STACK_BADGE_MIN_TILE = 16;
     const STACK_BADGE_FONT_PX = 5;
     if (tileWidth >= STACK_BADGE_MIN_TILE && droppedItems.length > 0) {
@@ -2455,7 +2427,14 @@
             mobPos: mobRenderPos,
             renderer,
             hidden: isHiddenTile,
-            mobsDrawn: tW >= ENTITY_RENDER_MIN_PX
+            mobsDrawn: tW >= ENTITY_RENDER_MIN_PX,
+            aim: moveAimActive
+              ? {
+                  from: [moveAimAnchorX, moveAimAnchorY],
+                  to: [moveAimEndX, moveAimEndY],
+                  slots: moveAimSlots
+                }
+              : null
           },
           { vx, vy, tW, tH, paused: simPaused }
         );
@@ -2817,6 +2796,7 @@
   function handleMouseDown(e: MouseEvent) {
     if (menuPreview) return;
     if (e.button === 2) {
+      rightPress.down();
       if (moveAimCount === 0 || hoverTileX < 0 || hoverTileY < 0) return;
       const groupMove = markedKind === 'pawn' && markedDraftedCount > 0;
       if (groupMove) {
@@ -2827,6 +2807,7 @@
           droppedItems.some((d) => d.x === hoverTileX && d.y === hoverTileY && d.quantity > 0);
         if (hasMenu) return;
       }
+      rightPress.aim();
       startMoveAim();
       return;
     }
@@ -2932,7 +2913,7 @@
     );
   }
 
-  function handleMouseUp() {
+  function handleMouseUp(e: MouseEvent) {
     if (moveAimActive) {
       commitMoveAim();
       return;
@@ -3004,7 +2985,7 @@
       drawDesignations();
       return;
     }
-    if (dragDistance < 3 && !customMapPreview && !menuPreview) {
+    if (releaseClicks(e.button) && dragDistance < 3 && !customMapPreview && !menuPreview) {
       hoverTileX = Math.floor(lastCursorCx / tileWidth + viewX);
       hoverTileY = Math.floor(lastCursorCy / tileHeight + viewY);
       handleTileClick();
@@ -3463,7 +3444,6 @@
     moveAimActive = false;
     moveAimArmed = false;
     moveAimSlots = [];
-    _aimCommitted = true;
     if (ids.length > 0 && bx >= 0 && by >= 0) {
       const dragLen = Math.abs(bx - ax) + Math.abs(by - ay);
       if (ids.length === 1) {
@@ -3609,10 +3589,7 @@
   function handleContextMenu(e: MouseEvent) {
     e.preventDefault();
     if (menuPreview) return;
-    if (_aimCommitted) {
-      _aimCommitted = false;
-      return;
-    }
+    if (rightPress.swallowsMenu()) return;
     equipMenu = null;
     if (hoverTileX < 0 || hoverTileY < 0) return;
 
