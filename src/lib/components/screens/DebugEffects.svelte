@@ -1,7 +1,8 @@
 <script lang="ts">
   import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
+  import Slider from '$lib/components/UI/widget/Slider.svelte';
   import { EFFECT_KINDS, effectToggles } from '$lib/stores/fx/effectToggles';
-  import { weatherEffects, windSwayOn } from '$lib/stores/uiPrefs';
+  import { waveStrength, waveWaterOn, weatherEffects, windSwayOn } from '$lib/stores/uiPrefs';
 
   const allOff = $derived(!$weatherEffects && EFFECT_KINDS.every((k) => !$effectToggles[k.id]));
   function toggleAll() {
@@ -21,7 +22,11 @@
     <ChromeButton on={$weatherEffects} onclick={() => weatherEffects.toggle()}>Weather</ChromeButton
     >
     <ChromeButton on={$windSwayOn} onclick={() => windSwayOn.toggle()}>Wind sway</ChromeButton>
+    <ChromeButton on={$waveWaterOn} onclick={() => waveWaterOn.toggle()}>Wave water</ChromeButton>
   </div>
+  <Slider label="Wave strength" max={200} value={$waveStrength} oninput={(v) => waveStrength.set(v)}
+    >{$waveStrength}%</Slider
+  >
 </div>
 
 <style>
