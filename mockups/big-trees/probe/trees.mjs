@@ -80,45 +80,62 @@ export function forest(A) {
     return s;
   }
 
-  function weep(s, crown, leaf, seed, base) {
+  function weep(s, crown, leaf, seed, base, glow) {
     const n = leaf.length - 1,
       r = rng(seed * 13 + 5),
-      top = new Map();
+      top = new Map(),
+      low = new Map();
     for (let x = 0; x < s.w; x++)
       for (let y = 0; y < base; y++) {
         const i = y * s.w + x;
-        if (s.c[i] && s.z[i] > -1e8 && s.c[i] !== s.snap[i]) {
-          top.set(x, y);
-          break;
-        }
+        if (!(s.c[i] && s.z[i] > -1e8 && s.c[i] !== s.snap[i])) continue;
+        if (!top.has(x)) top.set(x, y);
+        low.set(x, y);
       }
+    const back = B.tag(new Spr(s.w, s.h, s.ax, s.ay)),
+      front = B.tag(new Spr(s.w, s.h, s.ax, s.ay));
+    let id = 0;
     for (const layer of [0, 1, 2]) {
-      for (let bx = crown.x - crown.rx * 1.05; bx < crown.x + crown.rx * 1.05; bx += 3 + r() * 3) {
+      const into = layer === 0 ? back : front,
+        gap = layer === 0 ? 10 : layer === 1 ? 11 : 14;
+      for (let bx = crown.x - crown.rx * 0.98 + r() * gap; bx < crown.x + crown.rx * 0.98; bx += gap * (0.85 + r() * 0.3)) {
         const x0 = Math.round(bx),
-          surface = top.get(x0);
-        if (surface === undefined || r() < 0.12) continue;
-        const u = (bx - crown.x) / (crown.rx * 1.05),
+          surface = top.get(x0),
+          under = low.get(x0);
+        if (surface === undefined) continue;
+        const u = (bx - crown.x) / crown.rx,
           side = Math.sign(u) || 1,
-          width = 3 + Math.floor(r() * 3),
-          start = surface + Math.round((layer === 0 ? 2 : layer === 1 ? 6 : 12) + r() * crown.ry * (0.35 + layer * 0.2)),
-          L = (base - 6 - start) * (0.34 + r() * 0.6) * (1 - Math.abs(u) * 0.3) * (layer === 2 ? 0.75 : 1),
-          z = crown.Z * (0.6 + layer * 0.5) + 2,
-          tone = (layer === 0 ? -0.16 : layer === 1 ? -0.02 : 0.08) - u * 0.12;
-        for (let c = 0; c < width; c++) {
-          const len = L * (0.75 + hash(x0 + c, seed, 3) * 0.3),
-            cu = c / Math.max(1, width - 1);
-          const ph = Math.floor(hash(x0, layer, seed) * 255);
+          count = 2 + Math.floor(r() * 2),
+          start = Math.round(surface + (under - surface) * (0.42 + layer * 0.12 + r() * 0.1)),
+          hem = 0.62 + 0.16 * Math.sin(bx * 0.19 + seed) + r() * 0.08,
+          L = (base - 4 - start) * hem * (1 - Math.abs(u) * 0.38) * (layer === 0 ? 1.05 : layer === 2 ? 0.82 : 1),
+          bunch = id++ & 63,
+          tone = (layer === 0 ? 0.3 : layer === 1 ? 0.5 : 0.66) - u * 0.1;
+        for (let i = 0; i < count; i++) {
+          const mid = (count - 1) / 2,
+            off = i - mid,
+            len = L * (0.8 + 0.2 * (1 - Math.abs(off) / (mid + 1))),
+            lit = i === 0 ? 0.07 : i === count - 1 ? -0.07 : 0;
           for (let j = 0; j < len; j++) {
-            const out = side * Math.abs(u) * (1 - Math.exp(-j / 10)) * 4,
-              x = x0 + c + Math.round(out + Math.sin(j / 13 + bx) * 0.8),
-              y = start + j,
-              k = 0.62 + tone - cu * 0.26 - (j / len) * 0.14 + (j < 3 ? 0.08 : 0) + (c & 1 ? -0.05 : 0);
+            const f = j / len,
+              x = Math.round(x0 + off * (2.2 - f * 1.7) + side * Math.abs(u) * 3.5 * (1 - Math.exp(-j / 12))),
+              y = start + j;
             if (y >= base - 2) break;
-            B.as(j > len - 4 ? 7 : 4, ph, () => B.put(s, x, y, leaf[clamp(Math.round(k * n), 0, n)], z));
+            const tip = j > len - 4,
+              k = tone + lit - f * 0.14 + (tip ? 0.05 : 0),
+              c = leaf[clamp(Math.round(k * n), 1, n)],
+              h = Math.min(15, Math.floor(f * 16));
+            B.as((h << 4) | (tip ? 7 : 4), (layer << 6) | bunch, () => B.put(into, x, y, c, layer));
+            if (glow && tip) into.e[y * s.w + x] = 110;
           }
         }
       }
     }
+    for (const v of [back, front]) {
+      v.anim = null;
+      v.crown = new Uint8Array(v.w * v.h);
+    }
+    s.veil = [back, front];
   }
 
   function fruit(s, leaf, ramp, count, seed, size) {
@@ -159,7 +176,7 @@ export function forest(A) {
         s.orbs.push([x + 1, y + 1, Math.floor(r() * 255)]);
       }
     }
-    if (k.glow) s.emit = { dx: 0, dy: Math.round(crown.y - base), rad: Math.round(crown.rx * (big ? 2.6 : 2.2)), col: k.sparks ? [1, 0.42, 0.62] : k.glow, pulse: 1 };
+    if (k.glow) s.emit = { dx: 0, dy: Math.round(crown.y - base), rad: Math.round(crown.rx * (big ? 2.6 : 2.2)), col: k.glow, pulse: 1 };
     s.crownBox = [Math.round(crown.x - crown.rx), Math.round(crown.y - crown.ry), Math.round(crown.x + crown.rx), Math.round(crown.y + crown.ry)];
   }
 
@@ -183,6 +200,8 @@ export function forest(A) {
       hw = w0 * 0.2,
       floor = base - 8;
     const halfAt = (t) => hw * Math.pow(Math.sin(Math.PI * Math.min(1, t * 0.5 + 0.5)), 0.5) * (t > 0.6 ? Math.sqrt(Math.max(0, 1 - ((t - 0.6) / 0.4) ** 2)) : 1) + (noise(t * 9, 0, seed) - 0.5) * 1.6;
+    s.hollowAt = [Math.round(cx), Math.round(floor - h * 0.35)];
+    if (glow) s.hollowRamp = [dark(ramp[0], 0.5), ramp[0], ...glow.slice(1)];
     for (let j = 0; j < h; j++) {
       const t = j / h,
         half = halfAt(t),
@@ -201,19 +220,24 @@ export function forest(A) {
           s.c[i] = ramp[Math.max(1, n - 4)];
           continue;
         }
-        const u = (x - x0) / Math.max(1, x1 - x0);
+        const u = (x - x0) / Math.max(1, x1 - x0),
+          across = 1 - Math.pow(Math.abs(u * 2 - 1), 1.6),
+          lip = t > 0.62 ? Math.max(0, 1 - (t - 0.62) / 0.42) : 1,
+          sill = Math.min(1, j / 4),
+          depth = Math.max(0, Math.min(1, across * lip * sill * (0.75 + 0.25 * Math.sin(Math.PI * Math.min(1, t * 1.6)))));
         if (glow) {
-          const g = glow.length - 1,
-            k = clamp(Math.round((0.2 + u * 0.6 + (1 - Math.abs(t - 0.45) * 1.6) * 0.3) * g), 0, g);
-          s.c[i] = glow[k];
-          s.e[i] = 60 + k * 60;
+          s.c[i] = glow[Math.min(glow.length - 1, 1 + Math.floor(depth * (glow.length - 2)))];
+          s.kind[i] = 8;
+          s.ph[i] = Math.round(depth * 255);
+          s.e[i] = 0;
           continue;
         }
-        let k = 0;
-        if (u > 0.7 && t < 0.85) k = 1;
-        if (u > 0.86 && t < 0.7) k = 2;
-        if (j < 3) k = j === 0 ? 3 : 2;
-        s.c[i] = k ? ramp[k] : dark(ramp[0], 0.6);
+        const d = depth + (noise(x * 0.45, y * 0.3, seed + 5) - 0.5) * 0.16;
+        let c = d > 0.66 ? dark(ramp[0], 0.42) : d > 0.4 ? dark(ramp[0], 0.62) : d > 0.18 ? dark(ramp[0], 0.82) : ramp[0];
+        if (u > 0.8 && t < 0.72 && d < 0.5) c = ramp[Math.min(n, 2)];
+        else if (u > 0.68 && t < 0.6 && d < 0.4) c = ramp[1];
+        if (j < 2) c = ramp[Math.min(n, j === 0 ? 3 : 2)];
+        s.c[i] = c;
       }
     }
   }
@@ -287,7 +311,7 @@ export function forest(A) {
       E = elder ? ELDER : 1,
       o = { ...m, trunkH: m.trunkH * (elder ? 1.4 : 1), w0: m.w0 * (elder ? 2.6 : 1), w1: m.w1 * (elder ? 1.8 : 1), rx: m.rx * E, ry: m.ry * E, lift: m.lift * E, boughs: m.boughs + (elder ? 3 : 0), clumpR: elder ? [m.clumpR[0] + 1, m.clumpR[1] + 3] : m.clumpR },
       r = rng(seed * 31 + 7),
-      leaf = kind === 'emberwood' ? A.R('#260a0a #461210 #6e1c14 #982a18 #bc3c20 #d65634 #e8744e') : k.leaf;
+      leaf = k.leaf;
     const W = Math.ceil(o.rx * 2 + o.clumpR[1] * 2 + (elder ? 70 : 30)),
       H = Math.ceil(o.trunkH + o.lift + o.ry * (elder ? 1.5 : 1) + o.clumpR[1] + (o.weep ? 30 : 26)),
       base = H - 8,
@@ -315,9 +339,8 @@ export function forest(A) {
       c.seed = seed * 97 + i;
     }
     if (elder) {
-      const glow = kind === 'emberwood' ? A.R('#5a2a8a #a8255e #d84a78 #f08cb0 #fde2ee') : leaf;
-      hollow(s, at, base, o.w0, o.trunkH * 0.42, k.trunk, k.glow ? glow.slice(-3) : null, seed);
-      veins(s, at, base, o.trunkH, k, glow, seed, sapOf(kind));
+      hollow(s, at, base, o.w0, o.trunkH * 0.42, k.trunk, k.glow ? leaf : null, seed);
+      veins(s, at, base, o.trunkH, k, leaf, seed, sapOf(kind));
     }
     s.wood = new Uint8Array(s.w * s.h);
     for (let i = 0; i < s.c.length; i++) if (s.c[i]) s.wood[i] = 1;
@@ -327,7 +350,7 @@ export function forest(A) {
     B.heart(s, crown, leaf, lo, seed);
     for (const c of clumps.sort((a, b) => a.z - b.z)) B.clump(s, c, leaf, crown, { ...lo, b: lo.b + (elder ? -0.04 : 0) });
     s.snap = snap;
-    if (o.weep) weep(s, crown, leaf, seed, base);
+    if (o.weep) weep(s, crown, leaf, seed, base, Boolean(k.glow));
     if (elder && !o.weep) stag(s, crown, kind === 'emberwood' ? P.furDark : P.woodGrey, seed, 2);
     if (k.fruit && o.fruit) fruit(s, leaf, k.fruit, o.fruit, seed, kind === 'yew' ? 1 : 2);
     magic(s, k, leaf, snap, crown, base, elder);
@@ -614,6 +637,8 @@ export function forest(A) {
       witch: name === 'witchwood',
       bone: name === 'bonewood',
       leaf: leaf ? leaf.map(hex) : null,
+      hollow: s.hollowRamp ? s.hollowRamp.map(hex) : null,
+      hollowAt: s.hollowAt ?? null,
       orbs: s.orbs ?? []
     };
     return s;

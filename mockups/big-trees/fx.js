@@ -8,7 +8,7 @@
     glint: rgb('#ffffff'),
     glintArm: rgb('#cfe6f2'),
     apple: [rgb('#de6a52'), rgb('#9a2a2a')],
-    mote: ['#f6c2d6', '#d84a78', '#8e1f4a', '#5a2a8a'].map(rgb),
+    mote: ['#ffd98a', '#f6a04a', '#d2602e', '#8c3a40'].map(rgb),
     orb: rgb('#fff6c8'),
     orbHalo: rgb('#e6d98f'),
     wisp: ['#d0f8ec', '#94dcc8', '#56b0a4'].map(rgb),
@@ -101,6 +101,12 @@
           const [x, y] = f(sp.edges[i], sp.edges[i + 1]);
           parts.push({ k: 'mote', x, y: y - 2, vx: W.scale * 5, vy: -(7 + Math.random() * 6), age: 0, life: 3 + Math.random() * 1.5, ph: Math.random() * 6 });
         }
+      if (a.hollow && a.hollowAt)
+        for (let n = every(it, 'hollow', 0.45); n > 0; n--) {
+          const hx = it.x - sp.ax + a.hollowAt[0],
+            hy = it.b - sp.ay + a.hollowAt[1];
+          parts.push({ k: 'hmote', x: hx + (Math.random() - 0.5) * 6, y: hy + (Math.random() - 0.5) * 10, vx: (Math.random() - 0.5) * 3, vy: -3 - Math.random() * 2, age: 0, life: 3.2, ph: Math.random() * 6, col: rgb(a.hollow[a.hollow.length - 1]), dim: rgb(a.hollow[a.hollow.length - 3]) });
+        }
       if (a.soul && elder)
         for (let n = every(it, 'wisp', 0.9); n > 0; n--)
           parts.push({ k: 'wisp', x: it.x + (Math.random() - 0.5) * 12, y: it.b - sp.h * 0.12, vx: 0, vy: -5 - Math.random() * 3, age: 0, life: 5, ph: Math.random() * 6 });
@@ -162,6 +168,8 @@
           const pulse = 0.6 + 0.4 * Math.sin(t * 2 + p.ph);
           put(x, y, ...C.orb, 1, fade);
           for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) put(x + dx, y + dy, ...C.orbHalo, 0.6, 0.45 * pulse * fade);
+        } else if (p.k === 'hmote') {
+          put(x, y, ...(u < 0.5 ? p.col : p.dim), 1, fade);
         } else if (p.k === 'wisp') {
           const c = C.wisp[Math.min(2, Math.floor(u * 3))];
           put(x, y, ...c, 1, fade);

@@ -29,6 +29,7 @@ const keep = (s) => {
   if (s.id === undefined) {
     s.id = sprites.length;
     sprites.push(s);
+    for (const v of s.veil ?? []) keep(v);
   }
   return s.id;
 };
@@ -231,7 +232,7 @@ writeFileSync(`${WORK}/atlas.png`, encodePng(ATLAS_W, ATLAS_H, rgba, 6));
 writeFileSync(`${WORK}/parts.png`, encodePng(ATLAS_W, ATLAS_H, attr, 6));
 for (const name of ['atlas', 'parts']) execFileSync('cwebp', ['-quiet', '-lossless', '-exact', '-z', '9', `${WORK}/${name}.png`, '-o', join(IMG, `${name}.webp`)]);
 
-const meta = sprites.map((s, n) => ({ x: place[n][0], y: place[n][1], w: s.w, h: s.h, ax: s.ax, ay: s.ay, a: s.anim ?? null, emit: s.emit ?? null }));
+const meta = sprites.map((s, n) => ({ x: place[n][0], y: place[n][1], w: s.w, h: s.h, ax: s.ax, ay: s.ay, a: s.anim ?? null, emit: s.emit ?? null, veil: s.veil ? s.veil.map((v) => v.id) : null }));
 for (const old of ['species', 'species-today', 'forest', 'forest-open', 'magic', 'magic-night']) rmSync(join(IMG, `${old}.webp`), { force: true });
 rmSync(join(PAGE, 'layout.json'), { force: true });
 writeFileSync(join(PAGE, 'scene.json'), JSON.stringify({ atlas: [ATLAS_W, ATLAS_H], sprites: meta, views, at, magicAt }) + '\n');
