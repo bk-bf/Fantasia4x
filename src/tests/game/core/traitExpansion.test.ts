@@ -4,7 +4,7 @@ import { rng } from '$lib/game/core/util/rng';
 import { createBodyPlanLimbs } from '$lib/game/core/defs/bodyParts';
 import { rollWoundClotting, recomputeWound } from '$lib/game/core/defs/wounds';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
-import { applyTraitGrafts, applyTraitWounds } from '$lib/game/entities/Pawns';
+import { applyTraitGrafts, applyTraitWounds } from '$lib/game/core/rules/body/traitBody';
 import { syncTransientConditions, tickAuras } from '$lib/game/systems/PawnStateMachine';
 import type { Pawn, GameState, Injury, Trait } from '$lib/game/core/types';
 

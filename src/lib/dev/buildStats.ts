@@ -126,7 +126,7 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
   stamina: {
     wiring: 'mirrored',
     where:
-      'Combat reads calcMaxStamina (entities/Pawns.ts), a raw-stat copy — the × moving × blood_pumping capacity terms of the design formula are dropped',
+      'Combat reads calcMaxStamina (core/rules/body/vitals.ts), a raw-stat copy — the × moving × blood_pumping capacity terms of the design formula are dropped',
     engineFormula: 'maxStamina = 50 + (CONSTITUTION − 10) × 4 + (DEXTERITY − 10) × 2'
   },
   stamina_recovery_rate: {

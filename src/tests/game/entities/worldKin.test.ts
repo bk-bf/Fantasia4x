@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { generateColonyPawns, generateWorldKin } from '$lib/game/entities/Pawns';
+import { generateColonyPawns } from '$lib/game/core/gen/colonyPawns';
+import { generateWorldKin } from '$lib/game/core/gen/pawnKin';
 import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
 import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/gen/kingdom';
 import { socialService } from '$lib/game/services/SocialService';

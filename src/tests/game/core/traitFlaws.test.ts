@@ -5,7 +5,7 @@ import {
   pawnMeetsRequires,
   TRAIT_DATABASE
 } from '$lib/game/core/gen/culture';
-import { generateColonyPawns } from '$lib/game/entities/Pawns';
+import { generateColonyPawns } from '$lib/game/core/gen/colonyPawns';
 import { generateCulturePool } from '$lib/game/core/gen/culture';
 import { rng } from '$lib/game/core/util/rng';
 import type { Trait } from '$lib/game/core/types';
@@ -82,9 +82,7 @@ describe('negative-trait (flaw) layer', () => {
     expect(pawnMeetsRequires(heightGate, { weight: 50, height: 200 })).toBe(true);
     expect(pawnMeetsRequires(heightGate, { weight: 50, height: 201 })).toBe(false);
 
-    expect(pawnMeetsRequires(heightGate, { weight: 50, height: 0 }), 'height<=0 guard').toBe(
-      false
-    );
+    expect(pawnMeetsRequires(heightGate, { weight: 50, height: 0 }), 'height<=0 guard').toBe(false);
     expect(
       pawnMeetsRequires(stocky, { weight: 100, height: 0 }),
       'height<=0 forces build to 0, below minBuild'

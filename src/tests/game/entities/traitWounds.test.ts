@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyTraitWounds, applyTraitBodyMods } from '$lib/game/entities/Pawns';
+import { applyTraitWounds, applyTraitBodyMods } from '$lib/game/core/rules/body/traitBody';
 import { TRAIT_DATABASE } from '$lib/game/core/gen/culture';
 import { createBodyPlanLimbs } from '$lib/game/systems/Combat';
 import {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { combatService } from '$lib/game/systems/Combat';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { createDefaultBodyParts } from '$lib/game/core/defs/bodyParts';
-import { applyGainedTrait } from '$lib/game/entities/Pawns';
+import { applyGainedTrait } from '$lib/game/core/rules/body/traitBody';
 import { rng } from '$lib/game/core/util/rng';
 import itemsData from '$lib/game/database/items/items.json';
 import traitsData from '$lib/game/database/pawns/traits.json';
@@ -25,7 +25,13 @@ const baseStats = {
   charisma: 10
 };
 type Stats = typeof baseStats;
-const CORE: (keyof Stats)[] = ['strength', 'dexterity', 'constitution', 'perception', 'intelligence'];
+const CORE: (keyof Stats)[] = [
+  'strength',
+  'dexterity',
+  'constitution',
+  'perception',
+  'intelligence'
+];
 
 const fullLimbs = () =>
   (['head', 'torso', 'left_arm', 'right_arm', 'left_leg', 'right_leg'] as const).map((id) => ({
@@ -66,14 +72,23 @@ const T4 = ITEMS.filter(
   twoHanded: !!i.weaponProperties.twoHanded,
   ranged: (i.weaponProperties.range ?? 0) > 1,
   powerStat: (i.weaponProperties.powerStat ??
-    (i.weaponProperties.arcane ? 'intelligence' : i.weaponProperties.finesse ? 'perception' : 'strength')) as keyof Stats
+    (i.weaponProperties.arcane
+      ? 'intelligence'
+      : i.weaponProperties.finesse
+        ? 'perception'
+        : 'strength')) as keyof Stats
 }));
 const T4_MELEE = T4.filter((w) => !w.ranged);
 
 const offHandFor = (w: { twoHanded: boolean; id: string }) =>
   w.twoHanded || /stiletto|rapier/.test(w.id) ? undefined : 'iron_boss_shield';
 
-function armed(weaponId: string, stats: Partial<Stats>, offHand?: string, traits: Trait[] = []): Pawn {
+function armed(
+  weaponId: string,
+  stats: Partial<Stats>,
+  offHand?: string,
+  traits: Trait[] = []
+): Pawn {
   const pawn = makePawn({
     stats: { ...baseStats, ...stats },
     traits,
@@ -175,18 +190,25 @@ describe('tier-4 weapon audit — stats', { timeout: 600_000 }, () => {
     const rows = [10, 16, 20, 30, 45, 60, 100].map((s) => {
       const w = armed('rune_sung_greatsword', { strength: s }, undefined);
       const d = dpsOf(w, OPPONENTS.knight());
-      return `stat ${String(s).padStart(3)}  old ×${(s / 10).toFixed(2).padStart(5)}  now ×${(1 + ((s - 10) / 10) / (1 + (s - 10) / 30)).toFixed(2).padStart(5)}  dps vs knight ${f(d)}`;
+      return `stat ${String(s).padStart(3)}  old ×${(s / 10).toFixed(2).padStart(5)}  now ×${(1 + (s - 10) / 10 / (1 + (s - 10) / 30)).toFixed(2).padStart(5)}  dps vs knight ${f(d)}`;
     });
     console.log('[POWER CURVE]\n' + rows.join('\n'));
     const low = dpsOf(armed('rune_sung_greatsword', { strength: 16 }), OPPONENTS.knight());
     const high = dpsOf(armed('rune_sung_greatsword', { strength: 100 }), OPPONENTS.knight());
-    expect(high / Math.max(0.01, low), 'a maxed pawn no longer multiplies damage tenfold').toBeLessThan(6);
+    expect(
+      high / Math.max(0.01, low),
+      'a maxed pawn no longer multiplies damage tenfold'
+    ).toBeLessThan(6);
   });
 
   it('STAT SWEEP — dps per T4 weapon per stat, against three real opponents', () => {
     for (const opp of Object.keys(OPPONENTS) as OppKey[]) {
-      const lines = [`[STAT SWEEP vs ${opp}]   dps at stat 40 (all others 10) — ★ = the weapon's power stat`];
-      lines.push('weapon                      STRENGTH     DEXTERITY     CONSTITUTION     PERCEPTION     INT   best');
+      const lines = [
+        `[STAT SWEEP vs ${opp}]   dps at stat 40 (all others 10) — ★ = the weapon's power stat`
+      ];
+      lines.push(
+        'weapon                      STRENGTH     DEXTERITY     CONSTITUTION     PERCEPTION     INT   best'
+      );
       for (const w of T4_MELEE) {
         const t = OPPONENTS[opp]();
         const cells = CORE.map((s) => dpsOf(armed(w.id, { [s]: 40 }, offHandFor(w)), t));
@@ -220,7 +242,10 @@ describe('tier-4 weapon audit — stats', { timeout: 600_000 }, () => {
       '[STAT OUTLIERS] top 12 marginal gains (+10 on the stat, from a 30 power-stat baseline)\n' +
         rows
           .slice(0, 12)
-          .map((r) => `${r.weapon.padEnd(26)} ${r.stat.padEnd(13)} vs ${r.opp.padEnd(8)} +${r.gain.toFixed(1)} dps`)
+          .map(
+            (r) =>
+              `${r.weapon.padEnd(26)} ${r.stat.padEnd(13)} vs ${r.opp.padEnd(8)} +${r.gain.toFixed(1)} dps`
+          )
           .join('\n')
     );
     expect(rows.length).toBeGreaterThan(0);
@@ -239,7 +264,13 @@ const COMBAT_TRAITS = TRAITS.filter((t) => {
   );
 });
 
-const AUDIT_STATS = { strength: 30, dexterity: 30, constitution: 30, perception: 30, intelligence: 30 };
+const AUDIT_STATS = {
+  strength: 30,
+  dexterity: 30,
+  constitution: 30,
+  perception: 30,
+  intelligence: 30
+};
 const TRAIT_N = 400;
 
 interface TraitCell {
@@ -286,22 +317,27 @@ describe('tier-4 weapon audit — traits', { timeout: 900_000 }, () => {
   it('TRAIT SWEEP — every combat trait priced on every T4 weapon', () => {
     const worst = [...buildTraitMatrix()].sort((a, b) => b.pct - a.pct);
     const seen = new Set<string>();
-    const top = worst.filter((r) => (seen.has(r.trait) ? false : (seen.add(r.trait), true))).slice(0, 15);
+    const top = worst
+      .filter((r) => (seen.has(r.trait) ? false : (seen.add(r.trait), true)))
+      .slice(0, 15);
     console.log(
       `[TRAIT SWEEP] ${COMBAT_TRAITS.length} combat traits × ${T4_MELEE.length} weapons × 3 opponents\n` +
         'top 15 traits by their single best-case dps swing:\n' +
         top
           .map(
             (r) =>
-              `${r.trait.padEnd(22)} ${r.rarity.padEnd(10)} ${r.pct >= 0 ? '+' : ''}${r.pct.toFixed(1)}%`.padEnd(48) +
-              `(${r.weapon} vs ${r.opp})`
+              `${r.trait.padEnd(22)} ${r.rarity.padEnd(10)} ${r.pct >= 0 ? '+' : ''}${r.pct.toFixed(1)}%`.padEnd(
+                48
+              ) + `(${r.weapon} vs ${r.opp})`
           )
           .join('\n')
     );
     const bottom = worst.slice(-5).reverse();
     console.log(
       'worst 5 (the flaws that actually cost you a fight):\n' +
-        bottom.map((r) => `${r.trait.padEnd(22)} ${r.pct.toFixed(1)}%  (${r.weapon} vs ${r.opp})`).join('\n')
+        bottom
+          .map((r) => `${r.trait.padEnd(22)} ${r.pct.toFixed(1)}%  (${r.weapon} vs ${r.opp})`)
+          .join('\n')
     );
     expect(COMBAT_TRAITS.length).toBeGreaterThan(50);
   });
@@ -322,7 +358,12 @@ describe('tier-4 weapon audit — traits', { timeout: 900_000 }, () => {
           .slice(0, 5);
         const base = dpsOf(armed(w.id, AUDIT_STATS, offHandFor(w)), target);
         const stacked = dpsOf(
-          armed(w.id, AUDIT_STATS, offHandFor(w), ranked.map((r) => byId.get(r.trait)) as unknown as Trait[]),
+          armed(
+            w.id,
+            AUDIT_STATS,
+            offHandFor(w),
+            ranked.map((r) => byId.get(r.trait)) as unknown as Trait[]
+          ),
           target
         );
         lines.push(

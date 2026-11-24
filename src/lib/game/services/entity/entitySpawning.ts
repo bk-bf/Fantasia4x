@@ -1,7 +1,7 @@
 import type { GameState, Mob, MobState, EntityStats, EntityNeeds } from '../../core/types';
 import { CREATURES, type CreatureDefinition } from '../../core/defs/creatures';
 import { getAmbientLight } from '../EnvironmentService';
-import { calcMaxStamina } from '../../entities/Pawns';
+import { calcMaxStamina } from '../../core/rules/body/vitals';
 import { createBodyPlanLimbs } from '../../systems/Combat';
 import { DEFAULT_PLAN } from '../../core/defs/bodyParts';
 import { TRAIT_DATABASE } from '../../core/gen/culture';

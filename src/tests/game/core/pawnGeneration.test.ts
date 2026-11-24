@@ -1,12 +1,9 @@
 import { createHash } from 'node:crypto';
 import { describe, it, expect } from 'vitest';
 import { generateCulture, generateCulturePool } from '$lib/game/core/gen/culture';
-import {
-  buildPawnFromCulture,
-  generateColonyPawns,
-  generateWorldKin,
-  resetPawnDebugIds
-} from '$lib/game/entities/Pawns';
+import { buildPawnFromCulture, resetPawnDebugIds } from '$lib/game/core/gen/pawnBuild';
+import { generateColonyPawns } from '$lib/game/core/gen/colonyPawns';
+import { generateWorldKin } from '$lib/game/core/gen/pawnKin';
 import { rng } from '$lib/game/core/util/rng';
 
 const digest = (value: unknown) =>
@@ -19,13 +16,16 @@ const PINNED_BUILDS = [
 ];
 
 describe('pawn generation with a fixed seed', () => {
-  it.each(PINNED_BUILDS)('buildPawnFromCulture after reseed($seed)', ({ seed, name, digest: d }) => {
-    rng.reseed(seed);
-    resetPawnDebugIds();
-    const pawn = buildPawnFromCulture(generateCulture(), 3);
-    expect(pawn.name).toBe(name);
-    expect(digest(pawn)).toBe(d);
-  });
+  it.each(PINNED_BUILDS)(
+    'buildPawnFromCulture after reseed($seed)',
+    ({ seed, name, digest: d }) => {
+      rng.reseed(seed);
+      resetPawnDebugIds();
+      const pawn = buildPawnFromCulture(generateCulture(), 3);
+      expect(pawn.name).toBe(name);
+      expect(digest(pawn)).toBe(d);
+    }
+  );
 
   it('generateColonyPawns and generateWorldKin after reseed(99)', () => {
     rng.reseed(99);

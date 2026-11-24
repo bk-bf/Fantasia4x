@@ -23,7 +23,8 @@ import { simWorkerBridge, USE_SIM_WORKER } from '$lib/game/sim/simWorkerClient';
 import { applySimCommand } from '$lib/game/sim/commands';
 import type { SimCommand } from '$lib/game/sim/simProtocol';
 import type { GameState, FilterableZoneType, DesignationType } from '$lib/game/core/types';
-import { generateColonyPawns, generateWorldKin } from '$lib/game/entities/Pawns';
+import { generateColonyPawns } from '$lib/game/core/gen/colonyPawns';
+import { generateWorldKin } from '$lib/game/core/gen/pawnKin';
 import {
   initialGameState,
   ensureCulturePool,

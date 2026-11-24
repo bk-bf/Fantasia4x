@@ -47,7 +47,7 @@ import {
 } from '../core/defs/wounds';
 import { scaleWeaponQuality, scaleArmorQuality } from '../core/rules/gear/itemQuality';
 import { pawnStatService } from '../services/PawnStatService';
-import { calcMaxStamina } from '../entities/Pawns';
+import { calcMaxStamina } from '../core/rules/body/vitals';
 import conditionsData from '../database/pawns/conditions.json';
 import type { ConditionDef, TransientConditionDef } from '../core/types';
 import { simLog, type CombatTextKind } from '../core/util/logSink';
@@ -475,7 +475,7 @@ const ARMOR_DAMAGE_TYPE_RESISTANCE_FIELD: Partial<Record<DamageType, keyof Armor
 
 function armorTypeResistance(ap: ArmorProps, damageType: DamageType): number {
   const field = ARMOR_DAMAGE_TYPE_RESISTANCE_FIELD[damageType];
-  return field ? (ap[field] as number | undefined) ?? 0 : 0;
+  return field ? ((ap[field] as number | undefined) ?? 0) : 0;
 }
 
 export function partArmorReduction(
