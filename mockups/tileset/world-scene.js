@@ -15,6 +15,8 @@ const SCENES = (() => {
   function ofItem(item, season) {
     const k = RULES.classify(item);
     if (k.pile) return ruled(5, 2, stages(item, k.pile), { pawns: [[3.8, 1]], season });
+    const own = WORLD_GEAR.of(item);
+    if (own && own.stages) return ruled(own.stages.length + 2, 2, own.stages.map((quantity, i) => drop(item, quantity, i, 1)), { pawns: [[own.stages.length + .8, 1]], season });
     if (k.long) return ruled(5, 4, [drop(item, 1, 1, 1), drop(item, 1, 1, 3)], { walled: (x, y) => y === 0, pawns: [[3.2, 2]], season });
     return ruled(4, 2, [drop(item, 1, 1, 1)], { pawns: [[2.6, 1]], season });
   }

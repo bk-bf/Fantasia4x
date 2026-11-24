@@ -51,13 +51,21 @@
     return framed(made.img, +state.zoom, state.labels === 'on' ? made.labels : []);
   }
 
+  const ownedAs = (...kinds) => [...items.values()].filter(o => { const own = WORLD_GEAR.of(o); return own && kinds.includes(own.kind); }).map(o => o.id);
+  function bundles(state, ids) {
+    const drops = ids.flatMap((id, i) => WORLD_GEAR.of(items.get(id)).stages.map((quantity, j) => drop(id, quantity, 1 + i, 1 + j)));
+    const made = ruled(ids.length + 3, 6, drops, { pawns: [[ids.length + 1.4, 2]] });
+    return framed(made.img, +state.zoom, state.labels === 'on' ? made.labels : []);
+  }
+
   const titled = (title, note) => { const h = el('h2', '', title); if (note) h.append(el('small', '', note)); return h; };
   function render(state) {
     document.getElementById('seed').textContent = seedNow();
     sheet.textContent = '';
     sheet.append(...yard(state),
       titled('Props by storage class', 'a drop is drawn as its class, three fill stages by quantity, tinted by the item'), classes(state),
-      titled('Weapons, tools and gear', 'top row beside a wall, lower rows in open grass'), loose(state, WORLD_ITEMS.ids()), loose(state, [...TOOLS, ...WORN]));
+      titled('Weapons, tools and gear', 'top row beside a wall, lower rows in open grass'), loose(state, WORLD_ITEMS.ids()), loose(state, [...TOOLS, ...WORN]),
+      loose(state, ownedAs('pack', 'belt', 'quiver')), loose(state, ownedAs('vessel', 'hauler', 'organ')), bundles(state, ownedAs('ammo')));
   }
 
   const ui = F4X.bar(state => render(state));

@@ -56,6 +56,12 @@ const RULES = (() => {
   const jit = (d, seed, salt, span) => Math.round((hash(d.x * 7 + salt, d.y * 13, seed) - .5) * span);
   const coin = (d, seed, salt) => hash(d.x * 5 + salt, d.y * 11, seed) > .5;
   const tuck = (env, d, spr, seed, lush) => { const g = env.grass(d.x, d.y); return g ? PROPS.tucked(spr, g, seed + d.x * 31 + d.y, lush) : spr; };
+  const shade = (x, y) => { const s = new Spr(1, 1, 0, 0); s.sh = { rx: 2.4, ry: 1.15, dx: 0, dy: 0, k: .95 }; return { spr: s, x, y, labels: [] }; };
+  const contact = (spr, x, y) => PROPS.undersides(spr).filter(([cx], i, all) => i % 2 === 0 || i === all.length - 1).map(([cx, cy]) => shade(x + cx - spr.ax, y + cy + 1 - spr.ay));
+  function lying(env, d, spr, seed, x, y, rule) {
+    const g = env.grass(d.x, d.y), rx = Math.round(x), ry = Math.round(y);
+    return { spr: g ? PROPS.bedded(spr, g, seed + d.x * 31 + d.y) : spr, x: rx, y: ry, rule, shadows: contact(spr, rx, ry) };
+  }
   const label = d => ({ x: d.x * TILE + 16, y: d.y * TILE + 29 + (d.x % 2) * 7, text: d.item.name + (d.quantity > 1 ? ' x' + d.quantity : '') });
 
   function pilePlace(env, run, k, seed) {
@@ -83,8 +89,8 @@ const RULES = (() => {
     if (env.wall(d.x - 1, d.y)) return { spr: PROPS.long(k.long, 'lean', false, d.item.id), x: d.x * TILE + 4, y: d.y * TILE + 22 + jit(d, seed, 5, 8), rule: 'leans on the wall' };
     if (env.wall(d.x + 1, d.y)) return { spr: PROPS.long(k.long, 'lean', true, d.item.id), x: d.x * TILE + 28, y: d.y * TILE + 22 + jit(d, seed, 5, 8), rule: 'leans on the wall' };
     const east = env.field(d.x + 1, d.y), west = env.field(d.x - 1, d.y);
-    if (k.long === 'hoe' && (east || west)) return { spr: tuck(env, d, PROPS.long('hoe', 'lie', !east), seed, false), x: d.x * TILE + (east ? 31 - L / 2 : 1 + L / 2), y: d.y * TILE + 24, rule: 'laid at the field edge' };
-    return { spr: tuck(env, d, PROPS.long(k.long, 'lie', coin(d, seed, 6), d.item.id), seed, false), x: d.x * TILE + 16 + jit(d, seed, 7, 8), y: d.y * TILE + 22 + jit(d, seed, 8, 8), rule: 'lies in the grass' };
+    if (k.long === 'hoe' && (east || west)) return lying(env, d, PROPS.long('hoe', 'lie', !east), seed, d.x * TILE + (east ? 31 - L / 2 : 1 + L / 2), d.y * TILE + 24, 'laid at the field edge');
+    return lying(env, d, PROPS.long(k.long, 'lie', coin(d, seed, 6), d.item.id), seed, d.x * TILE + 16 + jit(d, seed, 7, 8), d.y * TILE + 22 + jit(d, seed, 8, 8), env.grass(d.x, d.y) ? 'lies in the grass' : 'lies on the ground');
   }
   const TUCKS = { lush: (env, d, spr, seed) => tuck(env, d, spr, seed, true), low: (env, d, spr, seed) => tuck(env, d, spr, seed, false), none: (env, d, spr) => spr };
   const tuckOf = (k, up) => up ? 'none' : k.tuck || (k.worn === 'pack' ? 'low' : 'lush');
@@ -96,11 +102,12 @@ const RULES = (() => {
   }
   function wornPlace(env, d, k, seed, piles) {
     const ramps = rampsFor(k, d.item), wall = env.wall(d.x, d.y - 1), up = shieldRest(env, d, k, piles);
-    const spr = PROPS.worn(up ? 'shieldUp' : k.worn, ramps, !k.own && (up ? !!up.flip : coin(d, seed, 9)), d.item);
+    const spr = PROPS.worn(up ? 'shieldUp' : k.worn, ramps, !k.own && (up ? !!up.flip : coin(d, seed, 9)), d.item, d.quantity);
     if (up && up.x !== undefined) return { spr, x: up.x, y: up.y, rule: up.rule };
     return { spr: TUCKS[tuckOf(k, up)](env, d, spr, seed), x: d.x * TILE + 16 + jit(d, seed, 10, 10), y: d.y * TILE + (wall ? 8 : env.wall(d.x, d.y + 1) ? 14 : 23 + jit(d, seed, 11, 6)), rule: up ? up.rule : wall ? 'against wall' : 'sits on the ground' };
   }
 
+  const placed = (p, dx, dy, labels) => [...(p.shadows || []).map(q => ({ ...q, x: q.x + dx, y: q.y + dy })), { spr: p.spr, x: Math.round(p.x) + dx, y: Math.round(p.y) + dy, rule: p.rule, labels }];
   function plan(env, drops, seed) {
     const at = new Map(drops.map(d => [d.x + ',' + d.y, d])), kind = new Map(drops.map(d => [d, classify(d.item)]));
     const sorted = drops.slice().sort((a, b) => a.y - b.y || a.x - b.x), done = new Set(), out = [], piles = [];
@@ -118,8 +125,8 @@ const RULES = (() => {
       const k = kind.get(d);
       if (done.has(d)) continue;
       const p = k.long ? longPlace(env, d, k, seed, piles) : wornPlace(env, d, k, seed, piles);
-      out.push({ ...p, x: Math.round(p.x), y: Math.round(p.y), labels: [label(d)] });
-      for (let i = 1; i < Math.min(3, d.quantity) && k.long; i++) out.push({ ...p, x: Math.round(p.x) + i * 5, y: Math.round(p.y) + (i & 1), labels: [] });
+      out.push(...placed(p, 0, 0, [label(d)]));
+      for (let i = 1; i < Math.min(3, d.quantity) && k.long; i++) out.push(...placed(p, i * 5, i & 1, []));
     }
     return out;
   }

@@ -57,8 +57,8 @@ const WORLD_GEAR = (() => {
     return FOUND.get(item.id);
   }
 
-  function sprite(def, pose) {
-    const sk = PX.outline((def[pose] || def.ground)()), b = PX.bounds(sk), s = new Spr(W, H, CX, B);
+  function sprite(def, pose, quantity) {
+    const sk = PX.outline((def[pose] || def.ground)(quantity)), b = PX.bounds(sk), s = new Spr(W, H, CX, B);
     const dx = CX - b.x - (b.w >> 1), dy = B - b.y - b.h + 1;
     for (const cell of sk.values()) s.set(cell.x + dx, cell.y + dy, cell.rgb);
     s.sh = { rx: b.w / 2 + 1, ry: pose === 'lean' ? 2 : Math.min(3, 1.2 + b.w / 10), dx: 2, dy: 0, k: .8 };
