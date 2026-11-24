@@ -43,3 +43,11 @@ const UNLISTED_LEVEL = 5;
 export function groundLayer(subType: string): GroundLayer {
   return WATER[subType] ?? { level: LAND[subType] ?? UNLISTED_LEVEL, water: 0 };
 }
+
+const STILL_WATER: Record<string, number> = {
+  bog: 1
+};
+
+export function stillWater(subType: string): number {
+  return STILL_WATER[subType] ?? 0;
+}

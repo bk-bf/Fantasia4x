@@ -573,6 +573,56 @@ vec3 darken(vec3 c, float k) {
     return vec3(c.r * k, c.g * k, min(1.0, c.b * (k + 0.1)));
 }
 
+const int STILL_STEP = 2;
+const float STILL_DRIFT[4] = float[4](0.0, 0.6, 1.4, 2.8);
+const float STILL_RUFFLE[4] = float[4](0.0, 0.25, 0.45, 0.7);
+const float STILL_PAW[4] = float[4](0.0, 0.5, 0.9, 1.4);
+const float STILL_PAW_PACE[4] = float[4](0.0, 1.2, 2.5, 4.5);
+const float STILL_LAP[4] = float[4](0.0, 0.25, 0.45, 0.7);
+const float STILL_COVER = 0.46;
+const float STILL_AFLOAT = 0.12;
+const float STILL_DARK = 0.7;
+const float STILL_DEEP = 0.5;
+const float STILL_SWASH = 1.6;
+const float STILL_WET = 1.6;
+const float STILL_WET_DARK = 0.82;
+const float STILL_LINE = 0.9;
+const float STILL_LINE_MIX = 0.34;
+const float STILL_SHOAL = 7.0;
+const float STILL_HUMMOCK = 0.32;
+const float STILL_UNIT = 2.0;
+const vec3 STILL_TINT = vec3(0.9, 1.0, 0.66);
+
+bool afloatAt(vec3 patchColour, bool piece) {
+    return piece || (patchColour.g > 0.37 && patchColour.g > patchColour.r * 1.15);
+}
+
+vec3 stillWater(vec3 ground, bool afloat, vec2 w, vec2 p) {
+    int step = STILL_STEP;
+    int shift = u_waterBlock;
+    ivec2 cell = ivec2(p) >> shift;
+    vec2 s = w + 0.5;
+    vec2 at = s / u_tileArt / vec2(u_mapSize);
+    float reach = (texture(u_ice, at).g * 255.0 / DIST_STEPS - 0.5) * u_tileArt / STILL_UNIT;
+    vec2 q = s / STILL_UNIT;
+    float t = u_sea[SEA_SURGE].z;
+    vec2 dir = u_sea[SEA_WIND].xy;
+    float hummock = (wn(q * 0.045, 65) - STILL_HUMMOCK) * 40.0;
+    float lap = sin(t * 0.55 + wn(q * 0.05, 64) * TAU) * STILL_LAP[step];
+    float into = min(reach, hummock) - STILL_SWASH * (0.6 + 0.8 * wn(q * 0.2, 55)) - lap;
+    if (into < 0.0) return into > -STILL_WET && !afloat ? darken(ground, STILL_WET_DARK) : ground;
+    ivec2 art = (cell << shift) + ((1 << shift) >> 1);
+    float drift = t * STILL_DRIFT[step];
+    vec4 grain = vec4(dir * drift, dir * drift * 0.6);
+    float paw = smoothstep(0.58, 0.82, wn((q - dir * t * STILL_PAW_PACE[step]) * 0.04, 66));
+    float tone = grainAt(art, grain, STILL_RUFFLE[step] * (0.5 + paw)) - STILL_DARK + paw * STILL_PAW[step];
+    int tier = rampStep(tone, cell);
+    vec3 film = mix(SHALLOWS[tier], DEEP[min(tier + 1, 5)], STILL_DEEP) * STILL_TINT;
+    if (into < STILL_LINE && !afloat && hash(cell.x >> 1, cell.y, 17) > 0.45) film = mix(film, FOAM[0], STILL_LINE_MIX);
+    float cover = STILL_COVER * (0.55 + 0.45 * smoothstep(0.0, STILL_SHOAL, into));
+    return mix(ground, film, afloat ? cover * STILL_AFLOAT : cover);
+}
+
 ivec4 fieldAt(ivec2 q) {
     if (u_artPerPx >= FAR_ART_PER_PX) {
         ivec2 size = textureSize(u_groundFar, 0);
@@ -657,7 +707,9 @@ void main() {
         if (patchRect.z > 0.5)
             c = texelFetch(u_paintAtlas, ivec2(patchRect.xy) + ivec2(mod(p, patchRect.z)), 0).rgb;
         else c = fieldGround(q, block, here.g);
+        vec3 bare = c;
         if (field) c = fieldPiece(here, block, c);
+        if (patchRect.w > 0.5) c = stillWater(c, afloatAt(bare, c != bare), w, p);
         uint up = kindAt(w - vec2(0.0, LIP_REACH));
         uint down = kindAt(w + vec2(0.0, LIP_REACH));
         vec2 upLayer = up == 0u ? layer.xy : u_layer[up].xy;
