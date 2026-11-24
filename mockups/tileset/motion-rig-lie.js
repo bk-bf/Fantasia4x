@@ -90,7 +90,7 @@ function rigPawnLie(o, p) {
   if (out) rigLimb(s, flopped, aw, limp(lieLength(flopped)), shade);
   s.outline();
   s.sh = out ? { rx: (L >> 1) + 5, ry: 4, dx: 0, dy: 1 } : { rx: (L >> 1) + 3, ry: 3.6, dx: 2, dy: 0 };
-  s.pts = { head: [x0 + (f.hh >> 1), hTop - 9], mouth: [x0 + f.hh, hTop + 3], body: [tx0 + (f.tl >> 1), top], feet: [] };
+  s.pts = { head: [x0 + (f.hh >> 1), hTop - 9], mouth: [x0 + f.hh, hTop + 3], body: [tx0 + (f.tl >> 1), top], feet: [], lie: [x0, hTop, top, gy, out ? ex : x0, out ? cy : hTop] };
   if (out) s.pts.daze = [x0 + (f.hh >> 1), hTop - 10];
   return s;
 }

@@ -231,8 +231,9 @@ function drawLook(look, face, time, act, gear) {
   const { o, skin, hair } = lookRig(look), idle = idlePose(look, time);
   if (act) {
     const pose = { ...idle, br: act.br ? 1 : 0, blink: !!act.blink }, rig = { ...o, ...(gear || {}) };
-    const s = act.lie ? rigPawnLie(rig, act) : rigPawn(rig, act);
-    paintLook(s, look, skin, hair, act.lie ? 's' : act.face || 's', pose);
+    if (act.lie) { const s = rigPawnLie(rig, act); paintLookLying(s, look, skin, hair, { ...pose, rest: !!act.rest }); return s; }
+    const s = rigPawn(rig, act);
+    paintLook(s, look, skin, hair, act.face || 's', pose);
     return s;
   }
   const s = rigPawn(o, { face: face || 'f', br: idle.br, blink: idle.blink, look: idle.glance, hair: idle.wave() * 1.2, cape: idle.wave(.2) * 1.5 });

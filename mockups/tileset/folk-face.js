@@ -15,12 +15,12 @@ function lookGeometry(look, face, pose, pts) {
   return { ...b, cx, base, legTop, tTop, sTop, hTop, X, er, F: X + b.hd, face, pose, lean, lx };
 }
 
-function canvasPen(s, behind, shift) {
-  const at = (x, y) => y * s.w + x, sx = shift || (() => 0);
+function canvasPen(s, behind, shift, place) {
+  const at = (x, y) => y * s.w + x, to = place || (shift ? (x, y) => [x + shift(y), y] : (x, y) => [x, y]);
   const pen = {
-    ok: (x, y) => s.ok(x + sx(y), y),
-    get: (x, y) => (pen.ok(x, y) ? s.c[at(x + sx(y), y)] : null),
-    put: (x, y, c, e) => { x += sx(y); if (s.ok(x, y) && !(behind && behind[at(x, y)])) { s.c[at(x, y)] = c; s.e[at(x, y)] = e || 0; } },
+    ok: (x, y) => s.ok(...to(x, y)),
+    get: (x, y) => { const [X, Y] = to(x, y); return s.ok(X, Y) ? s.c[at(X, Y)] : null; },
+    put: (x, y, c, e) => { [x, y] = to(x, y); if (s.ok(x, y) && !(behind && behind[at(x, y)])) { s.c[at(x, y)] = c; s.e[at(x, y)] = e || 0; } },
     under: (x, y, c, e) => { if (pen.ok(x, y) && !pen.get(x, y)) pen.put(x, y, c, e); },
     rect: (x, y, w, h, c, e) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) pen.put(x + i, y + j, c, e); },
     line: (x0, y0, x1, y1, c, e, behind) => {

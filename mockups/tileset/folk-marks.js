@@ -5,6 +5,7 @@ function paintLook(s, look, skin, hair, face, pose) {
   paintBuild(body, g, look);
   paintWomanFace(head, g, look, skin);
   paintSkin(pen, g, look, skin, hair);
+  paintRuff(pen, g, look);
   paintFaceMarks(head, g, look, skin);
   paintEyes(head, g, look, skin);
   paintHair(head, g, look, hair, skin);
@@ -12,6 +13,22 @@ function paintLook(s, look, skin, hair, face, pose) {
   paintEyewear(head, g, look, skin);
   paintHead(head, g, look, skin, hair);
   paintLimbs(pen, g, look, skin, s);
+  paintBack(body, g, look, skin, hair);
+}
+
+function paintLookLying(s, look, skin, hair, pose) {
+  const [x0, hTop, top, gy, ex, cy] = s.pts.lie, out = ex !== x0, g = lookGeometry(look, out ? 'f' : 's', pose), mid = Math.round((top + gy) / 2);
+  const head = canvasPen(s, null, null, out ? (x, y) => [ex + y - g.er, cy + x - g.X] : (x, y) => [x0 + y - g.hTop, hTop + g.X + g.hd - 1 - x]);
+  const body = canvasPen(s, null, null, out ? (x, y) => [x0 + y - g.hTop, mid + x - g.cx] : (x, y) => [x0 + y - g.hTop, mid + g.cx - x]);
+  if (!pose.rest) paintSkirt(body, g, look, DYES[look.garb]);
+  paintWomanFace(head, g, look, skin);
+  paintSkin(canvasPen(s), g, look, skin, hair);
+  paintRuff(head, g, look);
+  paintFaceMarks(head, g, look, skin);
+  paintHair(head, g, look, hair, skin);
+  paintBeard(head, g, look, hair, skin);
+  paintEyewear(head, g, look, skin);
+  paintHead(head, g, look, skin, hair);
   paintBack(body, g, look, skin, hair);
 }
 
@@ -39,7 +56,6 @@ function paintSkin(pen, g, look, skin, hair) {
   });
   if (m.ironSkin) each((x, y, i) => { if ((x - X) % 4 === 0 && !faceCore(x, y)) pen.put(x, y, skin[0]); else if ((x - X) % 4 === 1 && y % 3 === 0) pen.put(x, y, skin[sn], 90); if (sheen(x, y, 5, 60)) pen.put(x, y, P.iron[6], 120); });
   if (m.feathers >= 3) each((x, y) => { if (!faceCore(x, y) && hash(x, y, 5) > .5) pen.put(x, y, P.furWhite[hash(x, y, 9) > .5 ? 4 : 3]); });
-  if (m.feathers) for (let x = X - hd - 1; x < X + hd + 1; x++) for (let k = 0; k < 2; k++) if (hash(x, k, 31) > .35) pen.under(x, g.sTop - 1 + k - (pose.wave(.25) > .7 && !k ? 1 : 0), P.furWhite[3 + (k ? 0 : 1)]);
   if (m.fur) each((x, y) => { if (!faceCore(x, y) || hash(x, y, 3) > .75) pen.put(x, y, hair[clamp(hair.length - 2 - (hash(x, y, 4) > .5 ? 1 : 0), 0, hair.length - 1)]); });
   if (m.slick) each((x, y) => { if (hash(x, y, 7) > (m.slick >= 3 ? .8 : .9) || (sheen(x, y * 2, 4, 48) && !faceCore(x, y))) pen.put(x, y, skin[sn], 40); });
   if (m.leafSkin) {
@@ -53,6 +69,11 @@ function paintSkin(pen, g, look, skin, hair) {
   if (m.emberSkin === 1) each((x, y, i) => { if (hash(x, y, 2) > .8) pen.put(x, y, skin[Math.max(0, i - 2)]); else if (hash(x, y, 8 + pose.i) > .985) pen.put(x, y, P.ember[4], 160); });
   if (m.emberSkin === 2) each((x, y) => { if (hash(x, y, 2 + (pose.i >> 1)) > .9) pen.put(x, y, P.ember[5], 200); });
   if (m.emberSkin >= 3) { const hot = pose.wave() > 0 ? P.gold[4] : P.ember[5]; each((x, y) => { if (((x * 2 + y) % 7 === 0 || hash(x, y, 2 + (pose.i >> 1)) > .93) && !faceCore(x, y)) pen.put(x, y, hot, 230); }); }
+}
+
+function paintRuff(pen, g, look) {
+  const { X, hd, pose } = g;
+  if (look.marks.feathers) for (let x = X - hd - 1; x < X + hd + 1; x++) for (let k = 0; k < 2; k++) if (hash(x, k, 31) > .35) pen.under(x, g.sTop - 1 + k - (pose.wave(.25) > .7 && !k ? 1 : 0), P.furWhite[3 + (k ? 0 : 1)]);
 }
 
 function paintFaceMarks(pen, g, look, skin) {
