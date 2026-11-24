@@ -264,9 +264,7 @@ describe('rock veins: where ore shows in the rock top', () => {
   const channel = (c: number) => veins.filter((_, i) => i % 4 === c);
 
   it('names its codes as the fragment shader reads them', () => {
-    const glsl = ['fragment.glsl', 'rockSurface.glsl']
-      .map((f) => readFileSync(join(__dirname, '../../lib/webgl/shaders', f), 'utf8'))
-      .join('\n');
+    const glsl = readFileSync(join(__dirname, '../../lib/webgl/shaders/fragment.glsl'), 'utf8');
     for (const [type, name, value] of [
       ['int', 'VEIN_EDGE', VEIN.edge],
       ['int', 'VEIN_TILE', TILE],
