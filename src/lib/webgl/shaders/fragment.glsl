@@ -150,6 +150,7 @@ void main() {
         ? texelFetch(u_lightTexture, ivec2(gl_FragCoord.xy), 0).rgb * 2.0
         : min(u_ambient + v_light * u_lightFlicker, vec3(1.6));
 
+#ifdef PAINTED
     if (u_shadowPass > 0.5) {
         highp vec2 leaned = swayed(v_texCoord);
         if (v_uvBounds.x < 2.0 || offSprite(leaned) || texture(u_lightAtlas, paintedUv(leaned)).g < 0.5) discard;
@@ -157,6 +158,7 @@ void main() {
         fragColor = vec4(u_shade, 1.0);
         return;
     }
+#endif
 
     // Background-only pass (snow/ice WASH beneath the resource glyphs): emit just the per-cell wash at
     // its own alpha, no glyph — so grass/tree/wall glyphs drawn on top stay visible instead of being
@@ -166,8 +168,9 @@ void main() {
         return;
     }
 
-    bool painted = v_uvBounds.x >= 2.0;
     vec4 sprite;
+#ifdef PAINTED
+    bool painted = v_uvBounds.x >= 2.0;
     if (painted) {
         highp vec2 leaned = swayed(v_texCoord);
         bool off = offSprite(leaned);
@@ -195,6 +198,10 @@ void main() {
     } else {
         sprite = texture(u_fontAtlas, v_texCoord);
     }
+#else
+    const bool painted = false;
+    sprite = texture(u_fontAtlas, v_texCoord);
+#endif
 
     // Outline: if this tile has an outline color and the current fragment is
     // in the background (alpha < 0.5) but a cardinal neighbour is inside the

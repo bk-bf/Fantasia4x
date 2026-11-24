@@ -405,7 +405,7 @@ export class WebGLRendererCore {
 
       const gl = await this.webglState.initialize({ depth: this.rowDepth });
 
-      this.shaderManager = await createTileRendererShaders(gl, this.debug);
+      this.shaderManager = await createTileRendererShaders(gl, this.debug, PAINTED_TILES);
       if (!this.shaderManager) throw new Error('Shader init failed');
 
       try {
