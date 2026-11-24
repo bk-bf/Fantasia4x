@@ -1,29 +1,60 @@
 'use strict';
 (async () => {
   const sheet = document.getElementById('sheet');
+  let ready = false;
+  const ui = F4X.bar(st => { if (ready) render(st); });
   const data = await (await fetch('folk-data.json')).json();
   const name = id => data.traitNames[id];
   const cultures = data.cultures.map(c => {
     const pref = culturePreference(c);
     return { ...c, pref, phrase: colouringPhrase(pref), pawns: c.pawns.map(p => ({ ...p, look: pawnLookOf(p, pref, data.traitRarity) })) };
   });
-  let CROP = null;
+  const FRAMES = 12, FRAMES_PER_SECOND = 6;
+  let CROP = null, living = [], beat = 0;
+  const inView = new IntersectionObserver(seen => { for (const e of seen) e.target.figure.shown = e.isIntersecting; }, { root: sheet, rootMargin: '120px' });
+
   function cropFor(pawns, face) {
     let x0 = RG.W, y0 = RG.H, x1 = 0, y1 = 0;
     for (const p of pawns) {
       const s = drawLook(p.look, face);
       for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) if (s.c[y * s.w + x]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
     }
-    return { x: x0 - 2, y: y0 - 2, w: x1 - x0 + 5, h: y1 - y0 + 5 };
+    const headroom = pawns.some(p => p.look.marks.emberSkin >= 2) ? 12 : 4;
+    return { x: x0 - 4, y: y0 - headroom, w: x1 - x0 + 9, h: y1 - y0 + headroom + 3 };
+  }
+
+  function sprImage(s, crop) {
+    const im = new ImageData(crop.w, crop.h);
+    for (let y = 0; y < crop.h; y++) for (let x = 0; x < crop.w; x++) {
+      const c = s.ok(crop.x + x, crop.y + y) ? s.c[(crop.y + y) * s.w + crop.x + x] : null;
+      if (!c) continue;
+      const d = (y * crop.w + x) * 4;
+      im.data[d] = c[0]; im.data[d + 1] = c[1]; im.data[d + 2] = c[2]; im.data[d + 3] = 255;
+    }
+    return im;
   }
 
   function figure(p, st, scale) {
-    const s = drawLook(p.look, st.face), src = s.canvas(1), cv = document.createElement('canvas');
-    cv.width = CROP.w; cv.height = CROP.h;
-    cv.getContext('2d').drawImage(src, CROP.x, CROP.y, CROP.w, CROP.h, 0, 0, CROP.w, CROP.h);
-    cv.style.width = CROP.w * scale + 'px'; cv.style.height = CROP.h * scale + 'px';
+    const cv = document.createElement('canvas'), crop = CROP;
+    cv.width = crop.w; cv.height = crop.h;
+    cv.style.width = crop.w * scale + 'px'; cv.style.height = crop.h * scale + 'px';
+    const fig = { look: p.look, face: st.face, crop, ctx: cv.getContext('2d'), frames: new Array(FRAMES), shown: false };
+    fig.ctx.putImageData(sprImage(drawLook(p.look, st.face), crop), 0, 0);
+    cv.figure = fig;
+    living.push(fig);
+    inView.observe(cv);
     return cv;
   }
+
+  setInterval(() => {
+    if (ui.state.alive !== '1') return;
+    const i = ++beat % FRAMES;
+    for (const fig of living) {
+      if (!fig.shown) continue;
+      fig.frames[i] ||= sprImage(drawLook(fig.look, fig.face, { i, n: FRAMES }), fig.crop);
+      fig.ctx.putImageData(fig.frames[i], 0, 0);
+    }
+  }, 1000 / FRAMES_PER_SECOND);
 
   function card(p, st) {
     const fig = document.createElement('figure');
@@ -37,6 +68,8 @@
   }
 
   function render(st) {
+    inView.disconnect();
+    living = [];
     sheet.replaceChildren();
     const note = document.createElement('p');
     note.className = 'note';
@@ -89,6 +122,7 @@
     sheet.append(sec);
   }
 
-  const ui = F4X.bar(st => render(st));
-  render(ui.state);
+  ready = true;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches && !new URLSearchParams(location.search).has('alive')) ui.set('alive', '0');
+  else render(ui.state);
 })();

@@ -1,8 +1,16 @@
 'use strict';
-function lookGeometry(look, face) {
-  const b = look.body, cx = RG.CX, base = RG.BASE, legTop = base - b.legs + 1, tTop = legTop - b.tl, hTop = tTop - b.hh;
+const TURN = Math.PI * 2;
+const STILL = { i: 0, n: 1, u: 0, br: 0, blink: false, glance: 0, still: true, wave: () => 0 };
+function idlePose(look, time) {
+  if (!time) return STILL;
+  const n = time.n, i = (time.i + seedOf(look.id + ':phase')) % n, u = i / n;
+  return { i, n, u, br: u >= .45 && u < .8 ? 1 : 0, blink: i === n - 2, glance: i === 3 || i === 4 ? (seedOf(look.id + ':glance') & 1 ? 1 : -1) : 0, still: false, wave: shift => Math.sin((u + (shift || 0)) * TURN) };
+}
+
+function lookGeometry(look, face, pose) {
+  const b = look.body, cx = RG.CX, base = RG.BASE, legTop = base - b.legs + 1, tTop = legTop - b.tl, sTop = tTop - pose.br, hTop = sTop - b.hh;
   const X = face === 's' ? cx + 1 : cx, er = hTop + Math.floor(b.hh * .5);
-  return { ...b, cx, base, legTop, tTop, hTop, X, er, F: X + b.hd, face };
+  return { ...b, cx, base, legTop, tTop, sTop, hTop, X, er, F: X + b.hd, face, pose };
 }
 
 function canvasPen(s) {
@@ -25,11 +33,12 @@ function paintEyes(pen, g, look, skin) {
   const m = look.marks, { X, er, F, face } = g, sn = skin.length - 1, brow = skin[Math.max(0, sn - 1)];
   if (face === 'b') return;
   const eyes = face === 's' ? [[F - 3, F - 2]] : [[X - 3, X - 2], [X + 1, X + 2]];
-  const recolour = (fn) => eyes.forEach(([a, b2], i) => fn(a, b2, i));
-  if (m.dragonEyes) recolour((a, b2) => { pen.put(a, er, P.gold[4], 200); pen.put(b2, er, P.gold[3], 200); });
+  const pose = g.pose, open = !pose.blink;
+  const recolour = (fn) => { if (open) eyes.forEach(([a, b2], i) => fn(a, b2, i)); };
+  if (m.dragonEyes) { const flare = pose.wave() > .3; recolour((a, b2) => { pen.put(a, er, flare ? P.ember[5] : P.gold[4], 200); pen.put(b2, er, flare ? P.gold[4] : P.gold[3], 200); }); }
   else if (m.beastEyes) recolour((a, b2) => { pen.put(a, er, P.gold[2]); pen.put(b2, er, P.gold[4]); });
-  else if (m.murkEyes) recolour((a, b2) => { pen.put(a, er, P.frost[4], 120); pen.put(b2, er, P.frost[5], 120); });
-  if (look.oddEye && face === 'f') pen.put(X + 1, er, EYES[look.oddEye].col);
+  else if (m.murkEyes) { const flip = (pose.i >> 1) & 1; recolour((a, b2) => { pen.put(a, er, P.frost[flip ? 5 : 4], 120); pen.put(b2, er, P.frost[flip ? 4 : 5], 120); }); }
+  if (look.oddEye && face === 'f' && open) pen.put(X + 1, er, EYES[look.oddEye].col);
   if (m.spiderEyes) {
     const bare = skin[Math.max(0, sn - 1)];
     const beads = face === 's'
@@ -38,8 +47,10 @@ function paintEyes(pen, g, look, skin) {
     const n = face === 's' ? m.spiderEyes : m.spiderEyes >= 4 ? 6 : m.spiderEyes >= 3 ? 4 : 2;
     for (let y = er - 3; y < er; y++) for (let x = (face === 's' ? F - 5 : X - 4); x < (face === 's' ? F : X + 4); x++) if (pen.get(x, y) && pen.get(x, y) !== P.ink) pen.put(x, y, bare);
     if (m.spiderEyes >= 3) recolour((a, b2) => { pen.put(a, er, P.ink); pen.put(b2, er, P.ink); pen.put(a, er - 1, P.ink); pen.put(b2, er - 1, P.ink); pen.put(a, er - 1, P.furWhite[4]); });
-    beads.slice(0, n).forEach(([x, y]) => pen.put(x, y, P.ink));
-    if (m.spiderEyes >= 4) beads.slice(0, n).forEach(([x, y]) => pen.put(x, y, P.red[1], 90));
+    beads.slice(0, n).forEach(([x, y], k) => {
+      const shut = !pose.still && pose.i === (k * 2 + 1) % pose.n;
+      pen.put(x, y, shut ? skin[Math.max(0, sn - 3)] : m.spiderEyes >= 4 ? P.red[1] : P.ink, shut ? 0 : 90);
+    });
   }
 }
 
@@ -67,18 +78,18 @@ function paintEyewear(pen, g, look) {
 function paintHair(pen, g, look, hair, skin) {
   const { X, er, hd, hh, hTop, tTop, face } = g, n = hair.length - 1, side = face === 's', back = face === 'b';
   const h = (k) => hair[clamp(n - 1 - k, 0, n)], tie = look.trim ? look.trim[3] : P.red[3];
-  const skinSet = new Set(skin), rear = side ? X - hd - 1 : X;
+  const skinSet = new Set(skin), rear = side ? X - hd - 1 : X, sway = Math.round(g.pose.wave(.1));
   switch (look.style) {
     case 'crop':
       for (let y = hTop; y < hTop + (back ? hh - 2 : 3); y++) for (let x = X - hd; x < X + hd; x++) if (skinSet.has(pen.get(x, y)) && !(y === hTop + 2 && !back && hash(x, y, 37) > .6)) pen.put(x, y, h(hash(x, y, 41) > .7 ? 1 : 2));
       break;
     case 'ponytail':
-      if (back) { for (let y = hTop + 3; y < hTop + hh + 6; y++) { const w = y > hTop + hh + 3 ? 1 : 2; for (let i = 0; i < w; i++) pen.put(X - 1 + i, y, h((y + i) % 3 === 0 ? 1 : 0)); } pen.rect(X - 1, hTop + hh - 1, 2, 1, tie); }
-      else if (side) { for (let y = hTop + 3; y < tTop + 4; y++) { pen.under(rear, y, h(y % 3 === 0 ? 1 : 0)); if (y < tTop) pen.under(rear - 1, y, h(1)); } pen.put(rear, hTop + hh - 2, tie); }
+      if (back) { for (let y = hTop + 3; y < hTop + hh + 6; y++) { const w = y > hTop + hh + 3 ? 1 : 2; for (let i = 0; i < w; i++) pen.put(X - 1 + i + (y > hTop + hh + 1 ? sway : 0), y, h((y + i) % 3 === 0 ? 1 : 0)); } pen.rect(X - 1, hTop + hh - 1, 2, 1, tie); }
+      else if (side) { for (let y = hTop + 3; y < tTop + 4; y++) { pen.under(rear - (y >= tTop && sway > 0 ? 1 : 0), y, h(y % 3 === 0 ? 1 : 0)); if (y < tTop) pen.under(rear - 1, y, h(1)); } pen.put(rear, hTop + hh - 2, tie); }
       break;
     case 'braids': {
       const cols = side ? [rear] : [X - hd - 1, X + hd];
-      for (const c of cols) { for (let y = er - 1; y < tTop + 6; y++) { pen.put(c, y, h(y & 1)); if (!back && !side) pen.under(c + (c < X ? -1 : 1), y, (y & 1) ? h(2) : null); } pen.put(c, tTop + 6, tie); }
+      for (const c of cols) { for (let y = er - 1; y < tTop + 6; y++) { pen.put(c + (y > tTop + 2 ? sway : 0), y, h(y & 1)); if (!back && !side) pen.under(c + (c < X ? -1 : 1), y, (y & 1) ? h(2) : null); } pen.put(c, tTop + 6, tie); }
       break;
     }
     case 'topknot': {

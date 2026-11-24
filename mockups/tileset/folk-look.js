@@ -31,7 +31,7 @@ const EYES = {
 };
 const GARB = {
   undyed: P.cloth, moss: P.green, madder: P.red, woad: P.blue, murex: P.purple,
-  hide: P.leather, soot: P.furDark, ochre: P.gold, fern: P.oak, rust: P.copper,
+  hide: P.leather, soot: P.furDark, ochre: P.gold.slice(0, 4), fern: P.oak, rust: P.copper.slice(0, 5),
 };
 const LEGWEAR = { hide: P.leather, soot: P.furDark, undyed: P.cloth, woad: P.blue, bark: P.furBrown };
 const TRIMS = [null, null, P.gold, P.red, P.blue, P.cloth];
@@ -140,14 +140,18 @@ function lookMarks(traits, rarity) {
   return { marks, from };
 }
 
+const TYPICAL_WEIGHT = { scale: Math.exp(-3.568), power: 1.571 };
+function buildOf(p) {
+  return p.weight / (TYPICAL_WEIGHT.scale * Math.pow(p.height, TYPICAL_WEIGHT.power));
+}
+
 function bodyOf(p) {
-  const k = p.height / 175, bmi = p.weight / Math.pow(p.height / 100, 2);
-  const total = clamp(Math.round(32 * k), 16, 56);
-  const hh = clamp(Math.round(10 * Math.pow(k, .45)), 7, 13);
-  const rest = total - hh, legs = clamp(Math.round(rest * .46), 4, 22), tl = Math.max(6, rest - legs);
-  const girth = Math.sqrt(bmi / 23);
-  const hw = clamp(Math.round(6 * girth * Math.pow(k, .6) - (p.sex === 'female' ? .6 : 0)), 3, 12);
-  const aw = clamp(Math.round(hw / 2), 2, 5), hd = clamp(Math.round(hh / 2), 4, 7);
+  const k = Math.pow(p.height / 175, .75), girth = clamp(Math.sqrt(buildOf(p)), .78, 1.3);
+  const total = clamp(Math.round(32 * k), 18, 48);
+  const hh = clamp(Math.round(total * (.31 + .05 * (1 - k))), 6, 13);
+  const rest = total - hh, legs = Math.max(5, Math.round(rest * .46)), tl = rest - legs;
+  const hw = clamp(Math.round(6 * k * girth - (p.sex === 'female' ? .4 : 0)), 3, 11);
+  const aw = clamp(Math.round(hw / 2), 2, 5), hd = clamp(Math.round(hh / 2), 3, 7);
   return { legs, tl, hw, aw, hh, hd };
 }
 
@@ -185,7 +189,7 @@ function skinOf(look) {
 }
 
 let LOOKS = 0;
-function drawLook(look, face) {
+function drawLook(look, face, time) {
   const key = 'look' + (++LOOKS), m = look.marks;
   const skin = skinOf(look), eye = m.dragonEyes ? P.gold[4] : m.beastEyes ? P.gold[3] : m.murkEyes ? P.frost[5] : EYES[look.eyes].col;
   FOLK[key] = { ...look.body, skin, eyes: eye, tusks: m.tusks ? 1 : 0, pointears: m.fur >= 3 || m.scales >= 4 ? 1 : 0 };
@@ -194,8 +198,9 @@ function drawLook(look, face) {
   if (look.trim) o.trim = look.trim;
   if (look.style === 'mohawk') o.mohawk = hair;
   if (look.beard === 'full' || look.beard === 'braided') o.beard = 1;
-  const s = rigPawn(o, { face: face || 'f' });
+  const pose = idlePose(look, time);
+  const s = rigPawn(o, { face: face || 'f', br: pose.br, blink: pose.blink, look: pose.glance, hair: pose.wave() * 1.2 });
   delete FOLK[key];
-  paintLook(s, look, skin, hair, face || 'f');
+  paintLook(s, look, skin, hair, face || 'f', pose);
   return s;
 }
