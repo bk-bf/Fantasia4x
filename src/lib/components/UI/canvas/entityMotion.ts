@@ -6,11 +6,10 @@ export type Body = 'pawn' | 'beast' | 'hopper';
 export type Gait = 'walk' | 'trot' | 'fast' | 'haul';
 export type Rest = 'stand' | 'sleep' | 'down';
 
-export type Look = Required<Pick<TileData, 'flip' | 'lean' | 'squash' | 'pitch'>>;
+export type Look = Required<Pick<TileData, 'flip' | 'lean' | 'squash' | 'pitch' | 'lift'>>;
 
 export interface Pose {
   dx: number;
-  dy: number;
   look: Look;
 }
 
@@ -26,7 +25,7 @@ export interface HitEvent {
   spawnTime: number;
 }
 
-interface Track extends Look {
+interface Track extends Omit<Look, 'lift'> {
   dx: number;
   dy: number;
   size: number;
@@ -214,7 +213,7 @@ export class EntityMotion {
     const k = (BASE_TILE_PX / ART_PER_TILE) * scale;
     const facing = !lying && t.flip;
     out.dx = ((facing ? FACING_SHIFT - t.dx : t.dx) || 0) * k;
-    out.dy = t.dy * k;
+    look.lift = t.dy * k;
     look.flip = facing;
     look.lean = lying ? 0 : t.lean;
     look.squash = t.squash;
@@ -246,8 +245,8 @@ export class EntityMotion {
   }
 }
 
-const look: Look = { flip: false, lean: 0, squash: 0, pitch: 0 };
-const out: Pose = { dx: 0, dy: 0, look };
+const look: Look = { flip: false, lean: 0, squash: 0, pitch: 0, lift: 0 };
+const out: Pose = { dx: 0, look };
 
 function face(t: Track, x: number, lungeX: number): void {
   if (Math.abs(lungeX) > LUNGE_FACE) {

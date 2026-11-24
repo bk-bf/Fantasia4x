@@ -982,7 +982,7 @@
         position: { x: cellX, y: cellY },
         animationOffset: {
           x: (rm.x - cellX) * BASE_TILE_PX + mLunge.x + mPose.dx,
-          y: (rm.y - cellY) * BASE_TILE_PX + mLunge.y + mPose.dy
+          y: (rm.y - cellY) * BASE_TILE_PX + mLunge.y
         },
         ...mPose.look
       });
@@ -1040,7 +1040,7 @@
         position: { x: cellX, y: cellY },
         animationOffset: {
           x: (rp.x - cellX) * BASE_TILE_PX + pLunge.x + pPose.dx,
-          y: (rp.y - cellY) * BASE_TILE_PX + pLunge.y + pPose.dy
+          y: (rp.y - cellY) * BASE_TILE_PX + pLunge.y
         },
         ...pPose.look,
         rotation: isSleeping || isCollapsed ? 90 : undefined,

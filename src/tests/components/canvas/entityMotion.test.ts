@@ -79,8 +79,8 @@ describe('step bob and lean', () => {
   it('bobs by whole art pixels locked to distance, not time', () => {
     const slow = walker(new EntityMotion(), 'a', 0, 2, 120);
     const fast = walker(new EntityMotion(), 'a', 0, 2, 40);
-    const bobsOf = (ps: Pose[]) => ps.filter((p, i) => i > 0 && p.dy !== ps[i - 1].dy).length;
-    for (const p of slow) expect([0, -ART]).toContain(p.dy);
+    const bobsOf = (ps: Pose[]) => ps.filter((p, i) => i > 0 && p.look.lift !== ps[i - 1].look.lift).length;
+    for (const p of slow) expect([0, -ART]).toContain(p.look.lift);
     expect(Math.abs(bobsOf(slow) - bobsOf(fast))).toBeLessThanOrEqual(2);
     expect(bobsOf(slow)).toBeGreaterThan(4);
   });
@@ -103,7 +103,7 @@ describe('step bob and lean', () => {
       m.begin(1000 + t, 1000 + t);
       p = m.pawn('a', 1.03, 5, 'Idle', 0);
     }
-    expect(p!.dy).toBe(0);
+    expect(p!.look.lift).toBe(0);
     expect(p!.look.lean).toBe(0);
   });
 
@@ -116,9 +116,9 @@ describe('step bob and lean', () => {
       hop.begin(f * FRAME, f * FRAME);
       beast.begin(f * FRAME, f * FRAME);
       const h = hop.mob('r', f * 0.05, 0, 'Wander', HOPPER, 0);
-      hopTop = Math.min(hopTop, h.dy);
+      hopTop = Math.min(hopTop, h.look.lift);
       const b = beast.mob('w', f * 0.05, 0, 'Wander', WOLF, 0);
-      beastTop = Math.min(beastTop, b.dy);
+      beastTop = Math.min(beastTop, b.look.lift);
       expect(b.look.lean).toBe(0);
     }
     expect(hopTop).toBe(-6 * ART);
@@ -132,7 +132,7 @@ function stepsOver(walk: (m: EntityMotion, x: number) => Pose): number {
   let steps = 0;
   for (let f = 0; f <= 400; f++) {
     m.begin(f * FRAME, f * FRAME);
-    const dy = walk(m, f * 0.02).dy;
+    const dy = walk(m, f * 0.02).look.lift;
     if (dy < 0 && last === 0) steps++;
     last = dy;
   }

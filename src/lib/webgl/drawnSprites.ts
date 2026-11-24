@@ -64,7 +64,7 @@ export function tileQuad(
   out: number[] | Float32Array
 ): void {
   const offsetX = tile.animationOffset?.x || 0;
-  const offsetY = tile.animationOffset?.y || 0;
+  const offsetY = (tile.animationOffset?.y || 0) + (tile.lift || 0);
   const scale = tile.scale && tile.scale > 0 ? tile.scale : 1;
   if (tile.painted) {
     const lying = tile.rotation === 90 || tile.rotation === 270;

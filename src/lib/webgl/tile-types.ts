@@ -34,6 +34,7 @@ export interface TileData {
   lean?: number;
   squash?: number;
   pitch?: number;
+  lift?: number;
   scale?: number;
   painted?: PaintedSprite;
   scenery?: boolean;

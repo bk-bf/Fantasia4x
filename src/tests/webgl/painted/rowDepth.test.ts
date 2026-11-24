@@ -131,6 +131,17 @@ describe('the row each quad carries for the depth test', () => {
     expect(Math.max(...ys)).toBe(7 * 16);
   });
 
+  it('raises a lifted figure without moving the row its feet stand on', () => {
+    const { r } = gridRenderer(true);
+    const still = r['generateBatchVertexData']([tiles[2]], options);
+    const lifted = r['generateBatchVertexData']([{ ...tiles[2], lift: -4 }], options);
+    for (let v = 0; v < 6; v++) {
+      const at = v * ROW_FLOATS;
+      expect(lifted[at + GLYPH_FLOATS]).toBe(still[at + GLYPH_FLOATS]);
+      expect(lifted[at + 1]).toBe(still[at + 1] - 4);
+    }
+  });
+
   it('writes the map row in a cached chunk, so the rows either side of a chunk edge stay in order', () => {
     const uploads: Float32Array[] = [];
     const { r } = gridRenderer(true, uploads);
