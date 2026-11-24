@@ -337,8 +337,9 @@
     renderer?.setLightVersion(lightingService.getEmittersVersion());
     renderer?.setLightBounds(lightingService.getLitBounds());
   }
-  $: {
-    buildings;
+  let _litBuildings: PlacedBuilding[] | null = null;
+  $: if (buildings !== _litBuildings) {
+    _litBuildings = buildings;
     refreshEmitters();
   }
 

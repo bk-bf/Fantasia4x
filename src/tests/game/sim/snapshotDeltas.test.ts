@@ -41,6 +41,8 @@ let live: () => GameState;
 let page: () => WorldTile[][];
 let handle: (m: unknown) => void;
 let tick: (n: number) => void;
+let shown: GameState[] = [];
+let commit: (f: (s: GameState) => GameState) => void;
 let oldPath: WorldTile[][];
 let marked: Set<number>;
 const W = 40;
@@ -102,7 +104,9 @@ beforeAll(async () => {
     handle: (m: unknown) => void;
     worldMap: WorldTile[][];
     paused: boolean;
+    onState: ((s: GameState) => void) | null;
   };
+  bridge.onState = (s) => shown.push(s);
   const state = buildScenario({
     seed: 23,
     map: { w: W, h: H },
@@ -128,6 +132,10 @@ beforeAll(async () => {
   posted.splice(0).forEach((m) => handle(structuredClone(m)));
   oldPath = structuredClone(bridge.worldMap);
   marked = new Set();
+  commit = (f) => {
+    gameEngine.applyCommand(f, false);
+    deliver();
+  };
   const engine = gameEngine as unknown as { lastFlushMs: number };
   tick = (n) => {
     for (let i = 0; i < n; i++) {
@@ -174,5 +182,19 @@ describe('snow and ice deltas sent as packed numbers', () => {
     queueSnowRenderTiles();
     expect(pendingSnowRenderChunks()).toBe(0);
     clearRenderTileDeltas();
+  });
+});
+
+describe('the buildings list the page lights from', () => {
+  it('keeps its identity across flushes until the worker changes it', () => {
+    shown = [];
+    tick(30);
+    expect(shown.length).toBe(30);
+    expect(new Set(shown.map((s) => s.buildings)).size).toBe(1);
+    commit((s) => ({ ...s, buildings: [...s.buildings] }));
+    tick(30);
+    const lists = shown.map((s) => s.buildings);
+    expect(new Set(lists).size).toBe(2);
+    expect(lists[lists.length - 1]).not.toBe(lists[0]);
   });
 });
