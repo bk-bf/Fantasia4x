@@ -1,14 +1,13 @@
 'use strict';
 (async () => {
-  const sheet = document.getElementById('sheet'), page = window.FOLK_PAGE || {}, draw = page.draw || drawLook;
+  const sheet = document.getElementById('sheet');
   let ready = false;
   const ui = F4X.bar(st => { if (ready) render(st); });
   const data = await (await fetch('folk-data.json')).json();
   const name = id => data.traitNames[id];
   const cultures = data.cultures.map(c => {
     const pref = culturePreference(c);
-    const dress = (p, look) => (page.tune ? page.tune(look, c, p) : look);
-    return { ...c, pref, phrase: colouringPhrase(pref), pawns: c.pawns.map(p => ({ ...p, look: dress(p, pawnLookOf(p, pref, data.traitRarity)) })) };
+    return { ...c, pref, phrase: colouringPhrase(pref), pawns: c.pawns.map(p => ({ ...p, look: pawnLookOf(p, pref, data.traitRarity) })) };
   });
   const FRAMES = 12, FRAMES_PER_SECOND = 6;
   let CROP = null, living = [], beat = 0;
@@ -17,7 +16,7 @@
   function cropFor(pawns, face) {
     let x0 = RG.W, y0 = RG.H, x1 = 0, y1 = 0;
     for (const p of pawns) {
-      const s = draw(p.look, face);
+      const s = drawLook(p.look, face);
       for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) if (s.c[y * s.w + x]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
     }
     const headroom = pawns.some(p => p.look.marks.emberSkin >= 2) ? 12 : 4;
@@ -40,7 +39,7 @@
     cv.width = crop.w; cv.height = crop.h;
     cv.style.width = crop.w * scale + 'px'; cv.style.height = crop.h * scale + 'px';
     const fig = { look: p.look, face: st.face, crop, ctx: cv.getContext('2d'), frames: new Array(FRAMES), shown: false };
-    fig.ctx.putImageData(sprImage(draw(p.look, st.face), crop), 0, 0);
+    fig.ctx.putImageData(sprImage(drawLook(p.look, st.face), crop), 0, 0);
     cv.figure = fig;
     living.push(fig);
     inView.observe(cv);
@@ -52,7 +51,7 @@
     const i = ++beat % FRAMES;
     for (const fig of living) {
       if (!fig.shown) continue;
-      fig.frames[i] ||= sprImage(draw(fig.look, fig.face, { i, n: FRAMES }), fig.crop);
+      fig.frames[i] ||= sprImage(drawLook(fig.look, fig.face, { i, n: FRAMES }), fig.crop);
       fig.ctx.putImageData(fig.frames[i], 0, 0);
     }
   }, 1000 / FRAMES_PER_SECOND);
@@ -75,7 +74,7 @@
     sheet.replaceChildren();
     const note = document.createElement('p');
     note.className = 'note';
-    note.textContent = page.note || 'Cultures and pawns from the game\u2019s own generator (seed 431). Colours, hair, beards and the culture\u2019s colouring line are rolled by this page. Dress is plain medieval wear in each culture\u2019s rolled dyes, standing in for worn gear and held items, which belong to the animation work. A mark\u2019s strength follows its trait\u2019s rarity.';
+    note.textContent = 'Cultures and pawns from the game\u2019s own generator (seed 431). Colours, hair, beards and the culture\u2019s colouring line are rolled by this page. Dress is plain medieval wear in each culture\u2019s rolled dyes, standing in for worn gear and held items, which belong to the animation work. A mark\u2019s strength follows its trait\u2019s rarity.';
     sheet.append(note);
     sizeSections(st);
     for (const c of cultures) {
@@ -89,7 +88,7 @@
       for (const p of c.pawns) row.append(st.lineup === '1' ? figure(p, st, +st.zoom) : card(p, st));
       sec.append(h, d, row);
       sheet.append(sec);
-      if (c === cultures[0] && page.premade !== false) premadeSection(st);
+      if (c === cultures[0]) premadeSection(st);
     }
     marksSection(st);
   }
@@ -122,7 +121,7 @@
   }
 
   function marksSection(st) {
-    const samples = MARKS.filter(m => !page.marks || page.marks.includes(m.id)).flatMap(m => m.traits.filter(t => data.traitRarity[t]).map(t => plainPawn('mark-' + t, name(t), { traits: [t], note: data.traitRarity[t] })));
+    const samples = MARKS.flatMap(m => m.traits.filter(t => data.traitRarity[t]).map(t => plainPawn('mark-' + t, name(t), { traits: [t], note: data.traitRarity[t] })));
     samples.sort((a, b) => MARKS.findIndex(m => m.traits.includes(a.traits[0])) - MARKS.findIndex(m => m.traits.includes(b.traits[0])) || RANK[a.note] - RANK[b.note]);
     samples.push(plainPawn('mark-blind', 'Both eyes lost', { blind: true, note: 'from a wound' }));
     cardRow('Every mark at every rarity it comes in, on one plain body', samples, st);
