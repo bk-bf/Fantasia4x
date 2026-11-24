@@ -6,7 +6,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Foraging',
     description: 'Gather berries, nuts, and edible plants from the wild',
     color: '#4CAF50',
-    boostTools: ['flint_knife', 'flint_sickle'],
+    boostTools: ['flint_knife'],
     primaryStat: 'perception',
     secondaryStat: 'constitution',
     baseEfficiency: 1.0
@@ -71,7 +71,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Planting',
     description: 'Sow seeds, tend crops, and manage farmland',
     color: '#66BB6A',
-    toolsRequired: ['flint_sickle', 'stone_hoe', 'iron_hoe', 'steel_hoe'],
+    toolsRequired: ['stone_hoe', 'iron_hoe', 'steel_hoe'],
     primaryStat: 'dexterity',
     secondaryStat: 'intelligence',
     baseEfficiency: 1.0

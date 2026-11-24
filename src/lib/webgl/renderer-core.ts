@@ -11,6 +11,7 @@ import { BASE_TILE_PX } from './tile-types.js';
 import { WORK_PINS } from '../workPins/flag.js';
 import { addFrameTotals } from '../workPins/page.js';
 import { GROUND_BLEND, PAINTED_LIGHT, PAINTED_TILES } from './painted/flag.js';
+import { passOn } from './passes.js';
 import { loadPaintedTileset, type LoadedPaintedTileset } from './painted/loader.js';
 import { GroundBlend, waterTime } from './painted/groundBlend.js';
 import { LIGHT_FIELD_UNIT, PaintedLightPass, type LightPassFrame } from './painted/lightPass.js';
@@ -44,6 +45,13 @@ export const ROW_DEPTH_RANGE = 8192;
 
 export const SPRITE_LAYERS = ['resource', 'building', 'item', 'entity', 'resourceTall'] as const;
 export type SpriteLayer = (typeof SPRITE_LAYERS)[number];
+const LAYER_PASS = {
+  resource: 'resources',
+  building: 'buildings',
+  item: 'items',
+  entity: 'creatures',
+  resourceTall: 'tall-resources'
+} as const satisfies Record<SpriteLayer, Parameters<typeof passOn>[0]>;
 const CHUNKED: Partial<Record<SpriteLayer, 'resource' | 'resourceTall'>> = {
   resource: 'resource',
   resourceTall: 'resourceTall'
@@ -554,20 +562,22 @@ export class WebGLRendererCore {
         lightFrame?.grade.saturation ?? 1,
         lightFrame?.grade.brightness ?? 1
       ]);
-    const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
-      tileWidth: BASE_TILE_PX,
-      tileHeight: BASE_TILE_PX,
-      viewportX: this.viewTileX,
-      viewportY: this.viewTileY,
-      viewportWidth: viewportTilesW,
-      viewportHeight: viewportTilesH,
-      lightSampler: this.lightSampler ?? undefined,
-      lightTime,
-      pointLightActive: this.dynamicLight,
-      lightVersion: this.lightVersion,
-      litBounds: this.lightBounds,
-      cacheVersion: this.gridVersion
-    });
+    const gridStats = passOn('terrain')
+      ? this.gridRenderer.renderGrid(this.gameGrid, {
+          tileWidth: BASE_TILE_PX,
+          tileHeight: BASE_TILE_PX,
+          viewportX: this.viewTileX,
+          viewportY: this.viewTileY,
+          viewportWidth: viewportTilesW,
+          viewportHeight: viewportTilesH,
+          lightSampler: this.lightSampler ?? undefined,
+          lightTime,
+          pointLightActive: this.dynamicLight,
+          lightVersion: this.lightVersion,
+          litBounds: this.lightBounds,
+          cacheVersion: this.gridVersion
+        })
+      : { tilesRendered: 0 };
     this.stats.terrainMs = performance.now() - tTerrain;
     this.stats.terrainRebuilds = this.gridRenderer.chunksRebuiltLastRender;
     this.stats.drawCalls++;
@@ -585,7 +595,7 @@ export class WebGLRendererCore {
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
       const tOverlay = performance.now();
-      if (this.snowGrid) {
+      if (this.snowGrid && passOn('snow')) {
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 1);
         this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime);
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 0);
@@ -597,6 +607,7 @@ export class WebGLRendererCore {
       }
       this.drawGroundRings();
       for (const layer of SPRITE_LAYERS) {
+        if (!passOn(LAYER_PASS[layer])) continue;
         const chunk = CHUNKED[layer];
         this.renderGlyphOverlay(
           this.spriteGrid(layer),
@@ -606,7 +617,7 @@ export class WebGLRendererCore {
           chunk !== undefined,
           chunk
         );
-        if (layer === 'resource' && this.snowGrid)
+        if (layer === 'resource' && this.snowGrid && passOn('snow'))
           this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
       }
       this.drawLeaves(windSecs, viewportTilesW, viewportTilesH, lightFrame);
@@ -875,7 +886,7 @@ export class WebGLRendererCore {
   }
 
   endFrame(): void {
-    this.render();
+    if (passOn('gl')) this.render();
     this.stats.frameTime = this.timer.end();
     this.stats.fps = this.timer.updateFPS();
     if (WORK_PINS) addFrameTotals(this.stats);

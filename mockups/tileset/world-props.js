@@ -295,7 +295,19 @@ const PROPS = (() => {
     if (t >= 33) return [P.iron, 6];
     return [P.iron, v === -2 ? 5 : v === -1 ? (t < 14 ? 4 : 6) : v === 0 ? 3 : 2];
   }
-  const AXE = TRIAL.AXE, AXE_TOP = 27.5;
+  const AXE_EDGE = [[17, 9.5], [19.5, 10.4], [22.5, 10.8], [25.5, 10.2], [27.5, 8.5]];
+  function axeEdgeAt(a) {
+    const found = AXE_EDGE.findIndex(p => p[0] >= a), i = Math.max(1, found < 0 ? AXE_EDGE.length - 1 : found), p = AXE_EDGE[i - 1], q = AXE_EDGE[i];
+    return p[1] + (q[1] - p[1]) * clamp((a - p[0]) / (q[0] - p[0]), 0, 1);
+  }
+  const AXE = {
+    steel: TK.ramp('#1e2430 #323c4c #4c5a6a #6e7e8c #96a6b0 #c2ced2 #eaf0ee'),
+    head: [[24.8, 1.4], ...AXE_EDGE.slice().reverse(), [19.4, 5.6], [21.4, 3], [21.8, 1.4]],
+    socket: [[21.2, -1.8], [25.4, -1.8], [25.4, 1.8], [21.2, 1.8]],
+    headTone(a, q) { const d = axeEdgeAt(a) - q; return d < 1.1 ? 6 : d < 2.5 ? 5 : q < 3.2 ? 2 : a > 23.6 ? 4 : 3; },
+    socketTone: q => q > .4 ? 4 : q > -.8 ? 3 : 1
+  };
+  const AXE_TOP = 27.5;
   function within(pts, a, q) {
     let hit = false;
     for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
@@ -372,10 +384,18 @@ const PROPS = (() => {
     s.sh = { rx: half + 2, ry: 4.6 + (Math.max(...stages) > 0 ? 1 : 0), dx: 16 * (n - 1) + 4, dy: 0, k: .9 };
     return s;
   }
-  function long(kind, pose, flip) {
-    const def = LONG[kind];
+  function itemSprite(id, pose) {
+    const made = WORLD_ITEMS.cells(id, pose), s = new Spr(48, HIGH, CX, B), lean = pose === 'lean';
+    const ys = made.cells.map(c => c.y), low = Math.max(...ys), foot = made.cells.filter(c => c.y === low).map(c => c.x), xs = made.cells.map(c => c.x);
+    const dx = lean ? CX + 4 - Math.round((Math.min(...foot) + Math.max(...foot)) / 2) : CX - Math.round((Math.min(...xs) + Math.max(...xs)) / 2);
+    for (const c of made.cells) s.set(c.x + dx, c.y + B - 1 - low, c.rgb);
+    return { s, L: made.L };
+  }
+  function long(kind, pose, flip, id) {
+    const own = id && WORLD_ITEMS.has(id) && itemSprite(id, pose), def = own || LONG[kind];
     let s;
-    if (def.cell) s = drawn(def, pose);
+    if (own) s = own.s;
+    else if (def.cell) s = drawn(def, pose);
     else {
       const [a, b] = POSES[pose](def.L, def.headUp), F = frame(a, b);
       s = new Spr(48, HIGH, CX, B);
@@ -383,15 +403,20 @@ const PROPS = (() => {
       s.outline();
       if (def.over) def.over(s, F);
     }
-    s.sh = pose === 'lie' ? { rx: def.L * .5, ry: 2.4, dx: 2, dy: 0, k: .7 } : { rx: 5, ry: 2.2, dx: 4, dy: 0, k: .7 };
+    s.sh = pose === 'lie' ? null : { rx: 5, ry: 2.2, dx: 4, dy: 0, k: .7 };
     return flip ? s.flip() : s;
   }
-  function worn(kind, ramps, flip) {
+  function worn(kind, ramps, flip, item, quantity) {
+    const own = item && WORLD_GEAR.of(item);
+    const s = own ? WORLD_GEAR.sprite(own, kind === 'shieldUp' ? 'lean' : 'ground', quantity) : generic(kind, ramps);
+    return flip ? s.flip() : s;
+  }
+  function generic(kind, ramps) {
     const s = new Spr(48, HIGH, CX, B);
     ARMOUR[kind](s, CX, ramps);
     s.outline();
     s.sh = { rx: kind === 'shield' ? 11 : 8, ry: 3, dx: 3, dy: 0, k: .8 };
-    return flip ? s.flip() : s;
+    return s;
   }
   function tucked(spr, ramp, seed, lush) {
     const s = new Spr(spr.w, spr.h, spr.ax, spr.ay), m = ramp.length - 1;
@@ -405,5 +430,25 @@ const PROPS = (() => {
     }
     return s;
   }
-  return { B, rampOf, mixed, pile, long, worn, tucked, PILES: Object.keys(PILES), LONG: Object.keys(LONG), lengthOf: k => LONG[k].L };
+  function undersides(spr) {
+    const out = [];
+    for (let x = 0; x < spr.w; x++) for (let y = spr.h - 1; y >= 0; y--) if (spr.c[y * spr.w + x]) { out.push([x, y]); break; }
+    return out;
+  }
+  function blade(s, x, root, tall, lean, ramp) {
+    const top = lean ? ramp.length - 1 : ramp.length - 2;
+    for (let j = 0; j < tall; j++) s.set(x + (j >= tall - 1 ? lean : 0), root - j, ramp[clamp(top - tall + 1 + j, 0, top)]);
+  }
+  function bedded(spr, ramp, seed) {
+    const s = new Spr(spr.w, spr.h, spr.ax, spr.ay);
+    s.c = spr.c.slice(); s.e = spr.e.slice(); s.sh = spr.sh;
+    for (const [x, foot] of undersides(spr)) {
+      const roll = hash(x, seed, 41);
+      if (roll > .62) continue;
+      const crossing = roll < .16, tall = crossing ? 4 + Math.floor(hash(x, seed, 42) * 3) : 2 + Math.floor(hash(x, seed, 43) * 2);
+      blade(s, x, foot + 1, tall, crossing ? (hash(x, seed, 44) > .5 ? 1 : -1) : 0, ramp);
+    }
+    return s;
+  }
+  return { B, rampOf, mixed, pile, long, worn, tucked, bedded, undersides, PILES: Object.keys(PILES), LONG: Object.keys(LONG), lengthOf: k => LONG[k].L };
 })();

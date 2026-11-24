@@ -5,14 +5,15 @@
   const list = v => (v || '').split(',').filter((w, i, all) => HUD.WINS.includes(w) && all.indexOf(w) === i);
   const state = HUD.state = {
     skin: HUD.skins[q.get('skin')] ? q.get('skin') : 'timber', hour: q.has('hour') ? +q.get('hour') : 13, weather: AM.WEATHER[q.get('weather')] ? q.get('weather') : 'clear',
-    wins: list(q.get('win')), tab: ['attributes', 'gear', 'relations'].includes(q.get('tab')) ? q.get('tab') : 'status', bcat: q.get('bcat') === '0' ? 0 : 1, hideL: q.get('l') === '0', hideR: q.get('r') === '0', pos: {}, strip: q.get('strip') !== '0', speed: 1, paused: false
+    wins: list(q.get('win')), tab: ['attributes', 'gear', 'relations'].includes(q.get('tab')) ? q.get('tab') : 'status', bcat: q.get('bcat') === '0' ? 0 : 1, hideL: q.get('l') === '0', hideR: q.get('r') === '0', pos: {}, strip: q.get('strip') !== '0', speed: 1, paused: false, motion: q.get('motion') === '1'
   };
   const PAWN_WINS = ['pawns', 'body'], COL = { L: 186, R: 252 }, FLAG = 84, HALF = 59;
   const screen = $('screen'), hud = $('hud'), world = $('world'), marks = $('marks'), wx = $('wx'), busy = $('busy');
   const layers = { day: $('mapday'), dusk: $('mapdusk'), night: $('mapnight') }, maps = {};
   const CAM = { x: 800, y: 520 }, FONTS = ['20px Jersey20', '20px Jersey10', '24px Jacquard24', '16px VT'];
   const COLUMN = { '--c-ink': '#f2e8cc', '--c-dim': '#cdbd96', '--c-mute': '#a39474', '--c-hot': '#ffc468', '--c-neg': '#ff8a70', '--c-pos': '#b0dc80', '--c-cold': '#a4d4f2' };
-  const view = HUD.view = { k: 1, left: 0, top: 0, W: 0, H: 0, sx: x => view.left + x * view.k, sy: y => view.top + y * view.k };
+  const view = HUD.view = { k: 1, left: 0, top: 0, W: 0, H: 0, sx: x => view.left + x * view.k, sy: y => view.top + y * view.k,
+    clip: () => ({ x0: Math.floor(-view.left / view.k) - 2, y0: Math.floor(-view.top / view.k) - 2, x1: Math.ceil((view.W - view.left) / view.k) + 2, y1: Math.ceil((view.H - view.top) / view.k) + 2 }) };
   let scene = null, drawn = '';
 
   function sprBox(spr) {
@@ -88,7 +89,8 @@
     }
     for (const [k, v] of Object.entries(COLUMN)) st.setProperty(k, AM.toHex(AM.tintRGB(v, amb.legibleTint, 1)));
     for (const [k, v] of Object.entries(skin.emit)) st.setProperty(k, v);
-    layers.dusk.style.opacity = clamp(amb.warm * 1.35, 0, 1).toFixed(3); layers.night.style.opacity = amb.night.toFixed(3);
+    const alpha = AM.layers(amb);
+    layers.dusk.style.opacity = alpha.dusk.toFixed(3); layers.night.style.opacity = alpha.night.toFixed(3);
     applyWeather(amb);
     const day = state.hour % 24 >= 6 && state.hour % 24 < 18, wg = { clear: day ? 'sun' : 'moon', rain: 'rain', storm: 'storm', fog: 'fog', snow: 'snow' }[state.weather] || amb.weather.glyph || (day ? 'sun' : 'moon');
     const text = { clock: AM.clock(state.hour), phase: AM.phase(state.hour), weather: amb.weather.label, temp: amb.weather.temp + '°', wind: amb.weather.wind, season: amb.weather.season || (state.weather === 'snow' ? 'Winter' : HUD.data.season) };
@@ -139,13 +141,14 @@
     hud.classList.toggle('no-l', state.hideL); hud.classList.toggle('no-r', state.hideR);
     hud.innerHTML = HUD.html(state);
     layoutWorld(); fitTop(); drawMarks(); placeTag(); placeWins();
+    HUD.motion.sync();
     applyAmbient();
     HUD.fill(hud, skin);
     $('pov').innerHTML = `<b>${skin.name}</b> — ${skin.pov}`;
     const winOn = v => { const [w, t] = v.split(':'); return state.wins.includes(w) && (!t || (w === 'build' ? (t === 'zones') === (state.bcat === 0) : state.tab === t)); };
     document.querySelectorAll('#mock .grp').forEach(g => g.querySelectorAll('button').forEach(b => {
       const k = g.dataset.k, v = b.dataset.v;
-      b.classList.toggle('on', k === 'skin' ? v === state.skin : k === 'weather' ? v === state.weather : k === 'win' ? winOn(v) : false);
+      b.classList.toggle('on', k === 'skin' ? v === state.skin : k === 'weather' ? v === state.weather : k === 'motion' ? state.motion : k === 'win' ? winOn(v) : false);
     }));
     const p = new URLSearchParams({ skin: state.skin, hour: state.hour, weather: state.weather });
     if (state.wins.length) p.set('win', state.wins.join(','));
@@ -154,6 +157,7 @@
     if (state.hideL) p.set('l', '0');
     if (state.hideR) p.set('r', '0');
     if (!state.strip) p.set('strip', '0');
+    if (state.motion) p.set('motion', '1');
     history.replaceState(null, '', '?' + p.toString().replace(/%2C/g, ','));
     const pane = $('pane'), panes = [...pane.options].map(o => o.value).filter(Boolean);
     pane.value = [...state.wins].reverse().find(w => panes.includes(w)) ?? '';
@@ -199,6 +203,7 @@
     if (k === 'skin') { state.skin = v; mount(); }
     else if (k === 'hourset') { state.hour = +v; mount(); }
     else if (k === 'weather') setWeather(v);
+    else if (k === 'motion') { state.motion = !state.motion; mount(); }
     else if (k === 'win') act('win:' + v);
   });
   $('pane').addEventListener('change', ev => {

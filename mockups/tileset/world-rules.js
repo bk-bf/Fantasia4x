@@ -13,7 +13,7 @@ const RULES = (() => {
     [/^(Metal|Iron|Steel)$/, /bar$|ingot/, 'bars'], [/^Fuel$/, /log|firewood/, 'logs'], [/^(Fuel|Soil|Clay)$/, /./, 'heap'],
     [/^Carcass$/, /./, 'meat'], [/^(Hide|Cured Hide|Leather)$/, /./, 'hides'], [/^(Cloth|Wool)$/, /./, 'cloth'], [/^Fiber$/, /./, 'bundles'],
     [/Seed$/, /./, 'sacks'], [/^Primitive$/, /small_stone|flint/, 'rubble'], [/^Primitive$/, /sand|salt|dirt|ash/, 'heap'], [/^Primitive$/, /hay|fiber|branch|bark|reed|straw/, 'bundles'],
-    [/^Organic$/, /flour|meal$|malt/, 'sacks'], [/^Organic$/, /./, 'baskets']
+    [/^Organic$/, /flour|meal$|malt/, 'sacks'], [/^Organic$/, /cloth$/, 'cloth'], [/^Organic$/, /./, 'baskets']
   ];
   const FOOD = [[/^(Meat|Fish)$/, /./, 'meat'], [/^Meal$/, /./, 'pots'], [/^(Grain|Legume)$/, /./, 'sacks'], [/^Preserve$/, /meat|fish|jerky|sausage/, 'meat'], [/^Preserve$/, /./, 'crates'], [/./, /./, 'baskets']];
   const pileOf = (table, o) => (table.find(r => r[0].test(o.sub || '') && r[1].test(o.id)) || [0, 0, 'crates'])[2];
@@ -27,6 +27,8 @@ const RULES = (() => {
     return 'roll';
   }
   function classify(o) {
+    const own = WORLD_GEAR.of(o);
+    if (own) return { worn: own.kind, own: true, tuck: own.tuck || 'low' };
     if (o.group === 'Weapon') return { long: kindOf(o.id, 'sword') };
     if (o.group === 'Armor') return { worn: wornOf(o) };
     if (o.group === 'Tool' && o.sub === 'Storage') return /belt|sash|bandolier|harness/.test(o.id) ? { worn: 'roll' } : /pack|bag|pannier|quiver|satchel|sling/.test(o.id) ? { worn: 'pack' } : { pile: /skin|urn|jug|flask|bottle|bucket|barrel|cask|keg/.test(o.id) ? 'fluids' : /basket/.test(o.id) ? 'baskets' : 'crates' };
@@ -54,6 +56,12 @@ const RULES = (() => {
   const jit = (d, seed, salt, span) => Math.round((hash(d.x * 7 + salt, d.y * 13, seed) - .5) * span);
   const coin = (d, seed, salt) => hash(d.x * 5 + salt, d.y * 11, seed) > .5;
   const tuck = (env, d, spr, seed, lush) => { const g = env.grass(d.x, d.y); return g ? PROPS.tucked(spr, g, seed + d.x * 31 + d.y, lush) : spr; };
+  const shade = (x, y) => { const s = new Spr(1, 1, 0, 0); s.sh = { rx: 2.4, ry: 1.15, dx: 0, dy: 0, k: .95 }; return { spr: s, x, y, labels: [] }; };
+  const contact = (spr, x, y) => PROPS.undersides(spr).filter(([cx], i, all) => i % 2 === 0 || i === all.length - 1).map(([cx, cy]) => shade(x + cx - spr.ax, y + cy + 1 - spr.ay));
+  function lying(env, d, spr, seed, x, y, rule) {
+    const g = env.grass(d.x, d.y), rx = Math.round(x), ry = Math.round(y);
+    return { spr: g ? PROPS.bedded(spr, g, seed + d.x * 31 + d.y) : spr, x: rx, y: ry, rule, shadows: contact(spr, rx, ry) };
+  }
   const label = d => ({ x: d.x * TILE + 16, y: d.y * TILE + 29 + (d.x % 2) * 7, text: d.item.name + (d.quantity > 1 ? ' x' + d.quantity : '') });
 
   function pilePlace(env, run, k, seed) {
@@ -76,20 +84,30 @@ const RULES = (() => {
   }
   function longPlace(env, d, k, seed, piles) {
     const sup = support(env, d, k, piles), L = PROPS.lengthOf(k.long);
-    if (sup) { const p = against(d, sup.on); return { spr: PROPS.long(k.long, 'lean', p.flip), x: p.x, y: p.y, rule: sup.rule }; }
-    if (env.wall(d.x, d.y - 1)) return { spr: PROPS.long(k.long, 'lean', coin(d, seed, 3)), x: d.x * TILE + 16 + jit(d, seed, 4, 12), y: d.y * TILE + 7, rule: 'leans on the wall' };
-    if (env.wall(d.x - 1, d.y)) return { spr: PROPS.long(k.long, 'lean', false), x: d.x * TILE + 4, y: d.y * TILE + 22 + jit(d, seed, 5, 8), rule: 'leans on the wall' };
-    if (env.wall(d.x + 1, d.y)) return { spr: PROPS.long(k.long, 'lean', true), x: d.x * TILE + 28, y: d.y * TILE + 22 + jit(d, seed, 5, 8), rule: 'leans on the wall' };
+    if (sup) { const p = against(d, sup.on); return { spr: PROPS.long(k.long, 'lean', p.flip, d.item.id), x: p.x, y: p.y, rule: sup.rule }; }
+    if (env.wall(d.x, d.y - 1)) return { spr: PROPS.long(k.long, 'lean', coin(d, seed, 3), d.item.id), x: d.x * TILE + 16 + jit(d, seed, 4, 12), y: d.y * TILE + 7, rule: 'leans on the wall' };
+    if (env.wall(d.x - 1, d.y)) return { spr: PROPS.long(k.long, 'lean', false, d.item.id), x: d.x * TILE + 4, y: d.y * TILE + 22 + jit(d, seed, 5, 8), rule: 'leans on the wall' };
+    if (env.wall(d.x + 1, d.y)) return { spr: PROPS.long(k.long, 'lean', true, d.item.id), x: d.x * TILE + 28, y: d.y * TILE + 22 + jit(d, seed, 5, 8), rule: 'leans on the wall' };
     const east = env.field(d.x + 1, d.y), west = env.field(d.x - 1, d.y);
-    if (k.long === 'hoe' && (east || west)) return { spr: tuck(env, d, PROPS.long('hoe', 'lie', !east), seed, false), x: d.x * TILE + (east ? 31 - L / 2 : 1 + L / 2), y: d.y * TILE + 24, rule: 'laid at the field edge' };
-    return { spr: tuck(env, d, PROPS.long(k.long, 'lie', coin(d, seed, 6)), seed, false), x: d.x * TILE + 16 + jit(d, seed, 7, 8), y: d.y * TILE + 22 + jit(d, seed, 8, 8), rule: 'lies in the grass' };
+    if (k.long === 'hoe' && (east || west)) return lying(env, d, PROPS.long('hoe', 'lie', !east), seed, d.x * TILE + (east ? 31 - L / 2 : 1 + L / 2), d.y * TILE + 24, 'laid at the field edge');
+    return lying(env, d, PROPS.long(k.long, 'lie', coin(d, seed, 6), d.item.id), seed, d.x * TILE + 16 + jit(d, seed, 7, 8), d.y * TILE + 22 + jit(d, seed, 8, 8), env.grass(d.x, d.y) ? 'lies in the grass' : 'lies on the ground');
   }
-  function wornPlace(env, d, k, seed) {
-    const ramps = rampsFor(k, d.item), wall = env.wall(d.x, d.y - 1), up = k.worn === 'shield' && wall;
-    const spr = PROPS.worn(up ? 'shieldUp' : k.worn, ramps, coin(d, seed, 9));
-    return { spr: tuck(env, d, spr, seed, !up && k.worn !== 'pack'), x: d.x * TILE + 16 + jit(d, seed, 10, 10), y: d.y * TILE + (wall ? 8 : env.wall(d.x, d.y + 1) ? 14 : 23 + jit(d, seed, 11, 6)), rule: up ? 'leans on the wall' : wall ? 'against wall' : 'sits on the ground' };
+  const TUCKS = { lush: (env, d, spr, seed) => tuck(env, d, spr, seed, true), low: (env, d, spr, seed) => tuck(env, d, spr, seed, false), none: (env, d, spr) => spr };
+  const tuckOf = (k, up) => up ? 'none' : k.tuck || (k.worn === 'pack' ? 'low' : 'lush');
+  function shieldRest(env, d, k, piles) {
+    if (k.worn !== 'shield') return null;
+    if (env.wall(d.x, d.y - 1)) return { rule: 'leans on the wall' };
+    const sup = support(env, d, k, piles);
+    return sup && Object.assign(against(d, sup.on), { rule: sup.rule });
+  }
+  function wornPlace(env, d, k, seed, piles) {
+    const ramps = rampsFor(k, d.item), wall = env.wall(d.x, d.y - 1), up = shieldRest(env, d, k, piles);
+    const spr = PROPS.worn(up ? 'shieldUp' : k.worn, ramps, !k.own && (up ? !!up.flip : coin(d, seed, 9)), d.item, d.quantity);
+    if (up && up.x !== undefined) return { spr, x: up.x, y: up.y, rule: up.rule };
+    return { spr: TUCKS[tuckOf(k, up)](env, d, spr, seed), x: d.x * TILE + 16 + jit(d, seed, 10, 10), y: d.y * TILE + (wall ? 8 : env.wall(d.x, d.y + 1) ? 14 : 23 + jit(d, seed, 11, 6)), rule: up ? up.rule : wall ? 'against wall' : 'sits on the ground' };
   }
 
+  const placed = (p, dx, dy, labels) => [...(p.shadows || []).map(q => ({ ...q, x: q.x + dx, y: q.y + dy })), { spr: p.spr, x: Math.round(p.x) + dx, y: Math.round(p.y) + dy, rule: p.rule, labels }];
   function plan(env, drops, seed) {
     const at = new Map(drops.map(d => [d.x + ',' + d.y, d])), kind = new Map(drops.map(d => [d, classify(d.item)]));
     const sorted = drops.slice().sort((a, b) => a.y - b.y || a.x - b.x), done = new Set(), out = [], piles = [];
@@ -106,9 +124,9 @@ const RULES = (() => {
     for (const d of sorted) {
       const k = kind.get(d);
       if (done.has(d)) continue;
-      const p = k.long ? longPlace(env, d, k, seed, piles) : wornPlace(env, d, k, seed);
-      out.push({ ...p, x: Math.round(p.x), y: Math.round(p.y), labels: [label(d)] });
-      for (let i = 1; i < Math.min(3, d.quantity) && k.long; i++) out.push({ ...p, x: Math.round(p.x) + i * 5, y: Math.round(p.y) + (i & 1), labels: [] });
+      const p = k.long ? longPlace(env, d, k, seed, piles) : wornPlace(env, d, k, seed, piles);
+      out.push(...placed(p, 0, 0, [label(d)]));
+      for (let i = 1; i < Math.min(3, d.quantity) && k.long; i++) out.push(...placed(p, i * 5, i & 1, []));
     }
     return out;
   }

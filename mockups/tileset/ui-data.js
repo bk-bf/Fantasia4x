@@ -7,6 +7,7 @@
     o.skip = DBX.skipReason ? DBX.skipReason(o) : '';
     o.state = o.extra ? 'extra' : sprites.length ? 'covered' : o.skip ? 'skip' : 'missing';
     o.fresh = sprites.length > 0 && sprites[0].origin === 'new';
+    o.pixel = sprites.length > 0 && !!sprites[0].pixel;
   }
 
   function normalise(o, ages) {

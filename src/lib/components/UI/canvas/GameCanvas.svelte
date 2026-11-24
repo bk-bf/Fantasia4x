@@ -6,6 +6,7 @@
   import { WebGLRenderer, type SpriteLayer } from '$lib/webgl/renderer.js';
   import { crashBreadcrumb } from '$lib/webgl/crashLog.js';
   import { startFreezeWatchdog, beat, stopFreezeWatchdog } from '$lib/webgl/freezeWatchdog.js';
+  import { passOn } from '$lib/webgl/passes.js';
   import {
     applyTileToGrid,
     applyResourceToGrid,
@@ -2415,7 +2416,7 @@
           pawnOverlayGrid.clear();
           itemOverlayGrid.clear();
           buildingOverlayGrid.clear();
-        } else {
+        } else if (passOn('overlay')) {
           updatePawnOverlay(
             dt,
             map,
@@ -2447,7 +2448,8 @@
           designationsStale = false;
           drawDesignations();
         }
-        worldFx.frame(
+        if (passOn('effects'))
+          worldFx.frame(
           {
             pawns: pawnList,
             mobs: mobList,

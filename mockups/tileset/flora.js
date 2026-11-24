@@ -165,6 +165,14 @@ const PLANTS = {
   mandrake: { name: 'Mandrake', f: 'herb', leaf: P.oak, bloom: P.purple, root: 1 },
   emberbloom: { name: 'Emberbloom', f: 'herb', leaf: P.furDark, bloom: P.fire, glow: [1, .5, .15] },
 };
+function trimPeaks(s, rad, xMax) {
+  const top = x => { for (let y = 0; y < s.h; y++) if (s.get(x, y)) return y; return s.h; };
+  const t = []; for (let x = 0; x < s.w; x++) t.push(top(x));
+  const low = x => { let m = 0; for (let i = Math.max(0, x - rad); i <= Math.min(s.w - 1, x + rad); i++) m = Math.max(m, t[i]); return m; };
+  const open = []; for (let x = 0; x < s.w; x++) { let m = s.h; for (let i = Math.max(0, x - rad); i <= Math.min(s.w - 1, x + rad); i++) m = Math.min(m, low(i)); open.push(m); }
+  for (let x = 0; x <= xMax; x++) for (let y = 0; y < open[x]; y++) s.set(x, y, null);
+}
+
 function mkPlant(kind, seed, season) {
   const k = PLANTS[kind], r = rng(seed * 13 + 3), s = new Spr(40, 40, 20, 34), B = 34;
   const winter = season === 'winter', fall = season === 'autumn';
@@ -174,6 +182,7 @@ function mkPlant(kind, seed, season) {
     if (winter) { for (let i = 0; i < 9; i++) limb(s, 20, B, 20 + (i - 4) * 3 + (r() - .5) * 2, B - 12 - r() * 6, 1, P.wood, r, 1); s.snowCap(2, .3); } else {
       canopy(s, 20, B - 9, 13, 9, leaf, seed, { cr: 3.6 });
       canopy(s, 11, B - 5, 7, 5, leaf, seed + 5, { cr: 3.2, z: 3 }); canopy(s, 29, B - 5, 7, 5, leaf, seed + 9, { cr: 3.2, z: 3 });
+      if (!k.dots) trimPeaks(s, 4, 19);
       if (k.dots) for (let i = 0; i < 12; i++) { const x = 8 + Math.floor(r() * 24), y = B - 16 + Math.floor(r() * 14); if (s.get(x, y) && s.get(x + 1, y + 1)) { s.set(x, y, k.dots[4]); s.set(x + 1, y, k.dots[3]); s.set(x, y + 1, k.dots[2]); s.set(x + 1, y + 1, k.dots[1]); } }
     }
   } else if (k.f === 'flowers') {
