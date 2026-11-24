@@ -31,5 +31,6 @@ const cultures = archetypes.map((archetype, ci) => {
   };
 });
 const names = Object.fromEntries(TRAIT_DATABASE.map((t) => [t.id, t.name]));
-return { cultures, traitNames: names };
+const rarity = Object.fromEntries(TRAIT_DATABASE.map((t) => [t.id, t.rarity ?? 'common']));
+  return { cultures, traitNames: names, traitRarity: rarity };
 }
