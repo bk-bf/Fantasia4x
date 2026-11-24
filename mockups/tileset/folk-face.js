@@ -62,7 +62,7 @@ function paintEyes(pen, g, look, skin) {
   else if (m.beastEyes) recolour((a, b2) => { pen.put(a, er, P.gold[2]); pen.put(b2, er, P.gold[4]); });
   else if (m.murkEyes) { const flip = (pose.i >> 1) & 1; recolour((a, b2) => { pen.put(a, er, P.frost[flip ? 5 : 4], 120); pen.put(b2, er, P.frost[flip ? 4 : 5], 120); }); }
   if (look.oddEye && face === 'f' && open) pen.put(X + 1, er, EYES[look.oddEye].col);
-  if (look.sex === 'female' && open && !m.spiderEyes && !m.blind) for (const x of eyes.flat()) { const c = pen.get(x, er); if (c !== P.cloth[5] && c !== P.cloth[4]) pen.put(x, er - 1, c); }
+  if (look.sex === 'female' && !g.placed && open && !m.spiderEyes && !m.blind) for (const x of eyes.flat()) { const c = pen.get(x, er); if (c !== P.cloth[5] && c !== P.cloth[4]) pen.put(x, er - 1, c); }
   if (m.spiderEyes) {
     const bare = skin[Math.max(0, sn - 1)];
     const beads = face === 's'

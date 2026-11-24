@@ -128,7 +128,7 @@
   function figure(look, face, zoom, caption) {
     const fig = document.createElement('figure'), cv = document.createElement('canvas');
     cv.width = CROP.w; cv.height = CROP.h; cv.style.width = CROP.w * zoom + 'px'; cv.style.height = CROP.h * zoom + 'px';
-    cv.getContext('2d').putImageData(sprImage(drawLook(look, face), CROP), 0, 0);
+    cv.getContext('2d').putImageData(sprImage(FOLK_PARTS.look(look, face), CROP), 0, 0);
     fig.append(cv);
     if (caption) { const fc = document.createElement('figcaption'); fc.textContent = caption; fig.append(fc); }
     return { fig, ctx: cv.getContext('2d'), look, face, frames: [] };
@@ -180,7 +180,7 @@
     if (F4X.ui.state.alive !== '1') return;
     const i = ++beat % 12;
     for (const v of views) {
-      v.frames[i] ||= sprImage(drawLook(v.look, v.face, { i, n: 12 }), CROP);
+      v.frames[i] ||= sprImage(FOLK_PARTS.look(v.look, v.face, { i, n: 12 }), CROP);
       v.ctx.putImageData(v.frames[i], 0, 0);
     }
   }, 1000 / 6);

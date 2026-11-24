@@ -41,12 +41,13 @@
   }
 
   const SKIN_KEY = { pale: 'pale', tan: 'tan', dark: 'dark', ashen: 'ashen', green: 'green', sallow: 'olive' };
-  function today(person, face, st) {
+  function lookOf(person, st) {
     const sex = person.sex === 'woman' ? 'female' : 'male';
     const look = pawnLookOf({ id: 'trial-' + sex, sex, age: 30, height: 175, weight: typical(175), traits: [] }, { skin: { tan: 1 }, hair: { brown: 1 }, eyes: { dark: 1 } }, FOLK_CAST.traitRarity);
-    return drawLook({ ...look, skin: SKIN_KEY[st.skin], hair: st.hair, eyes: 'dark', oddEye: null, style: person.style, beard: 'none' }, face);
+    return { ...look, skin: SKIN_KEY[st.skin], hair: st.hair, eyes: 'dark', oddEye: null, style: person.style, beard: 'none' };
   }
-  const placed = (person, face, st) => FOLK_PARTS.figure(person.sex, face, { skin: st.skin, hair: st.hair, eyes: 'dark', style: person.style });
+  const today = (person, face, st) => drawLook(lookOf(person, st), face);
+  const placed = (person, face, st) => FOLK_PARTS.look(lookOf(person, st), face);
 
   function render(st) {
     const zoom = +st.zoom;
