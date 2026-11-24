@@ -547,8 +547,8 @@ export function applyResourceToGrid(
     blank(gridTall);
     gridShort.setTile(tile.x, tile.y, {
       char: ' ',
-      foreground: { r: 0, g: 0, b: 0 },
-      background: { r: 0, g: 0, b: 0 },
+      foreground: NO_COLOUR,
+      background: NO_COLOUR,
       position: { x: tile.x, y: tile.y },
       painted,
       ...(scenery ? { scenery } : null),
