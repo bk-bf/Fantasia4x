@@ -72,7 +72,9 @@ export function dropSurroundings(
         ([id, amount]) => amount > 0 && rock?.has(id)
       ),
     zone: (x, y) => world.zoneTiles[key(x, y)]?.includes('stockpile') ?? false,
-    field: (x, y) => FIELD_GROUND.test(tileAt(x, y)?.subType ?? ''),
+    field: (x, y) =>
+      (world.zoneTiles[key(x, y)]?.includes('grow') ?? false) ||
+      FIELD_GROUND.test(tileAt(x, y)?.subType ?? ''),
     grass: (x, y) => colour(x, y) !== undefined,
     grassColour: colour
   };

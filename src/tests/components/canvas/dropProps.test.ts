@@ -54,7 +54,11 @@ const drop = (resourceId: string, x: number, y: number, quantity = 1) =>
 const world = (over: Partial<Parameters<typeof dropProps>[1]> = {}) => ({
   map: yard(),
   buildings: [built('anvil', 4, 4), built('stone_block_wall', 2, 5), built('campfire', 1, 7)],
-  zoneTiles: { '1,3': ['stockpile' as const], '2,3': ['stockpile' as const] },
+  zoneTiles: {
+    '1,3': ['stockpile' as const],
+    '2,3': ['stockpile' as const],
+    '8,2': ['grow' as const]
+  },
   ...over
 });
 
@@ -95,7 +99,7 @@ describe('the surroundings a drop is placed from', () => {
 
   it('reads the stockpile zone, tilled ground and growing grass', () => {
     expect([env.zone(1, 3), env.zone(3, 3)]).toEqual([true, false]);
-    expect([env.field(7, 7), env.field(3, 3)]).toEqual([true, false]);
+    expect([env.field(7, 7), env.field(8, 2), env.field(3, 3)]).toEqual([true, true, false]);
     expect([env.grass(3, 3), env.grass(6, 6), env.grass(3, 0), env.grass(2, 5)]).toEqual([
       true,
       false,
@@ -136,6 +140,12 @@ describe('prop tiles of dropped items', () => {
     expect(placements[0].rule).toBe('rests on its station');
     expect(at(tiles, 5, 4).painted).toBe(item('iron_hammer').lean![0].sprite);
     expect(artOffset(at(tiles, 5, 4))).toEqual({ dx: -16, dy: 2 });
+  });
+
+  it('lays a hoe at the edge of the grow zone beside it', () => {
+    const { tiles, placements } = dropProps([drop('iron_hoe', 7, 2)], world(), tileset);
+    expect(placements[0].rule).toBe('laid at the field edge');
+    expect(at(tiles, 7, 2).painted).toBe(item('iron_hoe').lie![0].sprite);
   });
 
   it('lays a sword in the grass, with one more for each of a stack up to three', () => {
