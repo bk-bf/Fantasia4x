@@ -43,26 +43,35 @@ function paintSkirt(pen, g, look, cloth) {
   reink(pen, left - 3, legTop, right + 3, base + 1);
 }
 
+function shadeBy(pen, x, y, ramp, step) {
+  const i = ramp.indexOf(pen.get(x, y)), last = ramp.length - 1;
+  if (i < 0) return;
+  pen.put(x, y, i + step > last ? ramp[last].map(v => v + (255 - v) * .4) : ramp[clamp(i + step, 0, last)]);
+}
+
 function paintFigure(pen, g, look, cloth) {
   const { cx, hw, aw, sTop, tTop, tl, face } = g, n = cloth.length - 1, tone = k => cloth[clamp(n - k, 0, n)];
   if (look.sex !== 'female') return;
-  const full = look.body.build >= 1.3 ? 3 : look.body.build < .9 ? 1 : 2, under = tTop + (tl >= 10 ? 5 : tl >= 8 ? 4 : 3);
+  const full = look.body.build >= 1.3 ? 3 : look.body.build < .9 ? 1 : 2, tall = tl < 8 ? 1 : full >= 3 ? 3 : 2, top = tTop + 2;
   if (face === 's') {
-    const front = cx + hw - 1, depth = full >= 2 ? 2 : 1;
-    const curve = tl >= 9 ? [[under - 3, 1, 1], [under - 2, depth, 2], [under - 1, depth, 2], [under, 1, 3]] : [[under - 2, 1, 1], [under - 1, depth, 2], [under, 1, 3]];
-    for (const [y, reach, shade] of curve) for (let k = 0; k < reach; k++) pen.put(front + k, y, tone(shade));
-    reink(pen, front - 1, under - 5, front + depth + 1, under + 2);
+    const front = cx + hw - 1, peak = full >= 2 ? 2 : 1, rows = tall + 2;
+    for (let r = 0; r < rows; r++) {
+      const reach = r === 0 || r === rows - 1 ? 1 : peak, shade = r === 0 ? 0 : r === rows - 1 ? 3 : r === 1 ? 1 : 2;
+      for (let k = 0; k < reach; k++) pen.put(front + k, top - 1 + r, tone(shade + (k < reach - 1 ? 1 : 0)));
+    }
+    reink(pen, front - 1, top - 3, front + peak + 1, top + rows);
     return;
   }
   for (const x of [cx - hw - aw, cx + hw + aw - 1]) pen.put(x, sTop + 2, null);
   reink(pen, cx - hw - aw - 2, sTop, cx + hw + aw + 1, sTop + 4);
-  if (face !== 'f') return;
-  for (const [x0, x1, shade] of [[cx - hw + 1, cx - 1, 3], [cx, cx + hw - 2, 4]]) {
-    if (x1 - x0 < 2) continue;
-    for (let x = x0 + 1; x < x1; x++) pen.put(x, under, tone(shade));
-    if (full >= 2) { pen.put(x0, under - 1, tone(shade)); pen.put(x1, under - 1, tone(shade)); pen.put(x0 + 1, under - 2, tone(0)); }
-    if (full >= 3) pen.put(x0 + 1, under - 3, tone(0));
+  if (face !== 'f' || hw < 4) return;
+  const wide = hw >= 7 ? 3 : 2;
+  for (const x0 of [cx - 1 - wide, cx + 1]) {
+    for (let y = top; y < top + tall; y++) for (let x = x0; x < x0 + wide; x++) shadeBy(pen, x, y, cloth, 1);
+    shadeBy(pen, x0, top, cloth, 1);
   }
+  for (let y = top + 1; y <= top + tall; y++) for (const x of [cx - 1, cx]) shadeBy(pen, x, y, cloth, -1);
+  if (full >= 3) for (const x of [cx - 1 - wide, cx + wide]) shadeBy(pen, x, top + tall, cloth, -1);
 }
 
 function paintGarb(pen, g, look, skin, s) {
