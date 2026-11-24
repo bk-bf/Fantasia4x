@@ -108,7 +108,8 @@ const rimOf = (was, c) => !!(was && c) && c[0] === was[0] * .6 && c[1] === was[1
 function rigPawn(o, p) {
   p = p || {};
   const f = FOLK[o.race || 'human'], s = new Spr(RG.W, RG.H, RG.CX, RG.BASE), face = p.face || 'f', side = face === 's', back = face === 'b';
-  const skin = o.skin || f.skin, sn = skin.length - 1, tunic = o.tunic || P.cloth, pants = o.pants || P.leather, body = o.armor || tunic;
+  const skin = o.skin || f.skin, sn = skin.length - 1, tunic = o.tunic || (o.bare ? skin : P.cloth), pants = o.pants || (o.bare ? skin : P.leather), body = o.armor || tunic;
+  const boots = o.boots || (o.bare ? skin : P.leather), belted = !o.bare || !!(o.tunic || o.armor);
   const by = rnd(p.by || 0), lean = p.lean || 0, cx = RG.CX + rnd(p.bx || 0), base = RG.BASE, hw = f.hw, aw = f.aw, lw = hw - 1, br = p.br ? 1 : 0;
   const legTop = base - f.legs + 1 + by, tTop = legTop - f.tl, armLen = f.tl - 1, hTop = tTop - br - f.hh + rnd(p.hd ? p.hd[1] : 0), HX = cx + rnd(lean + (p.hd ? p.hd[0] : 0));
   const lx = j => rnd(lean * clamp(1 - j / f.tl, 0, 1)), kind = p.item === undefined ? o.tool : p.item, pts = s.pts = {}, sx0 = cx + rnd(lean);
@@ -121,10 +122,10 @@ function rigPawn(o, p) {
       if (lost && j >= cut) continue;
       if (lost && j === cut - 1) { for (let i = 0; i < lw; i++) s.set(x0 + i, y, WRAP[(x0 + i) & 1]); if (sd < 0) s.set(x0 + lw, y, j < 2 ? pick3(pants, .6, -1) : P.ink); continue; }
       for (let i = 0; i < lw; i++) {
-        const u = i / (lw - 1), R = boot ? P.leather : pants, d = boot ? (jb === 2 ? 1 : sole ? -2 : 0) : (j === Math.floor(f.legs * .4) ? 1 : 0);
+        const u = i / (lw - 1), R = boot ? boots : pants, d = boot ? (jb === 2 ? 1 : sole ? -2 : 0) : (j === Math.floor(f.legs * .4) ? 1 : 0);
         s.set(x0 + i, y, sd < 0 ? pick3(R, u * .7, d) : pick3(R, .3 + u * .7, d - 1));
       }
-      if (jb < 2) s.set(sd < 0 ? x0 - 1 : x0 + lw, y, P.leather[sole ? 0 : sd < 0 ? 3 : 1]);
+      if (jb < 2) s.set(sd < 0 ? x0 - 1 : x0 + lw, y, boots[sole ? 0 : sd < 0 ? 3 : 1]);
       if (sd < 0) s.set(x0 + lw, y, j < 2 ? pick3(pants, .6, -1) : P.ink);
     }
   };
@@ -133,11 +134,11 @@ function rigPawn(o, p) {
     const [kx, ky, ex, ey] = ik2(rx, legTop, rx + ft[0], base - ft[1], l1, l2, -1);
     (pts.legs = pts.legs || []).push({ path: [[rx, legTop], [kx, ky], [ex, ey]], w });
     rigLimb(s, [[rx, legTop], [kx, ky], [ex, ey]], w, (t, k) => {
-      const u = k / (w - 1), boot = t >= tot - 2.5, sole = t >= tot - .5, c = pick3(boot ? P.leather : pants, far ? .3 + u * .7 : u * .7, (boot ? (sole ? -2 : t < tot - 1.5 ? 1 : 0) : 0) - (far ? 1 : 0));
+      const u = k / (w - 1), boot = t >= tot - 2.5, sole = t >= tot - .5, c = pick3(boot ? boots : pants, far ? .3 + u * .7 : u * .7, (boot ? (sole ? -2 : t < tot - 1.5 ? 1 : 0) : 0) - (far ? 1 : 0));
       return far ? dark(c, .82) : c;
     }, far ? null : shade);
     const tx = rnd(ex) - (w >> 1) + w, ty = rnd(ey);
-    s.set(tx, ty, P.leather[0]); s.set(tx, ty - 1, far ? dark(P.leather[2], .82) : P.leather[2]);
+    s.set(tx, ty, boots[0]); s.set(tx, ty - 1, far ? dark(boots[2], .82) : boots[2]);
   };
   const torso = () => {
     const sw = SW;
@@ -146,11 +147,11 @@ function rigPawn(o, p) {
       for (let i = i0; i < i1; i++) {
         const u = (i - i0) / (i1 - i0 - 1);
         let c;
-        if (jj >= f.tl - 2 && jj < f.tl) c = (side ? i === i1 - 1 : !back && Math.abs(i + .5) < 1.2) ? P.gold[jj === f.tl - 2 ? 4 : 2] : pick3(P.leather, u, jj === f.tl - 2 ? 1 : -1);
+        if (belted && jj >= f.tl - 2 && jj < f.tl) c = (side ? i === i1 - 1 : !back && Math.abs(i + .5) < 1.2) ? P.gold[jj === f.tl - 2 ? 4 : 2] : pick3(P.leather, u, jj === f.tl - 2 ? 1 : -1);
         else if (o.armor === P.iron && !o.plate) c = P.iron[clamp((u < .25 ? 4 : u < .7 ? 3 : 2) + (((i + jj) & 1) ? 1 : -1), 0, 6)];
         else {
           let d = (jj === 0 ? 1 : 0) - (jj > f.tl - 1 ? 1 : 0);
-          if (!side && jj > 3 && jj < f.tl - 2 && (Math.abs(u - .32) < .06 || Math.abs(u - .72) < .06)) d -= 1;
+          if (body !== skin && !side && jj > 3 && jj < f.tl - 2 && (Math.abs(u - .32) < .06 || Math.abs(u - .72) < .06)) d -= 1;
           if (jj === 1 && u > .7) d -= 1;
           c = pick3(body, u, d);
           if (o.apron && !back && jj > 2 && (side ? i >= i1 - 3 : Math.abs(i + .5) < w - 1.5)) c = pick3(P.leather, u, jj === 3 ? 1 : 0);

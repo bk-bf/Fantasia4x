@@ -29,35 +29,6 @@ const EYES = {
   violet: { col: P.purple[4], word: 'violet-eyed' },
   red: { col: P.red[4], word: 'red-eyed' },
 };
-const DYES = {
-  undyed: P.cloth,
-  oatmeal: R('#3a3832 #55524a #736f64 #918c7e #aca696 #c4bfae'),
-  russet: R('#2e160e #4a2414 #6a361c #8a4c28 #a66436 #be7e4a'),
-  madder: R('#34100e #521a16 #742822 #94382e #ae4e3e #c46a54'),
-  woad: R('#141c2c #1e2c44 #2c405e #3e5878 #567290 #728ea6'),
-  weld: R('#3a2c0c #5a4614 #7c621e #9c7e2c #b8983e #ceb058'),
-  moss: R('#141e10 #20301a #304626 #445e34 #5a7644 #748e58'),
-  walnut: R('#1c120c #2e1e14 #44301e #5c422a #745638 #8c6c48'),
-  charcoal: R('#141416 #202124 #303236 #44464a #5a5c60 #727478'),
-  lichen: R('#1e1426 #30203a #463052 #5e446a #765a80 #8e7496'),
-};
-const HOSE = { hide: P.leather, walnut: DYES.walnut, charcoal: DYES.charcoal, oatmeal: DYES.oatmeal, russet: DYES.russet, moss: DYES.moss };
-const TRIMS = [null, null, null, DYES.weld, DYES.madder, DYES.woad, P.cloth];
-const HEADWEAR = { none: 6, hood: 1.5, coif: 1, straw: 1 };
-const HOMELAND_DRESS = {
-  'Mountain-born': { garb: ['walnut', 'charcoal', 'russet'], headwear: 'hood' },
-  'Forest-kin': { garb: ['moss', 'walnut', 'weld'], headwear: 'hood' },
-  'Deep-dwellers': { garb: ['charcoal', 'lichen', 'undyed'], headwear: 'coif' },
-  'Sky-touched': { garb: ['woad', 'undyed', 'weld'], headwear: 'coif' },
-  'Marsh-folk': { garb: ['moss', 'oatmeal', 'lichen'], headwear: 'straw' },
-  'Tundra-clans': { garb: ['undyed', 'charcoal', 'woad'], headwear: 'hood' },
-  'Ember-kin': { garb: ['madder', 'weld', 'russet'], headwear: 'coif' },
-  'River-people': { garb: ['woad', 'oatmeal', 'moss'], headwear: 'straw' },
-  'Wastrel-nomads': { garb: ['oatmeal', 'russet', 'weld'], headwear: 'hood' },
-  'Verdant': { garb: ['moss', 'weld', 'madder'], headwear: 'straw' },
-};
-const HOMELAND_PULL = 3;
-
 const STYLES = [
   { id: 'short', sexes: { male: 4, female: 2 } },
   { id: 'crop', sexes: { male: 3, female: 1 }, o: { bald: 1 } },
@@ -97,16 +68,7 @@ function culturePreference(culture) {
   const r = rng(seedOf(culture.id + ':colour'));
   const eyes = Object.fromEntries(Object.keys(EYES).map(k => [k, k === 'red' || k === 'violet' ? .15 : 1]));
   const eyeLean = lean(r, eyes, 2 + r() * 6);
-  const dress = HOMELAND_DRESS[culture.archetype] || { garb: [], headwear: null };
-  const garbKeys = Object.keys(DYES).filter(k => k !== 'lichen' || dress.garb.includes(k) || r() < .3), garb = {};
-  const garbPool = Object.fromEntries(garbKeys.map(k => [k, dress.garb.includes(k) ? HOMELAND_PULL : 1]));
-  for (let i = 0; i < 3; i++) garb[weighted(r, garbPool)] = 3 - i;
-  const headwear = { ...HEADWEAR }, worn = weighted(r, Object.fromEntries(['hood', 'coif', 'straw'].map(k => [k, k === dress.headwear ? HOMELAND_PULL : 1])));
-  if (r() < .6) headwear[worn] += 3;
-  return {
-    skin: lean(r, SKINS, 2 + r() * 10), hair: lean(r, HAIRS, 2 + r() * 8), eyes: eyeLean,
-    garb, legwear: lean(r, HOSE, 3), trim: TRIMS[Math.floor(r() * TRIMS.length)], headwear,
-  };
+  return { skin: lean(r, SKINS, 2 + r() * 10), hair: lean(r, HAIRS, 2 + r() * 8), eyes: eyeLean };
 }
 
 function topShare(weights) {
@@ -199,19 +161,13 @@ function pawnLookOf(p, pref, rarity) {
   const hair = greying(r, p.age, weighted(r, pref.hair));
   let style = weighted(r, Object.fromEntries(STYLES.filter(s => s.sexes[p.sex]).map(s => [s.id, s.sexes[p.sex]])));
   let beard = p.sex === 'male' ? weighted(r, BEARDS) : 'none';
-  const garb = weighted(r, pref.garb), legwear = weighted(r, pref.legwear);
   const { marks, from } = lookMarks(p.traits, rarity);
   if (p.blind) { marks.blind = 1; delete marks.oneEye; }
-  const hat = weighted(r, pref.headwear || { none: 1 }), hood = weighted(r, pref.garb), cloak = r() < .12 ? weighted(r, pref.garb) : null;
-  const marked = marks.scales || marks.fur || marks.chitin || marks.ironSkin || marks.emberSkin || marks.leafSkin || marks.slick || marks.feathers >= 3;
-  const sleeves = marked || r() < .5 ? 'rolled' : 'long', apron = p.sex === 'female' && r() < .35, pouch = r() < .5;
   const plumed = STYLES.find(s => s.trait && p.traits.includes(s.trait)), downy = Object.keys(TRAIT_BEARDS).find(k => p.traits.includes(TRAIT_BEARDS[k]));
   if (plumed) style = plumed.id;
   if (downy) beard = downy;
-  const capped = hat === 'hood' || hat === 'coif', underBrim = hat === 'straw' && ['topknot', 'bun', 'mohawk', 'curls', 'crop', 'bald', 'plumed'].includes(style);
   return {
-    id: p.id, sex: p.sex, body: bodyOf(p), skin, hair, eyes, oddEye: odd !== eyes ? odd : null, style: capped || underBrim ? 'short' : style, beard,
-    garb, legwear, trim: pref.trim, hat, hood, cloak, sleeves, apron, pouch, marks, from,
+    id: p.id, sex: p.sex, body: bodyOf(p), skin, hair, eyes, oddEye: odd !== eyes ? odd : null, style, beard, marks, from,
   };
 }
 
@@ -234,14 +190,9 @@ function lookRig(look) {
   const skin = skinOf(look), eye = m.dragonEyes ? P.gold[4] : m.beastEyes ? P.gold[3] : m.murkEyes ? P.frost[5] : EYES[look.eyes].col;
   FOLK[race] = { ...look.body, skin, eyes: eye, tusks: m.tusks ? 1 : 0, pointears: m.fur >= 3 || m.scales >= 4 ? 1 : 0 };
   const style = STYLES.find(s => s.id === look.style), hair = hairRamp(look.hair);
-  const o = { race, tunic: DYES[look.garb], pants: HOSE[look.legwear], hair, seed: seedOf(look.id) % 97 + 1, ...(style.o || {}) };
-  if (look.trim) o.trim = look.trim;
-  if (look.hat === 'hood' || look.hat === 'coif') { o.hat = 'hood'; o.hood = look.hat === 'coif' ? P.cloth : DYES[look.hood]; }
-  if (look.hat === 'straw') o.hat = 'straw';
-  if (look.cloak) o.cape = DYES[look.cloak];
+  const o = { race, bare: 1, hair, seed: seedOf(look.id) % 97 + 1, ...(style.o || {}) };
   if (look.style === 'mohawk') o.mohawk = hair;
   if (look.beard === 'full' || look.beard === 'braided') o.beard = 1;
-  if (look.sleeves === 'long') o.sleeves = 'long';
   if (m.oneArm) o.oneArm = 1;
   if (m.oneLeg) o.oneLeg = 1;
   return { o, skin, hair };

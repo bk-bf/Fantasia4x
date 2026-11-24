@@ -1,8 +1,7 @@
 'use strict';
 function paintLook(s, look, skin, hair, face, pose) {
   const g = lookGeometry(look, face, pose, s.pts), pen = canvasPen(s), head = canvasPen(s, s.front), body = canvasPen(s, s.front, g.lx);
-  paintGarb(pen, body, g, look, skin, s);
-  paintBuild(body, g, look);
+  paintBody(body, g, look, skin);
   paintWomanFace(head, g, look, skin);
   paintSkin(pen, g, look, skin, hair);
   paintFaceMarks(head, g, look, skin);
@@ -19,7 +18,6 @@ function paintLookLying(s, look, skin, hair, pose) {
   const [x0, hTop, top, gy, ex, cy] = s.pts.lie, out = ex !== x0, g = lookGeometry(look, out ? 'f' : 's', pose), mid = Math.round((top + gy) / 2);
   const head = canvasPen(s, null, null, out ? (x, y) => [ex + y - g.er, cy + x - g.X] : (x, y) => [x0 + y - g.hTop, hTop + g.X + g.hd - 1 - x]);
   const body = canvasPen(s, null, null, out ? (x, y) => [x0 + y - g.hTop, mid + x - g.cx] : (x, y) => [x0 + y - g.hTop, mid + g.cx - x]);
-  if (!pose.rest) paintSkirt(body, g, look, DYES[look.garb]);
   paintWomanFace(head, g, look, skin);
   paintSkin(canvasPen(s), g, look, skin, hair);
   paintFaceMarks(head, g, look, skin);

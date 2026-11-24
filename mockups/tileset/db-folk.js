@@ -11,6 +11,5 @@
     t.sh = s.sh;
     return t;
   };
-  for (const a of FOLK_PIECES.archetypes) a.makes.forEach((make, i) => X.reg('folk', a.id, String(i), () => trimmed(make())));
   for (const r of FOLK_PIECES) [].concat(r.make).forEach((make, i) => X.reg('folk', r.id, String(i), () => trimmed(make())));
 })();
