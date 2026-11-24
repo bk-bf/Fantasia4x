@@ -98,7 +98,7 @@
   const typicalWeight = cm => Math.round(TYPICAL_WEIGHT.scale * Math.pow(cm, TYPICAL_WEIGHT.power));
   function plainPawn(id, name, fields) {
     const p = { id, name, sex: 'male', age: 30, height: 175, weight: 72, traits: [], ...fields };
-    p.look = { ...pawnLookOf(p, PLAIN_PREF, data.traitRarity), ...PLAIN_LOOK };
+    p.look = { ...pawnLookOf(p, PLAIN_PREF, data.traitRarity), ...PLAIN_LOOK, style: p.sex === 'female' ? 'long' : 'short' };
     return p;
   }
 

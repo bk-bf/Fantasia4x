@@ -3,6 +3,7 @@ function paintLook(s, look, skin, hair, face, pose) {
   const g = lookGeometry(look, face, pose), pen = canvasPen(s);
   paintGarb(pen, g, look, skin, s);
   paintBuild(pen, g, look);
+  paintWomanFace(pen, g, look, skin);
   paintSkin(pen, g, look, skin, hair);
   paintEyes(pen, g, look, skin);
   paintHair(pen, g, look, hair, skin);
