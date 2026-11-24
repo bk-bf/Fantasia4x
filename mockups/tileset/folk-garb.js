@@ -25,7 +25,7 @@ function paintSkirt(pen, g, look, cloth) {
   const { legTop, legs, base, tTop, tl, cx, hw, face } = g, n = cloth.length - 1, gown = look.sex === 'female';
   const hem = gown ? base - 3 : legTop + Math.max(2, Math.round(legs * .35)), [left, right] = legSpan(pen, g);
   for (let y = legTop + 2; y <= hem; y++) {
-    const flare = gown && y > legTop + legs * .4 ? 1 : 0, x0 = left - flare, x1 = right + (face === 's' ? 0 : flare);
+    const flare = gown ? (y > legTop + legs * .6 && hw >= 5 ? 2 : 1) : 0, x0 = left - flare, x1 = right + (face === 's' ? 0 : flare);
     for (let x = x0; x <= x1; x++) {
       const u = (x - x0) / Math.max(1, x1 - x0), fold = gown && (x - cx) % 3 === 0 ? 1 : 0;
       const shade = (u < .25 ? 1 : u < .7 ? 2 : 3) + fold;
@@ -43,10 +43,32 @@ function paintSkirt(pen, g, look, cloth) {
   reink(pen, left - 3, legTop, right + 3, base + 1);
 }
 
+function paintFigure(pen, g, look, cloth) {
+  const { cx, hw, tTop, tl, face } = g, n = cloth.length - 1;
+  if (look.sex !== 'female') return;
+  const chest = tl >= 9 ? [tTop + 2, tTop + 3, tTop + 4] : [tTop + 2, tTop + 3];
+  if (face === 's') {
+    const front = cx + hw - 1;
+    chest.forEach((y, i) => pen.put(front, y, cloth[clamp(n - (i === chest.length - 1 ? 3 : 2), 0, n)]));
+    reink(pen, front - 1, chest[0] - 2, front + 2, chest[chest.length - 1] + 2);
+    return;
+  }
+  if (face === 'f' && hw >= 4) {
+    const under = chest[chest.length - 1];
+    for (let x = cx - hw + 2; x <= cx - 2; x++) pen.put(x, under, cloth[clamp(n - 3, 0, n)]);
+    for (let x = cx + 1; x <= cx + hw - 3; x++) pen.put(x, under, cloth[clamp(n - 4, 0, n)]);
+  }
+  if (tl >= 9 && hw >= 4 && look.body.build < 1.3) {
+    for (let y = tTop + tl - 5; y <= tTop + tl - 3; y++) for (const x of [cx - hw + 1, cx + hw - 2]) pen.put(x, y, null);
+    reink(pen, cx - hw - 1, tTop + tl - 7, cx + hw, tTop + tl - 1);
+  }
+}
+
 function paintGarb(pen, g, look, skin, s) {
   const cloth = DYES[look.garb];
   paintSleeves(pen, g, look, skin, cloth, s);
   paintSkirt(pen, g, look, cloth);
+  paintFigure(pen, g, look, cloth);
 }
 
 function paintBuild(pen, g, look) {

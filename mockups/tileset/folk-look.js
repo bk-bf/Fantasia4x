@@ -163,8 +163,9 @@ function bodyOf(p) {
   const tall = p.height / 175, k = tall >= 1 ? tall : Math.pow(tall, .75), build = buildOf(p), girth = clamp(Math.pow(build, .7), .68, 1.55);
   const total = clamp(Math.round(32 * k), 21, 58), hh = 10, hd = 5;
   const rest = total - hh, legs = Math.max(5, Math.round(rest * .46)), tl = rest - legs;
-  const hw = clamp(Math.round(6 * k * girth - (p.sex === 'female' ? .4 : 0)), 3, 12);
-  const aw = clamp(Math.round(3 * Math.sqrt(k) * Math.pow(girth, .8)), 2, 5);
+  const frame = p.sex === 'female' ? { shoulders: .86, arms: .8 } : { shoulders: 1, arms: 1 };
+  const hw = clamp(Math.round(6 * k * girth * frame.shoulders), 3, 12);
+  const aw = clamp(Math.round(3 * Math.sqrt(k) * Math.pow(girth, .8) * frame.arms), 2, 5);
   return { legs, tl, hw, aw, hh, hd, build };
 }
 

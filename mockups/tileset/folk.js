@@ -115,6 +115,7 @@
   function sizeSections(st) {
     cardRow('One build at nine heights', [90, 110, 130, 150, 175, 200, 230, 260, 290].map(cm => plainPawn('tall-' + cm, cm + ' cm', { height: cm, weight: typicalWeight(cm), note: '' })), st);
     cardRow('One height at seven builds', [.6, .75, .9, 1, 1.15, 1.35, 1.6].map(share => Math.round(typicalWeight(175) * share)).map(kg => plainPawn('heavy-' + kg, kg + ' kg', { weight: kg, note: '' })), st);
+    cardRow('A man and a woman at three builds', [.75, 1, 1.4].flatMap(share => ['male', 'female'].map(sex => plainPawn(`pair-${sex}-${share}`, sex === 'female' ? 'Woman' : 'Man', { sex, weight: Math.round(typicalWeight(175) * share), note: '' }))), st);
     const ends = cultures.flatMap(c => { const byHeight = [...c.pawns].sort((a, b) => a.height - b.height); return [byHeight[0], byHeight[byHeight.length - 1]].map(p => ({ ...p, note: c.archetype })); });
     cardRow('The shortest and the tallest of each folk', ends.sort((a, b) => a.height - b.height), st);
   }
