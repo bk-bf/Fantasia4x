@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ConditionView } from '$lib/components/util/conditionInfo';
 import type { Trait } from '$lib/game/core/types';
-import {
-  bySeverity,
-  conditionBadge,
-  conditionKind,
-  modifierLean,
-  traitBadge
-} from '$lib/components/pawn/badges';
+import { bySeverity, conditionKind, modifierLean, traitBadge } from '$lib/components/pawn/badges';
 
 const view = (id: string, modifiers: ConditionView['modifiers'], lifeThreatening = false) =>
   ({
@@ -36,14 +30,6 @@ describe('condition badges', () => {
     expect(conditionKind(view('wet', { moveSpeed: 0.9 }))).toBe('cold');
     expect(conditionKind(view('tired', { moveSpeed: 0.5 }))).toBe('warn');
     expect(conditionKind(view('bleeding', {}, true))).toBe('neg');
-  });
-
-  it('gives cold and feeding conditions their own glyphs', () => {
-    expect(conditionBadge(view('hypothermia', { moveSpeed: 0.9 }))).toEqual({
-      glyph: 'snow',
-      kind: 'cold'
-    });
-    expect(conditionBadge(view('well_fed', { workEfficiency: 1.05 })).glyph).toBe('bowl');
   });
 
   it('orders life-threatening first, comfort last, and deeper severity ahead', () => {

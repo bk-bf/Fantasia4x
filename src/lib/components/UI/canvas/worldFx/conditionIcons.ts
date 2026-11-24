@@ -74,7 +74,68 @@ const BY_CONDITION: Record<string, ConditionIcon> = {
   tinder_skin: down('burning'),
   camel_bodied: up('starving'),
   ravenous_hunger: down('starving'),
-  weak_gutted: down('sick')
+  weak_gutted: down('sick'),
+  laden: plain('pack'),
+  encumbered: down('pack'),
+  overmatched: plain('yield'),
+  windchilled: down('gust'),
+  fractured: plain('fractured'),
+  dehydration: down('drops'),
+  comfortable: plain('rested'),
+  fouled_guard: down('block'),
+  sheltered: up('rested'),
+  darkness: plain('crescent'),
+  clean: up('drops'),
+  well_rested: plain('rested'),
+  well_fed: plain('wellfed'),
+  rallied: up('surge'),
+  hearty_meal: plain('wellfed'),
+  warmed_through: up('sun'),
+  stock_warmed: up('sun'),
+  banked_warmth: up('sun'),
+  cool_slaked: up('mug'),
+  deep_slaked: up('mug'),
+  set_to_mend: plain('splint'),
+  trail_fed: plain('wellfed'),
+  well_provisioned: plain('wellfed'),
+  clear_headed: up('dazed'),
+  keen_witted: up('glare'),
+  nourished: plain('wellfed'),
+  fortified: up('block'),
+  refreshed: up('rested'),
+  soothed: up('heart'),
+  mood_ecstatic: up('heart'),
+  mood_content: plain('heart'),
+  mood_sad: down('heart'),
+  mood_depressed: plain('moodbreak'),
+  feathered: up('gust'),
+  gilled: up('drops'),
+  moist_skinned: up('drops'),
+  stone_boned: up('splint'),
+  budding_winged: up('gust'),
+  winged: up('gust'),
+  great_winged: up('gust'),
+  prehensile_tailed: plain('paw'),
+  gliding_membrane: up('gust'),
+  gill_frilled: up('drops'),
+  bounding_gait: up('dodge'),
+  restless_under_roof: down('rested'),
+  cold_torpor: down('frozen'),
+  parched_skin: down('sun'),
+  toxin_immune: up('poisoned'),
+  tremor_sense: up('ache'),
+  echo_sighted: up('glare'),
+  ironclad_mind: up('block'),
+  lightning_warded: up('storm'),
+  might: up('rage'),
+  insight: up('glare'),
+  vigor: up('heart'),
+  quickness: up('dodge'),
+  keen_senses: up('glare'),
+  charm: up('heart'),
+  moonlit: plain('fullmoon'),
+  grace: up('leaf'),
+  fortitude: up('block')
 };
 
 const BY_WORD: Record<string, ConditionIcon> = {
@@ -96,5 +157,8 @@ export function iconFor(e: CombatTextEvent): ConditionIcon | undefined {
 }
 
 export const iconWords = (): readonly string[] => Object.keys(BY_WORD);
+
+export const conditionIcon = (id: string): ConditionIcon | undefined =>
+  BY_CONDITION[id.split(':')[0]];
 
 export const iconConditions = (): readonly string[] => Object.keys(BY_CONDITION);

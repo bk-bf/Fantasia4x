@@ -1,11 +1,11 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
-  import SkinBadge from '$lib/components/UI/widget/SkinBadge.svelte';
+  import ConditionIcon from './ConditionIcon.svelte';
   import type { ConditionView } from '$lib/components/util/conditionInfo';
   import { createPinnable } from '$lib/components/util/pinnable.svelte';
   import ConditionTooltip from './ConditionTooltip.svelte';
-  import { BADGE_TONE, bySeverity, conditionBadge } from './badges';
+  import { BADGE_TONE, bySeverity, conditionKind } from './badges';
 
   let {
     views,
@@ -46,9 +46,8 @@
 </script>
 
 {#snippet chip(v: ConditionView)}
-  {@const b = conditionBadge(v)}
-  <SkinBadge glyph={b.glyph} kind={b.kind} />
-  <b style:--tone={BADGE_TONE[b.kind]}>{v.name}</b>
+  <ConditionIcon id={v.id} />
+  <b style:--tone={BADGE_TONE[conditionKind(v)]}>{v.name}</b>
 {/snippet}
 
 <div class="conds" class:inline bind:this={box}>
