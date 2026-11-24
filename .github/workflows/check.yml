@@ -172,7 +172,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Install Chromium for the browser work pins
-        if: needs.precheck.outputs.browser == 'true'
+        if: ${{ !cancelled() && needs.precheck.outputs.browser == 'true' }}
         run: pnpm exec playwright install ${{ runner.environment == 'github-hosted' && '--with-deps' || '' }} --only-shell chromium
 
       - name: Browser work pins, base against head
