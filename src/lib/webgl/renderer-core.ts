@@ -51,7 +51,7 @@ const LAYER_PASS = {
   item: 'items',
   entity: 'creatures',
   resourceTall: 'tall-resources'
-} as const satisfies Record<SpriteLayer, string>;
+} as const satisfies Record<SpriteLayer, Parameters<typeof passOn>[0]>;
 const CHUNKED: Partial<Record<SpriteLayer, 'resource' | 'resourceTall'>> = {
   resource: 'resource',
   resourceTall: 'resourceTall'
@@ -557,7 +557,7 @@ export class WebGLRendererCore {
 
     this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
     const tTerrain = performance.now();
-    if (this.groundBlend && passOn('terrain'))
+    if (this.groundBlend)
       this.drawGroundBlend(this.groundBlend, flicker, lightTime, [
         lightFrame?.grade.saturation ?? 1,
         lightFrame?.grade.brightness ?? 1
@@ -607,16 +607,16 @@ export class WebGLRendererCore {
       }
       this.drawGroundRings();
       for (const layer of SPRITE_LAYERS) {
+        if (!passOn(LAYER_PASS[layer])) continue;
         const chunk = CHUNKED[layer];
-        if (passOn(LAYER_PASS[layer]))
-          this.renderGlyphOverlay(
-            this.spriteGrid(layer),
-            viewportTilesW,
-            viewportTilesH,
-            lightTime,
-            chunk !== undefined,
-            chunk
-          );
+        this.renderGlyphOverlay(
+          this.spriteGrid(layer),
+          viewportTilesW,
+          viewportTilesH,
+          lightTime,
+          chunk !== undefined,
+          chunk
+        );
         if (layer === 'resource' && this.snowGrid && passOn('snow'))
           this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
       }

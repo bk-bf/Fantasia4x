@@ -17,6 +17,7 @@
   import MapTopRow from './MapTopRow.svelte';
   import MapLands from './MapLands.svelte';
   import MapGenOverlay from './MapGenOverlay.svelte';
+  import MapGeneratorRow from './MapGeneratorRow.svelte';
   import { mapSizes, rebalanceShares } from './customMap';
 
   let { onClose }: { onClose: () => void } = $props();
@@ -160,8 +161,9 @@
     onroll={rollSeed}
     onreset={reset}
   />
-  {#if size === L_DIM}
+  {#if size >= L_DIM}
     <p class="warn">vast lands are still rough, and may run slow</p>
+    <MapGeneratorRow onchange={previewNow} />
   {/if}
   <MapLands
     {biomes}
