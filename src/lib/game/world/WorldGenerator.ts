@@ -7,11 +7,15 @@ import {
   pickBiome,
   pickSubterrain,
   pickChar,
-  getWaterLevel
+  getWaterLevel,
+  getBiomeConfig
 } from '../core/defs/terrains';
 import { resourceGeneratorService } from '../services/ResourceGeneratorService';
 import { biomeBaseMoisture, baseMoistureFromWater } from '../services/EnvironmentService';
 import { makeSeededRng } from '../core/util/rng';
+import { chamferDistance } from './chamfer';
+import { Cover, generateLandforms, type LandformTargets } from './landforms';
+import { getMapGenerator, usesLandforms, type MapGenerator } from './mapGenerator';
 
 const TERRAIN_FREQUENCY = 0.005;
 const DETAIL_FREQUENCY = 0.05;
@@ -80,11 +84,136 @@ export function getTerraceNoise(
   return (Math.floor(normalized * steps) / steps) * 2.0 - 1.0;
 }
 
+type Noise = (x: number, y: number) => number;
+
+interface ClassicCell {
+  biome: string;
+  subType: string;
+  density: number;
+}
+
+function classicCell(
+  terrainNoise: Noise,
+  detailNoise: Noise,
+  waterNoise: Noise,
+  waterLevel: number,
+  x: number,
+  y: number
+): ClassicCell {
+  const wx = detailNoise(x * WARP_FREQUENCY + 17.3, y * WARP_FREQUENCY + 17.3) * WARP_AMOUNT;
+  const wy = detailNoise(x * WARP_FREQUENCY - 17.3, y * WARP_FREQUENCY - 17.3) * WARP_AMOUNT;
+  const raw = fbm(terrainNoise, x + wx, y + wy);
+  const density = Math.max(0, Math.min(1, (raw + 1) / 2));
+  const detail = detailNoise(x * DETAIL_FREQUENCY, y * DETAIL_FREQUENCY);
+  const biome = pickBiome(density) ?? 'plains';
+  let subType = pickSubterrain(biome, detail);
+  if (waterLevel > 0 && biome !== 'mountain') {
+    const wv = (waterNoise((x + wx) * WATER_FREQUENCY, (y + wy) * WATER_FREQUENCY) + 1) / 2;
+    if (wv < waterLevel) subType = wv < waterLevel * 0.55 ? 'water' : 'shallow_water';
+  }
+  return { biome, subType, density };
+}
+
+function makeTile(x: number, y: number, biomeName: string, subTypeName: string, density: number) {
+  const sub = SUBTERRAINS[subTypeName] ?? SUBTERRAIN_FALLBACK;
+  const legacyType =
+    biomeName === 'mountain'
+      ? 'mountain'
+      : WATER_SUBS.has(subTypeName)
+        ? 'water'
+        : biomeName === 'forest'
+          ? 'forest'
+          : 'land';
+  const tile: WorldTile = {
+    x,
+    y,
+    type: legacyType as WorldTile['type'],
+    discovered: true,
+    ascii: pickChar(sub, x, y),
+    terrainType: biomeName,
+    subType: subTypeName,
+    density,
+    moisture: 0,
+    temperature: 0,
+    movementCost: sub.movementCost,
+    walkable: sub.walkable,
+    blocksSight: sub.blocksSight ?? false,
+    resources: {},
+    territoryOwner: '',
+    gCost: 0,
+    hCost: 0,
+    fCost: 0,
+    parent: null
+  };
+  return tile;
+}
+
+const TARGET_SAMPLES = 160;
+
+function classicTargets(
+  width: number,
+  height: number,
+  cell: (x: number, y: number) => ClassicCell
+): LandformTargets {
+  const lowlandIds = getBiomeConfig()
+    .map((b) => b.id)
+    .filter((id) => id !== 'mountain');
+  const counts = new Map<string, number>();
+  let mountain = 0;
+  let water = 0;
+  let total = 0;
+  const step = Math.max(1, Math.floor(Math.max(width, height) / TARGET_SAMPLES));
+  for (let y = step >> 1; y < height; y += step) {
+    for (let x = step >> 1; x < width; x += step) {
+      const c = cell(x, y);
+      total++;
+      if (c.biome === 'mountain') mountain++;
+      else if (WATER_SUBS.has(c.subType)) water++;
+      else counts.set(c.biome, (counts.get(c.biome) ?? 0) + 1);
+    }
+  }
+  return {
+    mountain: mountain / total,
+    water: water / total,
+    lowland: lowlandIds.map((biome) => ({ biome, share: (counts.get(biome) ?? 0) / total }))
+  };
+}
+
+const LANDFORM_SUBTYPE: Record<number, string> = {
+  [Cover.Lake]: 'shallow_water',
+  [Cover.River]: 'shallow_water',
+  [Cover.DeepLake]: 'water'
+};
+
+function landformWorld(
+  width: number,
+  height: number,
+  seed: number,
+  detailNoise: Noise,
+  targets: LandformTargets
+): WorldTile[][] {
+  const { cover, lowland } = generateLandforms(width, height, seed, targets);
+  const world: WorldTile[][] = [];
+  for (let y = 0; y < height; y++) {
+    const row: WorldTile[] = [];
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      const biome = cover[i] === Cover.Mountain ? 'mountain' : targets.lowland[lowland[i]].biome;
+      const detail = detailNoise(x * DETAIL_FREQUENCY, y * DETAIL_FREQUENCY);
+      const subType = LANDFORM_SUBTYPE[cover[i]] ?? pickSubterrain(biome, detail);
+      const range = BIOMES[biome]?.densityRange ?? [0, 1];
+      row.push(makeTile(x, y, biome, subType, (range[0] + range[1]) / 2));
+    }
+    world.push(row);
+  }
+  return world;
+}
+
 export function generateWorld(
   width: number,
   height: number,
   seed: number,
-  opts?: { skipResources?: boolean; tidyWater?: boolean }
+  opts?: { skipResources?: boolean; tidyWater?: boolean; generator?: MapGenerator }
 ): WorldTile[][] {
   const detailSeed = (seed * 6971) >>> 0;
 
@@ -92,64 +221,25 @@ export function generateWorld(
   const detailNoise = createNoise2D(makeSeededRng(detailSeed));
   const waterNoise = createNoise2D(makeSeededRng((seed * 7919) >>> 0));
   const waterLevel = getWaterLevel();
+  const cell = (x: number, y: number) =>
+    classicCell(terrainNoise, detailNoise, waterNoise, waterLevel, x, y);
 
-  const world: WorldTile[][] = [];
-
-  for (let y = 0; y < height; y++) {
-    world[y] = [];
-    for (let x = 0; x < width; x++) {
-      const wx = detailNoise(x * WARP_FREQUENCY + 17.3, y * WARP_FREQUENCY + 17.3) * WARP_AMOUNT;
-      const wy = detailNoise(x * WARP_FREQUENCY - 17.3, y * WARP_FREQUENCY - 17.3) * WARP_AMOUNT;
-      const raw = fbm(terrainNoise, x + wx, y + wy);
-      const density = Math.max(0, Math.min(1, (raw + 1) / 2));
-
-      const detail = detailNoise(x * DETAIL_FREQUENCY, y * DETAIL_FREQUENCY);
-
-      const biomeName = pickBiome(density) ?? 'plains';
-      let subTypeName = pickSubterrain(biomeName, detail);
-      if (waterLevel > 0 && biomeName !== 'mountain') {
-        const wv = (waterNoise((x + wx) * WATER_FREQUENCY, (y + wy) * WATER_FREQUENCY) + 1) / 2;
-        if (wv < waterLevel) subTypeName = wv < waterLevel * 0.55 ? 'water' : 'shallow_water';
+  const landforms = usesLandforms(opts?.generator ?? getMapGenerator(), width, height);
+  let world: WorldTile[][];
+  if (landforms) {
+    world = landformWorld(width, height, seed, detailNoise, classicTargets(width, height, cell));
+    tidyWaterbodies(world, (t) => t.walkable && t.terrainType !== 'mountain');
+  } else {
+    world = [];
+    for (let y = 0; y < height; y++) {
+      world[y] = [];
+      for (let x = 0; x < width; x++) {
+        const c = cell(x, y);
+        world[y][x] = makeTile(x, y, c.biome, c.subType, c.density);
       }
-      const sub = SUBTERRAINS[subTypeName] ?? SUBTERRAIN_FALLBACK;
-
-      const walkable = sub.walkable;
-      const movementCost = sub.movementCost;
-
-      const legacyType =
-        biomeName === 'mountain'
-          ? 'mountain'
-          : subTypeName === 'water' || subTypeName === 'shallow_water' || subTypeName === 'rapids'
-            ? 'water'
-            : biomeName === 'forest'
-              ? 'forest'
-              : 'land';
-
-      world[y][x] = {
-        x,
-        y,
-        type: legacyType as WorldTile['type'],
-        discovered: true,
-        ascii: pickChar(sub, x, y),
-        terrainType: biomeName,
-        subType: subTypeName,
-        density,
-        moisture: 0,
-        temperature: 0,
-        movementCost,
-        walkable,
-        blocksSight: sub.blocksSight ?? false,
-        resources: {},
-        territoryOwner: '',
-        gCost: 0,
-        hCost: 0,
-        fCost: 0,
-        parent: null
-      };
     }
+    if (opts?.tidyWater !== false) tidyWaterbodies(world, (t) => !isWaterTile(t));
   }
-
-  if (opts?.tidyWater !== false) tidyWaterbodies(world);
 
   promoteBiomeVariants(world, detailNoise);
 
@@ -173,7 +263,7 @@ function setTileSubtype(t: WorldTile, subTypeName: string): void {
   t.type = (WATER_SUBS.has(subTypeName) ? 'water' : 'land') as WorldTile['type'];
 }
 
-function tidyWaterbodies(world: WorldTile[][]): void {
+function tidyWaterbodies(world: WorldTile[][], joins: (t: WorldTile) => boolean): void {
   const h = world.length;
   const w = world[0]?.length ?? 0;
   const waterAt = (x: number, y: number): boolean =>
@@ -184,7 +274,7 @@ function tidyWaterbodies(world: WorldTile[][]): void {
   const compBorder: boolean[] = [];
   for (let sy = 0; sy < h; sy++) {
     for (let sx = 0; sx < w; sx++) {
-      if (comp[sy * w + sx] !== -1 || isWaterTile(world[sy][sx])) continue;
+      if (comp[sy * w + sx] !== -1 || !joins(world[sy][sx])) continue;
       const id = compSize.length;
       let size = 0;
       let border = false;
@@ -203,7 +293,7 @@ function tidyWaterbodies(world: WorldTile[][]): void {
             const ny = y + dy;
             if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
             const ni = ny * w + nx;
-            if (comp[ni] !== -1 || isWaterTile(world[ny][nx])) continue;
+            if (comp[ni] !== -1 || !joins(world[ny][nx])) continue;
             comp[ni] = id;
             flood.push(ni);
           }
@@ -218,7 +308,8 @@ function tidyWaterbodies(world: WorldTile[][]): void {
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const id = comp[y * w + x];
-      if (id >= 0 && id !== mainland && !compBorder[id]) setTileSubtype(world[y][x], 'water');
+      if (id >= 0 && id !== mainland && !compBorder[id] && !isWaterTile(world[y][x]))
+        setTileSubtype(world[y][x], 'water');
     }
   }
 
@@ -258,47 +349,20 @@ function promoteBiomeVariants(
   }
   if (variantOf.size === 0) return;
 
-  const INF = 1e9;
-  const ORTHO = 1;
-  const DIAG = Math.SQRT2;
-  const dist = new Float64Array(w * h);
-
   for (const [parent, variant] of variantOf) {
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const t = world[y][x];
-        const interior =
-          t.terrainType === parent &&
-          !WATER_SUBS.has(t.subType) &&
-          x > 0 &&
-          y > 0 &&
-          x < w - 1 &&
-          y < h - 1;
-        dist[y * w + x] = interior ? INF : 0;
-      }
-    }
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = y * w + x;
-        let d = dist[i];
-        if (x > 0) d = Math.min(d, dist[i - 1] + ORTHO);
-        if (y > 0) d = Math.min(d, dist[i - w] + ORTHO);
-        if (x > 0 && y > 0) d = Math.min(d, dist[i - w - 1] + DIAG);
-        if (x < w - 1 && y > 0) d = Math.min(d, dist[i - w + 1] + DIAG);
-        dist[i] = d;
-      }
-    }
-    for (let y = h - 1; y >= 0; y--) {
-      for (let x = w - 1; x >= 0; x--) {
-        const i = y * w + x;
-        let d = dist[i];
-        if (x < w - 1) d = Math.min(d, dist[i + 1] + ORTHO);
-        if (y < h - 1) d = Math.min(d, dist[i + w] + ORTHO);
-        if (x < w - 1 && y < h - 1) d = Math.min(d, dist[i + w + 1] + DIAG);
-        if (x > 0 && y < h - 1) d = Math.min(d, dist[i + w - 1] + DIAG);
-        dist[i] = d;
-      }
-    }
+    const dist = chamferDistance(w, h, (i) => {
+      const x = i % w;
+      const y = (i / w) | 0;
+      const t = world[y][x];
+      return !(
+        t.terrainType === parent &&
+        !WATER_SUBS.has(t.subType) &&
+        x > 0 &&
+        y > 0 &&
+        x < w - 1 &&
+        y < h - 1
+      );
+    });
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         if (dist[y * w + x] < VARIANT_DEPTH) continue;
@@ -325,35 +389,7 @@ function assignMoisture(world: WorldTile[][], detailNoise: (x: number, y: number
   const h = world.length;
   const w = h > 0 ? world[0].length : 0;
   if (w === 0) return;
-  const INF = 1e9;
-  const ORTHO = 1;
-  const DIAG = Math.SQRT2;
-  const dist = new Float64Array(w * h);
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++) dist[y * w + x] = world[y][x].type === 'water' ? 0 : INF;
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = y * w + x;
-      let d = dist[i];
-      if (x > 0) d = Math.min(d, dist[i - 1] + ORTHO);
-      if (y > 0) d = Math.min(d, dist[i - w] + ORTHO);
-      if (x > 0 && y > 0) d = Math.min(d, dist[i - w - 1] + DIAG);
-      if (x < w - 1 && y > 0) d = Math.min(d, dist[i - w + 1] + DIAG);
-      dist[i] = d;
-    }
-  }
-  for (let y = h - 1; y >= 0; y--) {
-    for (let x = w - 1; x >= 0; x--) {
-      const i = y * w + x;
-      let d = dist[i];
-      if (x < w - 1) d = Math.min(d, dist[i + 1] + ORTHO);
-      if (y < h - 1) d = Math.min(d, dist[i + w] + ORTHO);
-      if (x < w - 1 && y < h - 1) d = Math.min(d, dist[i + w + 1] + DIAG);
-      if (x > 0 && y < h - 1) d = Math.min(d, dist[i + w - 1] + DIAG);
-      dist[i] = d;
-    }
-  }
+  const dist = chamferDistance(w, h, (i) => world[(i / w) | 0][i % w].type === 'water');
 
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {

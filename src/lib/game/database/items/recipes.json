@@ -1271,15 +1271,6 @@
     "toolTierRequired": 0
   },
   {
-    "id"              : "make_flint_sickle",
-    "discipline"      : "knapping",
-    "station"         : "craft_spot",
-    "inputs"          : {"flint_shard": 3, "branch": 2, "cordage": 4},
-    "outputs"         : {"flint_sickle": 1},
-    "workAmount"      : 2,
-    "toolTierRequired": 0
-  },
-  {
     "id"              : "make_stone_chopper",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
@@ -6187,15 +6178,6 @@
     "inputs"          : {"small_stone": 2, "branch": 1, "cordage": 4},
     "outputs"         : {"stone_club": 1},
     "workAmount"      : 3,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_flint_dagger",
-    "discipline"      : "knapping",
-    "station"         : "craft_spot",
-    "inputs"          : {"flint_shard": 2, "branch": 1, "category:cured_hide": 1},
-    "outputs"         : {"flint_dagger": 1},
-    "workAmount"      : 2,
     "toolTierRequired": 0
   },
   {

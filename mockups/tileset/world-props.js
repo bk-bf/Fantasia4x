@@ -403,12 +403,12 @@ const PROPS = (() => {
       s.outline();
       if (def.over) def.over(s, F);
     }
-    s.sh = pose === 'lie' ? { rx: def.L * .5, ry: 2.4, dx: 2, dy: 0, k: .7 } : { rx: 5, ry: 2.2, dx: 4, dy: 0, k: .7 };
+    s.sh = pose === 'lie' ? null : { rx: 5, ry: 2.2, dx: 4, dy: 0, k: .7 };
     return flip ? s.flip() : s;
   }
-  function worn(kind, ramps, flip, item) {
+  function worn(kind, ramps, flip, item, quantity) {
     const own = item && WORLD_GEAR.of(item);
-    const s = own ? WORLD_GEAR.sprite(own, kind === 'shieldUp' ? 'lean' : 'ground') : generic(kind, ramps);
+    const s = own ? WORLD_GEAR.sprite(own, kind === 'shieldUp' ? 'lean' : 'ground', quantity) : generic(kind, ramps);
     return flip ? s.flip() : s;
   }
   function generic(kind, ramps) {
@@ -430,5 +430,25 @@ const PROPS = (() => {
     }
     return s;
   }
-  return { B, rampOf, mixed, pile, long, worn, tucked, PILES: Object.keys(PILES), LONG: Object.keys(LONG), lengthOf: k => LONG[k].L };
+  function undersides(spr) {
+    const out = [];
+    for (let x = 0; x < spr.w; x++) for (let y = spr.h - 1; y >= 0; y--) if (spr.c[y * spr.w + x]) { out.push([x, y]); break; }
+    return out;
+  }
+  function blade(s, x, root, tall, lean, ramp) {
+    const top = lean ? ramp.length - 1 : ramp.length - 2;
+    for (let j = 0; j < tall; j++) s.set(x + (j >= tall - 1 ? lean : 0), root - j, ramp[clamp(top - tall + 1 + j, 0, top)]);
+  }
+  function bedded(spr, ramp, seed) {
+    const s = new Spr(spr.w, spr.h, spr.ax, spr.ay);
+    s.c = spr.c.slice(); s.e = spr.e.slice(); s.sh = spr.sh;
+    for (const [x, foot] of undersides(spr)) {
+      const roll = hash(x, seed, 41);
+      if (roll > .62) continue;
+      const crossing = roll < .16, tall = crossing ? 4 + Math.floor(hash(x, seed, 42) * 3) : 2 + Math.floor(hash(x, seed, 43) * 2);
+      blade(s, x, foot + 1, tall, crossing ? (hash(x, seed, 44) > .5 ? 1 : -1) : 0, ramp);
+    }
+    return s;
+  }
+  return { B, rampOf, mixed, pile, long, worn, tucked, bedded, undersides, PILES: Object.keys(PILES), LONG: Object.keys(LONG), lengthOf: k => LONG[k].L };
 })();

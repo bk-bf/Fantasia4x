@@ -5,8 +5,6 @@ const PIXEL_FLAILS = (() => {
   const CAP = [' l ', 'lmd', ' d '];
   const LINK = [' ll ', 'l  m', 'm  d', ' dd '];
   const RUNE_LINK = [' lL ', 'l  m', 'M  d', ' dd '];
-  const RING = [' l ', 'l d', ' d '];
-  const ACROSS = ['ld'];
   const DOWN = ['m', 'd'];
   const BALL = [
     '  lll  ',
@@ -63,13 +61,6 @@ const PIXEL_FLAILS = (() => {
     '  d ddd d  ',
     '     d     '
   ];
-  const STUDDED = [
-    ' l l ',
-    'lmlmd',
-    ' lmd ',
-    'lmdmd',
-    ' d d '
-  ];
 
   const lengthOf = pieces => pieces.reduce((n, piece) => n + (typeof piece === 'number' ? piece : piece[0].len), 0);
   function flail(handle, hung) {
@@ -110,17 +101,16 @@ const PIXEL_FLAILS = (() => {
     ...chain('runed', hanging(RUNE_LINK, [[1, -2]])).map(link => [...link, 'glow']),
     [RUNE_SPIKED, -1, 4, 'runed', 'glow']
   ]);
-  const chainbiter = () => flail([[POMMEL.ring, 'black'], [binding(5), 'red'], [haft(6), 'black']], [
-    [CAP, -1, -1, 'black'],
-    ...chain('iron', [
-      [RING, 1, -4], [ACROSS, 4, -3], [RING, 6, -4], [ACROSS, 9, -3],
-      [ACROSS, 2, 0], [RING, 4, 0], [RING, 7, 3],
-      [RING, 0, 2], [DOWN, 1, 5], [RING, 0, 7], [DOWN, 1, 10]
-    ]),
-    [STUDDED, 11, -5, 'black'],
-    [STUDDED, 9, 6, 'black'],
-    [STUDDED, -1, 12, 'black']
-  ]);
+  const STUD_BALL = [' lll ', 'lmlmd', 'lmmmd', 'lmldd', ' ddd '];
+  const CHAINBITER_DROPS = [[0, 1, 8, -2, 9], [1, 1, 6, 5, 5], [1, 0, 8, 9, -2]];
+  function chainbiter() {
+    const sk = flail([[POMMEL.ring, 'black'], [binding(5), 'red'], [haft(8), 'black']], [[CAP, -1, -1, 'black']]), [x, y] = PX.diagonal(15, 0);
+    for (const [dx, dy, n, bx, by] of CHAINBITER_DROPS) {
+      for (let k = 1; k <= n; k++) stamp(sk, x + dx * k, y + dy * k, [k % 2 ? 'm' : 'd'], ['iron']);
+      stamp(sk, x + bx, y + by, STUD_BALL, ['black']);
+    }
+    return sk;
+  }
 
   return [
     { id: 'bronze_chain_flail', draw: bronzeChainFlail },

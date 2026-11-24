@@ -66,6 +66,62 @@
     'ldmdmdmdddd',
     ' Z       X '
   ];
+  const FRAMED_SACK = [
+    ' L       M ',
+    ' LZZZZXZZM ',
+    ' LYYYYXYYM ',
+    ' llllllmmd ',
+    'llllllmmmdd',
+    'lmmmzyxmmdd',
+    'loooooooodd',
+    'lmmmmmmmmdd',
+    'lmmmmmmmmdd',
+    'lmmmmmmmddd',
+    ' ddddddddd ',
+    ' M       D '
+  ];
+  const SQUARE_SACK = [
+    ' L       M ',
+    ' LZZZZXZZM ',
+    ' LYYYYXYYM ',
+    'zllllllmmdx',
+    'yllllmmmmdx',
+    'lmmmzyxmmdd',
+    'loooooooodd',
+    'lmmmmmmmmdd',
+    'ymmmmmmmmdx',
+    'yxdddddddxx',
+    ' M       D '
+  ];
+  const STEEL_SACK = [
+    ' z       x ',
+    ' LZZZZXZZM ',
+    ' zYYYYXYYx ',
+    ' llllllmmd ',
+    'llllllmmmdd',
+    'lmmmzyxmmdd',
+    'loooooooodd',
+    'lmmmmmmmmdd',
+    'lmmmmmmmmdd',
+    'lmmmmmmmmdd',
+    'lmmmmmmmddd',
+    ' ddddddddd ',
+    ' z       x '
+  ];
+  const RUNE_SACK = [
+    ' L       M ',
+    ' LZZZZXZZM ',
+    ' LYYYYXYYM ',
+    ' llllllmmd ',
+    'llllllmmmdd',
+    'lmmmzyxmmdd',
+    'loooooooodd',
+    'lmymmmmmmdd',
+    'lmmmmmmymdd',
+    'lmymmmmmddd',
+    ' ddddddddd ',
+    ' M       D '
+  ];
 
   const LOOP = [
     '   lmmmmmd   ',
@@ -140,6 +196,10 @@
     hide_scrip: pack(SCRIP, { body: 'hide', strap: 'cord' }),
     hide_tool_roll: pack(TOOL_ROLL, { body: 'hide', trim: 'wood', strap: 'cord' }),
     wicker_frame: pack(WICKER_PACK, { body: 'ash', lining: 'sapwood' }),
+    framed_leather_pack: pack(FRAMED_SACK, { body: 'leather', trim: 'wood', strap: 'bronze', lining: 'linen' }),
+    iron_framed_pack: pack(SQUARE_SACK, { body: 'leather', trim: 'wood', strap: 'iron', lining: 'fur' }),
+    steel_framed_pack: pack(STEEL_SACK, { body: 'leather', trim: 'steel', strap: 'steel', lining: 'sackcloth' }),
+    rune_bound_frame_pack: pack(RUNE_SACK, { body: 'linen', trim: 'runed', strap: 'glow', lining: 'runecloth' }),
 
     leather_belt: belt(POUCHED_BELT, leather('bronze')),
     ringed_belt: belt(RINGED_BELT, leather('iron')),

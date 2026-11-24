@@ -53,7 +53,7 @@ to ubuntuserver through `remote/run.mjs`.
 | Path | What it does |
 |---|---|
 | `dev.sh` | Starts the dev server, on the port in `.devport` when there is one; flags add debug logging, the profiler, HMR, a browser or headless mode. |
-| `launch.sh` | Starts the game from this checkout. |
+| `launch.sh` | Starts the game from this checkout; `./launch.sh <branch>` first switches the checkout detached to `origin/<branch>` and plays it painted in Electron. |
 | `build.sh` | Packages the desktop app for Linux or Windows. |
 | `install.sh` | Sets up a fresh checkout. |
 | `audit.sh` | Runs the long combat audits (`RUN_AUDITS=1`) in the background on the host in `AUDIT_HOST`, `aspect` by default. |

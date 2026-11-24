@@ -57,21 +57,6 @@ const PIXEL_BLUNT = (() => {
     '  ddd  ',
     '  dd   '
   ]);
-  const FLANGED_HEAD = part(-6, [
-    '  lll  ',
-    ' llll  ',
-    ' lmmml ',
-    ' dddd  ',
-    '  ddd  ',
-    'llllll ',
-    'mmmmmmm',
-    'mmmmmm ',
-    '  ddd  ',
-    ' dddd  ',
-    ' mmmmd ',
-    ' dddd  ',
-    '  ddd  '
-  ]);
   const FINIAL = part(-1, ['l ', 'mm', 'd ']);
 
   const SHADE_BELOW = { l: 'd', d: 'l', L: 'D', D: 'L' };
@@ -164,6 +149,16 @@ const PIXEL_BLUNT = (() => {
     'lmmmmmmmd',
     'mmmmmmmmd'
   ]), part(0, ['mllllllld']));
+  const IRON_FLANGES = symmetric(part(-8, [
+    '  lll   ',
+    ' lmmmd  ',
+    ' lmmmmd ',
+    '  dddd  ',
+    ' lllll  ',
+    'lmmmmmd ',
+    'lmmmmmmd',
+    'mmmmmmmd'
+  ]), part(0, ['mlllllld']));
   const RUNE_FLANGES = symmetric(part(-9, [
     '  lllll  ',
     '  lLMLl  ',
@@ -272,7 +267,7 @@ const PIXEL_BLUNT = (() => {
   const stoneHammer = () => assemble([[haft(19), 'wood'], -8, lashing(2), [BLOCK_HEAD, 'stone', 'cord']]);
   const stoneMaul = () => assemble([[pole(23), 'wood'], -9, lashing(2), [BOULDER_HEAD, 'stone', 'cord']]);
   const copperMace = () => assemble([[haft(18), 'ash'], -1, [crossbar(2), 'copper'], -1, [KNOB_HEAD, 'copper']]);
-  const ironMace = () => assemble([[haft(15), 'wood'], -15, 1, [grip(4), 'leather'], 9, [crossbar(2), 'iron'], -1, [FLANGED_HEAD, 'iron'], -1, [FINIAL, 'iron']]);
+  const ironMace = () => assemble([[haft(15), 'wood'], -15, 1, [grip(4), 'leather'], 9, [crossbar(2), 'iron'], -1, [IRON_FLANGES, 'iron'], -1, [FINIAL, 'iron']]);
   const ironHammer = () => assemble([[haft(20), 'wood'], -1, [CLAW, 'iron']]);
 
   const antlerClub = () => assemble([[part(0, ['lm']), 'bone'], [binding(6), 'cord'], -1, [ANTLER_BEAM, 'bone']]);

@@ -59,12 +59,10 @@ describe('tool work boost (additive, items.json toolBoost)', () => {
     expect(steel).toBeGreaterThan(green);
   });
 
-  it('a knife/sickle boosts foraging via boostTools (without gating it)', () => {
+  it('a knife boosts foraging via boostTools (without gating it)', () => {
     const bareF = pawnStatService.getWorkModifiers(base(), 'foraging').speed;
     const knifeF = pawnStatService.getWorkModifiers(carrying('flint_knife'), 'foraging').speed;
-    const sickleF = pawnStatService.getWorkModifiers(carrying('flint_sickle'), 'foraging').speed;
     expect(knifeF).toBeGreaterThan(bareF);
-    expect(sickleF).toBeGreaterThan(bareF);
   });
 
   it('a hammer boosts construction via boostTools (speed up building, never gates)', () => {

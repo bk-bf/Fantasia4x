@@ -13,6 +13,7 @@ import {
   spawnPawnsOnMap
 } from '../core/state/initialState';
 import { generateWorld } from '../world/WorldGenerator';
+import type { MapGenerator } from '../world/mapGenerator';
 import { generateColonyPawns, generateWorldKin, resetPawnDebugIds } from '../entities/Pawns';
 import { resetMobIdCounter } from '../services/entity/entitySpawning';
 import { workService } from '../services/WorkService';
@@ -48,6 +49,7 @@ export interface ScenarioSpec {
     w?: number;
     h?: number;
     preset?: 'flat' | 'generated';
+    generator?: MapGenerator;
   };
   pawns?: ScenarioPawnGroup[];
   research?: string[];
@@ -122,7 +124,9 @@ export function buildScenario(spec: ScenarioSpec): GameState {
   const w = spec.map?.w ?? 96;
   const h = spec.map?.h ?? 96;
   const generated = spec.map?.preset === 'generated';
-  const world = generated ? generateWorld(w, h, seed) : flatWorld(w, h);
+  const world = generated
+    ? generateWorld(w, h, seed, { generator: spec.map?.generator })
+    : flatWorld(w, h);
   scenarioLog(
     `map ${w}x${h} preset=${generated ? 'generated' : 'flat'}` +
       (generated
@@ -244,14 +248,16 @@ export function buildScenario(spec: ScenarioSpec): GameState {
   }>;
   if (spec.workReady) {
     for (const p of gs.pawns) {
-      for (const c of categories) cmd('setPawnLaborLevel', { pawnId: p.id, workId: c.id, level: 3 });
+      for (const c of categories)
+        cmd('setPawnLaborLevel', { pawnId: p.id, workId: c.id, level: 3 });
     }
     const stocked = new Set(Object.keys(spec.items ?? {}));
     for (const c of categories) {
       const best = (c.toolsRequired ?? [])
         .map((id) => ({ id, tier: (itemService.getItemById(id) as { tier?: number })?.tier ?? 1 }))
         .sort((a, b) => b.tier - a.tier)[0];
-      if (best && !stocked.has(best.id)) cmd('addItem', { itemId: best.id, amount: 2, tileKey: stockTile });
+      if (best && !stocked.has(best.id))
+        cmd('addItem', { itemId: best.id, amount: 2, tileKey: stockTile });
     }
   }
 
@@ -267,7 +273,9 @@ export function buildScenario(spec: ScenarioSpec): GameState {
   if (gs.pawns.length && !spec.workReady) {
     const held = new Set(Object.keys(spec.items ?? {}));
     const uncovered = categories
-      .filter((c) => (c.toolsRequired ?? []).length && !(c.toolsRequired ?? []).some((t) => held.has(t)))
+      .filter(
+        (c) => (c.toolsRequired ?? []).length && !(c.toolsRequired ?? []).some((t) => held.has(t))
+      )
       .map((c) => c.id);
     if (uncovered.length) {
       scenarioLog(

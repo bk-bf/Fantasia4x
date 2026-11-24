@@ -30,9 +30,9 @@ const PX = (() => {
     buckskin: '#3a2710 #9a6e36 #c9994f #ecc682',
     boarhide: '#1f120a #4a2d18 #6e4526 #96663a',
     wolfpelt: '#211e1a #555047 #7f786a #aaa394',
-    elkhide: '#2a1c0e #654a2a #8f6b40 #b99262',
-    sabrehide: '#2e2210 #6e5426 #9a7a3c #c4a45e',
-    owlpelt: '#26160c #5a3820 #855634 #ae7c52',
+    elkhide: '#2a1a0e #6a4a2e #946a46 #bc9068',
+    sabrehide: '#2e1a0c #8a5222 #c27a34 #eca860',
+    owlpelt: '#1e0f08 #4e2818 #74402a #a06446',
     direpelt: '#22252c #646b78 #9aa0ac #cdd2da',
     plume: '#3a3426 #8c846c #b8b09a #e0dac8',
     sackcloth: '#33291a #857657 #b8a982 #d9cdaa',
@@ -255,15 +255,13 @@ const PX = (() => {
       }
     }
   }
-  function layered(...layers) {
-    const sk = sketch();
-    for (const [x, y, rows, ...inks] of layers) {
-      const fresh = stamp(sketch(), x, y, rows, inks);
-      edge(sk, fresh);
-      for (const [k, cell] of fresh) sk.set(k, cell);
-    }
+  function overlay(sk, x, y, rows, ...inks) {
+    const fresh = stamp(sketch(), x, y, rows, inks);
+    edge(sk, fresh);
+    for (const [k, cell] of fresh) sk.set(k, cell);
     return sk;
   }
+  const layered = (...layers) => layers.reduce((sk, layer) => overlay(sk, ...layer), sketch());
 
-  return { SIZE, MATERIALS, sketch, part, tile, run, join, strip, stack, profile, patch, mirror, lay, assemble, stamp, mirrored, transposed, diagonal, outline, bounds, fit, icon, layered };
+  return { SIZE, MATERIALS, sketch, part, tile, run, join, strip, stack, profile, patch, mirror, lay, assemble, stamp, mirrored, transposed, diagonal, outline, bounds, fit, icon, layered, overlay };
 })();
