@@ -153,7 +153,6 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
         { id: 'blast_furnace' },
         { id: 'crucible_steelworks' },
         { id: 'alchemy_lab' },
-        { id: 'manaforge' },
         { id: 'oven' },
         { id: 'larder_cupboard' },
         { id: 'feather_bed' },
