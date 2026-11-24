@@ -400,24 +400,6 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
       const recoveryMul = pos && isRoofedTile(pos.x, pos.y) ? SHELTER_RECOVERY_MUL : 1;
       const cold = approachExposure(needs?.coldExposure ?? 0, coldTarget, recoveryMul);
       const heat = approachExposure(needs?.heatExposure ?? 0, heatTarget, recoveryMul);
-      if (cold > 50 || heat > 50 || Number.isNaN(coldTarget)) {
-        gameLogger.log(
-          gameState.turn,
-          'NEED-CHECK',
-          () =>
-            `TEMP-DBG ${pawn.name} pos:(${pawn.position?.x},${pawn.position?.y}) ` +
-            `terrain:${tile?.terrainType ?? '?'} cachedTemp:${tile?.temperature} ` +
-            `base:${base.toFixed(1)} eff:${temp.toFixed(1)} ` +
-            `onset:[${tol.coldOnset.toFixed(1)},${tol.heatOnset.toFixed(1)}] ` +
-            `comfort:[${tol.comfortMin},${tol.comfortMax}] resDeg:[${tol.coldDeg.toFixed(1)},${tol.heatDeg.toFixed(1)}] ` +
-            `coldTarget:${coldTarget} heatTarget:${heatTarget} cold:${cold.toFixed(1)} heat:${heat.toFixed(1)} ` +
-            `wet:${(needs?.wetness ?? 0).toFixed(0)} wind:${windLevel.toFixed(2)} roofed:${!!thermal?.roofed} ` +
-            `equip:[${Object.values(pawn.equipment ?? {})
-              .map((i) => i?.itemId)
-              .filter(Boolean)
-              .join(',')}]`
-        );
-      }
       if (needs) {
         needs.coldExposure = cold;
         needs.heatExposure = heat;
