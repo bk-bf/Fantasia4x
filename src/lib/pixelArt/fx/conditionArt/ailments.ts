@@ -19,7 +19,7 @@ const BONE = [
 const BONE_PAL = keys(P.bone, '012345');
 const BANDAGE = { w: hex('#f4f0e4'), c: hex('#c8c0b0'), r: hex('#c03030') };
 const CRACK = { a: glow('#ff9944'), b: glow('#ffd870') };
-const HEART = [
+export const HEART = [
   '.344...443.',
   '34554.45543',
   '35555454443',
