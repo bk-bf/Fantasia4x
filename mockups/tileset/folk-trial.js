@@ -12,7 +12,12 @@
     ctx.putImageData(im, 0, 0);
     return cv;
   }
-  const ofSprite = (s, scale) => canvasOf(s.w, s.h, scale, d => s.c.forEach((c, i) => { if (c) d.set([c[0], c[1], c[2], 255], i * 4); }));
+  function ofSprite(s, scale) {
+    let x0 = s.w, y0 = s.h, x1 = 0, y1 = 0;
+    for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) if (s.c[y * s.w + x]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    const w = x1 - x0 + 1, h = y1 - y0 + 1;
+    return canvasOf(w, h, scale, d => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const c = s.c[(y0 + y) * s.w + x0 + x]; if (c) d.set([c[0], c[1], c[2], 255], (y * w + x) * 4); } });
+  }
   const ofBake = (b, scale) => canvasOf(b.w, b.h, scale, d => d.set(b.rgba));
   const entry = (cat, id, variant) => DBX.of(cat, id).find(e => e.variant === variant) || DBX.of(cat, id)[0];
 
@@ -73,5 +78,8 @@
     section('The pieces of the man, side', pieces(side));
   }
 
-  render(F4X.bar(st => render(st)).state);
+  fetch('catalog-data.json').then(r => r.json()).then(data => {
+    DBX.fromData(data.objects);
+    render(F4X.bar(st => render(st)).state);
+  });
 })();
