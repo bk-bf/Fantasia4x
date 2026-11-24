@@ -61,6 +61,5 @@
   const PAWN_ID = { gobboss: 'goblin_boss', kobold: 'kobold_skulker', warlord: 'orc_warlord', gnoll: 'gnoll_marauder', goblin: 'goblin', orc: 'orc_reaver', trader: 'kingdom_trader', guard: 'kingdom_guard' };
   for (const k in PAWNS) {
     if (PAWN_ID[k]) X.reg('creature', PAWN_ID[k], '0', () => mkPawn(PAWNS[k].o), old);
-    else X.reg('folk', '_' + k, '0', () => mkPawn(PAWNS[k].o), { origin: 'mockup', extra: PAWNS[k].name });
   }
 })();
