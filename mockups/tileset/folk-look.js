@@ -29,12 +29,21 @@ const EYES = {
   violet: { col: P.purple[4], word: 'violet-eyed' },
   red: { col: P.red[4], word: 'red-eyed' },
 };
-const GARB = {
-  undyed: P.cloth, moss: P.green, madder: P.red, woad: P.blue, murex: P.purple,
-  hide: P.leather, soot: P.furDark, ochre: P.gold.slice(0, 4), fern: P.oak, rust: P.copper.slice(0, 5),
+const DYES = {
+  undyed: P.cloth,
+  oatmeal: R('#3a3832 #55524a #736f64 #918c7e #aca696 #c4bfae'),
+  russet: R('#2e160e #4a2414 #6a361c #8a4c28 #a66436 #be7e4a'),
+  madder: R('#34100e #521a16 #742822 #94382e #ae4e3e #c46a54'),
+  woad: R('#141c2c #1e2c44 #2c405e #3e5878 #567290 #728ea6'),
+  weld: R('#3a2c0c #5a4614 #7c621e #9c7e2c #b8983e #ceb058'),
+  moss: R('#141e10 #20301a #304626 #445e34 #5a7644 #748e58'),
+  walnut: R('#1c120c #2e1e14 #44301e #5c422a #745638 #8c6c48'),
+  charcoal: R('#141416 #202124 #303236 #44464a #5a5c60 #727478'),
+  lichen: R('#1e1426 #30203a #463052 #5e446a #765a80 #8e7496'),
 };
-const LEGWEAR = { hide: P.leather, soot: P.furDark, undyed: P.cloth, woad: P.blue, bark: P.furBrown };
-const TRIMS = [null, null, P.gold, P.red, P.blue, P.cloth];
+const HOSE = { hide: P.leather, walnut: DYES.walnut, charcoal: DYES.charcoal, oatmeal: DYES.oatmeal, russet: DYES.russet, moss: DYES.moss };
+const TRIMS = [null, null, null, DYES.weld, DYES.madder, DYES.woad, P.cloth];
+const HEADWEAR = { none: 6, hood: 1.5, coif: 1, straw: 1 };
 
 const STYLES = [
   { id: 'short', sexes: { male: 4, female: 2 } },
@@ -73,11 +82,13 @@ function culturePreference(culture) {
   const r = rng(seedOf(culture.id + ':colour'));
   const eyes = Object.fromEntries(Object.keys(EYES).map(k => [k, k === 'red' || k === 'violet' ? .15 : 1]));
   const eyeLean = lean(r, eyes, 2 + r() * 6);
-  const garbKeys = Object.keys(GARB), garb = {};
+  const garbKeys = Object.keys(DYES).filter(k => k !== 'lichen' || r() < .3), garb = {};
   for (let i = 0; i < 3; i++) garb[garbKeys[Math.floor(r() * garbKeys.length)]] = 3 - i;
+  const headwear = { ...HEADWEAR }, worn = ['hood', 'coif', 'straw'][Math.floor(r() * 3)];
+  if (r() < .6) headwear[worn] += 3;
   return {
     skin: lean(r, SKINS, 2 + r() * 10), hair: lean(r, HAIRS, 2 + r() * 8), eyes: eyeLean,
-    garb, legwear: lean(r, LEGWEAR, 3), trim: TRIMS[Math.floor(r() * TRIMS.length)],
+    garb, legwear: lean(r, HOSE, 3), trim: TRIMS[Math.floor(r() * TRIMS.length)], headwear,
   };
 }
 
@@ -145,14 +156,16 @@ function buildOf(p) {
   return p.weight / (TYPICAL_WEIGHT.scale * Math.pow(p.height, TYPICAL_WEIGHT.power));
 }
 
+const PHYSIQUES = [[.75, 'gaunt'], [.9, 'lean'], [1.15, 'average'], [1.35, 'stocky'], [Infinity, 'heavy']];
+const buildWord = build => PHYSIQUES.find(([upTo]) => build < upTo)[1];
+
 function bodyOf(p) {
-  const tall = p.height / 175, k = tall >= 1 ? tall : Math.pow(tall, .75), girth = clamp(Math.sqrt(buildOf(p)), .78, 1.3);
-  const total = clamp(Math.round(32 * k), 21, 58);
-  const hh = clamp(Math.round(10 + 2.2 * (k - 1)), 9, 11), hd = hh >= 11 ? 6 : k < .72 ? 4 : 5;
+  const tall = p.height / 175, k = tall >= 1 ? tall : Math.pow(tall, .75), build = buildOf(p), girth = clamp(Math.pow(build, .7), .68, 1.55);
+  const total = clamp(Math.round(32 * k), 21, 58), hh = 10, hd = 5;
   const rest = total - hh, legs = Math.max(5, Math.round(rest * .46)), tl = rest - legs;
-  const hw = clamp(Math.round(6 * k * girth - (p.sex === 'female' ? .4 : 0)), 3, 11);
-  const aw = clamp(Math.round(hw / 2), 2, 5);
-  return { legs, tl, hw, aw, hh, hd };
+  const hw = clamp(Math.round(6 * k * girth - (p.sex === 'female' ? .4 : 0)), 3, 12);
+  const aw = clamp(Math.round(3 * Math.sqrt(k) * Math.pow(girth, .8)), 2, 5);
+  return { legs, tl, hw, aw, hh, hd, build };
 }
 
 function greying(r, age, hair) {
@@ -171,7 +184,14 @@ function pawnLookOf(p, pref, rarity) {
   const garb = weighted(r, pref.garb), legwear = weighted(r, pref.legwear);
   const { marks, from } = lookMarks(p.traits, rarity);
   if (p.blind) { marks.blind = 1; delete marks.oneEye; }
-  return { id: p.id, sex: p.sex, body: bodyOf(p), skin, hair, eyes, oddEye: odd !== eyes ? odd : null, style, beard, garb, legwear, trim: pref.trim, marks, from };
+  const hat = weighted(r, pref.headwear || { none: 1 }), hood = weighted(r, pref.garb), cloak = r() < .12 ? weighted(r, pref.garb) : null;
+  const marked = marks.scales || marks.fur || marks.chitin || marks.ironSkin || marks.emberSkin || marks.leafSkin || marks.slick || marks.feathers >= 3;
+  const sleeves = marked || r() < .5 ? 'rolled' : 'long', apron = p.sex === 'female' && r() < .35, pouch = r() < .5;
+  const capped = hat === 'hood' || hat === 'coif', underBrim = hat === 'straw' && ['topknot', 'bun', 'mohawk', 'curls', 'crop', 'bald'].includes(style);
+  return {
+    id: p.id, sex: p.sex, body: bodyOf(p), skin, hair, eyes, oddEye: odd !== eyes ? odd : null, style: capped || underBrim ? 'short' : style, beard,
+    garb, legwear, trim: pref.trim, hat, hood, cloak, sleeves, apron, pouch, marks, from,
+  };
 }
 
 const HAIR_GREY = { grey: P.furGrey };
@@ -194,12 +214,15 @@ function drawLook(look, face, time) {
   const skin = skinOf(look), eye = m.dragonEyes ? P.gold[4] : m.beastEyes ? P.gold[3] : m.murkEyes ? P.frost[5] : EYES[look.eyes].col;
   FOLK[key] = { ...look.body, skin, eyes: eye, tusks: m.tusks ? 1 : 0, pointears: m.fur >= 3 || m.scales >= 4 ? 1 : 0 };
   const style = STYLES.find(s => s.id === look.style), hair = hairRamp(look.hair);
-  const o = { race: key, tunic: GARB[look.garb], pants: LEGWEAR[look.legwear], hair, seed: seedOf(look.id) % 97 + 1, ...(style.o || {}) };
+  const o = { race: key, tunic: DYES[look.garb], pants: HOSE[look.legwear], hair, seed: seedOf(look.id) % 97 + 1, ...(style.o || {}) };
   if (look.trim) o.trim = look.trim;
+  if (look.hat === 'hood' || look.hat === 'coif') { o.hat = 'hood'; o.hood = look.hat === 'coif' ? P.cloth : DYES[look.hood]; }
+  if (look.hat === 'straw') o.hat = 'straw';
+  if (look.cloak) o.cape = DYES[look.cloak];
   if (look.style === 'mohawk') o.mohawk = hair;
   if (look.beard === 'full' || look.beard === 'braided') o.beard = 1;
   const pose = idlePose(look, time);
-  const s = rigPawn(o, { face: face || 'f', br: pose.br, blink: pose.blink, look: pose.glance, hair: pose.wave() * 1.2 });
+  const s = rigPawn(o, { face: face || 'f', br: pose.br, blink: pose.blink, look: pose.glance, hair: pose.wave() * 1.2, cape: pose.wave(.2) * 1.5 });
   delete FOLK[key];
   paintLook(s, look, skin, hair, face || 'f', pose);
   return s;

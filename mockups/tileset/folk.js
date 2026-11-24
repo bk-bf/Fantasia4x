@@ -60,8 +60,9 @@
     const fig = document.createElement('figure');
     fig.append(figure(p, st, +st.zoom));
     const cap = document.createElement('figcaption'), marks = Object.values(p.look.from).map(name).filter(Boolean);
-    cap.innerHTML = `<b>${p.name}</b><span>${p.sex === 'female' ? 'Woman' : 'Man'}, ${p.age} · ${p.height} cm · ${p.weight} kg</span>`
-      + `<span class="hidden">${SKINS[p.look.skin].word}, ${(HAIRS[p.look.hair] || { word: 'greying' }).word}, ${EYES[p.look.eyes].word}${p.look.oddEye ? ' and ' + EYES[p.look.oddEye].word : ''}</span>`
+    const colours = `${SKINS[p.look.skin].word}, ${(HAIRS[p.look.hair] || { word: 'greying' }).word}, ${EYES[p.look.eyes].word}${p.look.oddEye ? ' and ' + EYES[p.look.oddEye].word : ''}`;
+    cap.innerHTML = `<b>${p.name}</b><span>${p.sex === 'female' ? 'Woman' : 'Man'}, ${p.age} · ${p.height} cm · ${p.weight} kg · ${buildWord(p.look.body.build)}</span>`
+      + `<span class="hidden">${p.note ?? colours}</span>`
       + (marks.length ? `<span class="marks">${marks.join(' · ')}</span>` : '');
     fig.append(cap);
     return fig;
@@ -73,8 +74,9 @@
     sheet.replaceChildren();
     const note = document.createElement('p');
     note.className = 'note';
-    note.textContent = 'Cultures and pawns from the game\u2019s own generator (seed 431). Colours, hair, beards and the culture\u2019s colouring line are rolled by this page. Clothes are plain garb in each culture\u2019s rolled colours, standing in for worn gear and held items, which belong to the animation work. A mark\u2019s strength follows its trait\u2019s rarity.';
+    note.textContent = 'Cultures and pawns from the game\u2019s own generator (seed 431). Colours, hair, beards and the culture\u2019s colouring line are rolled by this page. Dress is plain medieval wear in each culture\u2019s rolled dyes, standing in for worn gear and held items, which belong to the animation work. A mark\u2019s strength follows its trait\u2019s rarity.';
     sheet.append(note);
+    sizeSections(st);
     for (const c of cultures) {
       const sec = document.createElement('section'), h = document.createElement('h2'), d = document.createElement('p');
       h.textContent = `${c.name} · ${c.archetype}`;
@@ -91,20 +93,37 @@
     marksSection(st);
   }
 
-  function marksSection(st) {
+  const PLAIN_PREF = { skin: { tan: 1 }, hair: { brown: 1 }, eyes: { dark: 1 }, garb: { undyed: 1 }, legwear: { hide: 1 }, trim: null, headwear: { none: 1 } };
+  const PLAIN_LOOK = { style: 'short', beard: 'none', hair: 'brown', hat: 'none', cloak: null, sleeves: 'rolled', apron: false, pouch: false };
+  const typicalWeight = cm => Math.round(TYPICAL_WEIGHT.scale * Math.pow(cm, TYPICAL_WEIGHT.power));
+  function plainPawn(id, name, fields) {
+    const p = { id, name, sex: 'male', age: 30, height: 175, weight: 72, traits: [], ...fields };
+    p.look = { ...pawnLookOf(p, PLAIN_PREF, data.traitRarity), ...PLAIN_LOOK };
+    return p;
+  }
+
+  function cardRow(title, pawns, st) {
     const sec = document.createElement('section'), h = document.createElement('h2'), row = document.createElement('div');
-    h.textContent = 'Every mark at every rarity it comes in, on one plain body';
+    h.textContent = title;
     row.className = 'cells';
-    const plain = { sex: 'male', age: 30, height: 175, weight: 72 };
-    const samples = MARKS.flatMap(m => m.traits.filter(t => data.traitRarity[t]).map(t => ({ ...plain, id: 'mark-' + t, name: name(t), traits: [t], rarity: data.traitRarity[t] })));
-    samples.sort((a, b) => MARKS.findIndex(m => m.traits.includes(a.traits[0])) - MARKS.findIndex(m => m.traits.includes(b.traits[0])) || RANK[a.rarity] - RANK[b.rarity]);
-    samples.push({ ...plain, id: 'mark-blind', name: 'Both eyes lost', traits: [], blind: true, rarity: 'from a wound' });
-    const pref = { skin: { tan: 1 }, hair: { brown: 1 }, eyes: { dark: 1 }, garb: { undyed: 1 }, legwear: { hide: 1 }, trim: null };
-    for (const p of samples) p.look = { ...pawnLookOf(p, pref, data.traitRarity), style: 'short', beard: 'none', hair: 'brown' };
-    CROP = cropFor(samples, st.face);
-    for (const p of samples) { const f = card(p, st); f.querySelector('figcaption .hidden').textContent = p.rarity; row.append(f); }
+    CROP = cropFor(pawns, st.face);
+    for (const p of pawns) row.append(card(p, st));
     sec.append(h, row);
     sheet.append(sec);
+  }
+
+  function sizeSections(st) {
+    cardRow('One build at nine heights', [90, 110, 130, 150, 175, 200, 230, 260, 290].map(cm => plainPawn('tall-' + cm, cm + ' cm', { height: cm, weight: typicalWeight(cm), note: '' })), st);
+    cardRow('One height at seven builds', [.6, .75, .9, 1, 1.15, 1.35, 1.6].map(share => Math.round(typicalWeight(175) * share)).map(kg => plainPawn('heavy-' + kg, kg + ' kg', { weight: kg, note: '' })), st);
+    const ends = cultures.flatMap(c => { const byHeight = [...c.pawns].sort((a, b) => a.height - b.height); return [byHeight[0], byHeight[byHeight.length - 1]].map(p => ({ ...p, note: c.archetype })); });
+    cardRow('The shortest and the tallest of each folk', ends.sort((a, b) => a.height - b.height), st);
+  }
+
+  function marksSection(st) {
+    const samples = MARKS.flatMap(m => m.traits.filter(t => data.traitRarity[t]).map(t => plainPawn('mark-' + t, name(t), { traits: [t], note: data.traitRarity[t] })));
+    samples.sort((a, b) => MARKS.findIndex(m => m.traits.includes(a.traits[0])) - MARKS.findIndex(m => m.traits.includes(b.traits[0])) || RANK[a.note] - RANK[b.note]);
+    samples.push(plainPawn('mark-blind', 'Both eyes lost', { blind: true, note: 'from a wound' }));
+    cardRow('Every mark at every rarity it comes in, on one plain body', samples, st);
   }
 
   function premadeSection(st) {

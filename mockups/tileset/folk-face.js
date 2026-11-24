@@ -93,6 +93,7 @@ function paintHair(pen, g, look, hair, skin) {
   const { X, er, hd, hh, hTop, tTop, face } = g, n = hair.length - 1, side = face === 's', back = face === 'b';
   const h = (k) => hair[clamp(n - 1 - k, 0, n)], tie = look.trim ? look.trim[3] : P.red[3];
   const skinSet = new Set(skin), rear = side ? X - hd - 1 : X, sway = Math.round(g.pose.wave(.1));
+  if (look.hat === 'hood' || look.hat === 'coif') return;
   switch (look.style) {
     case 'crop':
       for (let y = hTop; y < hTop + (back ? hh - 2 : 3); y++) for (let x = X - hd; x < X + hd; x++) if (skinSet.has(pen.get(x, y)) && !(y === hTop + 2 && !back && hash(x, y, 37) > .6)) pen.put(x, y, h(hash(x, y, 41) > .7 ? 1 : 2));
