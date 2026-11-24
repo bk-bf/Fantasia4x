@@ -30,7 +30,7 @@ ssh laptop 'cd ~/Documents/local/Projects/Fantasia4x && git log -1 --format="%h 
 - **Stale WASM.** A checkout whose `src/lib/*-pkg` is older than its Rust source runs with missing
   exports: the worker throws on its first path search and TPS sits at 0 after unpausing. `dev.sh`
   now rebuilds it when the source is newer; check the timestamps anyway when TPS is 0.
-- **How he launches.** `F4X_PAINTED=1 ./launch.sh --electron` runs the dev server, so Svelte's
+- **How he launches.** `./launch.sh --electron` runs the dev server, so Svelte's
   dev-mode bookkeeping (a stack trace captured on every state write) is part of what he feels.
   A production build would not show it; do not discount it from his numbers.
 
@@ -62,7 +62,7 @@ with `F4X_FIXTURE`; the probes serve it from the tree's `static/` because a save
 the page when Playwright hands it over directly.
 
 For a run he can repeat on his own laptop, launch the fixed map instead of a save:
-`F4X_PAINTED=1 F4X_SCENARIO=large-wilderness ./launch.sh --electron --net-host` loads a 750x750
+`F4X_SCENARIO=large-wilderness ./launch.sh --electron --net-host` loads a 750x750
 world from seed 4242 in its own save slot, the same on every launch. A world he generates by hand
 is a different world each time, and the size he picked in the menu is not always the size he got:
 read `map=` on the session line, and on every perf line after a regenerate, before comparing.
