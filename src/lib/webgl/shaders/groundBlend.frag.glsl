@@ -88,6 +88,11 @@ const float GRASS_RIM = 0.7;
 const float SOIL_LIP = 0.68;
 const float FAR_ART_PER_PX = 4.0;
 const int FAR_SHIFT = 3;
+const float RAG_MID_FREQ = 0.07;
+const float RAG_MID_AMP = 34.0;
+const float RAG_FINE_FREQ = 0.28;
+const float RAG_FINE_AMP = 7.0;
+const float RAG_GRAIN = 10.0;
 
 const int WAVE_STYLE = 1;
 const int SEA_PHASE = 0;
@@ -610,6 +615,19 @@ vec3 fieldPiece(ivec4 here, ivec2 block, vec3 c) {
     return texelFetch(u_paintAtlas, ivec2(u_pieces) + ivec2(colour, type + 1), 0).rgb;
 }
 
+vec2 ragAt(vec2 p) {
+    vec2 mid = vec2(valueNoise(p * RAG_MID_FREQ, 21), valueNoise(p * RAG_MID_FREQ, 22));
+    vec2 fine = vec2(valueNoise(p * RAG_FINE_FREQ, 23), valueNoise(p * RAG_FINE_FREQ, 24));
+    ivec2 cell = ivec2(p) >> 1;
+    vec2 grain = vec2(hash(cell.x, cell.y, 25), hash(cell.x, cell.y, 26));
+    return (mid - 0.5) * RAG_MID_AMP + (fine - 0.5) * RAG_FINE_AMP + (grain - 0.5) * RAG_GRAIN;
+}
+
+bool raggedKind(uint k) {
+    vec4 layer = u_layer[k];
+    return layer.y < 0.5 && layer.z >= 0.0 && metaAt(ivec2(layer.zw), AMOUNT).b > 0;
+}
+
 void main() {
     vec2 p = floor(v_art);
     uint own = kindAt(p);
@@ -619,6 +637,12 @@ void main() {
 
     uint k = kindAt(w);
     if (k == 0u) k = own;
+    vec2 wr = w + ragAt(p);
+    uint kr = kindAt(wr);
+    if (kr != 0u && kr != k && u_layer[k].y < 0.5 && u_layer[kr].y < 0.5 && (raggedKind(k) || raggedKind(kr))) {
+        k = kr;
+        w = wr;
+    }
     vec4 layer = u_layer[k];
     vec3 c;
     if (layer.y > 0.5) {

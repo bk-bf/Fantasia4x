@@ -410,12 +410,6 @@
       for (const [x, y] of scatter(r, 3, 3, 29, 14, 40)) { px(s, x, y, P.bog, 4); px(s, x + 1, y, P.bog, 3); }
       return s;
     }, 'bog'],
-    blue_clay: [(seed, season) => {
-      const s = tileSpr(), r = rng(seed * 29 + 5);
-      lumps(s, r, 6, P.clayBlue, { rmin: 3, rvar: 3.4, facet: 3.2, flat: .6 });
-      for (const [x, y] of scatter(r, 6, 2, 30, 13, 40)) { px(s, x, y, P.clayBlue, 2); px(s, x + 1, y, P.clayBlue, 3); px(s, x + 1, y + 1, P.clayBlue, 0); }
-      return winterOf(s, season);
-    }, 'clay'],
     riverbank_deposit: [(seed, season) => {
       const s = tileSpr(), r = rng(seed * 29 + 6);
       for (let k = 0; k < 2; k++) { const cx = 9 + r() * 14, cy = 20 + k * 11 + r() * 3; s.oval(cx, cy, 7 + r() * 3, 2.4, (x, y, nx, ny) => hash(x, y, seed) > .85 ? null : P.clayBlue[ny < -.2 ? 2 : nx > .5 ? 1 : 3 - ((x + y) & 1 && ny > .3 ? 1 : 0)]); }
