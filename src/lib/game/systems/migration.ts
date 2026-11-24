@@ -1,6 +1,7 @@
 import type { GameState } from '../core/types';
 import { rng } from '../core/util/rng';
-import { generateColonyPawns, remapKinIds } from '../entities/Pawns';
+import { generateColonyPawns } from '../core/gen/colonyPawns';
+import { remapKinIds } from '../core/gen/pawnKin';
 import { simLog } from '../core/util/logSink';
 import events from '../database/social/events.json';
 

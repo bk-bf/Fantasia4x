@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyConsumable } from '$lib/game/entities/Pawns';
+import { applyConsumable } from '$lib/game/core/rules/body/consumables';
 import type { Pawn } from '$lib/game/core/types';
 
 function makePawn(): Pawn {

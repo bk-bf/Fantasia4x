@@ -14,7 +14,9 @@ import {
 } from '../core/state/initialState';
 import { generateWorld } from '../world/WorldGenerator';
 import type { MapGenerator } from '../world/mapGenerator';
-import { generateColonyPawns, generateWorldKin, resetPawnDebugIds } from '../entities/Pawns';
+import { generateColonyPawns } from '../core/gen/colonyPawns';
+import { generateWorldKin } from '../core/gen/pawnKin';
+import { resetPawnDebugIds } from '../core/gen/pawnBuild';
 import { resetMobIdCounter } from '../services/entity/entitySpawning';
 import { workService } from '../services/WorkService';
 import { SKILL_CATEGORIES } from '../core/rules/body/workExperience';

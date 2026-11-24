@@ -2,7 +2,7 @@
   import type { Pawn } from '$lib/game/core/types';
   import type { GameState } from '$lib/game/core/types';
   import { getPawnTaskSummary, pawnCultureLabel } from '$lib/components/util/pawnUtils';
-  import { sizeFromHeight } from '$lib/game/core/gen/culture';
+  import { sizeFromHeight } from '$lib/game/core/rules/body/size';
   import {
     getBackgroundById,
     describeBackgroundEffects,

@@ -4,7 +4,7 @@ import { GameEngineImpl } from '$lib/game/systems/GameEngineImpl';
 import { GameStateManager } from '$lib/game/core/state/GameStateManager';
 import { applySimCommand } from '$lib/game/sim/commands';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
-import { generatePawns } from '$lib/game/entities/Pawns';
+import { generatePawns } from '$lib/game/core/gen/pawnBuild';
 import { workService } from '$lib/game/services/WorkService';
 import { initialGameState } from '$lib/game/core/state/initialState';
 import { rng } from '$lib/game/core/util/rng';

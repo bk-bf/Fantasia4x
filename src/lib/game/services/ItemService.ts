@@ -38,7 +38,7 @@ import itemsData from '../database/items/items.json';
 import buildingsData from '../database/world/buildings.json';
 import { SECONDS_PER_TICK } from '../core/util/time';
 import { chebyshev } from '../core/util/distance';
-import { sizeFromHeight } from '../core/gen/culture';
+import { sizeFromHeight } from '../core/rules/body/size';
 import { gatedConsole as console } from '../core/util/log';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];

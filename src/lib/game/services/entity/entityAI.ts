@@ -9,7 +9,7 @@ import {
 import { hasLineOfSight } from '../../core/util/lineOfSight';
 import { manhattan, chebyshev } from '../../core/util/distance';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/util/time';
-import { calcMaxStamina } from '../../entities/Pawns';
+import { calcMaxStamina } from '../../core/rules/body/vitals';
 import { gameLogger } from '../../debug/gameLogger';
 import { rng } from '../../core/util/rng';
 import { markTileDirty } from '../../core/state/tileDeltas';

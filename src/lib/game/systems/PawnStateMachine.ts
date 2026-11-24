@@ -85,7 +85,7 @@ import {
   isFullMoon
 } from '../services/EnvironmentService';
 import { getNightVision, dampenLightByNightVision } from '../core/rules/body/vision';
-import { calcBloodRegenRate } from '../entities/Pawns';
+import { calcBloodRegenRate } from '../core/rules/body/vitals';
 import { rng } from '../core/util/rng';
 import { pawnById } from '../core/state/pawnIndex';
 

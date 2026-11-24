@@ -8,7 +8,7 @@ import {
 } from '$lib/game/services/EnvironmentService';
 import { getTraitById } from '$lib/game/core/defs/lineages';
 import { perTick } from '$lib/game/core/util/time';
-import { calcBloodRegenRate } from '$lib/game/entities/Pawns';
+import { calcBloodRegenRate } from '$lib/game/core/rules/body/vitals';
 import type { GameState, Injury, Pawn, PlacedBuilding } from '$lib/game/core/types';
 
 function makePawn(injury?: Injury, constitution = 10): Pawn {

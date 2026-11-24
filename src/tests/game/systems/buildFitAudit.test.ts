@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateCulture } from '$lib/game/core/gen/culture';
-import { generatePawns } from '$lib/game/entities/Pawns';
+import { generatePawns } from '$lib/game/core/gen/pawnBuild';
 import { combatService } from '$lib/game/systems/Combat';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { createDefaultBodyParts } from '$lib/game/core/defs/bodyParts';
@@ -39,7 +39,14 @@ const dummy = (): Pawn =>
     isAlive: true,
     position: { x: 0, y: 0 },
     currentState: 'Fighting',
-    stats: { strength: 10, dexterity: 1, constitution: 10, perception: 10, intelligence: 10, charisma: 10 },
+    stats: {
+      strength: 10,
+      dexterity: 1,
+      constitution: 10,
+      perception: 10,
+      intelligence: 10,
+      charisma: 10
+    },
     traits: [],
     equipment: {
       bodyMid: { itemId: 'mail_hauberk', instanceId: 'a1', durability: 999 },

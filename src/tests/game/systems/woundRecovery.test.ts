@@ -20,7 +20,7 @@ import {
   complete as completeCaretake
 } from '$lib/game/services/jobs/caretake';
 import { stepHunger } from '$lib/game/services/entity/entityLifecycle';
-import { applyConsumable } from '$lib/game/entities/Pawns';
+import { applyConsumable } from '$lib/game/core/rules/body/consumables';
 import { makeMob } from '$lib/game/services/entity/entitySpawning';
 import { getCreatureById } from '$lib/game/core/defs/creatures';
 import { buildHealthModel } from '$lib/components/UI/canvas/selectionCard';

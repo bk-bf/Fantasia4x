@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { applyTraitWounds, applyTraitBodyMods } from '$lib/game/entities/Pawns';
-import { TRAIT_DATABASE } from '$lib/game/core/gen/culture';
+import { applyTraitWounds, applyTraitBodyMods } from '$lib/game/core/rules/body/traitBody';
+import { TRAIT_DATABASE } from '$lib/game/core/defs/traits';
 import { createBodyPlanLimbs } from '$lib/game/systems/Combat';
 import {
   lethalAnatomyCause,
