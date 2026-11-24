@@ -85,8 +85,6 @@ for (const c of creatures) {
   add({ cat: 'creature', group: title(byId[species] ? byId[species].name : species), sub: title(c.entityClass), id: c.id, name: c.name, desc: c.flavor, color: rgbHex(c.fg), src: { ...pick(c, ['entityClass', 'species', 'variantOf', 'limbMap', 'bodyScale', 'tier', 'threatLevel', 'behaviour', 'diet', 'lair', 'naturalWeapons', 'mountable', 'tameable', 'traits', 'sex']), baseScale: base.bodyScale }, raw: filled(omit(c, CREATURE_DROP)) });
 }
 
-for (const a of load('social/culture-lore.json').archetypes) add({ cat: 'folk', group: 'Culture archetype', id: slug(a.name), name: a.name, desc: `${title(a.homelands[0])}. ${title(a.origins[0])}.`, src: pick(a, ['sizeBias', 'traits', 'statFocus', 'statDump', 'temperaments', 'homelands']) });
-
 const ITEM_DROP = ['id', 'name', 'description', 'color', 'charSpans', 'audio', 'amount'];
 const GEAR_KEEP = ['classes', 'fallbackClasses', 'research', 'craftable', 'dmg', 'damMin', 'damMax', 'damageType', 'ap', 'armorDmg', 'crit', 'critMult', 'accuracy', 'atkSpeed', 'stamina', 'reach', 'range', 'stun', 'scaling', 'twoHanded', 'onHit', 'wieldStr', 'defense', 'armorType', 'slot', 'bodyPart', 'droppedBy', 'source', 'armorSet', 'setLabel', 'movePen', 'stealthMod', 'block', 'boostSpeed', 'boostYield', 'boostQuality', 'work', 'medicine', 'effect', 'durability'];
 function itemKind(path) {

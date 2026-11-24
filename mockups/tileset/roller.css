@@ -1,0 +1,18 @@
+.roller .desk { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+.roller #fields { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; min-width: 280px; max-width: 360px; }
+.roller #fields label { color: var(--m-dim); }
+.roller #fields select, .roller #fields input[type=range] { width: 100%; font: inherit; color: var(--m-ink); background: var(--m-field); border: 1px solid var(--m-line); }
+.roller #fields .lock { justify-self: end; }
+.roller #fields output { display: block; color: var(--m-dim); font-variant-numeric: tabular-nums; }
+.roller #fields fieldset { grid-column: 1 / -1; border: 1px solid var(--m-line); margin: 6px 0 0; padding: 4px 8px 6px; max-height: 340px; overflow: auto; }
+.roller #fields legend { color: var(--m-dim); }
+.roller #fields fieldset label { display: block; color: var(--m-ink); }
+.roller #fields fieldset label small { color: var(--m-dim); }
+.roller .stage { flex: 1 1 320px; min-width: 0; }
+.roller canvas { image-rendering: pixelated; background: var(--m-field); border: 1px solid var(--m-line); display: block; }
+.roller figcaption { color: var(--m-dim); text-align: center; margin-top: 2px; }
+.roller .lean { color: var(--m-text); margin: 8px 0 4px; max-width: 640px; }
+.roller .pieces { list-style: none; padding: 0; margin: 0; columns: 2 220px; color: var(--m-ink); }
+.roller .pieces li span { color: var(--m-dim); }
+.roller #rolls figure { cursor: pointer; }
+.roller #rolls figure:hover canvas { border-color: var(--m-hot); }

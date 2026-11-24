@@ -66,8 +66,8 @@ const FOLK_PIECES = (() => {
   const styleTotal = sex => STYLES.reduce((a, s) => a + (s.sexes[sex] || 0), 0);
   const styleSprite = (sex, style) => hair => isolate(drawLook(lookOf({ sex, look: { style, hair } }), 'f'), drawLook(lookOf({ sex, look: { style: 'bald', hair } }), 'f'));
   for (const st of STYLES) for (const sex of Object.keys(st.sexes)) add('Hair style', `style_${st.id}_${sex}`, cap(st.id) + ', ' + sexWord(sex).toLowerCase(),
-    st.id === 'bald' ? () => drawLook(lookOf({ sex, look: { style: 'bald' } }), 'f') : inColours(styleSprite(sex, st.id)),
-    { odds: pct(st.sexes[sex], styleTotal(sex)) + ' of ' + (sex === 'female' ? 'women' : 'men'), seen: seen(x => x.p.sex === sex && x.look.style === st.id), detail: st.id === 'bald' ? '' : colourNote + '; cut short under a hood, coif or tight straw brim' });
+    st.id === 'bald' ? () => isolate(drawLook(lookOf({ sex, look: { style: 'bald' } }), 'f'), drawLook(lookOf({ sex, look: { style: 'short' } }), 'f')) : inColours(styleSprite(sex, st.id)),
+    { odds: pct(st.sexes[sex], styleTotal(sex)) + ' of ' + (sex === 'female' ? 'women' : 'men'), seen: seen(x => x.p.sex === sex && x.look.style === st.id), detail: st.id === 'bald' ? 'the bare skull, in the skin tone' : colourNote + '; cut short under a hood, coif or tight straw brim' });
   for (const st of STYLES) if (st.trait) add('Hair style', `style_${st.id}`, cap(st.id), inColours(styleSprite('male', st.id)), {
     odds: 'every folk with ' + traitName(st.trait), seen: seen(x => x.look.style === st.id), who: carriers(st.trait), detail: colourNote,
   });
@@ -93,12 +93,5 @@ const FOLK_PIECES = (() => {
   });
   add('Mark', 'mark_blind', 'Both eyes lost', markPiece({ blind: true }), { odds: 'from a wound', detail: 'blindfold over both eyes' });
 
-  rows.archetypes = archetypes.map(a => ({
-    id: a.name.toLowerCase().replace(/[^a-z]+/g, '_'),
-    src: {
-      odds: `size leans ${listing(a.sizeBias)} 3 times in 4, otherwise any size`,
-      detail: 'its traits each 3× as likely to be drawn; nothing of its own is drawn',
-    },
-  }));
   return rows;
 })();

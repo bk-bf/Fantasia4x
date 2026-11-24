@@ -41,7 +41,7 @@ const STYLES = [
   { id: 'pigtails', sexes: { female: 2 } },
   { id: 'fringe', sexes: { male: 1, female: 2 } },
   { id: 'mohawk', sexes: { male: 1, female: 1 } },
-  { id: 'bald', sexes: { male: 2 }, o: { bald: 1 } },
+  { id: 'bald', sexes: { male: 2, female: .4 }, o: { bald: 1 } },
   { id: 'plumed', sexes: {}, o: { bald: 1 }, trait: 'feathered' },
 ];
 const BEARDS = { none: 5, full: 3, moustache: 2, goatee: 2, stubble: 3, braided: 1 };
