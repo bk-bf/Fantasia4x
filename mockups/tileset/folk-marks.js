@@ -5,7 +5,7 @@ function paintLook(s, look, skin, hair, face, pose) {
   paintEyes(pen, g, look, skin);
   paintHair(pen, g, look, hair, skin);
   paintBeard(pen, g, look, hair, skin);
-  paintEyewear(pen, g, look);
+  paintEyewear(pen, g, look, skin);
   paintHead(pen, g, look, skin, hair);
   paintLimbs(pen, g, look, skin, s);
   paintBack(pen, g, look, skin, hair);

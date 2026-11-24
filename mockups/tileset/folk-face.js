@@ -54,13 +54,27 @@ function paintEyes(pen, g, look, skin) {
   }
 }
 
-function paintEyewear(pen, g, look) {
+const brightness = c => c[0] * .3 + c[1] * .6 + c[2] * .1;
+function blindfoldCloth(skin) {
+  const tone = brightness(skin[Math.max(0, skin.length - 2)]);
+  const cloths = [P.furDark.slice(2, 5), P.furWhite.slice(2, 5)];
+  return cloths.reduce((a, c) => Math.abs(brightness(c[1]) - tone) > Math.abs(brightness(a[1]) - tone) ? c : a);
+}
+
+function paintEyewear(pen, g, look, skin) {
   const m = look.marks, { X, er, F, hd, hTop, hh, face } = g, strap = P.leather[1], patch = P.leather[0];
   if (m.blind) {
-    const band = (x, y) => pen.put(x, y, y === er ? P.cloth[2] : P.cloth[3]);
-    for (let x = X - hd - (face === 'b' ? 0 : 1); x < X + hd + 1; x++) { band(x, er - 1); band(x, er); }
-    const kx = face === 's' ? X - hd - 2 : X;
-    if (face !== 'f') { pen.put(kx, er - 1, P.cloth[4]); pen.put(kx, er, P.cloth[3]); pen.line(kx, er + 1, kx - 1, er + 4, P.cloth[2]); pen.line(kx + 1, er + 1, kx + 1, er + 3, P.cloth[3]); }
+    const [shade, mid, light] = blindfoldCloth(skin), x0 = X - hd, x1 = face === 's' ? F - 1 : X + hd - 1, sway = Math.round(g.pose.wave(.15));
+    for (let x = x0; x <= x1; x++) {
+      const fold = face === 'f' && (x === X - 3 || x === X + 2);
+      pen.put(x, er - 1, fold ? mid : light);
+      pen.put(x, er, x === x0 || x === x1 ? shade : mid);
+    }
+    if (face === 'f') return;
+    const kx = face === 's' ? x0 - 1 : X - 1;
+    pen.rect(kx, er - 1, 2, 2, light); pen.put(kx + 1, er, shade);
+    for (let k = 1; k <= 4; k++) pen.put(kx + (k > 2 ? sway : 0), er + k, k === 4 ? shade : mid);
+    for (let k = 1; k <= 3; k++) pen.put(kx + 1 + (face === 'b' ? 1 : 0) + (k > 1 ? sway : 0), er + k, k === 3 ? shade : light);
     return;
   }
   if (!m.oneEye) return;
