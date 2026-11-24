@@ -1,8 +1,9 @@
 import type { Heading } from './wind.js';
+import { STRAND_PACE } from './riverStream.js';
 
 export const STILL_WATER_TILES = { from: 0, to: 4 };
 export const ART_PER_UNIT = 2;
-export const SEA_SLOTS = 15;
+export const SEA_SLOTS = 18;
 
 const TAU = Math.PI * 2;
 const NOISE_PERIOD = 1024;
@@ -26,6 +27,11 @@ const SEICHE_SECS = 14;
 const SWAY = { ripple: 10, glint: 4, lean: 1.6 };
 const GUST_PACE = { calm: 5, gale: 19 };
 const RAIN_PERIOD = 1000;
+const RIVER_CLOCK_WRAP = 3600;
+const FLOW_CYCLE_WRAP = 2.4 * 400;
+const FLOW_PACE = 46;
+export const RIVER_PUSH = 0.8;
+export const RIVER_CURRENT = 1;
 
 export interface SeaWeather {
   rain: number;
@@ -71,6 +77,10 @@ export function seaFor(wind: number) {
   };
 }
 
+function freshness(wind: number): number {
+  return 0.4 + 1.2 * wind;
+}
+
 function wrap(v: number, period: number): number {
   return ((v % period) + period) % period;
 }
@@ -88,6 +98,7 @@ export class WaveClock {
   ripple = { x: 0, y: 0 };
   glint = { x: 0, y: 0 };
   gust = 0;
+  flow = 0;
   private last: number | null = null;
 
   tick(nowMs: number, wind: number, dir: Heading, still: boolean): void {
@@ -96,13 +107,14 @@ export class WaveClock {
     if (still) return;
     this.waveT += secs * seaFor(wind).speed;
     this.t += secs;
+    this.flow = wrap(this.flow + secs * RIVER_CURRENT * RIVER_PUSH, RIVER_CLOCK_WRAP);
     const pace = lerp(DRIFT.calm, DRIFT.gale, Math.min(1, Math.max(0, wind)));
     this.drift.x += dir.x * pace * secs;
     this.drift.y += dir.y * pace * secs;
-    const fresh = 0.4 + 1.2 * wind;
+    const fresh = freshness(wind);
     const carry = (at: { x: number; y: number }, speed: number) => {
-      at.x = wrap(at.x + dir.x * speed * secs, FIELD_PERIOD);
-      at.y = wrap(at.y + dir.y * speed * secs, FIELD_PERIOD);
+      at.x = wrap(at.x - dir.x * speed * secs, FIELD_PERIOD);
+      at.y = wrap(at.y - dir.y * speed * secs, FIELD_PERIOD);
     };
     carry(this.ripple, RIPPLE_PX * fresh);
     carry(this.glint, GLINT_PX * (0.5 + wind));
@@ -127,8 +139,10 @@ export class WaveClock {
     const n = (v: number) => wrap(v, NOISE_PERIOD);
     const { x: dx, y: dy } = this.drift;
     const ampSum = sea.amp.reduce((s, v) => s + v, 0);
-    const chop = 0.6 * (sea.amp[2] + sea.amp[3]) * smoothstep(3, 7, 3.3 / perPx);
+    const chopZoom = smoothstep(3, 7, 3.3 / perPx);
+    const chop = 0.6 * (sea.amp[2] + sea.amp[3]) * chopZoom;
     const t = this.t;
+    const fresh = freshness(wind);
     const sway = Math.sin((TAU * t) / SEICHE_SECS);
     const swayed = (at: { x: number; y: number }, reach: number) => [
       wrap(at.x + dir.x * sway * reach, FIELD_PERIOD),
@@ -172,7 +186,16 @@ export class WaveClock {
       dir.x * sway * SWAY.lean,
       dir.y * sway * SWAY.lean,
       this.gust,
-      waveMix
+      waveMix,
+      ...fade,
+      wind,
+      RIPPLE_PX * fresh,
+      chopZoom,
+      wrap(t, FLOW_CYCLE_WRAP),
+      RIVER_PUSH,
+      (this.flow * STRAND_PACE * FLOW_PACE) / ART_PER_UNIT,
+      RIVER_CURRENT,
+      0
     ]);
   }
 }
