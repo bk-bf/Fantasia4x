@@ -15,7 +15,6 @@ import { biomeBaseMoisture, baseMoistureFromWater } from '../services/Environmen
 import { makeSeededRng } from '../core/util/rng';
 import { chamferDistance } from './chamfer';
 import { Cover, generateLandforms, type LandformTargets } from './landforms';
-import { getMapGenerator, usesLandforms, type MapGenerator } from './mapGenerator';
 
 const TERRAIN_FREQUENCY = 0.005;
 const DETAIL_FREQUENCY = 0.05;
@@ -225,7 +224,7 @@ export function generateWorld(
   width: number,
   height: number,
   seed: number,
-  opts?: { skipResources?: boolean; tidyWater?: boolean; generator?: MapGenerator }
+  opts?: { skipResources?: boolean }
 ): WorldTile[][] {
   const detailSeed = (seed * 6971) >>> 0;
 
@@ -236,22 +235,8 @@ export function generateWorld(
   const cell = (x: number, y: number) =>
     classicCell(terrainNoise, detailNoise, waterNoise, waterLevel, x, y);
 
-  const landforms = usesLandforms(opts?.generator ?? getMapGenerator(), width, height);
-  let world: WorldTile[][];
-  if (landforms) {
-    world = landformWorld(width, height, seed, detailNoise, classicTargets(width, height, cell));
-    tidyWaterbodies(world, (t) => t.walkable && t.terrainType !== 'mountain');
-  } else {
-    world = [];
-    for (let y = 0; y < height; y++) {
-      world[y] = [];
-      for (let x = 0; x < width; x++) {
-        const c = cell(x, y);
-        world[y][x] = makeTile(x, y, c.biome, c.subType, c.density);
-      }
-    }
-    if (opts?.tidyWater !== false) tidyWaterbodies(world, (t) => !isWaterTile(t));
-  }
+  const world = landformWorld(width, height, seed, detailNoise, classicTargets(width, height, cell));
+  tidyWaterbodies(world, (t) => t.walkable && t.terrainType !== 'mountain');
 
   promoteBiomeVariants(world, detailNoise);
 

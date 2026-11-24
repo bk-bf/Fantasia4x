@@ -392,7 +392,7 @@ function loadStateIntoWorker(state0: GameState) {
   }
 }
 
-let currentMapSize = { w: 500, h: 500 };
+let currentMapSize = { w: 750, h: 750 };
 function setMapSize(w: number, h: number) {
   currentMapSize = { w: Math.max(8, w | 0), h: Math.max(8, h | 0) };
 }
@@ -471,8 +471,7 @@ function startMenuPreview() {
   rng.reseed(MENU_PREVIEW_SEED);
   resetSimTransients();
   const world = generateWorld(MENU_PREVIEW_MAP.w, MENU_PREVIEW_MAP.h, MENU_PREVIEW_SEED, {
-    skipResources: true,
-    tidyWater: false
+    skipResources: true
   });
   customizeMenuPreviewWorld(world);
   resourceGeneratorService.generateResources(world, MENU_PREVIEW_SEED, {
