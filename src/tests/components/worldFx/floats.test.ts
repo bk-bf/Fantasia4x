@@ -157,28 +157,33 @@ describe('condition floaters', () => {
     expect(eased).toBe(floater('bleeding', 'Bleeding', '#9575cd', undefined, -1)[0]);
   });
 
-  it('strikes a lost condition out, left to right, and never a gained one', () => {
+  it('drifts a lost condition in from above, strikes it through, then crumbles it', () => {
     const at = 200_000;
     const gain = onset('wet', 'Wet', 900, 4);
     const loss = onset('wet', 'Wet', 1900, 4, { lost: true });
-    const bands = (e: CombatTextEvent, now: number) => {
-      const out: number[] = [];
-      const p = {
-        textRatio: 1,
-        label: () => {},
-        fill: () => {},
-        band: (_x: number, _y: number, _ox: number, _oy: number, w: number) => out.push(w)
-      } as unknown as FxPainter;
-      drawFloats(p, null, [e], now, both);
-      return out;
+    const frame = (e: CombatTextEvent, now: number) => {
+      const drawn = draw([e], both, now);
+      const lines = ticks.filter((t) => t[3] === 1).map((t) => t[2]);
+      return { s: drawn[0]?.s, y: drawn[0] && rect(drawn[0])[1], line: lines[0] ?? 0 };
     };
-    bands(gain, at);
-    expect(bands(gain, at + 300)).toEqual([]);
-    bands(loss, at + 10_000);
-    const early = bands(loss, at + 10_200);
-    const late = bands(loss, at + 10_900);
-    expect(early.length).toBe(2);
-    expect(late[1]).toBeGreaterThan(early[1]);
+    frame(gain, at);
+    expect(frame(gain, at + 1000).line).toBe(0);
+    const t0 = at + 10_000;
+    frame(loss, t0);
+    const early = frame(loss, t0 + 100);
+    const settled = frame(loss, t0 + 550);
+    expect(settled.y).toBeGreaterThan(early.y);
+    expect(early.line).toBe(0);
+    const striking = frame(loss, t0 + 750);
+    const struck = frame(loss, t0 + 1500);
+    expect(striking.line).toBeGreaterThan(0);
+    expect(struck.line).toBeGreaterThan(striking.line);
+    const lit = (x: Spr) => x.c.filter(Boolean).length;
+    const crumbling = frame(loss, t0 + 2100).s;
+    const gone = frame(loss, t0 + 2900).s;
+    expect(crumbling.h).toBeGreaterThan(struck.s.h);
+    expect(lit(gone)).toBeLessThan(lit(crumbling));
+    expect(lit(crumbling)).toBeLessThan(lit(struck.s) + struck.s.w);
   });
 
   it('fades a lost condition so it never looks like the gain', () => {

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { iconConditions, iconFor } from '$lib/components/UI/canvas/worldFx/conditionIcons';
+import { readFileSync } from 'node:fs';
+import {
+  iconConditions,
+  iconFor,
+  iconWords
+} from '$lib/components/UI/canvas/worldFx/conditionIcons';
 import { icon } from '$lib/pixelArt/fx/icons';
 import conditions from '$lib/game/database/pawns/conditions.json';
 import type { CombatTextEvent } from '$lib/stores/fx/combatFeedback';
@@ -48,5 +53,26 @@ describe('condition icons', () => {
   it('gives the organ and fracture hits an icon', () => {
     expect(iconFor(event({ kind: 'fracture', text: 'Organ hit!' }))?.id).toBe('organ');
     expect(iconFor(event({ kind: 'fracture', text: 'Fractured!' }))?.id).toBe('fractured');
+  });
+
+  it('gives every word the sim floats in combat an icon, and crits too', () => {
+    const src = readFileSync('src/lib/game/systems/Combat.ts', 'utf8');
+    const emitted = [...src.matchAll(/emitFloat\([^;]*?'(\w+)',\s*'([^'$]+)'/g)].map((m) => ({
+      kind: m[1],
+      text: m[2]
+    }));
+    const pushed = [...src.matchAll(/text: '([^']+)',\s*kind: '(\w+)'/g)].map((m) => ({
+      kind: m[2],
+      text: m[1]
+    }));
+    const words = [...emitted, ...pushed];
+    expect(words.map((w) => w.text).sort()).toEqual([...iconWords()].sort());
+    for (const w of words)
+      expect(
+        iconFor(event({ kind: w.kind as CombatTextEvent['kind'], text: w.text }))
+      ).toBeDefined();
+    expect(iconFor(event({ kind: 'crit', text: '-12!' }))).toBeDefined();
+    for (const w of iconWords())
+      expect(icon(iconFor(event({ kind: 'dodge', text: w }))!.id)[0].w).toBeGreaterThan(4);
   });
 });

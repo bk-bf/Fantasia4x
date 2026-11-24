@@ -102,32 +102,19 @@ const trim = (rows: string[]): string[] => {
   return rows.slice(y0, y1 + 1).map((r) => r.slice(x0, x1 + 1));
 };
 
-const beside = (a: string[], b: string[], gap: number): string[] => {
-  const h = Math.max(a.length, b.length);
-  const pad = (r: string[]) =>
-    Array.from({ length: h - r.length }, () => '.'.repeat(r[0].length)).concat(r);
-  const l = pad(a);
-  const r = pad(b);
-  return l.map((row, i) => row + '.'.repeat(gap) + r[i]);
-};
-
-const DROP = ['..#..', '..#..', '.###.', '.###.', '#####', '#####', '.###.'];
-
 export interface WordOpts {
   big?: boolean;
   small?: boolean;
-  icon?: 'drop';
   e?: number;
 }
 
 export function word(text: string, ramp: Ramp, o: WordOpts = {}): Pair {
   return keep(`w${text}${ramp[3]}${JSON.stringify(o)}`, () => {
-    let rows = trim(
+    const rows = trim(
       o.big
         ? typeset(text, FX_FONT.bold, { gap: 3, k: 2 })
         : typeset(text, o.small ? FX_FONT.thin : FX_FONT.bold, { gap: 2, tall: true })
     );
-    if (o.icon) rows = beside(DROP, rows, 3);
     const s = shade(rows, ramp, { e: o.e === undefined ? 170 : o.e, grad: o.small });
     return [s, melt(s, 0.5)] as Pair;
   });
