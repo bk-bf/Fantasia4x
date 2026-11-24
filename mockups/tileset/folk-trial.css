@@ -1,0 +1,7 @@
+.trial #sheet canvas { image-rendering: pixelated; display: block; }
+.trial #sheet .cells { align-items: flex-end; gap: 14px; }
+.trial #sheet figure { cursor: default; }
+.trial #sheet figure canvas { border: 0; }
+.trial #sheet figcaption { color: var(--m-dim); text-align: center; margin-top: 4px; }
+.trial #sheet .field { display: inline-flex; align-items: flex-end; gap: 10px; padding: 10px 14px; background: #4d6a3a; border: 1px solid var(--m-line); }
+.trial #sheet .pair { display: grid; grid-template-columns: repeat(2, max-content); gap: 8px 28px; align-items: end; }

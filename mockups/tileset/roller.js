@@ -104,7 +104,7 @@
     for (const { t } of [...markTraits, { t: 'blind' }]) {
       const lab = document.createElement('label'), c = document.createElement('input'), on = t === 'blind' ? st.blind : st.traits.includes(t);
       c.type = 'checkbox'; c.checked = on;
-      c.onchange = () => { if (t === 'blind') st.blind = c.checked; else st.traits = c.checked ? [...st.traits, t] : st.traits.filter(x => x !== t); draw(); };
+      c.onchange = () => { if (t === 'blind') st.blind = c.checked; else st.traits = c.checked ? [...st.traits, t] : st.traits.filter(x => x !== t); drawViews(); };
       const small = document.createElement('small');
       small.textContent = ' ' + (t === 'blind' ? 'from a wound' : rarity[t]);
       lab.append(c, ' ' + (t === 'blind' ? 'Both eyes lost' : traitName(t)), small);
