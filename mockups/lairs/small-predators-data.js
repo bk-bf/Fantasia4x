@@ -11,8 +11,8 @@ const SMALL_PREDATORS = (() => {
         ['foxfire_vixen', 'Foxfire Vixen', 4, 8, 'neutral', 1.32, { forest: 1, swamp: .6 }, 'foxfire_vixen_carcass'],
       ],
     },
-    hawk: {
-      group: 'Goshawk', limbMap: 'avian', lair: 'raptor_eyrie', lairRange: 70, pack: [1, 2], diet: 'carnivore', naturalWeapons: ['claw', 'peck'],
+    raptor: {
+      group: 'Goshawk', base: 'hawk', limbMap: 'avian', lair: 'raptor_eyrie', lairRange: 70, pack: [1, 2], diet: 'carnivore', naturalWeapons: ['claw', 'peck'],
       tiers: [
         ['hawk_eyas', 'Eyas', 1, 1, 'passive', .74, { forest: 1, plains: .8, mountain: .6 }, 'hawk_carcass'],
         ['hawk', 'Goshawk', 2, 2, 'neutral', 1.05, { forest: 1, plains: .8, mountain: .6 }, 'hawk_carcass'],
@@ -41,8 +41,8 @@ const SMALL_PREDATORS = (() => {
 
   const objects = [];
   for (const [species, L] of Object.entries(LINES)) for (const [id, name, tier, threatLevel, behaviour, bodyScale, biomeWeights, carcassItemId] of L.tiers) {
-    const raw = { species, tier, threatLevel, entityClass: 'animal', behaviour, diet: L.diet, predator: true, intelligence: 'primitive', pack: L.pack, bodyScale, biomeWeights, lair: L.lair, lairRange: L.lairRange, carcassItemId, naturalWeapons: L.naturalWeapons, limbMap: L.limbMap };
-    if (id !== species) raw.variantOf = species;
+    const base = L.base || species, raw = { species, tier, threatLevel, entityClass: 'animal', behaviour, diet: L.diet, predator: true, intelligence: 'primitive', pack: L.pack, bodyScale, biomeWeights, lair: L.lair, lairRange: L.lairRange, carcassItemId, naturalWeapons: L.naturalWeapons, limbMap: L.limbMap };
+    if (id !== base) raw.variantOf = base;
     objects.push({ cat: 'creature', group: L.group, sub: 'Animal', id, name, raw });
   }
   for (const [id, [name, weightKg, volumeL]] of Object.entries(CARCASS)) objects.push({ cat: 'item', group: 'Material', sub: 'Carcass', id, name, raw: { type: 'material', category: 'carcass', weightKg, volumeL, gatheringTypes: ['hunting'], processingType: ['butchery'], decaysTo: 'rotten_carcass' } });
