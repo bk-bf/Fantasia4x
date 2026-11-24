@@ -4,7 +4,7 @@ import { getAmbientLight } from '../EnvironmentService';
 import { calcMaxStamina } from '../../core/rules/body/vitals';
 import { createBodyPlanLimbs } from '../../systems/Combat';
 import { DEFAULT_PLAN } from '../../core/defs/bodyParts';
-import { TRAIT_DATABASE } from '../../core/gen/culture';
+import { TRAIT_DATABASE } from '../../core/defs/traits';
 import { creatureAptitudes } from '../../core/rules/body/aptitudes';
 import { rng } from '../../core/util/rng';
 import { getLootPool, drawLoadout, rollCondition, validateLootItemIds } from '../../core/defs/loot';

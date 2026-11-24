@@ -1,10 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import {
-  generateCulture,
-  drawPawnTraits,
-  pawnMeetsRequires,
-  TRAIT_DATABASE
-} from '$lib/game/core/gen/culture';
+import { generateCulture } from '$lib/game/core/gen/culture';
+import { drawPawnTraits } from '$lib/game/core/gen/pawnTraits';
+import { pawnMeetsRequires } from '$lib/game/core/rules/body/traitRequirements';
+import { TRAIT_DATABASE } from '$lib/game/core/defs/traits';
 import { generateColonyPawns } from '$lib/game/core/gen/colonyPawns';
 import { generateCulturePool } from '$lib/game/core/gen/culture';
 import { rng } from '$lib/game/core/util/rng';

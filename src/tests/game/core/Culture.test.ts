@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   generateCulture,
   generateCulturePool,
-  generateCultureRelations,
-  generateCultureDescription,
-  statBucket
+  generateCultureRelations
 } from '$lib/game/core/gen/culture';
+import { generateCultureDescription } from '$lib/game/core/gen/cultureDescription';
+import { statBucket } from '$lib/game/core/rules/social/cultureBuckets';
 import { generateColonyPawns } from '$lib/game/core/gen/colonyPawns';
 import { rng } from '$lib/game/core/util/rng';
 import type { Culture } from '$lib/game/core/types';

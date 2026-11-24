@@ -1,6 +1,6 @@
 import type { Pawn, Culture } from '../types';
 import { createPawnInventory, createPawnEquipment } from '../rules/gear/equipment';
-import { drawPawnTraits } from './culture';
+import { drawPawnTraits } from './pawnTraits';
 import {
   type Background,
   backgroundTraitAffinity,

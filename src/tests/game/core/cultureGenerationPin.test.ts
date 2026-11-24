@@ -1,10 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import {
-  drawPawnTraits,
-  generateCulturePool,
-  generateCultureRelations
-} from '$lib/game/core/gen/culture';
+import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
+import { drawPawnTraits } from '$lib/game/core/gen/pawnTraits';
 import { rng } from '$lib/game/core/util/rng';
 import type { Culture } from '$lib/game/core/types';
 

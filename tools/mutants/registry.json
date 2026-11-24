@@ -2423,7 +2423,7 @@
   },
   {
     "id": "culture-medium-cut-200",
-    "file": "src/lib/game/core/gen/culture.ts",
+    "file": "src/lib/game/core/rules/body/size.ts",
     "find": "if (cm < 190) return 'medium';",
     "replace": "if (cm < 200) return 'medium';",
     "tests": ["src/tests/game/core/sizeFromHeight.test.ts"]

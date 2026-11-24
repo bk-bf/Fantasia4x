@@ -1,6 +1,6 @@
 import type { Pawn, StatKey } from '$lib/game/core/types';
 import { CORE_STAT_KEYS } from '$lib/game/core/types';
-import { statBucket } from '$lib/game/core/gen/culture';
+import { statBucket } from '$lib/game/core/rules/social/cultureBuckets';
 
 const STATS = CORE_STAT_KEYS;
 

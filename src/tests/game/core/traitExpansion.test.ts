@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { TRAIT_DATABASE } from '$lib/game/core/gen/culture';
+import { TRAIT_DATABASE } from '$lib/game/core/defs/traits';
 import { rng } from '$lib/game/core/util/rng';
 import { createBodyPlanLimbs } from '$lib/game/core/defs/bodyParts';
 import { rollWoundClotting, recomputeWound } from '$lib/game/core/defs/wounds';

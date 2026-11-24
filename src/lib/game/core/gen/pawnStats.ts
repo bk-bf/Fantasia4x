@@ -2,7 +2,7 @@ import type { Culture, EntityStats, Pawn, Trait } from '../types';
 import { CORE_STAT_KEYS } from '../types';
 import { PART_DEF_MAP } from '../defs/bodyParts';
 import { rng } from '../util/rng';
-import { SPAWN_STAT_CAP } from './culture';
+import { SPAWN_STAT_CAP } from '../rules/body/spawnStatCap';
 
 export const SPAWN_STAT_FLOOR = 4;
 
