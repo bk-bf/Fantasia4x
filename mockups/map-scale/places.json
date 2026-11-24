@@ -1,0 +1,60 @@
+{
+  "tile": 32,
+  "metres": 1.5,
+  "map": 750,
+  "mapScale": 2,
+  "region": {"x": 92, "y": 576, "w": 96, "h": 64},
+  "places": {
+    "forest": {"at": [44, 12], "true": [300, 430], "focus": [48, 32]},
+    "lake": {"at": [66, 34], "true": [150, 660], "focus": [48, 32]},
+    "river": {"at": [10, 40], "true": [117, 268], "focus": [48, 32]},
+    "range": {"at": [27, 30], "true": [512, 195], "focus": [58, 18]},
+    "snow": {"at": [33, 44], "true": [585, 62], "focus": [48, 32]}
+  },
+  "folk": {
+    "region": [
+      {"kind": "farmer", "at": [41, 13]},
+      {"kind": "woodcutter", "at": [46, 11], "flip": true},
+      {"kind": "hunter", "at": [38, 16]},
+      {"kind": "cook", "at": [62, 26]},
+      {"kind": "hauler", "at": [53, 38], "flip": true},
+      {"kind": "weaver", "at": [69, 24]},
+      {"kind": "farmer", "at": [8, 44]},
+      {"kind": "guard", "at": [3, 41], "flip": true},
+      {"kind": "miner", "at": [29, 28]},
+      {"kind": "smith", "at": [31, 31], "flip": true},
+      {"kind": "hunter", "at": [46, 50]}
+    ],
+    "forest": [
+      {"kind": "woodcutter", "at": [44, 30]},
+      {"kind": "hauler", "at": [52, 33], "flip": true},
+      {"kind": "hunter", "at": [40, 36]},
+      {"kind": "farmer", "at": [12, 45]},
+      {"kind": "cook", "at": [66, 24], "flip": true}
+    ],
+    "lake": [
+      {"kind": "cook", "at": [67, 14]},
+      {"kind": "farmer", "at": [74, 39], "flip": true},
+      {"kind": "hunter", "at": [79, 30]},
+      {"kind": "woodcutter", "at": [86, 22]}
+    ],
+    "river": [
+      {"kind": "farmer", "at": [26, 7]},
+      {"kind": "guard", "at": [40, 43], "flip": true},
+      {"kind": "cook", "at": [47, 35]},
+      {"kind": "hunter", "at": [70, 27]},
+      {"kind": "woodcutter", "at": [74, 46], "flip": true}
+    ],
+    "range": [
+      {"kind": "miner", "at": [30, 25]},
+      {"kind": "smith", "at": [52, 30], "flip": true},
+      {"kind": "hunter", "at": [20, 48]},
+      {"kind": "guard", "at": [70, 45]}
+    ],
+    "snow": [
+      {"kind": "miner", "at": [20, 40]},
+      {"kind": "hunter", "at": [50, 30], "flip": true},
+      {"kind": "guard", "at": [70, 20]}
+    ]
+  }
+}

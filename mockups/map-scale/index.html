@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Map scale</title>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+<style>
+  :root { --bg: #e9e4d8; --ink: #2a241c; --frame: #b9ae98; --chip: rgb(236 230 214 / .92); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121014; --ink: #eee6d4; --frame: #35303c; --chip: rgb(10 8 12 / .82); } }
+  :root[data-theme="dark"] { --bg: #121014; --ink: #eee6d4; --frame: #35303c; --chip: rgb(10 8 12 / .82); }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font: 12px/1.4 system-ui, sans-serif; }
+  #stage { position: fixed; inset: 0; display: grid; gap: 6px; padding: 6px; box-sizing: border-box; grid-template: 1fr / repeat(3, 1fr); touch-action: none; cursor: grab; }
+  #stage.held { cursor: grabbing; }
+  #stage.one { grid-template: 1fr / 1fr; }
+  @media (max-aspect-ratio: 1/1) { #stage:not(.one) { grid-template: repeat(3, 1fr) / 1fr; } }
+  .pane { position: relative; margin: 0; overflow: hidden; outline: 1px solid var(--frame); background: var(--bg); min-width: 0; min-height: 0; }
+  #stage.one .pane:not(.shown) { display: none; }
+  .pane img { position: absolute; left: 0; top: 0; transform-origin: 0 0; image-rendering: pixelated; user-select: none; -webkit-user-drag: none; max-width: none; }
+  .pane figcaption, .pane .rule { position: absolute; padding: 1px 7px; background: var(--chip); color: var(--ink); pointer-events: none; }
+  .pane figcaption { left: 6px; top: 6px; font-weight: 650; letter-spacing: .02em; }
+  .pane .rule { right: 6px; top: 6px; display: flex; align-items: center; gap: 7px; font-variant-numeric: tabular-nums; }
+  .pane .rule i { display: block; height: 5px; border: solid var(--ink); border-width: 0 1px 1px; }
+</style>
+</head>
+<body>
+<main id="stage">
+  <figure class="pane" data-view="today"><img alt="" draggable="false"><figcaption>Today</figcaption><span class="rule"><i></i><b></b></span></figure>
+  <figure class="pane" data-view="bridged"><img alt="" draggable="false"><figcaption>Bridged</figcaption><span class="rule"><i></i><b></b></span></figure>
+  <figure class="pane" data-view="true"><img alt="" draggable="false"><figcaption>True to size</figcaption><span class="rule"><i></i><b></b></span></figure>
+</main>
+<header id="mock">
+  <div class="mrow"><strong>Map scale</strong><button id="mockhide">Hide · `</button></div>
+  <div class="mrow"><span class="grp" data-k="show" data-def="all"><span class="lab">Show</span><button data-v="all">All three</button><button data-v="today">Today</button><button data-v="bridged">Bridged</button><button data-v="true">True</button></span></div>
+  <div class="mrow"><span class="grp" data-k="zoom" data-def="0.5"><span class="lab">Zoom</span><button data-v="0.25">¼×</button><button data-v="0.5">½×</button><button data-v="1">1×</button><button data-v="2">2×</button></span></div>
+  <div class="mrow"><span class="grp" data-k="at" data-def="forest"><span class="lab">Look at</span><button data-v="forest">Forest</button><button data-v="lake">Lake</button><button data-v="river">River</button><button data-v="range">Range</button><button data-v="snow">Snow line</button><button data-v="map">Whole map</button></span></div>
+  <p class="mnote">Vast map · seed 1337 · 1 tile = 1.5 m · game render with trees, rock and margins repainted · folk placed by hand</p>
+</header>
+<script src="view.js"></script>
+</body>
+</html>
