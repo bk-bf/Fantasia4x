@@ -66,6 +66,8 @@ const TIERS = [0, 20, 38, 56];
 const BADGE_STEP = 18;
 const GAP = 2;
 const SETTLE_PX_S = 24;
+const TICK_FROM = 6;
+const TICK_LIGHT = hex('#e8dcc4');
 const STRIKE_IN_S = 0.25;
 const STRIKE_LIGHT = hex('#f4ecd8');
 
@@ -294,6 +296,7 @@ export function drawFloats(
     if (it.q.badge) badge(p, at, it.q.pair, u);
     else float(p, at, it.q.pair, u, it.q.ttl, it.q.shake);
     if (it.q.strike) strike(p, it.q, at, u);
+    if (it.lift <= -TICK_FROM) tick(p, it.q, at, u, -it.lift);
   }
 }
 
@@ -304,6 +307,18 @@ function follow(r: WebGLRenderer | null, locate: Locate): void {
     it.fig = figureAt(r, Math.round(rp.x), Math.round(rp.y), rp.x, rp.y);
     anchor(it.fig, it.q);
   }
+}
+
+function tick(p: FxPainter, q: Placed, at: Anchor, u: number, len: number): void {
+  if (u > q.ttl) return;
+  const s = q.pair[0];
+  const dy = q.badge ? badgeDy(u) : floatDy(u, q.ttl);
+  const y = Math.round(at.oy + dy) - s.ay + s.h;
+  const h = Math.round(len);
+  p.fill(P.ink, 255);
+  p.band(at.x, at.y, -1, y, 3, h);
+  p.fill(TICK_LIGHT, 255);
+  p.band(at.x, at.y, 0, y, 1, h);
 }
 
 function strike(p: FxPainter, q: Placed, at: Anchor, u: number): void {

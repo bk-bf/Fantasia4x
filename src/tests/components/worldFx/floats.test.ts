@@ -65,11 +65,17 @@ function draw(
   const p = {
     textRatio: 1,
     label: (s: Spr, x: number, y: number, ox: number, oy: number) =>
-      put.push({ s, x: x + ox, y: y + oy })
+      put.push({ s, x: x + ox, y: y + oy }),
+    fill: () => {},
+    band: (x: number, y: number, ox: number, oy: number, w: number, h: number) =>
+      ticks.push([x + ox, y + oy, w, h])
   } as unknown as FxPainter;
+  ticks.length = 0;
   drawFloats(p, null, list, now, mode, blocked, locate);
   return put;
 }
+
+const ticks: number[][] = [];
 
 const rect = (d: Put) => {
   const x = Math.round(d.x) - d.s.ax;
@@ -248,6 +254,21 @@ describe('condition floaters', () => {
     const freed = lift(t0 + 3600, [second, alone]);
     expect(blocked).toBeGreaterThan(0);
     expect(freed).toBeLessThan(blocked);
+  });
+
+  it('ties a lifted floater to its own creature with a tick down to its head', () => {
+    const t0 = 290_000;
+    const low = onset('knockdown', 'Knocked Down', 9000, 4, { entityId: 'left' });
+    const high = onset('winded', 'Winded', 9001, 4, { entityId: 'right' });
+    draw([low], both, t0);
+    draw([low, high], both, t0 + 300);
+    const drawn = draw([low, high], both, t0 + 800);
+    const mine = ticks.filter((t) => t[2] === 1);
+    expect(mine).toHaveLength(1);
+    expect(mine[0][0]).toBe((9001 + 0.5) * 32);
+    const winded = rect(drawn.find((d) => d.x > (9001 - 0.5) * 32)!);
+    expect(mine[0][1]).toBe(winded[3]);
+    expect(mine[0][3]).toBeGreaterThan(5);
   });
 
   it('merges hits that land close together, however late the frame that sees them', () => {
