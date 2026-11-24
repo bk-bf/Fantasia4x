@@ -5,6 +5,7 @@ import { parseArgs } from 'node:util';
 
 import {
   DEFAULT_FIXTURE,
+  GLYPH_RENDERER,
   MAP,
   assertRunning,
   disableAutosave,
@@ -219,7 +220,7 @@ async function main() {
     serverLog: join(out, 'dev-server.log'),
     log,
     init: [disableAutosave, watchScenarioLoad(SCENARIO)],
-    query: scenarioQuery(SCENARIO)
+    query: `${scenarioQuery(SCENARIO)}&${GLYPH_RENDERER}`
   });
   /** @type {Round[]} */
   let results = [];
