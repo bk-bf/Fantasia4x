@@ -4,17 +4,7 @@ import { projectiles } from '$lib/stores/fx/projectiles';
 import { gradeFromWeights, gradeGen, setGrade } from '$lib/pixelArt/fx/bake';
 import { FxPainter } from '$lib/pixelArt/fx/painter';
 import { bar } from '$lib/pixelArt/fx/marks';
-import {
-  brackets,
-  pant,
-  path,
-  reel,
-  rest,
-  rings,
-  route,
-  sleep,
-  trader
-} from '$lib/pixelArt/fx/effects';
+import { brackets, pant, path, reel, rest, rings, sleep, trader } from '$lib/pixelArt/fx/effects';
 import type { BubbleSkin } from '$lib/pixelArt/fx/bubble';
 import { ART_TILE } from './figure';
 import { collectScene, type FxWorld, type Mark, type Scene } from './scene';
@@ -194,8 +184,8 @@ class WorldFxLayer {
   ): void {
     const t = now / 1000;
     for (const r of s.routes) {
-      path(p, route(r.stops, r.from), r.col, t);
-      rings(p, r.stops, r.col, r.attack);
+      path(p, r.pts, r.col, t);
+      rings(p, r.stops, r.col, r.attack, r.even);
       for (const b of r.boxes) brackets(p, b, r.col, t);
     }
     for (const b of s.bars) p.put(bar(BAR_W, b.v, b.ramp, b.pegs), b.x, b.y);
@@ -220,7 +210,7 @@ function stillKey(
   let k = `${v.vx.toFixed(3)},${v.vy.toFixed(3)},${v.tW},${gen},${texts},${shots},${clock}`;
   for (const b of s.bars) k += `|${b.x},${b.y},${Math.round(b.v * 100)}`;
   for (const m of s.marks) k += `|${m.kind}${m.x},${m.y}`;
-  for (const r of s.routes) k += `|r${r.from}${r.stops.join(';')}`;
+  for (const r of s.routes) k += `|r${r.pts.join(';')}`;
   return k;
 }
 
