@@ -8,7 +8,7 @@ const RIG = ['motion-rig-pawn.js', 'motion-poses.js', 'motion-poses-fb.js', 'mot
 const FACES = ['s', 'f', 'b'], PUSHED = 3;
 const source = [...SCRIPTS, ...RIG.filter(f => !SCRIPTS.includes(f))].map(f => readFileSync(join(here, f), 'utf8')).join('\n;');
 const data = JSON.parse(readFileSync(join(here, 'catalog-data.json'), 'utf8'));
-const G = new Function('DATA', source + '\nDBX.fromData(DATA);\nreturn { DBX, HAUL, FOLK, RG, HOLDS, RIG_OVER, PAWN_ANIMS, rigPawn, fitted };')(data.objects);
+const G = new Function('DATA', source + '\nDBX.fromData(DATA);\nreturn { DBX, HAUL, FOLK, RG, HOLDS, HELD, PAWN_ANIMS, rigPawn, fitted };')(data.objects);
 
 const drawn = data.objects.filter(o => o.cat === 'item' && G.DBX.of('item', o.id).length);
 const loads = drawn.map(o => G.HAUL.of(o));
@@ -26,7 +26,7 @@ const anchors = shots => Object.fromEntries(FACES.map(face => [face, shots[face]
 const tilts = shots => Object.fromEntries(FACES.map(face => [face, shots[face].map(a => a[2])]));
 const holds = Object.fromEntries(G.HAUL.HOLDS.map(hold => {
   const [walk, stand] = G.HOLDS[hold], def = G.PAWN_ANIMS[walk], lead = frames(walk, 'human');
-  const row = { items: count(l => l.hold === hold), walk, stand, frames: def.n, cycle: def.dist, over: G.RIG_OVER[hold] };
+  const row = { items: count(l => l.hold === hold), walk, stand, frames: def.n, cycle: def.dist, held: G.HELD[hold] };
   if (FACES.some(face => lead[face].some(a => a[2]))) row.tilt = tilts(lead);
   row.anchors = Object.fromEntries(Object.keys(G.FOLK).map(race => [race, { walk: anchors(frames(walk, race)), stand: anchors(frames(stand, race)) }]));
   return [hold, row];

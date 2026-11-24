@@ -41,6 +41,7 @@ const HAUL = (() => {
     const [toward, away] = END_SOURCES.find(pair => has(pair[0])) || [];
     if (k.long) return { side: 'map-lie', upright: 'map-lean', headUp: PROPS.headUp(k.long, o.id) };
     if (o.sub === 'Carcass') return { side: '0', toward, away };
+    if (k.pile && PROPS.TURNED.includes(k.pile)) return { side: 'map-carry-end', toward: 'map-carry', away: 'map-carry', turned: true };
     if (k.pile) return { side: PROPS.CARRIED.includes(k.pile) ? 'map-carry' : 'map-pile-1', toward, away };
     return { side: WORN_SOURCES.find(has), toward, away };
   }
@@ -79,12 +80,21 @@ const HAUL = (() => {
     for (let x = 0; x < spr.w; x++) if (spr.c[from * spr.w + x]) xs.push(x);
     return [xs[xs.length >> 1], row];
   }
+  const IN_BOTH_ARMS = ['chest', 'low'], HELD_ACROSS = ['hides', 'bundles', 'cloth', 'bone'], ENDS_ON = new Map();
+  function endOn(key, spr) {
+    if (ENDS_ON.has(key)) return ENDS_ON.get(key);
+    const w = Math.min(spr.w, spr.h + 2), x0 = (spr.w - w) >> 1, s = new Spr(w, spr.h, w >> 1, spr.h - 1);
+    for (let y = 0; y < spr.h; y++) for (let x = 0; x < w; x++) { const c = spr.c[y * spr.w + x0 + x]; if (c) { s.c[y * w + x] = x === 0 || x === w - 1 ? P.ink : c; s.e[y * w + x] = spr.e[y * spr.w + x0 + x]; } }
+    ENDS_ON.set(key, s);
+    return s;
+  }
   function layer(load, hold, face, resting) {
     const src = load.source;
-    if (resting) { const along = hold === 'shoulder' && face !== 's' && (face === 'f' ? src.toward : src.away), lying = along || src.lying || src.side, spr = cropped(load.id, lying); return { key: load.id + '/' + lying + '/rest', sprite: 'item/' + load.id + '/' + lying, spr, grip: [face === 's' ? REST.edge : spr.w >> 1, along && face === 'f' ? 0 : spr.h - 1], sag: 0 }; }
-    const upright = hold === 'hip' && face !== 's' && src.upright, ended = ON_SHOULDER.includes(hold) && face !== 's' && (face === 'f' ? src.toward : src.away);
-    const variant = upright || ended || src.side, spr = cropped(load.id, variant), headDown = (face === 'f') === !!src.headUp;
-    const out = { key: load.id + '/' + variant, sprite: 'item/' + load.id + '/' + variant, spr, grip: spr.hold || GRIPS[hold](spr), sag: load.limp && !ended ? SAG[hold] : 0 };
+    if (resting) { const along = (hold === 'shoulder' || src.turned) && face !== 's' && (face === 'f' ? src.toward : src.away), lying = along || src.lying || src.side, spr = cropped(load.id, lying); return { key: load.id + '/' + lying + '/rest', sprite: 'item/' + load.id + '/' + lying, spr, grip: [face === 's' ? REST.edge : spr.w >> 1, along && face === 'f' && !src.turned ? 0 : spr.h - 1], sag: 0 }; }
+    const upright = hold === 'hip' && face !== 's' && src.upright, ended = (ON_SHOULDER.includes(hold) || src.turned) && face !== 's' && (face === 'f' ? src.toward : src.away);
+    const variant = upright || ended || src.side, whole = cropped(load.id, variant), headDown = (face === 'f') === !!src.headUp;
+    const across = face === 's' && IN_BOTH_ARMS.includes(hold) && HELD_ACROSS.includes(load.storage) && whole.w > whole.h, spr = across ? endOn(load.id + '/' + variant, whole) : whole;
+    const out = { key: load.id + '/' + variant + (across ? '/end' : ''), sprite: 'item/' + load.id + '/' + variant, spr, grip: spr.hold || GRIPS[hold](spr), sag: load.limp && !ended ? SAG[hold] : 0 };
     if (upright) {
       const seen = Math.min(spr.h, SEEN_ROWS.most, Math.max(SEEN_ROWS.least, Math.round(spr.h * SEEN.depth))), rows = face === 'f' ? [spr.h - seen, spr.h] : [0, seen], held = face === 'f' ? rows[0] : rows[1] - 1;
       Object.assign(out, { key: out.key + (headDown ? '/upside' : '') + '/' + rows, upside: headDown, rows, grip: shaftAt(spr, held, headDown) });
@@ -92,6 +102,7 @@ const HAUL = (() => {
     if (FUSED.includes(hold) && face === 's') out.fused = true;
     return out;
   }
+  const span = (load, hold, face) => ({ wide: layer(load, hold, face).spr.w });
   const flags = l => Object.fromEntries(['sag', 'upside', 'rows', 'fused'].filter(k => l[k]).map(k => [k, l[k]]));
   function ported(load) {
     const side = layer(load, load.hold, 's'), row = { bulk: load.bulk, hold: load.hold, sprite: side.sprite, grip: side.grip, ...flags(side) };
@@ -104,5 +115,5 @@ const HAUL = (() => {
     for (const l of loads) { const t = out[l.bulk]; t.count++; t.storage[l.storage] = (t.storage[l.storage] || 0) + 1; t.holds[l.hold] = (t.holds[l.hold] || 0) + 1; }
     return out;
   }
-  return { BULKS, HOLDS, STANCES, bulkOf, of, layer, ported, tally, nameOf };
+  return { BULKS, HOLDS, STANCES, bulkOf, of, layer, span, ported, tally, nameOf };
 })();

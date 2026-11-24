@@ -29,7 +29,7 @@
     const k = RULES.classify(o), own = WORLD_GEAR.of(o), forms = [];
     if (k.pile && PROPS.CARRIED.includes(k.pile)) forms.push(['map-carry', () => PROPS.carried(k.pile, RULES.rampsFor(k, o), 1)]);
     if (o.sub === 'Carcass') forms.push(...carcassForms(o));
-    else if (k.pile && PROPS.SHOULDERED.includes(k.pile)) forms.push(['map-carry-end', () => PROPS.carriedEnd(k.pile, RULES.rampsFor(k, o))]);
+    else if (k.pile && (PROPS.SHOULDERED.includes(k.pile) || PROPS.TURNED.includes(k.pile))) forms.push(['map-carry-end', () => PROPS.carriedEnd(k.pile, RULES.rampsFor(k, o))]);
     if (own && own.carried) forms.push(...Object.entries(own.carried));
     return forms;
   }

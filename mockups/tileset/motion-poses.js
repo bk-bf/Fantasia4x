@@ -36,14 +36,15 @@ const GAIT = {
 for (const g of Object.values(GAIT)) g.dist = g.S / g.duty;
 const HOLD = {
   hip: { gait: 'light', swing: 1, side: { hr: [3, 7], lean: 1 }, fb: { hr: [0, 7], crook: ['hr'], fore: ['hr'] } },
-  chest: { gait: 'bulky', side: { hr: [6, 7], hl: [7, 6.5], lean: -1 }, fb: { hl: [2.6, 8], hr: [-2.6, 8], fore: ['hl', 'hr'] } },
-  low: { gait: 'heavy', sink: .9, side: { hr: [6.5, 7.5], hl: [7.5, 7], lean: -1.6 }, fb: { hl: [1, 9], hr: [-1, 9], fore: ['hl', 'hr'] } },
+  chest: { gait: 'bulky', side: { hr: [6, 7], hl: [7, 6.5], lean: -1 }, fb: { hl: [2.6, 8], hr: [-2.6, 8], fore: ['hl', 'hr'] }, beside: 8 },
+  low: { gait: 'heavy', sink: .9, side: { hr: [6.5, 7.5], hl: [7.5, 7], lean: -1.6 }, fb: { hl: [1, 9], hr: [-1, 9], fore: ['hl', 'hr'] }, beside: 9 },
   shoulder: { gait: 'shouldered', tilt: 1, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 1.4 }, fb: { hl: [-5.5, -4], wing: 1, lean: 1.5, hd: [1, 0] } },
   game: { gait: 'heavy', sink: .9, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 2.4, hd: [1, 1] }, fb: { hl: [-5.5, -4], wing: 1, lean: 1.5, hd: [1, 1] } },
   drape: { gait: 'heavy', sink: .4, free: 1, side: { hr: [5, 3.5], hl: [6, 4], lean: 1.8 }, fb: { hl: [4, 4], crook: ['hl'], fore: ['hl'] } },
 };
 const LIFT = { reaches: .4, grips: .5, lands: .9 };
 const lifted = (u, base, crouch, end) => u >= LIFT.lands ? end : keyed(u / LIFT.lands, base, [[0, {}], [LIFT.reaches, crouch], [LIFT.grips, { ...crouch, down: 0 }], [1, { ...end, cu: 1, down: 0 }, 'o']]);
+const BESIDE = { shoulder: 5.5, wrap: 1, reach: 4.5 };
 const HOLDS = { hip: ['tote', 'toteStand'], chest: ['heft', 'heftStand'], low: ['lug', 'lugStand'], shoulder: ['haul', 'haulStand'], game: ['bear', 'bearStand'], drape: ['rescue', 'rescueStand'] };
 const turned = (p, keys) => { for (const k of keys) if (p[k]) p[k] = [-p[k][0], p[k][1]]; return p; };
 function carried(hold, u, c, go) {
@@ -51,6 +52,7 @@ function carried(hold, u, c, go) {
   const p = { face: c.face, carry: hold, item: null, ...(side ? h.side : h.fb), by: g.by + (h.sink || 0) + (go ? cs(u * 2) * g.bob : 0), br: !go && u > .35 && u < .8 ? 1 : 0 };
   if (side) { p.fr = go ? stride(u, g.duty, g.S, g.H) : [1.5, 0]; p.fl = go ? stride(u + .5, g.duty, g.S, g.H) : [-1.5, 0]; }
   else { p.fl = [0, go ? Math.max(0, a) * g.up : 0]; p.fr = [0, go ? Math.max(0, -a) * g.up : 0]; }
+  if (h.beside && !side && c.wide) { const out = clamp(BESIDE.shoulder - c.wide / 2 + BESIDE.wrap, -BESIDE.reach, BESIDE.shoulder); p.hl = [out, h.beside]; p.hr = [-out, h.beside]; }
   if (h.swing) p.hl = side ? [go * a * 5, 10 - go * Math.abs(a) * 1.2] : [0, 9.2 + go * a * 1.6];
   if (h.free && !side) p.hr = [0, 9.2 - go * a * 1.6];
   if (h.tilt && push && side) p.tilt = sn(u * 2 + .1);

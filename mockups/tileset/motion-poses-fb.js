@@ -69,7 +69,7 @@ const FB_POSES = {
 };
 const FB_READY = {
   one: (u, c) => ({ hr: [-2, 5 + sn(u) * .5], tool: 25, hl: [5, 4], by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0], clasp: 1, ub: 1 }),
-  two: (u, c) => c.tool === 'spear' || c.tool === 'staff' ? { hl: [4, 1.2 + sn(u) * .4], hr: [-1, 7 + sn(u) * .4], tool: -60, by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0], ub: 1 } : { hl: [5, 8], hr: [-5, 8 + sn(u) * .4], tool: 35, by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0], ub: 1 },
+  two: (u, c) => c.tool === 'spear' || c.tool === 'staff' ? { hl: [4, 4 + sn(u) * .4], hr: [-1.5, 8 + sn(u) * .4], tool: -68, palm: { hl: 'under', hr: 'under' }, by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0] } : { hl: [5, 8], hr: [-5, 8 + sn(u) * .4], tool: 35, by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0], ub: 1 },
   bow: (u, c) => ({ hl: [4, 5.5 + sn(u) * .4], hr: [-4, 4.5], bow: 1, arrow: 1, cant: 40, by: .6 + sn(u) * .3, fl: [0, 0], fr: [0, 0] }),
 };
 const FB_HALFWAY = { one: { hr: [-1, 6], by: .6 }, two: { hr: [-1, 6.5], hl: [3, 6], by: .6 }, bow: { hl: [2, 6.5], hr: [-2, 7], by: .6 } };
@@ -80,8 +80,7 @@ function fbReadied(family, u, c) {
 }
 function fbPose(name, u, c) {
   const back = c.face === 'b', p = { ...FB_POSES[name](u, c), face: c.face };
-  p.under = (!back && p.uf > .5) || (back && p.ub > .5) ? 1 : 0;
-  if (back && p.nb > .5) p.item = null;
+  p.behind = p.uf > .5 ? 1 : 0;
   if (back && p.tool_b !== undefined) p.tool = p.tool_b;
   if (back) { for (const k of FBX_KEYS) if (p[k]) p[k] = [-p[k][0], p[k][1]]; if (p.bx) p.bx = -p.bx; }
   delete p.nb; delete p.uf; delete p.ub; delete p.tool_b;

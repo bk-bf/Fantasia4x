@@ -422,7 +422,7 @@ const PROPS = (() => {
     const s = own ? WORLD_GEAR.sprite(own, kind === 'shieldUp' ? 'lean' : 'ground', quantity) : generic(kind, ramps);
     return flip ? s.flip() : s;
   }
-  const SHOULDERED = { half: 14, tones: [5, 4, 3, 3, 2, 1] };
+  const SHOULDERED = { half: 14, tones: [5, 4, 3, 3, 2, 1], recedes: 4 };
   function shouldered(s, bark, end) {
     const { half, tones } = SHOULDERED, top = B - tones.length + 1;
     for (let i = -half; i <= half; i++) tones.forEach((tone, j) => s.set(CX + i, top + j, at(bark, tone - (noise(i * .3, j, 3) > .68 ? 1 : 0))));
@@ -432,20 +432,25 @@ const PROPS = (() => {
     logs: (s, r) => shouldered(s, r.a, r.b),
     planks: (s, r, seed) => s.slab(CX - SHOULDERED.half, B - 5, SHOULDERED.half * 2 + 1, 4, 2, M.wood(r.a, { pw: 4, seed, b: 3 }), M.flat(r.a, 2, seed + 1, .04)),
     rubble: (s, r, seed) => basket(s, CX, B, 8, 9, r.a, seed),
-    heap: (s, r, seed) => basket(s, CX, B, 8, 9, r.a, seed)
+    heap: (s, r, seed) => basket(s, CX, B, 8, 9, r.a, seed),
+    bars: (s, r) => bar(s, CX - 6, B - 4, r.a)
   };
-  const SHOULDER_FORMS = ['logs', 'planks'];
+  const SHOULDER_FORMS = ['logs', 'planks'], TURNED_FORMS = ['bars'];
   const END_REST = { logs: 0, planks: 0 };
   const ENDS = {
     logs(s, r) {
-      const rows = Math.round(SHOULDERED.half * 2 * SEEN.depth);
+      const rows = SHOULDERED.recedes;
       for (let j = 0; j < rows; j++) for (let i = -3; i <= 4; i++) if (j || (i > -3 && i < 4)) s.set(CX + i, B - 6 - rows + j, at(r.a, [3, 5, 4, 4, 3, 3, 2, 1][i + 3] - (noise(i * 1.3, j * .5, 3) > .68 ? 1 : 0)));
       s.oval(CX + .5, B - 3, 4, 3.7, (px, py, nx, ny) => { const q = Math.hypot(nx, ny); return q > .8 ? at(r.a, 2) : q < .3 ? at(r.b, 2) : at(r.b, q < .6 ? 5 : 4); });
     },
     planks(s, r) {
-      const rows = Math.round(SHOULDERED.half * 2 * SEEN.depth);
+      const rows = SHOULDERED.recedes;
       for (let j = 0; j < rows; j++) for (let i = -3; i <= 4; i++) s.set(CX + i, B - 2 - rows + j, at(r.a, i === -1 || i === 2 ? 4 : 5));
       s.rect(CX - 3, B - 1, 8, 2, at(r.a, 3)); s.rect(CX - 3, B, 8, 1, at(r.a, 1));
+    },
+    bars(s, r) {
+      const n = r.a.length - 1;
+      s.rect(CX - 1, B - 4, 3, 1, r.a[n]); s.rect(CX - 2, B - 3, 5, 3, r.a[n - 2]); s.rect(CX - 2, B - 3, 5, 1, r.a[n - 1]); s.rect(CX - 2, B - 1, 5, 1, r.a[1]);
     },
     meat(s, r, size) {
       const rx = clamp(size * .3, 5, 9), ry = rx * .8, top = B - ry * 2;
@@ -459,7 +464,8 @@ const PROPS = (() => {
     const s = new Spr(48, HIGH, CX, B);
     ENDS[cls](s, ramps, size);
     s.outline();
-    s.hold = cls === 'meat' ? [CX, B + 1] : [CX, B + 1 - END_REST[cls] - Math.round(SHOULDERED.half * SEEN.depth)];
+    if (cls === 'meat') s.hold = [CX, B + 1];
+    else if (SHOULDER_FORMS.includes(cls)) s.hold = [CX, B + 1 - END_REST[cls] - (SHOULDERED.recedes >> 1)];
     return s;
   }
   function carried(cls, ramps, seed) {
@@ -509,5 +515,5 @@ const PROPS = (() => {
     return s;
   }
   const headUp = (kind, id) => id && WORLD_ITEMS.has(id) ? WORLD_ITEMS.headUp(id) : !!LONG[kind].headUp;
-  return { B, rampOf, mixed, pile, long, worn, carried, carriedEnd, SHOULDERED: SHOULDER_FORMS, headUp, tucked, bedded, undersides, PILES: Object.keys(PILES), LONG: Object.keys(LONG), CARRIED: Object.keys(CARRIED), lengthOf: k => LONG[k].L };
+  return { B, rampOf, mixed, pile, long, worn, carried, carriedEnd, SHOULDERED: SHOULDER_FORMS, TURNED: TURNED_FORMS, headUp, tucked, bedded, undersides, PILES: Object.keys(PILES), LONG: Object.keys(LONG), CARRIED: Object.keys(CARRIED), lengthOf: k => LONG[k].L };
 })();

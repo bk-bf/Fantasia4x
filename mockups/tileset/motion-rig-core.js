@@ -125,28 +125,43 @@ function aimed(ang, stow, back) {
   return { ang: Math.atan2(x, up) / D2R, fore: Math.max(STOWED.least, Math.hypot(x, up)) };
 }
 const BOW = { half: 11, sag: 4, nock: 10 };
-const RIG_OVER = {
-  hip: { s: ['near arm'], f: ['carrying arm'], b: ['body'] },
-  chest: { s: ['near arm'], f: ['hands'], b: ['body'] },
-  low: { s: ['near arm'], f: ['hands'], b: ['body'] },
-  shoulder: { s: ['near arm'], f: ['shoulder hand'], b: ['shoulder hand'] },
-  game: { s: ['head', 'near arm'], f: ['head', 'shoulder hand'], b: ['shoulder hand'] },
-  drape: { s: ['near arm'], f: ['head', 'shoulder arm'], b: [] },
-  rest: { s: ['near arm'], f: ['hands'], b: ['body'] },
+const SIDE_DEPTH = { far: -3, farHeld: -2.9, farHand: -2.85, shield: -2.8, cape: -2, tail: -1.9, farLeg: -1, nearLeg: -.9, torso: 0, head: .3, pad: .4, tucked: .9, near: 1, tool: 1.5, hand: 1.6, fingers: 1.7 };
+const TOWARD_DEPTH = { behind: -4, cape: -.45, tail: -.4, legs: -.3, torso: -.2, raised: .2, head: .3, upper: 1, pad: 1.5, fore: 2, shield: 2.5, hand: 3, butt: -.5, step: .05 };
+const AWAY_DEPTH = { shield: -3.5, hand: -3, fore: -2, upper: -1, tail: -.4, legs: -.3, torso: -.2, pad: -.1, cape: .1, head: .3, butt: 3.2, behind: 4, step: .05 };
+const ON_ONE_SHOULDER = ['shoulder', 'game', 'drape'];
+const HELD = {
+  hip: { s: { at: .95, palm: 'around' }, f: { at: 2.95, palm: 'around' }, b: { at: -3.05, palm: 'around' } },
+  chest: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'around' }, b: { at: -6, palm: 'around' } },
+  low: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'under' }, b: { at: -6, palm: 'under' } },
+  shoulder: { s: { at: .95, palm: 'around' }, f: { at: 7, palm: 'under' }, b: { at: 7, palm: 'under' } },
+  game: { s: { at: .2, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: 7, palm: 'under' } },
+  drape: { s: { at: .95, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: 7, palm: 'under' } },
+  rest: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'under' }, b: { at: -6, palm: 'under' } },
 };
 const REST = { toes: 4, reach: 8, edge: 2, raised: .7 };
-const RIG_FLAT = [];
-function rigMask(s, names, parts) {
-  const m = new Uint8Array(s.w * s.h);
-  if (names.includes('body')) { for (let i = 0; i < m.length; i++) m[i] = s.c[i] ? 1 : 0; return m; }
-  for (const name of names) {
-    const t = new Spr(s.w, s.h, s.ax, s.ay), mark = RIG_FLAT.includes(name) ? 2 : 1;
-    for (const draw of parts[name]) draw(t);
-    for (let i = 0; i < m.length; i++) if (t.c[i]) m[i] = mark;
-  }
-  return m;
+const RIG_KEEP = { layers: false };
+const STRUCK = { reach: 1.5 };
+function struckAway(ang) {
+  const a = ang * D2R, across = Math.sin(a), up = Math.cos(a), ahead = STRUCK.reach * Math.max(0, -up), n = Math.hypot(across, up, ahead), rise = (up + SEEN.depth * ahead) / n;
+  return { ang: Math.atan2(across / n, rise) / D2R, fore: Math.max(STOWED.least, Math.hypot(across / n, rise)) };
 }
-
+function rigComposite(s, layers) {
+  const order = layers.map((l, i) => [l, i]).sort((a, b) => a[0].cam - b[0].cam || a[1] - b[1]).map(x => x[0]), owner = new Uint8Array(s.w * s.h), near = [-1, 1, -s.w, s.w], rims = new Map();
+  order.forEach((l, n) => {
+    const t = l.spr, inked = l.inks ? order.findIndex(x => x.name === l.inks) + 1 : 0, rimmed = rims.get(l.limb || l.name) || rims.set(l.limb || l.name, new Set()).get(l.limb || l.name);
+    for (let i = 0; i < t.c.length; i++) {
+      if (!t.c[i]) continue;
+      for (const d of near) {
+        const q = i + d;
+        if (t.c[q] || !s.c[q]) continue;
+        if (inked && owner[q] === inked) s.c[q] = P.ink;
+        else if (l.rim && s.c[q] !== P.ink && !rimmed.has(q) && !(l.limb && owner[q] && order[owner[q] - 1].limb === l.limb)) { s.c[q] = shade(s.c[q]); rimmed.add(q); }
+      }
+    }
+    for (let i = 0; i < t.c.length; i++) if (t.c[i]) { s.c[i] = t.c[i]; s.e[i] = t.e[i]; owner[i] = n + 1; }
+  });
+  return { order, owner };
+}
 function bowSeen(S, gx, gy, o) {
   const { half, sag, nock } = BOW, pull = o.pull || 0, mix3 = (t, off) => o.u.map((c, i) => c * t + o.v[i] * off);
   const at = (t, off) => { const p = seenAt(mix3(t, off)); return [rnd(gx + p[0]), rnd(gy + p[1])]; };
