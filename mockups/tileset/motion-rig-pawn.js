@@ -239,6 +239,7 @@ function rigPawn(o, p) {
     pts.hand = th; pts.mouth = [HX, hTop + Math.floor(f.hh * .5) + 4]; pts.head = [HX, hTop - 3];
     pts.feet = [[cx - hw + 2, base - fl[1]], [cx + 3, base - fr[1]]];
   }
+  pts.torso = [sx0, tTop - br, lean]; pts.hip = [cx, legTop];
   if (p.carry) { const cu = p.cu === undefined ? 1 : p.cu, to = holds[p.carry]; pts.carry = [rnd(mix(hand[0], to[0], cu)), rnd(mix(hand[1], to[1], cu))]; }
   s.outline();
   if (p.carry) s.mask = rigMask(s, RIG_OVER[p.carry][face], parts);

@@ -1,6 +1,6 @@
 'use strict';
 function paintLook(s, look, skin, hair, face, pose) {
-  const g = lookGeometry(look, face, pose), pen = canvasPen(s);
+  const g = lookGeometry(look, face, pose, s.pts), pen = canvasPen(s);
   paintGarb(pen, g, look, skin, s);
   paintBuild(pen, g, look);
   paintWomanFace(pen, g, look, skin);

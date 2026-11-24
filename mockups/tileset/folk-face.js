@@ -7,10 +7,11 @@ function idlePose(look, time) {
   return { i, n, u, br: u >= .45 && u < .8 ? 1 : 0, blink: i === n - 2, glance: i === 3 || i === 4 ? (seedOf(look.id + ':glance') & 1 ? 1 : -1) : 0, still: false, wave: shift => Math.sin((u + (shift || 0)) * TURN) };
 }
 
-function lookGeometry(look, face, pose) {
-  const b = look.body, cx = RG.CX, base = RG.BASE, legTop = base - b.legs + 1, tTop = legTop - b.tl, sTop = tTop - pose.br, hTop = sTop - b.hh;
-  const X = face === 's' ? cx + 1 : cx, er = hTop + Math.floor(b.hh * .5);
-  return { ...b, cx, base, legTop, tTop, sTop, hTop, X, er, F: X + b.hd, face, pose };
+function lookGeometry(look, face, pose, pts) {
+  const b = look.body, base = RG.BASE, at = pts && pts.hip ? pts : null;
+  const cx = at ? at.hip[0] : RG.CX, legTop = at ? at.hip[1] : base - b.legs + 1, tTop = legTop - b.tl, sTop = at ? at.torso[1] : tTop - pose.br;
+  const hTop = at ? at.head[1] + 3 : sTop - b.hh, X = at ? at.head[0] : face === 's' ? cx + 1 : cx, er = hTop + Math.floor(b.hh * .5), lean = at ? at.torso[2] : 0;
+  return { ...b, cx, base, legTop, tTop, sTop, hTop, X, er, F: X + b.hd, face, pose, lean };
 }
 
 function canvasPen(s) {
