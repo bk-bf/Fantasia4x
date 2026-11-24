@@ -57,7 +57,7 @@ const PIXEL_TOOLS = (() => {
   );
   const blade = (ends, tones) => profile(ends.map((end, i) => [i - 4, Math.abs(i - 4) > 3 ? 1 : 0, end, tones[i]]));
   const SHOVEL_IRON = stack(blade([8, 9, 10, 10, 10, 10, 10, 9, 8], 'llmmmmmdd'), strip(0, 1, 6, 'd'));
-  const SHOVEL_STEEL = stack(blade([10, 11, 11, 11, 12, 11, 11, 11, 10], 'llmmmmmdd'), strip(-1, 1, 9, 'l'));
+  const SHOVEL_STEEL = stack(profile([[-5, 0, 5, 'l'], [-4, 0, 7, 'l'], [-3, 0, 8, 'l'], [-2, 0, 9, 'm'], [-1, 0, 9, 'm'], [0, 0, 10, 'm'], [1, 0, 9, 'm'], [2, 0, 9, 'm'], [3, 0, 8, 'd'], [4, 0, 7, 'd'], [5, 0, 5, 'd']]), strip(-1, 1, 8, 'l'), strip(0, 1, 8, 'd'), profile([[-6, 0, 2, 'l'], [6, 0, 2, 'd']]));
   const SOCKET = part(-1, ['lll', 'mmm', 'ddd']);
   const STEEL_HOE_BLADE = part(-12, [
     'l     ',
@@ -121,16 +121,16 @@ const PIXEL_TOOLS = (() => {
     '  yyyy  '
   ], [2, 9], 0);
 
-  const BONE_SLAB = part(-7, [
-    ' l lll lll ',
-    'lllllllllll',
-    'lmmmmmmmmml',
-    'mmmmmmmmmmm',
-    'mmmmmmmmmmd',
-    'mmmmmmmmmdd',
-    'dddddddddd ',
-    'mmmmmmmmmd ',
-    'ddddddddd  '
+  const BONE_SLAB = part(-8, [
+    ' lllllllllll',
+    'lmmmmmmmmmml',
+    'lmmmmmmmmmmm',
+    'mmmmmmmmmmmm',
+    'mmmmmmmmmmmd',
+    'mmmmmmmm  md',
+    'mmmmmmmm  dd',
+    'mmmmmmmmmmdd',
+    'dddddddddddd'
   ]);
   const KNIFE_BLADE = profile([[-1, 0, 9, 'l'], [0, 0, 11, 'm'], [1, 0, 10, 'm'], [2, 1, 8, 'd']]);
   const SCAPULA = patch([

@@ -40,10 +40,14 @@
   ];
   const BILLET_END = ['llmd', 'lmmd', 'lmdd', 'dddd'];
   const CAKE = [
-    ' llmm ',
-    'llmmmd',
-    'lmmmdd',
-    ' dddd '
+    '  llllllm    ',
+    ' llodddddm   ',
+    'llodddddmmL  ',
+    'lmddmmmmlmLL ',
+    'lmmllllllmDLM',
+    'lmmmmmmmmdLMD',
+    ' mmmmmmmdDLD ',
+    '  dddddddDD  '
   ];
   const RIPPLED_BAR = [
     'lllllllllllllmd',
@@ -61,7 +65,7 @@
   }
   const lifted = bar => strewn(bar, [[2, 0], [0, bar.h + 1]]);
   const barred = (rows, ends, wear) => { const bar = piece(rows, wear), end = piece(ends, wear); return stock(() => scene([0, 0, bar]), () => lifted(bar), () => crossed(bar, end)); };
-  const cake = piece(CAKE, { body: 'steel' });
+  const cake = piece(CAKE, { body: 'iron', trim: 'steel' });
 
   WORLD_GEAR.add({
     wrought_iron: barred(FLAT_BAR, FLAT_END, { body: 'iron' }),

@@ -174,18 +174,32 @@ const PIXEL_JEWELRY = (() => {
     'mmmmmmdddddd'
   ]);
   const DIADEM = plate([
-    'lm',
-    'lmmd',
-    'll  dd',
-    'lmm  mmd',
-    'l lmmmmd d',
-    'lm  lmmd  md',
-    'llllllmmmmmmmmmmdddddd',
+    ...HOOP_BACK,
+    'll                    dd',
+    'llm                  mdd',
+    'lllmm              mmddd',
+    'llllmmmmmmmmmmmmmmdddd',
     'lm lm lm lmmd md md md',
-    'l ml ml mmmmdm dm dm d',
-    'lm lm lm lmmd md md md',
-    'llllllmmmmmmmmmmdddddd'
+    'lllmmmmmmmmmmmmmmddd',
+    'mmmmmmdddddd'
   ]);
+  const DIADEM_PEAK = mark(6, -6, [
+    '     ll     ',
+    '     lm     ',
+    '    lmmd    ',
+    '   l lm d   ',
+    '  lm lm md  ',
+    '  l  lm  d  ',
+    ' lm lmmd md ',
+    'lm lm  md md',
+    'l  lm  md  d',
+    'lm  lmmd  md',
+    ' lm  lm  md ',
+    '  llmmmmdd  ',
+    '   llmmdd   ',
+    '    lmmd    '
+  ], 'silver');
+  const DIADEM_GEM = mark(11, 2, ['lm', 'lmd', 'md'], 'sapphire');
   const WAR_CROWN = plate([
     'lm',
     'lm',
@@ -244,7 +258,7 @@ const PIXEL_JEWELRY = (() => {
     { id: 'stargazer_circlet', draw: () => dress(CIRCLET, silver('glow'), SPARK) },
     { id: 'scholars_circlet', draw: () => dress(CIRCLET, silver('sapphire')) },
     { id: 'wardens_circlet', draw: () => dress(TWIN_CIRCLET, gold('emerald', 'moonstone')) },
-    { id: 'filigree_diadem', draw: () => dress(DIADEM, { body: 'silver', trim: 'silver' }) },
+    { id: 'filigree_diadem', draw: () => dress(DIADEM, { body: 'silver', trim: 'silver' }, DIADEM_PEAK, DIADEM_GEM) },
     { id: 'champions_crown', draw: () => dress(WAR_CROWN, gold('ruby', 'topaz')) },
     { id: 'sovereign_crown', draw: () => dress(HIGH_CROWN, { body: 'gold', trim: 'citrine', lining: 'amethyst', strap: 'regal' }) }
   ];

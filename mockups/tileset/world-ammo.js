@@ -38,10 +38,42 @@
     return grid.map(row => row.join(''));
   }
 
-  const PILES = [[[0, 0]], [[0, 0], [2, 4]], [[2, 0], [0, 4], [3, 8]], [[1, 0], [4, 3], [0, 6], [3, 9]]];
+  const STANDING = [[1, 1], [4, 0], [7, 2], [10, 1]];
+  function upright(shape) {
+    const grid = Array.from({ length: Math.max(shape.len + 1, 11) }, () => new Array(12).fill(' '));
+    for (const [x, top] of STANDING) {
+      for (let y = top; y < grid.length; y++) grid[y][x] = y === top ? 'm' : y > top + 3 && (x + y) % 5 === 0 ? 'm' : 'l';
+      for (let y = top + 1; y < top + 4; y++) { grid[y][x - 1] = y === top + 3 ? 'M' : 'L'; grid[y][x + 1] = y === top + 3 ? 'D' : 'M'; }
+    }
+    const tie = grid.length - 4;
+    for (let x = 0; x < 12; x++) grid[tie][x] = x < 4 ? 'Z' : x < 9 ? 'Y' : 'X';
+    return grid.map(row => row.join(''));
+  }
+  const BUCKET = [
+    'lmlmlmlmldmd',
+    'zzzzyyyyyyxx',
+    'lmlmmmmmmddd',
+    'lmlmmmmmdddd',
+    'zzzzyyyyyyxx',
+    ' lmmmmmmddd '
+  ];
+  function bale(shape, head) {
+    const tip = HEADS[head][1].replace(/ /g, '').slice(-3), long = shape.len + 3, ties = [Math.round(long * .3), Math.round(long * .7)];
+    return ['l', 'd', 'm', 'd', 'm', 'd', 'd'].map((glyph, r) => {
+      const lift = r < 2 ? 0 : r < 5 ? 1 : 2, band = 'ZYX'[lift], shift = r % 2 ? ' ' : '';
+      let row = shift + 'LMD'[lift] + (r % 2 ? 'M' : 'L');
+      for (let i = 0; i < long; i++) row += ties.includes(i) || ties.includes(i - 1) ? band : glyph;
+      return row + tip + (r % 2 ? '' : ' ');
+    });
+  }
   const SHEAVES = [6, 20, 45, 80], countOf = quantity => quantity <= 12 ? 1 : quantity <= 30 ? 2 : quantity <= 60 ? 3 : 4;
   const arrow = (wood, feather, metal, lash) => ({ body: wood, trim: feather, strap: metal, lining: lash || 'cord' });
-  const bundled = (shape, head, wear) => ({ kind: 'ammo', tuck: 'low', stages: SHEAVES, ground: quantity => strewn(piece(sheaf(SHAPES[shape], head), wear), PILES[countOf(quantity || 1) - 1]) });
+  const bucket = piece(BUCKET, { body: 'wood', strap: 'iron' });
+  function bundled(shape, head, wear) {
+    const loose = piece(sheaf(SHAPES[shape], head), wear), sheafed = piece(upright(SHAPES[shape]), wear), baled = piece(bale(SHAPES[shape], head), wear);
+    const draws = [() => scene([0, 0, loose]), () => strewn(loose, [[0, 0], [2, 4]]), () => held([[0, 0, sheafed]], bucket, [0, sheafed.h - 2]), () => scene([0, 0, baled], [2, 5, baled])];
+    return { kind: 'ammo', tuck: 'low', stages: SHEAVES, ground: quantity => draws[countOf(quantity || 1) - 1]() };
+  }
 
   const PEBBLE = [
     ' llm ',

@@ -19,19 +19,18 @@ const PIXEL_AXES = (() => {
     '  ddd  ',
     '   dd  '
   ]);
-  const CHOPPER_HEAD = part(-8, [
-    '  lll lll  ',
-    ' lllllllll ',
-    'lmmmmmmmmml',
-    'lmmllmmmllm',
-    'mmmmdmmmmdm',
-    'mmmmmmmmmmm',
-    'mmmmmmmmmmd',
-    'mmmmmmmmmdd',
-    'dmmmmmmmmdd',
-    'ddddddddddd',
-    'dddddddddd '
-  ]);
+  const CHOPPER_HEAD = PX.patch([
+    '     l  l    ',
+    '    llmlmd   ',
+    '   lmdllmml  ',
+    '  llmmdmmldl ',
+    ' lmmmlmmdmmd ',
+    ' lmmmmmmmmdd ',
+    'Lmmmmmmmmmdd ',
+    'LMmmmmmmmddd ',
+    ' LMDmmmmddd  ',
+    '  DDDDddd    '
+  ], [3, 7]);
   const CELT_THROUGH = PX.patch([
     '  lll         ',
     ' lmmml        ',
@@ -320,7 +319,7 @@ const PIXEL_AXES = (() => {
   const lashed = (length, drop, head, ink) => assemble([[haft(length), 'wood'], -drop, lashing(2), 3, lashing(1), -drop - 1, [head, ink]]);
 
   const flintHandaxe = () => lashed(17, 6, BIFACE_HEAD, 'flint');
-  const stoneChopper = () => assemble([[haft(9), 'wood'], -2, [CHOPPER_HEAD, 'stone'], -12, lashing(4)]);
+  const stoneChopper = () => assemble([[haft(13), 'wood'], -3, lashing(3)], assemble([[haft(15), 'wood'], -2, [CHOPPER_HEAD, 'stone', 'hide']]));
   const stoneAxe = () => assemble([[pole(15), 'wood'], lashing(2)], assemble([[pole(20), 'wood'], -2, [CELT_THROUGH, 'flint']]));
   const copperAxe = () => lashed(21, 7, CELT_HEAD, 'copper');
   const ironAxe = () => assemble([[haft(22), 'wood'], -8, [FELLING_HEAD, 'iron']]);

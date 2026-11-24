@@ -1226,29 +1226,52 @@ const ARMOUR = (() => {
     'xxxxxxxxxx xxx',
     ' xxxxxxxx     '
   ];
-  const ARM_SPLINT = plate([
-    'LMD  lmmmmd  LMD',
-    'LMD llmmmmdd LMD',
-    'LMDlllmmmmdddLMD',
-    'zyyyyyyyyyyyyyyx',
-    ...times(6, 'LMDlllmmmmdddLMD'),
-    'zyyyyyyyyyyyyyyx',
-    ...times(2, 'LMDlllmmmmdddLMD'),
-    'LMD llmmmmdd LMD',
-    'LMD  lmmmmd  LMD'
-  ]);
-  const LEG_SPLINT = plate([
-    'LMD  lmmmmd  LMD',
-    'LMD llmmmmdd LMD',
-    'zyyyyyyyyyyyyyyx',
-    ...times(7, 'LMDlllmmmmdddLMD'),
-    'zyyyyyyyyyyyyyyx',
-    ...times(7, 'LMDlllmmmmdddLMD'),
-    'zyyyyyyyyyyyyyyx',
-    ...times(2, 'LMDlllmmmmdddLMD'),
-    'LMD llmmmmdd LMD',
-    'LMD  lmmmmd  LMD'
-  ]);
+  const ARM_SPLINT = [
+    ' LMD     LMD         ',
+    ' LMDlmmmdLMD         ',
+    ' LMDlmmmdLMD         ',
+    'zzyyyyyyyyyyx        ',
+    ' LMDlmmmdLMD         ',
+    ' LMDlmmmdLMD         ',
+    ' LMDlmmmdLMD         ',
+    'zzyyyyyyyyyyx        ',
+    ' LMDlmmmdLMD  z   z  ',
+    ' LMDlmmmdLMDLLyLLLyLM',
+    ' LMDlmmmdLMDMMyMMMyMD',
+    ' LMDlmmmdLMDllylllyl ',
+    ' LMDlmmmdLMDmmymmmym ',
+    ' LMDlmmmdLMDddydddyd ',
+    ' MMMMMMMMMMMMMyMMMyMD',
+    ' DDDDDDDDDDDDDyDDDyD ',
+    '              x   x  '
+  ];
+  const LEG_SPLINT = [
+    ' LMD     LMD      ',
+    ' LMDlmmmdLMD      ',
+    ' LMDlmmmdLMD      ',
+    'zzyyyyyyyyyyx     ',
+    ' LMDlmmmdLMD      ',
+    ' LMDlmmmdLMD      ',
+    ' LMDlmmmdLMD      ',
+    ' LMDlmmmdLMD      ',
+    ' LMDlmmmdLMD      ',
+    ' LMDlmmmdLMD      ',
+    'zzyyyyyyyyyyx     ',
+    ' LMDlmmmdLMD      ',
+    ' LMDlmmmdLMD      ',
+    ' LMDlmmmdLMD      ',
+    ' LMDlmmmdLMD      ',
+    ' LMDlmmmdLMD      ',
+    ' LMDlmmmdLMD      ',
+    'zzyyyyyyyyyyx     ',
+    ' LMDlmmmdLMD  z   ',
+    ' LMDlmmmdLMDllyl  ',
+    ' LMDlmmmdLMDmmym  ',
+    ' LLLLLLLLLLLLLyLL ',
+    ' MMMMMMMMMMMMMyMM ',
+    ' DDDDDDDDDDDDDyDD ',
+    '              x   '
+  ];
   const ARM_CAST = [
     '  llllmm            ',
     ' llWWWWWWd          ',

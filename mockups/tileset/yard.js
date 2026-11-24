@@ -70,7 +70,8 @@
       titled('Props by storage class', 'a drop is drawn as its class, three fill stages by quantity, tinted by the item'), classes(state),
       titled('Weapons, tools and gear', 'top row beside a wall, lower rows in open grass'), loose(state, WORLD_ITEMS.ids()), loose(state, [...TOOLS, ...WORN]),
       loose(state, ownedAs('pack', 'belt', 'quiver')), ...chunked(ownedAs('vessel', 'hauler', 'organ'), STRIP + 2).map(ids => loose(state, ids)), bundles(state, ownedAs('ammo')),
-      titled('Small goods by family', 'one, a few and many of each, top to bottom'), ...families(state));
+      titled('Small goods by family', 'one, a few and many of each, top to bottom'), ...families(state),
+      titled('Bone, horn and feather', 'one, a few and many of each, top to bottom'), ...chunked(ownedAs('bone', 'plucked'), STRIP).map(ids => bundles(state, ids)));
   }
 
   const ui = F4X.bar(state => render(state));
