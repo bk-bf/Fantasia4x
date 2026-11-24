@@ -15,6 +15,7 @@ import { biomeBaseMoisture, baseMoistureFromWater } from '../services/Environmen
 import { makeSeededRng } from '../core/util/rng';
 import { chamferDistance } from './chamfer';
 import { Cover, generateLandforms, type LandformTargets } from './landforms';
+import { shapeShores } from './shores';
 
 const TERRAIN_FREQUENCY = 0.005;
 const DETAIL_FREQUENCY = 0.05;
@@ -252,9 +253,11 @@ export function generateWorld(
 
   promoteBiomeVariants(world, detailNoise);
 
-  assignMoisture(world, detailNoise);
-
   if (!opts?.skipResources) resourceGeneratorService.generateResources(world, seed);
+
+  shapeShores(world, setTileSubtype);
+
+  assignMoisture(world, detailNoise);
 
   return world;
 }
