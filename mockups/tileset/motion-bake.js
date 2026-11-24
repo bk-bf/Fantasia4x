@@ -1,12 +1,15 @@
 'use strict';
 const FRAMES = new Map();
+const LOOK_CAST = {};
 const STRIKES = new Set(['chop', 'mine', 'hoe', 'hammer', 'attack', 'thrust', 'bite']);
 const NODS = { stir: 2, gather: 2, draw: 2, eat: 3, drink: 1, talk: 4, listen: 2, warm: 1, tired: 1, cry: 6, graze: 3, peck: 2, cud: 4, sniff: 2 };
 let SEEDS = 0;
 
 function mkActor(rig, kind, over) {
   const A = { rig, kind, seed: (++SEEDS * .618) % 1, id: rig + ':' + kind + ':' + SEEDS };
-  if (rig === 'pawn') { A.o = { ...PAWNS[kind].o, ...(over || {}) }; A.base = mkPawn(A.o); A.name = PAWNS[kind].name; A.ls = FOLK[A.o.race || 'human'].legs / 10; A.as = (FOLK[A.o.race || 'human'].tl - 1) / 11; A.look = JSON.stringify(Object.entries(A.o).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])); }
+  const cast = rig === 'pawn' && LOOK_CAST[kind];
+  if (cast) { A.lookOf = cast.look; A.gear = { ...(cast.gear || {}), ...(over || {}) }; A.o = { ...lookRig(cast.look).o, ...A.gear }; A.base = drawLook(cast.look, 's', null, { face: 's' }, A.gear); A.name = cast.name; A.ls = FOLK[A.o.race].legs / 10; A.as = (FOLK[A.o.race].tl - 1) / 11; A.look = JSON.stringify(cast.look) + JSON.stringify(A.gear); }
+  else if (rig === 'pawn') { A.o = { ...PAWNS[kind].o, ...(over || {}) }; A.base = mkPawn(A.o); A.name = PAWNS[kind].name; A.ls = FOLK[A.o.race || 'human'].legs / 10; A.as = (FOLK[A.o.race || 'human'].tl - 1) / 11; A.look = JSON.stringify(Object.entries(A.o).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])); }
   else { A.base = mkBeast(kind); A.name = (BEASTS[kind] || {}).name || OTHER[kind]; A.look = kind; }
   A.anims = rig === 'pawn' ? PAWN_ANIMS : rig === 'quad' ? QUAD_ANIMS : rig === 'fowl' ? FOWL_ANIMS : rig === 'rabbit' ? RABBIT_ANIMS : rig === 'critter' ? CRIT_ANIMS[kind] : QUAD_ANIMS;
   return A;
@@ -100,14 +103,14 @@ function fitted(A, pose) {
 function frameOf(A, st, lvl, smooth) {
   const def = animOf(A, st.anim), n = (def.n || 6) * (smooth ? 3 : 1), u0 = clamp(st.u - Math.floor(st.u), 0, .9999), u = (Math.floor(u0 * n) + .5) / n;
   if (lvl < 2 || A.rig === 'plain') return procFrame(A, st, def, lvl ? u : u0, lvl);
-  const c = { face: st.face || 's', lvl, t: st.t || 0, seed: A.seed, tool: A.o && A.o.tool, bulk: A.load ? A.load.bulk : 'bulky', o: A.rig === 'quad' ? BEASTS[A.kind].o : null }, ang = smooth ? 2 : 5;
+  const c = { face: st.face || 's', lvl, t: st.t || 0, seed: A.seed, tool: A.o && A.o.tool, hold: A.load ? A.load.hold : 'chest', o: A.rig === 'quad' ? BEASTS[A.kind].o : null }, ang = smooth ? 2 : 5;
   let flip = !!st.flip, make, pose;
   if (A.rig === 'pawn') {
     pose = c.face !== 's' && FB_POSES[st.anim] ? fbPose(st.anim, u, c) : def.pose(u, c);
-    if (pose.lie) { const q = { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, out: pose.out ? 1 : 0, bent: A.seed > .5 ? 1 : 0 }, fl = !!st.flip; return { s: cachedFrame(A.look + '|lie' + JSON.stringify(q) + (fl ? 'F' : ''), () => { const s = rigPawnLie(A.o, q); return fl ? mirror(s) : s; }), dx: 0, dy: 0 }; }
+    if (pose.lie) { const q = { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, out: pose.out ? 1 : 0, bent: A.seed > .5 ? 1 : 0 }, fl = !!st.flip; return { s: cachedFrame(A.look + '|lie' + JSON.stringify(q) + (fl ? 'F' : ''), () => { const s = A.lookOf ? drawLook(A.lookOf, 's', null, { lie: 1, ...q }, A.gear) : rigPawnLie(A.o, q); return fl ? mirror(s) : s; }), dx: 0, dy: 0 }; }
     fitted(A, pose);
     if (pose.face !== 's') flip = false;
-    make = () => rigPawn(A.o, JSON.parse(key0));
+    make = () => A.lookOf ? drawLook(A.lookOf, pose.face, null, JSON.parse(key0), A.gear) : rigPawn(A.o, JSON.parse(key0));
   } else if (A.rig === 'quad') {
     const fb = c.face !== 's' && FB_ANIMS[st.anim];
     if (fb) { pose = fb(u, c); flip = false; make = () => rigQuadFB(A.kind, JSON.parse(key0), c.face === 'b'); }
@@ -116,7 +119,7 @@ function frameOf(A, st, lvl, smooth) {
   else { pose = def.pose(u, c); make = () => (A.rig === 'fowl' ? rigFowl : rigRabbit)(JSON.parse(key0)); }
   const layer = pose.carry && A.load ? HAUL.layer(A.load, pose.carry, c.face) : null;
   const key0 = quant(pose, ang), key = A.look + '|' + lvl + (c.face !== 's' ? c.face : '') + (flip ? 'F' : '') + key0 + (layer ? '|' + layer.key : '');
-  return { s: cachedFrame(key, () => { const bare = make(), s = layer ? MOTION_LOAD.put(bare, layer) : bare; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
+  return { s: cachedFrame(key, () => { const bare = make(), s = layer && bare.mask ? MOTION_LOAD.put(bare, layer) : bare; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
 }
 
 function rotated(src, deg, dir) {

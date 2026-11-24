@@ -12,7 +12,8 @@
 <header id="mock">
   <div class="mrow"><strong>Lairs as places</strong><a href="region.html">Region</a><button id="mockhide">Hide · `</button></div>
   <div class="mrow"><span class="grp" data-k="lair"><button data-v="wolves">Wolves</button><button data-v="bear">Bear</button><button data-v="goblins">Goblins</button><button data-v="fen">Fen</button><button data-v="harpies">Harpies</button></span></div>
-  <div class="mrow"><span class="grp" data-k="age" data-def="2"><button data-v="1">Fresh</button><button data-v="2">Settled</button><button data-v="3">Old</button></span><span class="grp" data-k="state"><button data-v="lived">Lived in</button><button data-v="cleared">Cleared</button></span></div>
+  <div class="mrow"><span class="grp" data-k="age" data-def="2"><button data-v="1">Fresh</button><button data-v="2">Settled</button><button data-v="3">Old</button></span></div>
+  <div class="mrow"><span class="grp" data-k="state"><button data-v="lived">Lived in</button><button data-v="cleared">Cleared</button><button data-v="abandoned">Abandoned</button><button data-v="overgrown">Overgrown</button><button data-v="ruin">Ruin</button></span></div>
   <div class="mrow"><span class="grp" data-k="show"><span class="lab">Show</span><button data-v="parts">Parts</button><button data-v="rules">Rules</button><button data-v="none">Nothing</button></span></div>
   <div class="mrow"><span class="grp" data-k="speed" data-def="1"><button data-v="0">Pause</button><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="4">4×</button></span><span class="grp" data-k="zoom"><span class="lab">Zoom</span><button data-v="fit">Fit</button><button data-v="2">2</button><button data-v="3">3</button></span></div>
   <div class="mrow"><span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span></div>
@@ -27,7 +28,7 @@
 <script src="../fantasia4x-hud/ambient.js"></script>
 <script src="../fantasia4x-tileset/registry-scripts.js"></script>
 <script>
-document.write([...REGISTRY_SCRIPTS, 'motion-rig-pawn.js', 'motion-rig-beast.js', 'motion-rig-quadfb.js', 'motion-rig-critter.js', 'motion-poses.js', 'motion-poses-critter.js', 'motion-poses-fb.js', 'motion-bake.js', 'motion-timeline.js', 'motion-stage.js', 'motion-fell.js', 'motion-scene.js'].map(src => '<script src="../fantasia4x-tileset/' + src + '"><\/script>').join(''));
+document.write([...REGISTRY_SCRIPTS, 'motion-rig-beast.js', 'motion-rig-quadfb.js', 'motion-rig-critter.js', 'motion-poses.js', 'motion-poses-critter.js', 'motion-poses-fb.js', 'motion-bake.js', 'motion-timeline.js', 'motion-stage.js', 'motion-fell.js', 'motion-scene.js'].map(src => '<script src="../fantasia4x-tileset/' + src + '"><\/script>').join(''));
 </script>
 <script src="lair-kit.js"></script>
 <script src="lair-props.js"></script>

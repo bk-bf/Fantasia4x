@@ -1,31 +1,34 @@
 'use strict';
 LAIR_SCENES.bear = (() => {
   const time = LAIR.clock([[0, 5.5], [3, 6.5], [11, 8], [18, 10], [24, 11.5], [29, 13], [46, 16], [52, 17], [60, 19.5], [66, 21], [72, 29.5]]);
-  const BED = [15.3, 15.1], BERRIES = [[21.6, 11.6], [23, 12.4], [24.3, 11.3], [22.6, 10.6], [25.2, 12.6]], POST = [27.2, 14.8], CACHE = [19.8, 19.4];
+  const BED = [15.3, 15.1], BERRIES = [[21.6, 11.6], [23, 12.4], [24.3, 11.3], [22.6, 10.6], [25.2, 12.6]], POST = [27.2, 14.8], CACHE = [19.8, 19.4], WILD = [[20.3, 12.5], [24.9, 10.3], [26.3, 11.6], [21.2, 10.2]];
   const item = (id, ...v) => LAIR.sprite(...v.map(x => 'item/' + id + '/' + x));
 
   function place(k) {
-    const { put, bare, age, cleared, loot, season } = k;
+    const { put, bare, age, cleared, decay, loot, season } = k;
     bare(15.5, 15, 4.2); bare(23, 12, 3); bare(POST[0], POST[1] + .6, 2.4); bare(CACHE[0], CACHE[1], 2.6); bare(26, 18.6, 3.4); bare(32.5, 20, 4.6); bare(41, 19, 4);
-    put(LAIR_PROPS.overhang(4), 15.2, 13.9);
-    put(LAIR_PROPS.bed(7, P.litter, P.soilRich, age > 2 ? 86 : 74), BED[0], BED[1] - .68);
-    BERRIES.forEach((b, i) => put(plant('berry', i, season), b[0], b[1]));
-    loot.add('Large bones', [4, 11, 26][age - 1], item('large_bones', 'map-pile-' + age), CACHE[0] + 1.6, CACHE[1] + .5);
+    put(LAIR_PROPS.overhang(4, decay), 15.2, 13.9);
+    put(LAIR_PROPS.bed(7, P.litter, P.soilRich, age > 2 ? 86 : 74, decay), BED[0], BED[1] - .68);
+    [...BERRIES, ...WILD.slice(0, Math.max(0, decay - 1) * 2)].forEach((b, i) => put(plant('berry', i, season), b[0], b[1]));
+    loot.add('Large bones', [4, 11, 26][age - 1], item('large_bones', k.heap(age)), CACHE[0] + 1.6, CACHE[1] + .5, 'bone');
     if (age > 1) loot.add('Disturbed earth', 1, LAIR.sprite('site/buried_hoard/summer-0'), 11.6, 16.8);
     if (age > 2) {
-      put(LAIR_PROPS.skeleton(5), 18.6, 13.2);
-      loot.add('Framed leather pack', 1, item('framed_leather_pack', 'map-ground'), 19.8, 13.4);
+      put(LAIR_PROPS.skeleton(5, decay), 18.6, 13.2);
+      loot.add('Framed leather pack', 1, item('framed_leather_pack', 'map-ground'), 19.8, 13.4, 'hide');
       loot.add('Bronze socketed spear', 1, item('bronze_socketed_spear', 'map-lie'), 17.6, 13.8);
       loot.add('Spangenhelm', 1, item('spangenhelm', 'map-ground'), 18.1, 12.7);
     }
+    if (decay && decay < 3) put(LAIR_PROPS.brush(3, decay), CACHE[0], CACHE[1]);
+    LAIR.regrow(k, 15.6, 15.9, 2.8, 1.5, 47, ['fern', 'mushroom', 'bush'], 'oak', [[15.2, 13.9]]);
+    if (decay > 2) put(LAIR_PROPS.sapling(7, 'oak'), 16.9, 14.3);
     if (!cleared) return;
     loot.add('Boar carcass, half eaten', 1, item('boar_carcass', 'map-pile-1'), CACHE[0], CACHE[1]);
     loot.add(age > 2 ? 'Cave bear carcass' : 'Bear carcass', 1, item(age > 2 ? 'cave_bear_carcass' : 'bear_carcass', 'map-pile-2'), BED[0] + .2, BED[1]);
   }
 
   function cast(R, k) {
-    const { age, season } = k, post = { kind: 'pine', at: POST, seed: 3, spr: LAIR_PROPS.clawed(tree('pine', 3, season)) };
-    if (k.cleared) return { post };
+    const { age, season } = k, post = { kind: 'pine', at: POST, seed: 3, spr: LAIR_PROPS.clawed(tree('pine', 3, season), k.decay) };
+    if (k.vacant) return { post };
     const big = age > 2, reach = big ? 1.5 : 1.3, kill = [30.4, 20.2];
     const bear = R.add(LAIR.quad(big ? 'cavebear' : 'bear'), BED, big ? 'Cave bear' : 'Brown bear'), prey = R.add(LAIR.quad('boar'), [kill[0] + reach - 1.2, kill[1] + .04]), brush = R.add(LAIR.prop(LAIR_PROPS.brush(3)), CACHE);
     prey.keeps = true;
@@ -62,9 +65,10 @@ LAIR_SCENES.bear = (() => {
   return {
     name: 'Bear den', size: [56, 32], seed: 47, home: [15.4, 15.2], cam: [26, 16], ring: 5, time, place, cast,
     who: ['a brown bear', 'a sow and her cub', 'a cave bear and her cub'],
-    ground(x, y, n, n2) {
-      if (Math.hypot(x - 15.4, (y - 15.6) * 1.5) < 2.2 + n2) return 'dirt';
-      if (Math.hypot(x - CACHE[0], (y - CACHE[1]) * 1.5) < 1.2 + n2) return 'dirt';
+    ground(x, y, n, n2, age, decay) {
+      const grown = n2 < .5 ? 'mossy_ground' : 'deep_grass';
+      const yard = LAIR.yard(Math.hypot(x - 15.4, (y - 15.6) * 1.5), 2.2 + n2, decay, 'dirt', grown) || LAIR.yard(Math.hypot(x - CACHE[0], (y - CACHE[1]) * 1.5), 1.2 + n2, decay, 'dirt', grown);
+      if (yard) return yard;
       const open = Math.hypot((x - 30) / 13, (y - 18.5) / 6) + (n - .5) * .7;
       if (open < .8) return n2 < .4 ? 'tall_grass' : 'deep_grass';
       return n2 < .42 ? 'tree' : n2 < .68 ? 'mossy_ground' : 'deep_grass';

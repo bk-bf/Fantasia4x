@@ -1,8 +1,8 @@
 'use strict';
 function rigPawnLie(o, p) {
   p = p || {};
-  const f = FOLK[o.race || 'human'], s = new Spr(RG.W, RG.H, RG.CX, RG.BASE), skin = o.skin || f.skin, sn = skin.length - 1, tunic = o.tunic || P.cloth, pants = o.pants || P.leather, body = o.armor || tunic, hair = o.hair || P.furBrown, hn = hair.length - 1;
-  const rest = !!p.rest, out = !!p.out, br = p.br ? 1 : 0, gy = RG.BASE - 1, th = Math.round(f.hw * 1.7), L = f.hh + f.tl + f.legs, x0 = RG.CX - (L >> 1), tx0 = x0 + f.hh - 1, lx0 = tx0 + f.tl, top = gy - th + 1, legH = Math.max(3, th >> 1);
+  const f = FOLK[o.race || 'human'], s = new Spr(RG.W, RG.H, RG.CX, RG.BASE), skin = o.skin || f.skin, sn = skin.length - 1, tunic = o.tunic || (o.bare ? skin : P.cloth), pants = o.pants || (o.bare ? skin : P.leather), body = o.armor || tunic, boots = o.boots || (o.bare ? skin : P.leather), belted = o.belt === undefined ? !o.bare || !!(o.tunic || o.armor) : !!o.belt, hair = o.hair || P.furBrown, hn = hair.length - 1;
+  const rest = !!p.rest, out = !!p.out, tucked = !!p.tucked, br = p.br ? 1 : 0, gy = RG.BASE - 1, th = Math.round(f.hw * 1.7), L = f.hh + f.tl + f.legs, x0 = RG.CX - (L >> 1), tx0 = x0 + f.hh - 1, lx0 = tx0 + f.tl, top = gy - th + 1, legH = Math.max(3, th >> 1);
   const headH = 2 * f.hd, hTop = gy - headH + 1 - (rest ? 1 : 0) + (out ? 1 : 0), noHair = o.bald || f.bald, rowU = y => clamp((y - top) / Math.max(1, th - 1), 0, 1);
   if (rest) {
     for (let x = x0 - 4; x <= x0 + L + 3; x++) for (let y = gy - 3; y <= gy + 1; y++) { const e = x === x0 - 4 || x === x0 + L + 3 || y === gy + 1; s.set(x, y, P.cloth[e ? 1 : y === gy - 3 ? 3 : 2 - ((x + y) % 7 === 0 ? 1 : 0)]); }
@@ -11,23 +11,23 @@ function rigPawnLie(o, p) {
   const bootX = lx0 + f.legs - 3;
   const legRow = (y0, y1, far) => {
     for (let y = y0; y <= y1; y++) for (let x = lx0; x < lx0 + f.legs; x++) {
-      const boot = x >= bootX, u = (y - y0) / Math.max(1, y1 - y0), c = pick3(boot ? P.leather : pants, u * .9, (boot && x === bootX ? 1 : 0) + (x === lx0 + f.legs - 1 ? -2 : 0) - (far ? 1 : 0));
+      const boot = x >= bootX, u = (y - y0) / Math.max(1, y1 - y0), c = pick3(boot ? boots : pants, u * .9, (boot && x === bootX ? 1 : 0) + (x === lx0 + f.legs - 1 ? -2 : 0) - (far ? 1 : 0));
       s.set(x, y, far ? dark(c, .82) : c);
     }
     const tx = lx0 + f.legs - 2;
-    s.rect(tx, y0 - 2, 2, 2, far ? dark(P.leather[2], .82) : P.leather[3]); s.set(tx + 1, y0 - 2, P.leather[1]);
+    s.rect(tx, y0 - 2, 2, 2, far ? dark(boots[2], .82) : boots[3]); s.set(tx + 1, y0 - 2, boots[1]);
   };
-  if (out) lieSprawledLegs(s, f, pants, lx0, top, gy, legH);
+  if (out && !tucked) lieSprawledLegs(s, f, pants, lx0, top, gy, legH, boots);
   else legRow(top + 1, top + legH, true);
-  if (out) s.rect(lx0 - 1, top + 1, 2, th - 1, pick3(pants, .5, -1));
-  else if (rest || !p.bent) legRow(top + legH + 1, gy, false);
+  if (out && !tucked) s.rect(lx0 - 1, top + 1, 2, th - 1, pick3(pants, .5, -1));
+  else if (rest || tucked || !p.bent) legRow(top + legH + 1, gy, false);
   else {
     const w = legH, hip = [lx0, gy - (w >> 1)], knee = [lx0 + 4, top - 2], ft = [lx0 + 8, gy - (w >> 1)];
-    rigLimb(s, [hip, knee, ft], w, (t, k) => pick3(t > f.legs - 3.5 ? P.leather : pants, k / (w - 1) * .9, t > f.legs - 3.5 ? 0 : 0), shade);
+    rigLimb(s, [hip, knee, ft], w, (t, k) => pick3(t > f.legs - 3.5 ? boots : pants, k / (w - 1) * .9, t > f.legs - 3.5 ? 0 : 0), shade);
   }
   for (let y = top - br; y <= gy; y++) for (let x = tx0; x < lx0; x++) {
     if (y < top && x > tx0 + 7) continue;
-    const u = rowU(y), belt = x >= lx0 - 2;
+    const u = rowU(y), belt = belted && x >= lx0 - 2;
     let c;
     if (belt) c = Math.abs(y - (top + (th >> 1))) < 1 ? P.gold[x === lx0 - 2 ? 4 : 2] : pick3(P.leather, u, x === lx0 - 2 ? 1 : -1);
     else if (o.armor === P.iron && !o.plate) c = P.iron[clamp((u < .25 ? 4 : u < .7 ? 3 : 2) + (((x + y) & 1) ? 1 : -1), 0, 6)];
@@ -35,12 +35,12 @@ function rigPawnLie(o, p) {
     s.set(x, y, c);
   }
   if (o.cape && !rest) for (let x = tx0 - 1; x < lx0 + 4; x++) { s.set(x, gy + 1, o.cape[2]); s.set(x, gy + 2, o.cape[1]); }
-  const aw = f.aw, armC = (t, k) => { const hand = t > f.tl - 4.5, bare = o.sleeves === 0 || t > 7; return hand || bare ? skin[clamp(sn - 1 - (k === aw - 1 ? 1 : 0), 0, sn)] : pick3(body, k / aw * .5, 0); };
+  const aw = f.aw, armC = (t, k) => { const hand = t > f.tl - 4.5, bare = o.sleeves === 0 || t > 7; return hand || bare ? skin[clamp(sn - 1 - (k === aw - 1 ? 1 : 0), 0, sn)] : pick3(o.sleeve || body, k / aw * .5, 0); };
   const sh0 = [tx0 + 2, gy - (aw >> 1)];
   const limp = len => (t, k) => t > len - 3.5 || o.sleeves === 0 ? skin[clamp(sn - 1 - (k === aw - 1 ? 1 : 0) + (t > len - 1.5 ? 1 : 0), 0, sn)] : pick3(body, k / aw * .5, 0);
-  const flung = [[tx0 + 2, top + 1], [x0 + f.hh * .5, top - 3], [x0 - 1, top - 2], [x0 - 4, top + 1]], flopped = [[tx0 + 3, gy - 2], [tx0 + 7, gy + 2], [tx0 + 12, gy + 1]];
-  if (out) rigLimb(s, flung, aw, (t, k) => dark(limp(lieLength(flung))(t, k), .85));
-  else if (!rest) {
+  const flung = [[tx0 + 2, top + 1], [x0 + f.hh * .5, top - 3], [x0 - 1, top - 2], [x0 - 4, top + 1]], flopped = tucked ? [[tx0 + 3, gy - 3], [tx0 + 8, gy - 2], [tx0 + 12, gy - 3]] : [[tx0 + 3, gy - 2], [tx0 + 7, gy + 2], [tx0 + 12, gy + 1]];
+  if (out && !tucked) rigLimb(s, flung, aw, (t, k) => dark(limp(lieLength(flung))(t, k), .85));
+  else if (!rest && !tucked) {
     rigLimb(s, [[tx0 + 2, top + 1], [tx0 - 2, top - 4], [x0 + 1, top - 7]], aw, (t, k) => dark(armC(t, k), .85));
     rigLimb(s, [sh0, [tx0 + 7, gy + 1], [tx0 + 11, gy + 2]], aw, armC, shade);
   }
@@ -90,18 +90,19 @@ function rigPawnLie(o, p) {
   if (out) rigLimb(s, flopped, aw, limp(lieLength(flopped)), shade);
   s.outline();
   s.sh = out ? { rx: (L >> 1) + 5, ry: 4, dx: 0, dy: 1 } : { rx: (L >> 1) + 3, ry: 3.6, dx: 2, dy: 0 };
-  s.pts = { head: [x0 + (f.hh >> 1), hTop - 9], mouth: [x0 + f.hh, hTop + 3], body: [tx0 + (f.tl >> 1), top], feet: [] };
+  s.pts = { head: [x0 + (f.hh >> 1), hTop - 9], mouth: [x0 + f.hh, hTop + 3], body: [tx0 + (f.tl >> 1), top], feet: [], lie: [x0, hTop, top, gy, out ? ex : x0, out ? cy : hTop] };
   if (out) s.pts.daze = [x0 + (f.hh >> 1), hTop - 10];
+  if (tucked) s.hold = [RG.CX, gy + 1];
   return s;
 }
 const lieLength = pts => pts.slice(1).reduce((sum, q, i) => sum + Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]), 0);
-function lieSprawledLegs(s, f, pants, lx0, top, gy, w) {
+function lieSprawledLegs(s, f, pants, lx0, top, gy, w, boots = P.leather) {
   const h = w >> 1, fy = top + h, ny = gy - h + 1, knee = lx0 + Math.round(f.legs * .45), bent = [[lx0 - 1, fy + 1], [knee, fy - 3], [lx0 + f.legs - 2, fy + 1]], straight = [[lx0 - 1, ny - 1], [lx0 + f.legs, ny + 1]];
-  const leg = (len, far) => (t, k) => { const boot = t > len - 3.5, c = pick3(boot ? P.leather : pants, k / Math.max(1, w - 1) * .9, boot && t < len - 2.5 ? 1 : 0); return far ? dark(c, .86) : c; };
+  const leg = (len, far) => (t, k) => { const boot = t > len - 3.5, c = pick3(boot ? boots : pants, k / Math.max(1, w - 1) * .9, boot && t < len - 2.5 ? 1 : 0); return far ? dark(c, .86) : c; };
   rigLimb(s, bent, w, leg(lieLength(bent), true));
-  s.rect(lx0 + f.legs - 1, fy + h, 2, 2, dark(P.leather[3], .86));
+  s.rect(lx0 + f.legs - 1, fy + h, 2, 2, dark(boots[3], .86));
   rigLimb(s, straight, w, leg(lieLength(straight), false), c => dark(c, .72));
-  s.rect(lx0 + f.legs - 1, ny + 2 + h, 2, 2, P.leather[2]); s.set(lx0 + f.legs - 1, ny + 2 + h, P.leather[3]);
+  s.rect(lx0 + f.legs - 1, ny + 2 + h, 2, 2, boots[2]); s.set(lx0 + f.legs - 1, ny + 2 + h, boots[3]);
 }
 function lieLolledFace(s, f, o, x0, ex, cy, skin, lid) {
   const sn = skin.length - 1;
@@ -110,4 +111,37 @@ function lieLolledFace(s, f, o, x0, ex, cy, skin, lid) {
   s.set(ex + 2, cy - 1, skin[sn]); s.set(ex + 2, cy, skin[Math.max(0, sn - 2)]);
   s.rect(ex + 3, cy - 1, 1, 2, dark(skin[0], .5));
   s.set(ex - 1, cy + 3, skin[Math.max(0, sn - 2)]);
+}
+const SLUNG = { hip: [5, 3.5], hang: 8, arm: 8 };
+function rigPawnSlung(o, view) {
+  const f = FOLK[o.race || 'human'], s = new Spr(RG.W, RG.H, RG.CX, RG.BASE), skin = o.skin || f.skin, sn = skin.length - 1, tunic = o.tunic || P.cloth, pants = o.pants || P.leather, body = o.armor || tunic, hair = o.hair || P.furBrown, hn = hair.length - 1;
+  const X = RG.CX, Y = 34, [rx, ry] = SLUNG.hip, lw = 3, legs = f.legs, hd = f.hd, bald = o.bald || f.bald;
+  const leg = (path, far) => { const len = lieLength(path); rigLimb(s, path, lw, (t, k) => { const boot = t > len - 3.5, c = pick3(boot ? P.leather : pants, k / (lw - 1) * .8, boot && t < len - 2.5 ? 1 : 0); return far ? dark(c, .82) : c; }, far ? null : shade); };
+  const arm = (x, y, far) => rigLimb(s, [[x, y], [x, y + SLUNG.arm]], f.aw, (t, k) => { const c = t > SLUNG.arm - 3 || o.sleeves === 0 ? skin[clamp(sn - 1 - (k ? 1 : 0), 0, sn)] : pick3(body, k / f.aw * .5, 0); return far ? dark(c, .82) : c; }, far ? null : shade);
+  const rump = () => s.oval(X, Y - ry + 1, rx, ry, (x, y, nx, ny) => pick3(pants, (nx + 1) / 2, ny < -.4 ? 1 : ny > .5 ? -1 : 0));
+  const head = (cx, cy, turnedAway) => {
+    s.oval(cx, cy, hd - .5, hd, (x, y, nx, ny) => turnedAway || bald ? (bald ? skin[clamp(sn - 1 - (nx > .3 ? 1 : 0), 0, sn)] : hair[clamp(hn - 1 - (nx > .3 ? 1 : 0) - ((x + y) % 4 === 0 ? 1 : 0), 0, hn)]) : ny > .1 || nx < -.35 ? hair[clamp(hn - 1 - (ny > .6 ? 1 : 0), 0, hn)] : skin[clamp(sn - 1 - (nx > .4 ? 1 : 0), 0, sn)]);
+    if (!turnedAway && !bald) s.rect(Math.round(cx) + 1, Math.round(cy) - 2, 2, 1, skin[Math.max(0, sn - 3)]);
+  };
+  if (view === 's') {
+    leg([[X + 3, Y - 2], [X + 7, Y + 1], [X + 8, Y + legs - 2]], true);
+    arm(X - 9, Y + SLUNG.hang - 1, true);
+    for (let j = 0; j < SLUNG.hang; j++) for (let i = -10; i <= -3; i++) s.set(X + i, Y - 1 + j, j === 0 ? pick3(P.leather, (i + 10) / 7, 0) : pick3(body, (i + 10) / 7, j === SLUNG.hang - 1 ? -1 : 0));
+    head(X - 6.5, Y + SLUNG.hang + hd - 2, false);
+    leg([[X + 1, Y - 2], [X + 5, Y + 1], [X + 6, Y + legs - 2]], false);
+    rump();
+    arm(X - 4, Y + SLUNG.hang - 1, false);
+  } else if (view === 'f') {
+    for (const [x0, lit] of [[X - 4, 1], [X, 0]]) for (let j = 0; j < legs; j++) for (let i = 0; i < lw + 1; i++) { const boot = j >= legs - 3, c = pick3(boot ? P.leather : pants, (lit ? 0 : .3) + i / lw * .6, boot && j === legs - 3 ? 1 : j === legs - 1 ? -2 : 0); s.set(x0 + i, Y + j, c); }
+    rump();
+  } else {
+    for (const x of [X - 7, X + 5]) arm(x + 1, Y + SLUNG.hang - 2, x > X);
+    for (let j = 0; j < SLUNG.hang; j++) for (let i = -5; i <= 4; i++) s.set(X + i, Y + j, j === 0 ? pick3(P.leather, (i + 5) / 9, 0) : pick3(body, (i + 5) / 9, j === SLUNG.hang - 1 ? -1 : 0));
+    head(X, Y + SLUNG.hang + hd - 2, true);
+    if (!bald && (f.longhair || o.longhair)) for (let j = 0; j < 4; j++) s.rect(X - 3 + (j > 2 ? 1 : 0), Y + SLUNG.hang + 2 * hd - 3 + j, 6 - (j > 2 ? 2 : 0), 1, hair[clamp(hn - 2, 0, hn)]);
+    rump();
+  }
+  s.outline();
+  s.hold = [X, Y];
+  return s;
 }

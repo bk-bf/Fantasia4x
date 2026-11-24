@@ -254,6 +254,11 @@
     part(s, t => { for (const q of [.18, .5, .82]) stroke(t, [F(F.len * q - .8, 0), F(F.len * q + .8, 0)], leg ? 8.4 : 7.4, (u, v, d, hw, x, y) => rp(C.leather, .56 - v * .3, x, y, .25)); }, { line: 0 });
     return sel(s);
   };
+  const cutOf = id => {
+    const robe = /robe/.test(id);
+    return { long: robe, mid: /hauberk|gambeson|jack|tunic/.test(id), sleeve: robe ? 'bell' : /gambeson|doublet|tunic|hauberk|shirt/.test(id) ? (/gambeson|doublet/.test(id) ? 'long' : 'short') : /jack$/.test(id) ? 'short' : 0, belt: /robe|tunic|jerkin|gambeson|jack|hauberk/.test(id) };
+  };
+  X.hdArmor = { styleOf, cutOf };
   const gemIn = id => { for (const k of ['ruby', 'sapphire', 'emerald', 'topaz', 'amethyst', 'citrine', 'moonstone']) if (id.includes(k)) return GEM[k]; return null; };
   const armor = o => {
     const id = o.id, a = o.src.armor || {}, slot = a.slot || a.equipmentSlot, st = styleOf(o), fur = st.fur, pl = st.t === 'plate', mt = !!st.m;
@@ -287,7 +292,7 @@
     }
     if (slot === 'bodyBase' || slot === 'bodyMid' || slot === 'bodyOuter') {
       const robe = /robe/.test(id);
-      return body(st, { long: robe, mid: /hauberk|gambeson|jack|tunic/.test(id), sleeve: robe ? 'bell' : /gambeson|doublet|tunic|hauberk|shirt/.test(id) ? (/gambeson|doublet/.test(id) ? 'long' : 'short') : /jack$/.test(id) ? 'short' : 0, flank: /bodybase/.test(id), belt: /robe|tunic|jerkin|gambeson|jack|hauberk/.test(id), beltM: mt ? MAT.iron : MAT.bronze, pecs: pl && !st.crude, faulds: pl && /plate|cuirass|ceremonial|warplate/.test(id), pauldrons: pl && /plate|ceremonial|warplate|half/.test(id) && !/breastplate/.test(id), ridge: pl && !st.crude, rivets: /plated_jack|scrap|half_plate/.test(id) ? MAT.iron : null, plates: /bone_plated/.test(id) ? { m: MAT.bone } : /plated_jack/.test(id) ? { m: MAT.iron, rivet: MAT.iron } : /layered|cave_bear_plate/.test(id) ? { m: C.dark, rivet: MAT.bronze } : null, spikes: /orc|gnoll/.test(id) ? MAT.orc : null, open: /regal|arcane|silk/.test(id), split: /hauberk/.test(id), trimHem: robe || /regal|ceremonial|rune/.test(id), furCollar: !!fur, cuffFur: !!fur, lacing: /jerkin|vest|harness|doublet/.test(id) && !mt, wa: /robe/.test(id) ? 12 : 11 });
+      return body(st, { ...cutOf(id), flank: /bodybase/.test(id), beltM: mt ? MAT.iron : MAT.bronze, pecs: pl && !st.crude, faulds: pl && /plate|cuirass|ceremonial|warplate/.test(id), pauldrons: pl && /plate|ceremonial|warplate|half/.test(id) && !/breastplate/.test(id), ridge: pl && !st.crude, rivets: /plated_jack|scrap|half_plate/.test(id) ? MAT.iron : null, plates: /bone_plated/.test(id) ? { m: MAT.bone } : /plated_jack/.test(id) ? { m: MAT.iron, rivet: MAT.iron } : /layered|cave_bear_plate/.test(id) ? { m: C.dark, rivet: MAT.bronze } : null, spikes: /orc|gnoll/.test(id) ? MAT.orc : null, open: /regal|arcane|silk/.test(id), split: /hauberk/.test(id), trimHem: robe || /regal|ceremonial|rune/.test(id), furCollar: !!fur, cuffFur: !!fur, lacing: /jerkin|vest|harness|doublet/.test(id) && !mt, wa: /robe/.test(id) ? 12 : 11 });
     }
     if (slot === 'bracers') return pair(st, 'bracer', { straps: st.t !== 'plate' && st.t !== 'mail' && !fur, lace: !!fur });
     if (slot === 'greaves') return /hose/.test(id) ? legs(st) : /skirt/.test(id) ? legs(st, { skirt: 1 }) : pair(st, 'greave', { knee: pl || st.t === 'bone' || st.t === 'splint', straps: st.t === 'leather' || st.t === 'splint' || st.t === 'sticks' || !!fur, gap: !!fur && !/hippogriff/.test(id) });
