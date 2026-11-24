@@ -127,6 +127,7 @@ highp vec2 swayed(highp vec2 uv) {
     return uv - vec2(step * u_paintTexelSize.x, 0.0);
 }
 
+#ifdef POSED
 highp vec2 posed(highp vec2 uv) {
     highp float top = v_uvBounds.y;
     highp float last = (v_uvBounds.w - top) / u_paintTexelSize.y - 1.0;
@@ -148,10 +149,17 @@ highp vec2 posed(highp vec2 uv) {
 highp vec2 warped(highp vec2 uv) {
     return v_pose.x > 0.0 ? posed(uv) : swayed(uv);
 }
+#else
+highp vec2 warped(highp vec2 uv) {
+    return swayed(uv);
+}
+#endif
 
 bool offSprite(highp vec2 uv) {
+#ifdef POSED
     if (v_pose.x > 0.0)
         return uv.x < v_uvBounds.x - 2.0 || uv.x > v_uvBounds.z - 2.0 || uv.y < v_uvBounds.y || uv.y > v_uvBounds.w;
+#endif
     return v_reach > 0.0 && (uv.x < v_uvBounds.x - 2.0 || uv.x > v_uvBounds.z - 2.0);
 }
 

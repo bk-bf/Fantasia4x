@@ -1,7 +1,7 @@
 import type { GameGrid } from './game-grid.js';
 import { withOverlays, type TileData, type Viewport } from './tile-types.js';
 import type { CharacterRenderer } from './character-renderer.js';
-import type { ShaderManager } from './shaders.js';
+import { POSED_TILE_PROGRAM, TILE_PROGRAM, type ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
 import { checkWebGLError } from './utils.js';
 import { mirrored, tileQuad } from './drawnSprites.js';
@@ -81,6 +81,7 @@ export class GridRenderer {
   private warmState = new Map<Map<string, TerrainChunk>, WarmState>();
   chunksRebuiltLastRender = 0;
   private readonly paintTexel: [number, number] = [0, 0];
+  private batchPosed = false;
   skipBlendedGround = false;
   skipWaterIce = false;
   private chunkDirty = new Map<string, number>();
@@ -396,7 +397,7 @@ export class GridRenderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.gridVBO);
     gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.DYNAMIC_DRAW);
 
-    if (!this.shaderManager.useProgram('tileRenderer')) {
+    if (!this.shaderManager.useProgram(this.batchPosed ? POSED_TILE_PROGRAM : TILE_PROGRAM)) {
       console.error('❌ Failed to use tile renderer shader');
       return;
     }
@@ -425,6 +426,7 @@ export class GridRenderer {
     const lightTime = options.lightTime ?? 0;
     const litBounds = options.litBounds;
     const noEmitters = sampler !== undefined && litBounds === null;
+    this.batchPosed = false;
 
     for (const tile of tiles) {
       const isSpace = !tile.char || tile.char === ' ';
@@ -481,6 +483,7 @@ export class GridRenderer {
         this.paintTexel[0] > 0 &&
         isPosed(tile.lean, tile.squash, tile.pitch);
       if (posed) {
+        this.batchPosed = true;
         const lying = tile.rotation === 90 || tile.rotation === 270;
         const du = POSE_PAD * this.paintTexel[0];
         const dv = POSE_PAD * this.paintTexel[1];

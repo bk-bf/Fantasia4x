@@ -2,6 +2,16 @@ import type { ShaderProgram } from './types.js';
 import vertexShaderSource from './shaders/vertex.glsl?raw';
 import fragmentShaderSource from './shaders/fragment.glsl?raw';
 
+export const TILE_PROGRAM = 'tileRenderer';
+export const POSED_TILE_PROGRAM = 'tileRendererPosed';
+
+type UniformValue = number | number[] | Float32Array;
+
+interface Queued {
+  value: number | Float32Array;
+  waiting: boolean;
+}
+
 export interface ShaderSource {
   vertex: string;
   fragment: string;
@@ -19,6 +29,9 @@ export class ShaderManager {
   private programs: Map<string, ShaderProgram> = new Map();
   private shaderCache: Map<string, WebGLShader> = new Map();
   private debug: boolean;
+  private twins = new Map<string, string>();
+  private queued = new Map<string, Map<string, Queued>>();
+  private bound: string | null = null;
 
   constructor(gl: WebGL2RenderingContext, debug: boolean = false) {
     this.gl = gl;
@@ -49,7 +62,8 @@ export class ShaderManager {
   createProgram(
     name: string,
     vertexSource: string,
-    fragmentSource: string
+    fragmentSource: string,
+    attributeLocations?: ReadonlyMap<string, number>
   ): ShaderCompilationResult {
     const gl = this.gl;
 
@@ -78,6 +92,7 @@ export class ShaderManager {
 
       gl.attachShader(program, vertexShader);
       gl.attachShader(program, fragmentShader);
+      attributeLocations?.forEach((at, attribute) => gl.bindAttribLocation(program, at, attribute));
       gl.linkProgram(program);
 
       if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
@@ -232,20 +247,56 @@ export class ShaderManager {
     }
 
     this.gl.useProgram(shaderProgram.program);
+    this.bound = name;
+    const queued = this.queued.get(name);
+    if (queued)
+      for (const [uniformName, q] of queued) {
+        if (!q.waiting) continue;
+        q.waiting = false;
+        this.write(shaderProgram, name, uniformName, q.value);
+      }
     return true;
   }
 
-  setUniform(
-    programName: string,
-    uniformName: string,
-    value: number | number[] | Float32Array
-  ): boolean {
-    const program = this.programs.get(programName);
+  pairPrograms(a: string, b: string): void {
+    this.twins.set(a, b);
+    this.twins.set(b, a);
+    this.queued.set(a, new Map());
+    this.queued.set(b, new Map());
+  }
+
+  setUniform(programName: string, uniformName: string, value: UniformValue): boolean {
+    const twin = this.twins.get(programName);
+    const target = twin !== undefined && this.bound === twin ? twin : programName;
+    if (twin !== undefined) this.queue(target === twin ? programName : twin, uniformName, value);
+    const program = this.programs.get(target);
     if (!program) {
-      console.error(`Shader program "${programName}" not found`);
+      console.error(`Shader program "${target}" not found`);
       return false;
     }
+    return this.write(program, target, uniformName, value);
+  }
 
+  private queue(programName: string, uniformName: string, value: UniformValue): void {
+    const queued = this.queued.get(programName)!;
+    const q = queued.get(uniformName);
+    if (typeof value === 'number') {
+      if (q) {
+        q.value = value;
+        q.waiting = true;
+      } else queued.set(uniformName, { value, waiting: true });
+    } else if (q && q.value instanceof Float32Array && q.value.length === value.length) {
+      q.value.set(value);
+      q.waiting = true;
+    } else queued.set(uniformName, { value: Float32Array.from(value), waiting: true });
+  }
+
+  private write(
+    program: ShaderProgram,
+    programName: string,
+    uniformName: string,
+    value: UniformValue
+  ): boolean {
     const location = program.uniforms.get(uniformName);
     if (!location) {
       if (this.debug) {
@@ -366,10 +417,23 @@ export async function createTileRendererShaders(
     console.log('📋 Fragment shader source length:', shaderSource.fragment.length);
 
     const result = shaderManager.createProgram(
-      'tileRenderer',
+      TILE_PROGRAM,
       shaderSource.vertex,
       shaderSource.fragment
     );
+    const posed =
+      result.success &&
+      shaderManager.createProgram(
+        POSED_TILE_PROGRAM,
+        shaderSource.vertex,
+        withDefine(shaderSource.fragment, 'POSED'),
+        shaderManager.getProgram(TILE_PROGRAM)?.attributes
+      );
+    if (posed && !posed.success) {
+      console.error('❌ Failed to create posed tile renderer shaders:', posed.error);
+      return null;
+    }
+    shaderManager.pairPrograms(TILE_PROGRAM, POSED_TILE_PROGRAM);
 
     if (result.success) {
       console.log('✅ Tile renderer shaders created successfully');
@@ -385,4 +449,9 @@ export async function createTileRendererShaders(
     console.error('❌ Failed to load shader files:', error);
     return null;
   }
+}
+
+export function withDefine(source: string, name: string): string {
+  const end = source.indexOf('\n') + 1;
+  return `${source.slice(0, end)}#define ${name}\n${source.slice(end)}`;
 }
