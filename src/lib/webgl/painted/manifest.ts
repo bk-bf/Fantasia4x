@@ -193,7 +193,11 @@ export interface PaintedTileset {
   drops?: PaintedDrops;
 }
 
-const SCENERY: Readonly<Record<string, string>> = { reeds: 'plant/reeds/' };
+const SCENERY: Readonly<Record<string, string>> = {
+  reeds: 'plant/reeds/',
+  ...Object.fromEntries([1, 2, 3].map((n) => [`reedbed/${n}`, `plant/reedbed/${n}/`])),
+  ...Object.fromEntries([5, 6, 7, 8].map((n) => [`lilies/${n}`, `plant/lilies/${n}/`]))
+};
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);

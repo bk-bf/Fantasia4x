@@ -29,6 +29,7 @@ import {
   rockVeins
 } from './rock.mjs';
 import { WATER_IMAGE, WATER_SIZE, waterField } from './water.mjs';
+import { shoreSprites } from './shoreArt.mjs';
 import {
   FAR_IMAGE,
   FAR_SIZE,
@@ -303,6 +304,7 @@ function sprites(ground = groundSprites(A, [], [])) {
     for (let v = 0; v < 4; v++) add(`tree/${k}/${v}`, object(A.mkTree(k, v, 'summer'), 16, 23));
   for (const k of Object.keys(A.PLANTS))
     for (let v = 0; v < 3; v++) add(`plant/${k}/${v}`, object(A.mkPlant(k, v, 'summer'), 16, 23));
+  for (const { id, sprite: s } of shoreSprites(A)) add(id, object(s, 16, 23));
   for (const k of Object.keys(A.CROPS))
     for (let v = 0; v < 3; v++) add(`crop/${k}/${v}`, object(A.mkCrop(k, v, 'summer'), 16, 31));
   for (const k of Object.keys(A.ROCKS))

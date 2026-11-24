@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { art } from './bake.mjs';
 import { UNPAINTED } from './map.mjs';
 import { loadRegistry, registryEntries } from './registry.mjs';
+import { shoreSprites } from './shoreArt.mjs';
 
 const OUT = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -40,6 +41,7 @@ export function swayTable() {
   );
   const unpainted = (cat = '', dbId = '') => skipped.has(`${cat}/${dbId}`);
   for (const r of registryEntries(DBX, unpainted)) drawn.push([r.spriteId, DBX.bake(r.entry)]);
+  for (const { id, sprite } of shoreSprites(A)) drawn.push([id, sprite]);
   const { sprites } = JSON.parse(readFileSync(join(OUT, 'manifest.json'), 'utf8'));
   const sway = new Map();
   const leafy = new Set();

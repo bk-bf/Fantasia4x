@@ -27,6 +27,8 @@ import {
 } from './painted/tileset.js';
 import { groundTufts } from './painted/tufts.js';
 import { hiddenUnderFluid } from './painted/fluids.js';
+import { shorePlantAt } from './painted/shorePlants.js';
+import { isWet } from '$lib/game/world/shores.js';
 import type { PaintedPieces, PaintedSprite } from './painted/manifest.js';
 
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
@@ -523,6 +525,12 @@ function bankReeds(tile: WorldTile): PaintedSprite | undefined {
   return paintedScenery('reeds', tile.x, tile.y);
 }
 
+function shoreScenery(tile: WorldTile, worldMap?: WorldTile[][]): PaintedSprite | undefined {
+  if (!PAINTED_TILES || !worldMap || !isWet(tile)) return bankReeds(tile);
+  const plant = shorePlantAt(worldMap, tile.x, tile.y);
+  return plant ? paintedScenery(plant, tile.x, tile.y) : undefined;
+}
+
 export function applyResourceToGrid(
   gridShort: GameGrid,
   gridTall: GameGrid,
@@ -559,7 +567,7 @@ export function applyResourceToGrid(
     return paintOnly(rockPiece(tile, hiddenMask, worldMap), false, true);
   const active = resolveActiveResource(tile);
   if (!active || (PAINTED_TILES && hiddenUnderFluid(active.resDef.id)))
-    return paintOnly(bankReeds(tile), true);
+    return paintOnly(shoreScenery(tile, worldMap), true);
   const { resDef, scale: stageScale } = active;
   const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
   const variant = season ? resDef.seasonVariants?.[season] : undefined;
@@ -617,7 +625,7 @@ export function buildResourceOverlay(
       if (
         (tile.resources && Object.keys(tile.resources).length > 0) ||
         (PAINTED_TILES && mask[tile.y]?.[tile.x]) ||
-        bankReeds(tile)
+        shoreScenery(tile, worldMap)
       )
         applyResourceToGrid(short, tall, tile, mask, season, worldMap);
   return { short, tall };
