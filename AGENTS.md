@@ -144,6 +144,12 @@ it can reach `dev`, by a pull request or by a direct push:
 gh api repos/bk-bf/Fantasia4x/branches/dev/protection --jq .required_status_checks.contexts
 ```
 
+**A test branch only warns.** A push to `test/**`, a pull request into one, and the chain of any
+branch built on one run every gate against that test branch, report what fails, and pass; the
+"What this change needs" step in `check.yml` decides it. A red gate there never holds a push to the
+test branch. Its `Bound for dev` job fails, and `dev` requires it, so that work still reaches `dev`
+only through the strict chain.
+
 A required job the scope skips counts as passed. `.github/workflows/promote.yml` runs every leg
 against `main` before a promotion, which catches a leg that a change to the CI files broke. The
 CodSpeed and ticks-per-second legs run on GitHub's own runners. Before moving either to another
