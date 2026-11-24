@@ -27,7 +27,7 @@ function canvas(w, h, ground) {
       const o = ((g.y + (y % g.h)) * sheet.w + g.x + (x % g.w)) * 4;
       for (let k = 0; k < 3; k++) px[(y * w + x) * 3 + k] = sheet.rgba[o + k];
     }
-  return { w, h, px };
+  return { w, h, px, em: new Float32Array(w * h), lights: [] };
 }
 
 function shadow(cv, s, x, base) {
@@ -52,6 +52,7 @@ function compose(cv, items, cut) {
       ox = it.x - s.ax,
       oy = it.base - s.ay;
     const over = cut && it.tree ? folk.filter((f) => f.base < it.base) : [];
+    if (s.emit) cv.lights.push({ x: it.x + s.emit.dx, y: it.base + s.emit.dy, rad: s.emit.rad, col: s.emit.col });
     for (let sy = 0; sy < s.h; sy++)
       for (let sx = 0; sx < s.w; sx++) {
         const c = s.c[sy * s.w + sx];
@@ -68,8 +69,31 @@ function compose(cv, items, cut) {
         }
         const i = (y * cv.w + x) * 3;
         for (let k = 0; k < 3; k++) cv.px[i + k] = cv.px[i + k] * (1 - a) + c[k] * a;
+        cv.em[y * cv.w + x] = cv.em[y * cv.w + x] * (1 - a) + ((s.e[sy * s.w + sx] || 0) / 255) * a;
       }
   }
+}
+
+const GRADE = [0.26, 0.31, 0.46];
+function night(cv) {
+  const out = new Float32Array(cv.px.length);
+  for (let y = 0; y < cv.h; y++)
+    for (let x = 0; x < cv.w; x++) {
+      const i = y * cv.w + x;
+      const add = [0, 0, 0];
+      for (const l of cv.lights) {
+        const d = Math.hypot(x - l.x, (y - l.y) * 1.25) + (A.noise(x / 9, y / 9, 61) - 0.5) * 14;
+        if (d >= l.rad) continue;
+        const f = Math.floor(Math.pow(1 - d / l.rad, 1.6) * 5) / 5;
+        for (let k = 0; k < 3; k++) add[k] += f * l.col[k] * 0.95;
+      }
+      const e = cv.em[i];
+      for (let k = 0; k < 3; k++) {
+        const b = cv.px[i * 3 + k];
+        out[i * 3 + k] = (b * (GRADE[k] + add[k] * 0.55) + add[k] * 34) * (1 - e) + b * 1.12 * e;
+      }
+    }
+  return { ...cv, px: out };
 }
 
 function save(cv, name) {
@@ -166,4 +190,31 @@ for (const cut of [true, false]) {
   compose(cv, list, cut);
   save(cv, cut ? 'forest' : 'forest-open');
 }
-writeFileSync(join(HERE, '..', 'layout.json'), JSON.stringify({ sheet: [sheetCv.w, sheetCv.h], forest: [980, 660], at: layout }) + '\n');
+const MAGIC = ['heartwood', 'frostheart', 'moonwood', 'ironwood', 'emberwood', 'soulwood', 'witchwood', 'bonewood'];
+const MAGIC_FOLK = ['mage', 'watch', 'hunter', 'smith', 'guard', 'weaver', 'trader', 'miner'];
+const magicCells = MAGIC.map((kind, i) => ({ kind, young: F.young(kind, 1), mature: F.mature(kind, 21 + i), elder: F.elder(kind, 41 + i) }));
+const MCOLS = 2;
+const mCellW = Math.max(...magicCells.map((c) => c.young.w * 0.8 + 40 + c.mature.w * 0.95 + c.elder.w * 0.92)) | 0;
+const mRowH = Math.max(...magicCells.map((c) => c.elder.h)) + 20;
+const magicAt = {};
+const magicCv = canvas(mCellW * MCOLS + 40, mRowH * Math.ceil(magicCells.length / MCOLS) + 20, 'deep_grass');
+const mItems = [];
+for (const [i, c] of magicCells.entries()) {
+  const x0 = 20 + (i % MCOLS) * mCellW,
+    base = 10 + Math.floor(i / MCOLS) * mRowH + mRowH - 18;
+  const youngX = x0 + Math.round(c.young.w * 0.4),
+    pawnX = youngX + Math.round(c.young.w * 0.45) + 6,
+    matureX = pawnX + 16 + Math.round(c.mature.w * 0.46),
+    elderX = matureX + Math.round(c.mature.w * 0.5 + c.elder.w * 0.44);
+  mItems.push({ sprite: c.young, x: youngX, base, tree: true });
+  mItems.push({ sprite: pawn(MAGIC_FOLK[i]), x: pawnX, base: base + 2, folk: true });
+  mItems.push({ sprite: c.mature, x: matureX, base, tree: true });
+  mItems.push({ sprite: c.elder, x: elderX, base, tree: true });
+  mItems.push({ sprite: pawn(MAGIC_FOLK[(i + 3) % 8], true), x: elderX - Math.round(c.elder.w * 0.3), base: base + 6, folk: true });
+  magicAt[c.kind] = [Math.round((youngX + matureX) / 2), base - 90];
+  magicAt[`${c.kind}-elder`] = [elderX, base - Math.round(c.elder.h * 0.5)];
+}
+compose(magicCv, mItems, false);
+save(magicCv, 'magic');
+save(night(magicCv), 'magic-night');
+writeFileSync(join(HERE, '..', 'layout.json'), JSON.stringify({ sheet: [sheetCv.w, sheetCv.h], forest: [980, 660], magic: [magicCv.w, magicCv.h], at: layout, magicAt }) + '\n');
