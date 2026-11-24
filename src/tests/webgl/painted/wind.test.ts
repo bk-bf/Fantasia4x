@@ -17,6 +17,7 @@ import {
 import { WindClock, gustAt, heading, swayTable } from '$lib/webgl/painted/wind';
 import { LeafField, leafTarget, type LeafFrame } from '$lib/webgl/painted/leaves';
 import { GroundBlend, waterTime } from '$lib/webgl/painted/groundBlend';
+import { FLUID_DEFS, FluidClock } from '$lib/webgl/painted/fluids';
 
 const GLYPH_FLOATS = 24;
 const ROW_FLOATS = 31;
@@ -140,6 +141,8 @@ function windyCore(
     snowGrid: null,
     rowDepth: true,
     wind: new WindClock(),
+    fluidClock: new FluidClock(),
+    fluids: FLUID_DEFS,
     painted: {
       tileset: { ...tileset, tile: 32, atlasW: 64, atlasH: 64 },
       texture: {},

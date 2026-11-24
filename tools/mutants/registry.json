@@ -373,9 +373,16 @@
   {
     "id": "terrain-subterrain-no-parent-fallback",
     "file": "src/lib/game/core/defs/terrains.ts",
-    "find": "const range = def.biomes?.[biomeName] ?? (parent ? def.biomes?.[parent] : undefined);",
-    "replace": "const range = def.biomes?.[biomeName];",
+    "find": "ranges?.[biomeName] ?? (parent ? ranges?.[parent] : undefined);",
+    "replace": "ranges?.[biomeName];",
     "tests": ["src/tests/game/core/soilFertility.test.ts"]
+  },
+  {
+    "id": "terrain-subterrain-pools-ungated",
+    "file": "src/lib/game/core/defs/terrains.ts",
+    "find": "    if (within(pool, pools)) return id;\n",
+    "replace": "    return id;\n",
+    "tests": ["src/tests/game/world/bogPools.test.ts"]
   },
   {
     "id": "terrain-spawnable-allows-water",

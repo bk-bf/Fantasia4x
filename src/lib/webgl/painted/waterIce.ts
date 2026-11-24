@@ -2,6 +2,7 @@ import type { GameGrid } from '../game-grid.js';
 
 export const ICE_UNIT = 13;
 const FULL = 255;
+const TEXEL = 2;
 
 type Tile = { x: number; y: number };
 
@@ -24,6 +25,7 @@ export class WaterIce {
   private readonly gl: WebGL2RenderingContext;
   private readonly tex: WebGLTexture;
   private levels = new Uint8Array(0);
+  private still: Uint8Array = new Uint8Array(0);
   private w = 0;
   private h = 0;
   private grid: GameGrid | null = null;
@@ -51,6 +53,11 @@ export class WaterIce {
     if (!this.stale) for (const t of dirtyTiles) this.dirty.push(t);
   }
 
+  setStill(reach: Uint8Array): void {
+    this.still = reach;
+    this.stale = true;
+  }
+
   bind(): void {
     this.gl.activeTexture(this.gl.TEXTURE0 + ICE_UNIT);
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.tex);
@@ -65,7 +72,7 @@ export class WaterIce {
     if (w !== this.w || h !== this.h) {
       this.w = w;
       this.h = h;
-      this.levels = new Uint8Array(w * h);
+      this.levels = new Uint8Array(w * h * TEXEL);
       this.stale = true;
     }
     if (!this.stale && this.dirty.length === 0) return;
@@ -75,18 +82,23 @@ export class WaterIce {
       this.levels.fill(0);
       for (const t of this.grid?.getAllTiles() ?? []) {
         const { x, y } = t.position;
-        if (x >= 0 && y >= 0 && x < w && y < h) this.levels[y * w + x] = this.levelAt(x, y);
+        if (x >= 0 && y >= 0 && x < w && y < h)
+          this.levels[(y * w + x) * TEXEL] = this.levelAt(x, y);
       }
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, w, h, 0, gl.RED, gl.UNSIGNED_BYTE, this.levels);
+      for (let i = 0; i < w * h; i++) this.levels[i * TEXEL + 1] = this.still[i] ?? 0;
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG8, w, h, 0, gl.RG, gl.UNSIGNED_BYTE, this.levels);
     } else {
       const rect = iceRect(this.dirty, w, h);
       if (rect) {
-        const part = new Uint8Array(rect.w * rect.h);
+        const part = new Uint8Array(rect.w * rect.h * TEXEL);
         for (let j = 0; j < rect.h; j++)
           for (let i = 0; i < rect.w; i++) {
-            const v = this.levelAt(rect.x + i, rect.y + j);
-            this.levels[(rect.y + j) * w + rect.x + i] = v;
-            part[j * rect.w + i] = v;
+            const at = (rect.y + j) * w + rect.x + i;
+            this.levels[at * TEXEL] = this.levelAt(rect.x + i, rect.y + j);
+            part.set(
+              this.levels.subarray(at * TEXEL, at * TEXEL + TEXEL),
+              (j * rect.w + i) * TEXEL
+            );
           }
         gl.texSubImage2D(
           gl.TEXTURE_2D,
@@ -95,7 +107,7 @@ export class WaterIce {
           rect.y,
           rect.w,
           rect.h,
-          gl.RED,
+          gl.RG,
           gl.UNSIGNED_BYTE,
           part
         );
