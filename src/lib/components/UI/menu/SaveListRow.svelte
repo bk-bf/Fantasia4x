@@ -2,6 +2,7 @@
   import type { SaveEntry } from '$lib/stores/saveManager';
   import { chrome } from '$lib/pixelArt/chrome';
   import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
+  import { copyText } from '$lib/components/util/copyText';
 
   let {
     save,
@@ -37,21 +38,7 @@
   let copyTimer: ReturnType<typeof setTimeout> | undefined;
   async function copySeed() {
     if (meta.seed == null) return;
-    const text = String(meta.seed);
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand('copy');
-      } catch {}
-      ta.remove();
-    }
+    await copyText(String(meta.seed));
     copied = true;
     clearTimeout(copyTimer);
     copyTimer = setTimeout(() => (copied = false), 1200);

@@ -1,5 +1,6 @@
 import { derived, writable } from 'svelte/store';
 import { isThemeId, type ThemeId } from '$lib/components/UI/theme/themes';
+import { fluidTuning } from './fluidTuning';
 
 const COLLAPSED_RES_CATS_KEY = 'fx.resourcePanel.collapsedCategories';
 const HIDE_EMPTY_RES_CATS_KEY = 'fx.resourcePanel.hideEmptyCategories';
@@ -113,11 +114,12 @@ export const windSwayOn = createPersistedBool('fx.debug.sway', true);
 export const waveWaterOn = createPersistedBool('fx.debug.waves', true);
 export const waveStrength = createPersistedNumber('fx.debug.waveStrength', 100);
 export const mapMotion = derived(
-  [windSwayOn, waveWaterOn, waveStrength],
-  ([sway, waves, strength]) => ({
+  [windSwayOn, waveWaterOn, waveStrength, fluidTuning],
+  ([sway, waves, strength, fluids]) => ({
     sway,
     waves,
-    waveMix: strength / 100
+    waveMix: strength / 100,
+    fluids
   })
 );
 
