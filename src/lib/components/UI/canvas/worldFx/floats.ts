@@ -141,12 +141,7 @@ function textLook(e: CombatTextEvent): [Pair, number, number, boolean] {
     case 'fracture':
       return [word(e.text, tint('#ff9944')), 0, WORD_TTL, false];
     default:
-      return [
-        floater(null, e.text, e.color ?? '#dddddd', undefined, trend(e), !!e.lost),
-        4,
-        BADGE_TTL,
-        false
-      ];
+      return [floater(null, e.text, e.color ?? '#dddddd', trend(e), !!e.lost), 4, BADGE_TTL, false];
   }
 }
 
@@ -159,7 +154,13 @@ function place(e: CombatTextEvent, f: Figure, mode: FloaterMode): Placed | null 
     if (id && mode.icons) {
       const col = e.color ?? (e.kind === 'fracture' ? '#ff9944' : '#dddddd');
       return anchor(f, {
-        pair: floater(id.id, mode.text ? e.text : null, col, id.mark, trend(e), lost),
+        pair: floater(
+          id.id,
+          mode.text ? e.text : null,
+          col,
+          lost ? 0 : (id.grade ?? trend(e)),
+          lost
+        ),
         x: 0,
         y: 0,
         ox: 0,

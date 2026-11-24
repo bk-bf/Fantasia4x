@@ -256,7 +256,7 @@ function stamp(draw = (d = dot) => d()) {
 
 export function groundKinds(GROUND = [{ id: '', f: GROUND_TEXTURE, dec: [DEC[0]].slice(0) }]) {
   return GROUND.flatMap((g) =>
-    g.dec ? [{ id: g.id, f: g.f, layers: fieldLayers(g.f), ...kindPieces(g.dec) }] : []
+    g.dec ? [{ id: g.id, f: g.f, ragged: 'ragged' in g && g.ragged ? 1 : 0, layers: fieldLayers(g.f), ...kindPieces(g.dec) }] : []
   );
 }
 
@@ -286,7 +286,7 @@ export function groundSprites(
     k.density.forEach((d, t) => (meta[t] = [densityByte(d), 0, 0]));
     if (k.layers?.soil) meta[META_COLS.soil] = offset(k.layers.soil.seed, SOIL_SEED);
     if (k.layers?.grass) meta[META_COLS.grass] = offset(k.layers.grass.seed, GRASS_SEED);
-    meta[META_COLS.amount] = [amountByte(k.layers?.amount ?? -1), 0, 0];
+    meta[META_COLS.amount] = [amountByte(k.layers?.amount ?? -1), 0, k.ragged ? 255 : 0];
     const rows = [
       k.layers?.soil ? shadeRow(k.layers.soil.ramp) : zero,
       k.layers?.grass ? shadeRow(k.layers.grass.ramp) : zero,

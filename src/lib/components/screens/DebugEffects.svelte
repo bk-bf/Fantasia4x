@@ -1,6 +1,8 @@
 <script lang="ts">
   import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
   import Slider from '$lib/components/UI/widget/Slider.svelte';
+  import Well from '$lib/components/UI/widget/Well.svelte';
+  import DebugFluids from './DebugFluids.svelte';
   import { EFFECT_KINDS, effectToggles } from '$lib/stores/fx/effectToggles';
   import { waveStrength, waveWaterOn, weatherEffects, windSwayOn } from '$lib/stores/uiPrefs';
 
@@ -27,6 +29,9 @@
   <Slider label="Wave strength" max={200} value={$waveStrength} oninput={(v) => waveStrength.set(v)}
     >{$waveStrength}%</Slider
   >
+  <Well title="Fluids" scroll>
+    <DebugFluids />
+  </Well>
 </div>
 
 <style>
@@ -35,6 +40,8 @@
     flex-direction: column;
     gap: 8px;
     padding: 6px;
+    flex: 1;
+    min-height: 0;
   }
   .grid {
     display: grid;

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -11,7 +11,7 @@ import {
   positionHash,
   spriteAt
 } from '$lib/webgl/painted/manifest';
-import { readPaintedFlag } from '$lib/webgl/painted/flag';
+import { GROUND_BLEND_SWITCH, PAINTED_SWITCH, readPaintedFlag } from '$lib/webgl/painted/flag';
 
 const FIXTURE = join(__dirname, 'fixture');
 const raw = JSON.parse(readFileSync(join(FIXTURE, 'manifest.json'), 'utf8'));
@@ -216,12 +216,45 @@ describe('painted quad geometry', () => {
 });
 
 describe('painted flag', () => {
-  it('is on for ?painted=1 or the stored switch, and off otherwise', () => {
+  it('is on unless ?painted=0 or the stored switch turns it off', () => {
+    expect(readPaintedFlag('', null)).toBe(true);
+    expect(readPaintedFlag('?x=2', '1')).toBe(true);
     expect(readPaintedFlag('?painted=1', null)).toBe(true);
-    expect(readPaintedFlag('?x=2&painted=1', null)).toBe(true);
-    expect(readPaintedFlag('', '1')).toBe(true);
     expect(readPaintedFlag('?painted=0', null)).toBe(false);
+    expect(readPaintedFlag('?x=2&painted=0', '1')).toBe(false);
     expect(readPaintedFlag('', '0')).toBe(false);
-    expect(readPaintedFlag('', null)).toBe(false);
+  });
+
+  const flagsIn = async (search: string, stored: Record<string, string> = {}) => {
+    vi.resetModules();
+    vi.stubGlobal('window', {
+      location: { search },
+      localStorage: { getItem: (key: string) => stored[key] ?? null }
+    });
+    const flags = await import('$lib/webgl/painted/flag');
+    vi.unstubAllGlobals();
+    return [flags.PAINTED_TILES, flags.GROUND_BLEND, flags.PAINTED_LIGHT];
+  };
+
+  it('draws the painted map, blended and lit, in a browser with no query and nothing stored', async () => {
+    expect(await flagsIn('')).toEqual([true, true, true]);
+  });
+
+  it('turns the blend and the light off alone, and both with the painted map', async () => {
+    expect(await flagsIn('?blend=0')).toEqual([true, false, true]);
+    expect(await flagsIn('', { [GROUND_BLEND_SWITCH]: '0' })).toEqual([true, false, true]);
+    expect(await flagsIn('?light=old')).toEqual([true, true, false]);
+    expect(await flagsIn('?painted=0')).toEqual([false, false, false]);
+    expect(await flagsIn('', { [PAINTED_SWITCH]: '0' })).toEqual([false, false, false]);
+  });
+
+  it('stays off where there is no window', async () => {
+    vi.resetModules();
+    const flags = await import('$lib/webgl/painted/flag');
+    expect([flags.PAINTED_TILES, flags.GROUND_BLEND, flags.PAINTED_LIGHT]).toEqual([
+      false,
+      false,
+      false
+    ]);
   });
 });

@@ -26,6 +26,7 @@ import {
   paintedTileset
 } from './painted/tileset.js';
 import { groundTufts } from './painted/tufts.js';
+import { hiddenUnderFluid } from './painted/fluids.js';
 import type { PaintedPieces, PaintedSprite } from './painted/manifest.js';
 
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
@@ -546,7 +547,8 @@ export function applyResourceToGrid(
   };
   if (hiddenMask[tile.y]?.[tile.x]) return paintOnly(rockPiece(tile, hiddenMask, worldMap), false);
   const active = resolveActiveResource(tile);
-  if (!active) return paintOnly(bankReeds(tile), true);
+  if (!active || (PAINTED_TILES && hiddenUnderFluid(active.resDef.id)))
+    return paintOnly(bankReeds(tile), true);
   const { resDef, scale: stageScale } = active;
   const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
   const variant = season ? resDef.seasonVariants?.[season] : undefined;

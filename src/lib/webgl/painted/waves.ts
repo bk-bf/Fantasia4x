@@ -1,5 +1,6 @@
 import type { Heading } from './wind.js';
 import { STRAND_PACE } from './riverStream.js';
+import { FLUID_DEFS, WATER_FLUID, type FluidDef, type FluidSet } from './fluids.js';
 
 export const STILL_WATER_TILES = { from: 0, to: 4 };
 export const ART_PER_UNIT = 2;
@@ -18,18 +19,15 @@ const ROUGH_TURN = 1.25;
 const CHOPPY_TURN = 2;
 const DRIFT = { calm: 2, gale: 12 };
 const RIPPLE_RATE = 0.26 * 8;
-const RIPPLE = { drift: 0.9, period: 553 };
 const GLINT = { drift: 0.7, period: 2253 };
 const FIELD_PERIOD = 2048;
-const RIPPLE_PX = (RIPPLE_RATE * RIPPLE.drift * FIELD_PERIOD) / RIPPLE.period;
 const GLINT_PX = (RIPPLE_RATE * GLINT.drift * FIELD_PERIOD) / GLINT.period;
 const SEICHE_SECS = 14;
 const SWAY = { ripple: 10, glint: 4, lean: 1.6 };
 const GUST_PACE = { calm: 5, gale: 19 };
 const RAIN_PERIOD = 1000;
 const RIVER_CLOCK_WRAP = 3600;
-const FLOW_CYCLE_WRAP = 2.4 * 400;
-const FLOW_PACE = 46;
+const FLOW_CYCLES = 400;
 export const RIVER_PUSH = 0.8;
 export const RIVER_CURRENT = 1;
 
@@ -45,6 +43,7 @@ export interface MapMotion {
   sway: boolean;
   waves: boolean;
   waveMix: number;
+  fluids: FluidSet;
 }
 
 export function waterStill(tilePx: number): boolean {
@@ -77,8 +76,8 @@ export function seaFor(wind: number) {
   };
 }
 
-function freshness(wind: number): number {
-  return 0.4 + 1.2 * wind;
+function ripplePace(water: FluidDef, wind: number): number {
+  return (water.drift ?? 0) + (water.windDrift ?? 0) * wind;
 }
 
 function wrap(v: number, period: number): number {
@@ -99,6 +98,7 @@ export class WaveClock {
   glint = { x: 0, y: 0 };
   gust = 0;
   flow = 0;
+  water: FluidDef = FLUID_DEFS[WATER_FLUID];
   private last: number | null = null;
 
   tick(nowMs: number, wind: number, dir: Heading, still: boolean): void {
@@ -111,12 +111,11 @@ export class WaveClock {
     const pace = lerp(DRIFT.calm, DRIFT.gale, Math.min(1, Math.max(0, wind)));
     this.drift.x += dir.x * pace * secs;
     this.drift.y += dir.y * pace * secs;
-    const fresh = freshness(wind);
     const carry = (at: { x: number; y: number }, speed: number) => {
       at.x = wrap(at.x - dir.x * speed * secs, FIELD_PERIOD);
       at.y = wrap(at.y - dir.y * speed * secs, FIELD_PERIOD);
     };
-    carry(this.ripple, RIPPLE_PX * fresh);
+    carry(this.ripple, ripplePace(this.water, wind));
     carry(this.glint, GLINT_PX * (0.5 + wind));
     this.gust = wrap(this.gust + lerp(GUST_PACE.calm, GUST_PACE.gale, wind) * secs, NOISE_PERIOD);
   }
@@ -142,7 +141,7 @@ export class WaveClock {
     const chopZoom = smoothstep(3, 7, 3.3 / perPx);
     const chop = 0.6 * (sea.amp[2] + sea.amp[3]) * chopZoom;
     const t = this.t;
-    const fresh = freshness(wind);
+    const water = this.water;
     const sway = Math.sin((TAU * t) / SEICHE_SECS);
     const swayed = (at: { x: number; y: number }, reach: number) => [
       wrap(at.x + dir.x * sway * reach, FIELD_PERIOD),
@@ -189,11 +188,11 @@ export class WaveClock {
       waveMix,
       ...fade,
       wind,
-      RIPPLE_PX * fresh,
+      ripplePace(water, wind),
       chopZoom,
-      wrap(t, FLOW_CYCLE_WRAP),
+      wrap(t, (water.flowCycle ?? 1) * FLOW_CYCLES),
       RIVER_PUSH,
-      (this.flow * STRAND_PACE * FLOW_PACE) / ART_PER_UNIT,
+      (this.flow * STRAND_PACE * (water.flowPace ?? 0)) / ART_PER_UNIT,
       RIVER_CURRENT,
       0
     ]);

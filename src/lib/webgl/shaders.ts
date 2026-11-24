@@ -400,9 +400,13 @@ export class ShaderManager {
   }
 }
 
+const withPaintedPath = (source: string): string =>
+  source.replace(/^(#version[^\n]*\n)/, '$1#define PAINTED\n');
+
 export async function createTileRendererShaders(
   gl: WebGL2RenderingContext,
-  debug: boolean = false
+  debug: boolean = false,
+  painted: boolean = false
 ): Promise<ShaderManager | null> {
   console.log('🔄 Creating tile renderer shaders...');
   const shaderManager = new ShaderManager(gl, debug);
@@ -410,7 +414,7 @@ export async function createTileRendererShaders(
   try {
     const shaderSource: ShaderSource = {
       vertex: vertexShaderSource,
-      fragment: fragmentShaderSource
+      fragment: painted ? withPaintedPath(fragmentShaderSource) : fragmentShaderSource
     };
 
     console.log('📋 Vertex shader source length:', shaderSource.vertex.length);

@@ -1085,38 +1085,6 @@
     "toolTierRequired": 0
   },
   {
-    "id"              : "make_heartwood_plank",
-    "station"         : "heartwood_joiner",
-    "inputs"          : {"heartwood_log": 1},
-    "outputs"         : {"heartwood_plank": 2},
-    "workAmount"      : 8,
-    "toolTierRequired": 2
-  },
-  {
-    "id"              : "make_moonwood_plank",
-    "station"         : "heartwood_joiner",
-    "inputs"          : {"moonwood_log": 1},
-    "outputs"         : {"moonwood_plank": 2},
-    "workAmount"      : 8,
-    "toolTierRequired": 2
-  },
-  {
-    "id"              : "make_ironwood_plank",
-    "station"         : "heartwood_joiner",
-    "inputs"          : {"ironwood_log": 1},
-    "outputs"         : {"ironwood_plank": 2},
-    "workAmount"      : 10,
-    "toolTierRequired": 2
-  },
-  {
-    "id"              : "make_emberwood_plank",
-    "station"         : "heartwood_joiner",
-    "inputs"          : {"emberwood_log": 1},
-    "outputs"         : {"emberwood_plank": 2},
-    "workAmount"      : 8,
-    "toolTierRequired": 2
-  },
-  {
     "id"              : "make_saw",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
@@ -1505,33 +1473,6 @@
     "researchRequired": "steel_making"
   },
   {
-    "id": "carve_emberwood_haft",
-    "discipline": "woodworking",
-    "station": "heartwood_joiner",
-    "inputs": { "emberwood_log": 1 },
-    "outputs": { "emberwood_haft": 4 },
-    "workAmount": 10,
-    "toolTierRequired": 3
-  },
-  {
-    "id": "carve_moonwood_haft",
-    "discipline": "woodworking",
-    "station": "heartwood_joiner",
-    "inputs": { "moonwood_log": 1 },
-    "outputs": { "moonwood_haft": 4 },
-    "workAmount": 10,
-    "toolTierRequired": 3
-  },
-  {
-    "id": "carve_heartwood_haft",
-    "discipline": "woodworking",
-    "station": "heartwood_joiner",
-    "inputs": { "heartwood_log": 1 },
-    "outputs": { "heartwood_haft": 4 },
-    "workAmount": 10,
-    "toolTierRequired": 3
-  },
-  {
     "id"              : "make_wooden_haft",
     "station"         : "sawtable",
     "inputs"          : {"branch": 1},
@@ -1877,15 +1818,6 @@
     "toolTierRequired": 1
   },
   {
-    "id"              : "make_rune_sealed_flask",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"glassware": 1, "gem_dust": 2, "enchant_thread": 1},
-    "outputs"         : {"rune_sealed_flask": 1},
-    "workAmount"      : 24,
-    "toolTierRequired": 1,
-    "researchRequired": "runic_inscription"
-  },
-  {
     "id"              : "make_leather_knapsack",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
@@ -1904,15 +1836,6 @@
     "workAmount"      : 20,
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
-  },
-  {
-    "id"              : "make_rune_stitched_knapsack",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"category:leather": 6, "enchant_thread": 3, "gem_dust": 1},
-    "outputs"         : {"rune_stitched_knapsack": 1},
-    "workAmount"      : 34,
-    "toolTierRequired": 1,
-    "researchRequired": "runic_inscription"
   },
   {
     "id"              : "make_framed_leather_pack",
@@ -1975,24 +1898,6 @@
     "researchRequired": "steel_making"
   },
   {
-    "id"              : "make_rune_woven_satchel",
-    "station"         : "runic_loom",
-    "inputs"          : {"silk_cloth": 3, "enchant_thread": 1, "gem_dust": 1},
-    "outputs"         : {"rune_woven_satchel": 1},
-    "workAmount"      : 28,
-    "toolTierRequired": 1,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_bound_frame_pack",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"category:leather": 8, "magic_alloy_bar": 1, "enchant_thread": 5, "gem_dust": 1},
-    "outputs"         : {"rune_bound_frame_pack": 1},
-    "workAmount"      : 40,
-    "toolTierRequired": 1,
-    "researchRequired": "runic_inscription"
-  },
-  {
     "id"              : "make_leather_belt",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
@@ -2021,24 +1926,6 @@
     "workAmount"      : 14,
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
-  },
-  {
-    "id"              : "make_rune_etched_pick",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 2, "sanded_haft": 1},
-    "outputs"         : {"rune_etched_pick": 1},
-    "workAmount"      : 30,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_etched_belt",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"category:leather": 4, "magic_alloy_bar": 1, "gem_dust": 2, "enchant_thread": 2},
-    "outputs"         : {"rune_etched_belt": 1},
-    "workAmount"      : 28,
-    "toolTierRequired": 1,
-    "researchRequired": "runic_inscription"
   },
   {
     "id"              : "make_hide_knife_sheath",
@@ -2117,16 +2004,6 @@
     "outputs"         : {"wool_cloak": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1
-  },
-  {
-    "id"              : "make_arcane_robe",
-    "station"         : "runic_loom",
-    "researchRequired": "runic_inscription",
-    "inputs"          : {"silk_cloth": 5, "gem_dust": 2, "category:thread": 2},
-    "outputs"         : {"arcane_robe": 1},
-    "workAmount"      : 16,
-    "toolTierRequired": 2,
-    "discipline"      : "weaving"
   },
   {
     "id"              : "make_silk_robe",
@@ -2403,96 +2280,6 @@
     "inputs"          : {"great_tusk": 1},
     "outputs"         : {"ivory": 2},
     "workAmount"      : 10,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_great_bone_helm",
-    "discipline": "leatherworking",
-    "station": "runic_loom",
-    "inputs": {"great_bone": 1, "cave_bear_pelt": 1, "category:thread": 3, "category:fastener": 8},
-    "outputs": { "great_bone_helm": 1 },
-    "workAmount": 26,
-    "toolTierRequired": 3
-  },
-  {
-    "id": "make_great_bone_cuirass",
-    "discipline": "leatherworking",
-    "station": "runic_loom",
-    "inputs": {"great_bone": 3, "cave_bear_pelt": 2, "direwolf_hackles": 1, "category:thread": 10, "category:fastener": 24},
-    "outputs": { "great_bone_cuirass": 1 },
-    "workAmount": 46,
-    "toolTierRequired": 3
-  },
-  {
-    "id": "make_great_bone_vambraces",
-    "discipline": "leatherworking",
-    "station": "runic_loom",
-    "inputs": {"great_bone": 1, "direwolf_hackles": 1, "category:leather": 1, "category:thread": 3},
-    "outputs": { "great_bone_vambraces": 1 },
-    "workAmount": 22,
-    "toolTierRequired": 3
-  },
-  {
-    "id": "make_great_bone_greaves",
-    "discipline": "leatherworking",
-    "station": "runic_loom",
-    "inputs": {"great_bone": 1, "cave_bear_pelt": 1, "category:leather": 1, "category:thread": 3},
-    "outputs": { "great_bone_greaves": 1 },
-    "workAmount": 24,
-    "toolTierRequired": 3
-  },
-  {
-    "id": "make_great_bone_gauntlets",
-    "discipline": "leatherworking",
-    "station": "runic_loom",
-    "inputs": {"great_bone": 1, "predator_claw": 2, "category:leather": 1, "category:thread": 2},
-    "outputs": { "great_bone_gauntlets": 1 },
-    "workAmount": 18,
-    "toolTierRequired": 3
-  },
-  {
-    "id": "make_great_bone_sabatons",
-    "discipline": "leatherworking",
-    "station": "runic_loom",
-    "inputs": {"great_bone": 1, "cave_bear_pelt": 1, "category:leather": 1, "category:thread": 2},
-    "outputs": { "great_bone_sabatons": 1 },
-    "workAmount": 20,
-    "toolTierRequired": 3
-  },
-  {
-    "id": "make_great_tusk_impaler",
-    "discipline": "smithing",
-    "station": "manaforge",
-    "inputs": { "great_tusk": 1, "sanded_haft": 1, "category:thread": 3, "category:fastener": 6 },
-    "outputs": { "great_tusk_impaler": 1 },
-    "workAmount": 30,
-    "toolTierRequired": 3
-  },
-  {
-    "id": "make_great_fang_javelin",
-    "discipline": "bonecarving",
-    "station": "runecarver_bench",
-    "inputs": {"great_fang": 1, "wooden_haft": 1, "category:fastener": 5, "category:thread": 2},
-    "outputs": { "great_fang_javelin": 1 },
-    "workAmount": 18,
-    "toolTierRequired": 3
-  },
-  {
-    "id": "make_great_fang_dirk",
-    "discipline": "bonecarving",
-    "station": "runecarver_bench",
-    "inputs": { "great_fang": 1, "category:leather": 1, "category:thread": 1 },
-    "outputs": { "great_fang_dirk": 1 },
-    "workAmount": 14,
-    "toolTierRequired": 3
-  },
-  {
-    "id"              : "make_great_bone_maul",
-    "discipline"      : "bonecarving",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"great_bone": 1, "oak_plank": 1, "cordage": 8},
-    "outputs"         : {"great_bone_maul": 1},
-    "workAmount"      : 12,
     "toolTierRequired": 0
   },
   {
@@ -3235,321 +3022,6 @@
     "researchRequired": "arcane_lapidary"
   },
   {
-    "id"              : "attune_ruby",
-    "station"         : "attunement_bench",
-    "inputs"          : {"infused_ruby": 1},
-    "outputs"         : {"attuned_ruby": 1},
-    "workAmount"      : 8,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "attune_sapphire",
-    "station"         : "attunement_bench",
-    "inputs"          : {"infused_sapphire": 1},
-    "outputs"         : {"attuned_sapphire": 1},
-    "workAmount"      : 8,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "attune_emerald",
-    "station"         : "attunement_bench",
-    "inputs"          : {"infused_emerald": 1},
-    "outputs"         : {"attuned_emerald": 1},
-    "workAmount"      : 8,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "attune_topaz",
-    "station"         : "attunement_bench",
-    "inputs"          : {"infused_topaz": 1},
-    "outputs"         : {"attuned_topaz": 1},
-    "workAmount"      : 8,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "attune_amethyst",
-    "station"         : "attunement_bench",
-    "inputs"          : {"infused_amethyst": 1},
-    "outputs"         : {"attuned_amethyst": 1},
-    "workAmount"      : 8,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "attune_citrine",
-    "station"         : "attunement_bench",
-    "inputs"          : {"infused_citrine": 1},
-    "outputs"         : {"attuned_citrine": 1},
-    "workAmount"      : 8,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "attune_moonstone",
-    "station"         : "attunement_bench",
-    "inputs"          : {"infused_moonstone": 1},
-    "outputs"         : {"attuned_moonstone": 1},
-    "workAmount"      : 8,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_ruby_ring",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_ruby": 1, "gold_bar": 1},
-    "outputs"         : {"ruby_ring": 1},
-    "workAmount"      : 10,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_sapphire_ring",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_sapphire": 1, "gold_bar": 1},
-    "outputs"         : {"sapphire_ring": 1},
-    "workAmount"      : 10,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_emerald_ring",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_emerald": 1, "gold_bar": 1},
-    "outputs"         : {"emerald_ring": 1},
-    "workAmount"      : 10,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_topaz_ring",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_topaz": 1, "gold_bar": 1},
-    "outputs"         : {"topaz_ring": 1},
-    "workAmount"      : 10,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_amethyst_ring",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_amethyst": 1, "gold_bar": 1},
-    "outputs"         : {"amethyst_ring": 1},
-    "workAmount"      : 10,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_citrine_ring",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_citrine": 1, "gold_bar": 1},
-    "outputs"         : {"citrine_ring": 1},
-    "workAmount"      : 10,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_moonstone_ring",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_moonstone": 1, "silver_bar": 1},
-    "outputs"         : {"moonstone_ring": 1},
-    "workAmount"      : 10,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_ruby_amulet",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_ruby": 2, "gold_bar": 2},
-    "outputs"         : {"ruby_amulet": 1},
-    "workAmount"      : 14,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_sapphire_amulet",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_sapphire": 2, "gold_bar": 2},
-    "outputs"         : {"sapphire_amulet": 1},
-    "workAmount"      : 14,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_emerald_amulet",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_emerald": 2, "gold_bar": 2},
-    "outputs"         : {"emerald_amulet": 1},
-    "workAmount"      : 14,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_topaz_amulet",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_topaz": 2, "gold_bar": 2},
-    "outputs"         : {"topaz_amulet": 1},
-    "workAmount"      : 14,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_amethyst_amulet",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_amethyst": 2, "gold_bar": 2},
-    "outputs"         : {"amethyst_amulet": 1},
-    "workAmount"      : 14,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_citrine_amulet",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_citrine": 2, "gold_bar": 2},
-    "outputs"         : {"citrine_amulet": 1},
-    "workAmount"      : 14,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_moonstone_amulet",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_moonstone": 2, "silver_bar": 2},
-    "outputs"         : {"moonstone_amulet": 1},
-    "workAmount"      : 14,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_scholars_circlet",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_sapphire": 1, "silver_bar": 1},
-    "outputs"         : {"scholars_circlet": 1},
-    "workAmount"      : 16,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_champions_crown",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_ruby": 1, "attuned_topaz": 1, "gold_bar": 2},
-    "outputs"         : {"champions_crown": 1},
-    "workAmount"      : 22,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_sovereign_crown",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_citrine": 1, "attuned_amethyst": 1, "gold_bar": 2},
-    "outputs"         : {"sovereign_crown": 1},
-    "workAmount"      : 22,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_wardens_circlet",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_emerald": 1, "attuned_moonstone": 1, "gold_bar": 1},
-    "outputs"         : {"wardens_circlet": 1},
-    "workAmount"      : 20,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_gold_torc",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_emerald": 1, "gold_bar": 2},
-    "outputs"         : {"gold_torc": 1},
-    "workAmount"      : 16,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_champions_torc",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_ruby": 1, "attuned_emerald": 1, "gold_bar": 1},
-    "outputs"         : {"champions_torc": 1},
-    "workAmount"      : 18,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_wayfarers_pendant",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_topaz": 1, "attuned_moonstone": 1, "silver_bar": 1},
-    "outputs"         : {"wayfarers_pendant": 1},
-    "workAmount"      : 18,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_sages_pendant",
-    "station"         : "attunement_bench",
-    "inputs"          : {"attuned_sapphire": 1, "attuned_citrine": 1, "gold_bar": 1},
-    "outputs"         : {"sages_pendant": 1},
-    "workAmount"      : 18,
-    "toolTierRequired": 1,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_ember_staff",
-    "station"         : "runecarver_bench",
-    "inputs": {"emberwood_haft": 1, "cut_ruby": 1, "category:fastener": 6, "category:thread": 2},
-    "outputs"         : {"ember_staff": 1},
-    "workAmount"      : 16,
-    "toolTierRequired": 1,
-    "researchRequired": "arcane_lapidary"
-  },
-  {
-    "id"              : "make_frost_staff",
-    "station"         : "runecarver_bench",
-    "inputs": {"moonwood_haft": 1, "cut_sapphire": 1, "category:fastener": 6, "category:thread": 2},
-    "outputs"         : {"frost_staff": 1},
-    "workAmount"      : 16,
-    "toolTierRequired": 1,
-    "researchRequired": "arcane_lapidary"
-  },
-  {
-    "id"              : "make_spark_staff",
-    "station"         : "runecarver_bench",
-    "inputs": {"heartwood_haft": 1, "cut_topaz": 1, "category:fastener": 6, "category:thread": 2},
-    "outputs"         : {"spark_staff": 1},
-    "workAmount"      : 16,
-    "toolTierRequired": 1,
-    "researchRequired": "arcane_lapidary"
-  },
-  {
-    "id"              : "make_pyre_staff",
-    "station"         : "attunement_altar",
-    "inputs": {"emberwood_haft": 1, "attuned_ruby": 1, "gold_bar": 1, "category:fastener": 8},
-    "outputs"         : {"pyre_staff": 1},
-    "workAmount"      : 24,
-    "toolTierRequired": 2,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_rime_staff",
-    "station"         : "attunement_altar",
-    "inputs": {"moonwood_haft": 1, "attuned_sapphire": 1, "gold_bar": 1, "category:fastener": 8},
-    "outputs"         : {"rime_staff": 1},
-    "workAmount"      : 24,
-    "toolTierRequired": 2,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_tempest_staff",
-    "station"         : "attunement_altar",
-    "inputs": {"heartwood_haft": 1, "attuned_topaz": 1, "gold_bar": 1, "category:fastener": 8},
-    "outputs"         : {"tempest_staff": 1},
-    "workAmount"      : 24,
-    "toolTierRequired": 2,
-    "researchRequired": "attunement"
-  },
-  {
     "id"              : "make_wheel",
     "station"         : "sawtable",
     "inputs"          : {"category:plank": 3, "category:fastener": 8, "resin": 1},
@@ -3932,28 +3404,12 @@
     "toolTierRequired": 1
   },
   {
-    "id"              : "flense_great_wolf",
-    "station"         : "sanguinary_altar",
-    "inputs"          : {"great_wolf_carcass": 1},
-    "outputs"         : {"wolf_meat": 14, "dire_wolf_pelt": 3, "alpha_ichor": 0.8, "alpha_heart": 1, "direwolf_hackles": 1, "great_fang": 1, "large_bones": 10, "raw_sinew": 8, "predator_claw": 2},
-    "workAmount"      : 80,
-    "toolTierRequired": 2
-  },
-  {
     "id"              : "render_great_bear",
     "station"         : "butcher_spot",
     "inputs"          : {"great_bear_carcass": 1},
     "outputs"         : {"bear_meat": 26, "large_bones": 16},
     "workAmount"      : 80,
     "toolTierRequired": 1
-  },
-  {
-    "id"              : "flense_great_bear",
-    "station"         : "sanguinary_altar",
-    "inputs"          : {"great_bear_carcass": 1},
-    "outputs"         : {"bear_meat": 26, "cave_bear_pelt": 3, "owlbear_bile": 0.6, "owlbear_pineal": 1, "sabretooth_glands": 1, "great_bone": 2, "great_fang": 1, "tallow": 5, "predator_claw": 2},
-    "workAmount"      : 100,
-    "toolTierRequired": 2
   },
   {
     "id"              : "render_great_boar",
@@ -3964,28 +3420,12 @@
     "toolTierRequired": 1
   },
   {
-    "id"              : "flense_great_boar",
-    "station"         : "sanguinary_altar",
-    "inputs"          : {"great_boar_carcass": 1},
-    "outputs"         : {"boar_meat": 20, "boar_hide": 5, "great_tusk": 2, "great_bone": 2, "tallow": 6},
-    "workAmount"      : 90,
-    "toolTierRequired": 2
-  },
-  {
     "id"              : "render_great_weaver",
     "station"         : "butcher_spot",
     "inputs"          : {"great_weaver_carcass": 1},
     "outputs"         : {"raw_silk": 6, "small_bones": 4},
     "workAmount"      : 60,
     "toolTierRequired": 1
-  },
-  {
-    "id"              : "flense_great_weaver",
-    "station"         : "sanguinary_altar",
-    "inputs"          : {"great_weaver_carcass": 1},
-    "outputs"         : {"raw_silk": 14, "venom_sac": 3, "great_fang": 1},
-    "workAmount"      : 80,
-    "toolTierRequired": 2
   },
   {
     "id"              : "make_goblin_remains",
@@ -4069,30 +3509,12 @@
     "researchRequired" : "iron_working"
   },
   {
-    "id"              : "make_fang_reaver",
-    "discipline"      : "bonecarving",
-    "station"         : "runecarver_bench",
-    "inputs": {"great_fang": 1, "heartwood_haft": 1, "category:fastener": 10, "category:thread": 4},
-    "outputs"         : {"fang_reaver": 1},
-    "workAmount"      : 50,
-    "toolTierRequired": 3
-  },
-  {
     "id"              : "make_direwolf_warcloak",
     "station"         : "curriers_bench",
     "inputs"          : {"prime_direwolf_leather": 2, "category:thread": 6},
     "outputs"         : {"direwolf_warcloak": 1},
     "workAmount"      : 40,
     "toolTierRequired": 1
-  },
-  {
-    "id"              : "make_stargazer_circlet",
-    "station"         : "attunement_altar",
-    "inputs"          : {"star_shard": 1, "owlbear_pineal": 1, "witch_morel": 2},
-    "outputs"         : {"stargazer_circlet": 1},
-    "workAmount"      : 50,
-    "toolTierRequired": 2,
-    "researchRequired" : "attunement"
   },
   {
     "id"              : "make_sabretooth_meat",
@@ -4218,32 +3640,6 @@
     "outputs"          : {"rebar": 2},
     "workAmount"       : 24,
     "toolTierRequired" : 2
-  },
-  {
-    "id"               : "grind_gem_dust",
-    "station"          : "attunement_bench",
-    "researchRequired" : "runic_inscription",
-    "inputs"           : {"infused_ruby": 1},
-    "inputAlternatives": [
-      {"infused_sapphire": 1},
-      {"infused_emerald": 1},
-      {"infused_topaz": 1},
-      {"infused_amethyst": 1},
-      {"infused_citrine": 1},
-      {"infused_moonstone": 1}
-    ],
-    "outputs"          : {"gem_dust": 2},
-    "workAmount"       : 20,
-    "toolTierRequired" : 1
-  },
-  {
-    "id"               : "grind_mana_crystal",
-    "station"          : "attunement_bench",
-    "researchRequired" : "runic_inscription",
-    "inputs"           : {"mana_crystal": 1},
-    "outputs"          : {"gem_dust": 4},
-    "workAmount"       : 22,
-    "toolTierRequired" : 1
   },
   {
     "id"              : "mix_magic_concrete",
@@ -4499,28 +3895,12 @@
     "toolTierRequired": 1
   },
   {
-    "id"              : "brew_grand_potion_of_might",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_potion_of_might": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 2
-  },
-  {
     "id"              : "brew_greater_draught_of_vigor",
     "station"         : "apothecary",
     "inputs"          : {"woundwort": 3, "glassware": 1, "hopped_ale": 1},
     "outputs"         : {"greater_draught_of_vigor": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
-  },
-  {
-    "id"              : "brew_grand_draught_of_vigor",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_draught_of_vigor": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_elixir_of_grace",
@@ -4531,28 +3911,12 @@
     "toolTierRequired": 1
   },
   {
-    "id"              : "brew_grand_elixir_of_grace",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_elixir_of_grace": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 2
-  },
-  {
     "id"              : "brew_greater_tonic_of_fortitude",
     "station"         : "apothecary",
     "inputs"          : {"woundwort": 3, "glassware": 1, "hopped_ale": 1},
     "outputs"         : {"greater_tonic_of_fortitude": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
-  },
-  {
-    "id"              : "brew_grand_tonic_of_fortitude",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_tonic_of_fortitude": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_bloodrage_draught",
@@ -4563,28 +3927,12 @@
     "toolTierRequired": 1
   },
   {
-    "id"              : "brew_grand_bloodrage_draught",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"alpha_ichor": 0.8, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_bloodrage_draught": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 2
-  },
-  {
     "id"              : "brew_greater_ironhide_tonic",
     "station"         : "apothecary",
     "inputs"          : {"owlbear_bile": 0.6, "woundwort": 1, "glassware": 1, "hopped_ale": 1},
     "outputs"         : {"greater_ironhide_tonic": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
-  },
-  {
-    "id"              : "brew_grand_ironhide_tonic",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"owlbear_bile": 0.6, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_ironhide_tonic": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_vigor_draught",
@@ -4595,28 +3943,12 @@
     "toolTierRequired": 1
   },
   {
-    "id"              : "brew_grand_vigor_draught",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_vigor_draught": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 2
-  },
-  {
     "id"              : "brew_greater_calming_draught",
     "station"         : "apothecary",
     "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "grape_wine": 1},
     "outputs"         : {"greater_calming_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
-  },
-  {
-    "id"              : "brew_grand_calming_draught",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_calming_draught": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_nightglow_draught",
@@ -4627,28 +3959,12 @@
     "toolTierRequired": 1
   },
   {
-    "id"              : "brew_grand_nightglow_draught",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_nightglow_draught": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 2
-  },
-  {
     "id"              : "brew_greater_frenzy_draught",
     "station"         : "apothecary",
     "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "hopped_ale": 1},
     "outputs"         : {"greater_frenzy_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
-  },
-  {
-    "id"              : "brew_grand_frenzy_draught",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "nightshade_bolete": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_frenzy_draught": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_venom_coating",
@@ -4659,28 +3975,12 @@
     "toolTierRequired": 1
   },
   {
-    "id"              : "brew_grand_venom_coating",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_venom_coating": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 2
-  },
-  {
     "id"              : "brew_greater_caustic_coating",
     "station"         : "apothecary",
     "inputs"          : {"caustic_bile": 0.6, "nightshade_bolete": 1, "glassware": 1, "distilled_spirit": 0.3},
     "outputs"         : {"greater_caustic_coating": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
-  },
-  {
-    "id"              : "brew_grand_caustic_coating",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"caustic_bile": 0.6, "nightshade_bolete": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_caustic_coating": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 2
   },
   {
     "id"              : "brew_crude_feral_draught",
@@ -4691,44 +3991,12 @@
     "toolTierRequired": 1
   },
   {
-    "id"              : "brew_feral_transfusion",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"alpha_heart": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"feral_transfusion": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 1
-  },
-  {
-    "id"              : "brew_alpha_essence",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"alpha_heart": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"alpha_essence": 0.3},
-    "workAmount"      : 22,
-    "toolTierRequired": 2
-  },
-  {
     "id"              : "brew_crude_hide_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"direwolf_hackles": 1, "woundwort": 1, "glassware": 1},
     "outputs"         : {"crude_hide_draught": 0.3},
     "workAmount"      : 10,
     "toolTierRequired": 1
-  },
-  {
-    "id"              : "brew_hide_transfusion",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"direwolf_hackles": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"hide_transfusion": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 1
-  },
-  {
-    "id"              : "brew_ironhide_essence",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"direwolf_hackles": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"ironhide_essence": 0.3},
-    "workAmount"      : 22,
-    "toolTierRequired": 2
   },
   {
     "id"              : "brew_crude_predator_draught",
@@ -4739,73 +4007,12 @@
     "toolTierRequired": 1
   },
   {
-    "id"              : "brew_predator_transfusion",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"sabretooth_glands": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"predator_transfusion": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 1
-  },
-  {
-    "id"              : "brew_sabretooth_essence",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"sabretooth_glands": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"sabretooth_essence": 0.3},
-    "workAmount"      : 22,
-    "toolTierRequired": 2
-  },
-  {
     "id"              : "brew_crude_sight_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"owlbear_pineal": 1, "woundwort": 1, "glassware": 1},
     "outputs"         : {"crude_sight_draught": 0.3},
     "workAmount"      : 10,
     "toolTierRequired": 1
-  },
-  {
-    "id"              : "brew_sight_transfusion",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"owlbear_pineal": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"sight_transfusion": 0.3},
-    "workAmount"      : 16,
-    "toolTierRequired": 1
-  },
-  {
-    "id"              : "brew_third_eye_essence",
-    "station"         : "arcane_alembic",
-    "inputs"          : {"owlbear_pineal": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"third_eye_essence": 0.3},
-    "workAmount"      : 22,
-    "toolTierRequired": 2
-  },
-  {
-    "id"              : "smelt_magic_alloy",
-    "station"         : "runic_crucible",
-    "researchRequired": "runic_inscription",
-    "inputs"          : {"category:steel": 2, "gem_dust": 1},
-    "outputs"         : {"magic_alloy_bar": 1},
-    "workAmount"      : 36,
-    "toolTierRequired": 2
-  },
-  {
-    "id"               : "spin_enchant_thread",
-    "station"          : "runic_loom",
-    "researchRequired" : "runic_inscription",
-    "inputs"           : {"category:wool": 2, "gem_dust": 1},
-    "inputAlternatives": [ {"woolcloth": 2, "gem_dust": 1} ],
-    "outputs"          : {"enchant_thread": 2},
-    "workAmount"       : 28,
-    "toolTierRequired" : 1
-  },
-  {
-    "id"               : "cut_runed_block",
-    "station"          : "glyph_cutters_banker",
-    "researchRequired" : "runic_inscription",
-    "inputs"           : {"granite_block": 1, "gem_dust": 1},
-    "inputAlternatives": [ {"limestone_block": 1, "gem_dust": 1}, {"marble_block": 1, "gem_dust": 1} ],
-    "outputs"          : {"runed_block": 1},
-    "workAmount"       : 32,
-    "toolTierRequired" : 2
   },
   {
     "id"               : "tap_resin",
@@ -4860,19 +4067,6 @@
     "toolTierRequired": 1
   },
   {
-    "id": "purify_catalyst",
-    "station": "arcane_alembic",
-    "inputs": {
-      "gem_dust": 3,
-      "charcoal": 2
-    },
-    "outputs": {
-      "purified_catalyst": 1
-    },
-    "workAmount": 24,
-    "toolTierRequired": 2
-  },
-  {
     "id": "brew_tanglefoot_coating",
     "station": "apothecary",
     "inputs": {
@@ -4899,20 +4093,6 @@
     },
     "workAmount": 12,
     "toolTierRequired": 1
-  },
-  {
-    "id": "brew_grand_tanglefoot_coating",
-    "station": "arcane_alembic",
-    "inputs": {
-      "resin": 2,
-      "purified_catalyst": 1,
-      "glassware": 1
-    },
-    "outputs": {
-      "grand_tanglefoot_coating": 0.4
-    },
-    "workAmount": 16,
-    "toolTierRequired": 2
   },
   {
     "id": "brew_dread_coating",
@@ -4944,21 +4124,6 @@
     "toolTierRequired": 1
   },
   {
-    "id": "brew_grand_dread_coating",
-    "station": "arcane_alembic",
-    "inputs": {
-      "mandrake": 1,
-      "spore_of_madness": 1,
-      "purified_catalyst": 1,
-      "glassware": 1
-    },
-    "outputs": {
-      "grand_dread_coating": 0.4
-    },
-    "workAmount": 16,
-    "toolTierRequired": 2
-  },
-  {
     "id": "brew_farsight_tonic",
     "station": "apothecary",
     "inputs": {
@@ -4985,20 +4150,6 @@
     },
     "workAmount": 12,
     "toolTierRequired": 1
-  },
-  {
-    "id": "brew_grand_farsight_tonic",
-    "station": "arcane_alembic",
-    "inputs": {
-      "glowcap": 2,
-      "purified_catalyst": 1,
-      "glassware": 1
-    },
-    "outputs": {
-      "grand_farsight_tonic": 0.3
-    },
-    "workAmount": 16,
-    "toolTierRequired": 2
   },
   {
     "id": "brew_antivenin_tonic",
@@ -5030,21 +4181,6 @@
     "toolTierRequired": 1
   },
   {
-    "id": "brew_grand_antivenin_tonic",
-    "station": "arcane_alembic",
-    "inputs": {
-      "charcoal": 1,
-      "woundwort": 1,
-      "purified_catalyst": 1,
-      "glassware": 1
-    },
-    "outputs": {
-      "grand_antivenin_tonic": 0.3
-    },
-    "workAmount": 16,
-    "toolTierRequired": 2
-  },
-  {
     "id": "brew_restful_tonic",
     "station": "apothecary",
     "inputs": {
@@ -5074,21 +4210,6 @@
     "toolTierRequired": 1
   },
   {
-    "id": "brew_grand_restful_tonic",
-    "station": "arcane_alembic",
-    "inputs": {
-      "dreamleaf": 1,
-      "wild_berries": 1,
-      "purified_catalyst": 1,
-      "glassware": 1
-    },
-    "outputs": {
-      "grand_restful_tonic": 0.3
-    },
-    "workAmount": 16,
-    "toolTierRequired": 2
-  },
-  {
     "id": "brew_honing_oil",
     "station": "alchemy_lab",
     "inputs": {
@@ -5114,32 +4235,6 @@
     },
     "workAmount": 12,
     "toolTierRequired": 1
-  },
-  {
-    "id": "brew_razors_grace",
-    "station": "arcane_alembic",
-    "inputs": {
-      "tallow": 1,
-      "sand": 2,
-      "purified_catalyst": 1
-    },
-    "outputs": {
-      "razors_grace": 0.4
-    },
-    "workAmount": 16,
-    "toolTierRequired": 2
-  }
-,
-  {
-    "id": "make_fang_charm",
-    "discipline"      : "bonecarving",
-    "station": "runecarver_bench",
-    "inputs": {"great_fang": 1, "predator_claw": 2, "cordage": 8},
-    "outputs": {
-      "fang_charm": 1
-    },
-    "workAmount": 40,
-    "toolTierRequired": 3
   },
   {
     "id": "make_fang_arrow",
@@ -5718,33 +4813,6 @@
     "researchRequired": "steel_making"
   },
   {
-    "id"              : "make_rune_etched_axe",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1, "category:leather": 1},
-    "outputs"         : {"rune_etched_axe": 1},
-    "workAmount"      : 30,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_ribbed_mace",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1, "category:leather": 1},
-    "outputs"         : {"rune_ribbed_mace": 1},
-    "workAmount"      : 30,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_toothed_cleaver",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1, "category:leather": 1},
-    "outputs"         : {"rune_toothed_cleaver": 1},
-    "workAmount"      : 30,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
     "id"              : "make_steel_greatflail",
     "station"         : "anvil",
     "inputs"          : {"seasoned_haft": 1, "category:steel": 3, "iron_nail": 36},
@@ -5753,123 +4821,6 @@
     "toolTierRequired": 2,
     "discipline"      : "metalworking",
     "researchRequired": "steel_making"
-  },
-  {
-    "id"              : "make_rune_lashing_greatflail",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "seasoned_haft": 1, "iron_nail": 36},
-    "outputs"         : {"rune_lashing_greatflail": 1},
-    "workAmount"      : 36,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_etched_arming_sword",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "category:leather": 1},
-    "outputs"         : {"rune_etched_arming_sword": 1},
-    "workAmount"      : 30,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_standard_glaive",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1, "linen_cloth": 2},
-    "outputs"         : {"rune_standard_glaive": 1},
-    "workAmount"      : 32,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_chained_flail",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "seasoned_haft": 1, "category:leather": 1},
-    "outputs"         : {"rune_chained_flail": 1},
-    "workAmount"      : 34,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_graven_spear",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1, "cordage": 4},
-    "outputs"         : {"rune_graven_spear": 1},
-    "workAmount"      : 30,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_needle_rapier",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "category:leather": 1},
-    "outputs"         : {"rune_needle_rapier": 1},
-    "workAmount"      : 32,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_slotted_stiletto",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "category:leather": 1},
-    "outputs"         : {"rune_slotted_stiletto": 1},
-    "workAmount"      : 26,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_sung_greatsword",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 2, "seasoned_haft": 1, "category:leather": 1},
-    "outputs"         : {"rune_sung_greatsword": 1},
-    "workAmount"      : 40,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_bitten_greataxe",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 3, "gem_dust": 2, "seasoned_haft": 1, "category:leather": 1},
-    "outputs"         : {"rune_bitten_greataxe": 1},
-    "workAmount"      : 42,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_fanged_greatcleaver",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 2, "seasoned_haft": 1, "category:leather": 1},
-    "outputs"         : {"rune_fanged_greatcleaver": 1},
-    "workAmount"      : 40,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_weighted_warhammer",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 3, "gem_dust": 2, "seasoned_haft": 1, "category:leather": 1},
-    "outputs"         : {"rune_weighted_warhammer": 1},
-    "workAmount"      : 44,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_etched_halberd",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "seasoned_haft": 1, "steel_rivet": 20},
-    "outputs"         : {"rune_etched_halberd": 1},
-    "workAmount"      : 36,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_banded_longstaff",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 2},
-    "outputs"         : {"rune_banded_longstaff": 1},
-    "workAmount"      : 28,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
   },
   {
     "id"              : "make_sinew_backed_bow",
@@ -5912,15 +4863,6 @@
     "researchRequired": "advanced_forestry"
   },
   {
-    "id"              : "make_rune_strung_warbow",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"seasoned_haft": 1, "yew_log": 1, "spider_silk_thread": 1, "enchant_thread": 2, "gem_dust": 1},
-    "outputs"         : {"rune_strung_warbow": 1},
-    "workAmount"      : 34,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
     "id"              : "make_composite_crossbow",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
@@ -5940,15 +4882,6 @@
     "researchRequired": "steel_making"
   },
   {
-    "id"              : "make_rune_cranked_arbalest",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"seasoned_haft": 1, "magic_alloy_bar": 1, "steel_rivet": 34, "spider_silk_thread": 1, "enchant_thread": 8},
-    "outputs"         : {"rune_cranked_arbalest": 1},
-    "workAmount"      : 38,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
     "id"              : "make_staff_sling",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
@@ -5956,15 +4889,6 @@
     "outputs"         : {"staff_sling": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_rune_whistling_sling",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"category:leather": 1, "enchant_thread": 1, "gem_dust": 1},
-    "outputs"         : {"rune_whistling_sling": 1},
-    "workAmount"      : 22,
-    "toolTierRequired": 1,
-    "researchRequired": "runic_inscription"
   },
   {
     "id"              : "make_bronze_javelin",
@@ -6004,42 +4928,6 @@
     "researchRequired": "steel_making"
   },
   {
-    "id"              : "make_rune_marked_javelin",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1},
-    "outputs"         : {"rune_marked_javelin": 2},
-    "workAmount"      : 26,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_cinder_rod",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"wooden_haft": 1, "cut_ruby": 1, "copper_bar": 1},
-    "outputs"         : {"cinder_rod": 1},
-    "workAmount"      : 12,
-    "toolTierRequired": 1,
-    "researchRequired": "arcane_lapidary"
-  },
-  {
-    "id"              : "make_hoarfrost_rod",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"wooden_haft": 1, "cut_sapphire": 1, "copper_bar": 1},
-    "outputs"         : {"hoarfrost_rod": 1},
-    "workAmount"      : 12,
-    "toolTierRequired": 1,
-    "researchRequired": "arcane_lapidary"
-  },
-  {
-    "id"              : "make_storm_rod",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"wooden_haft": 1, "cut_topaz": 1, "copper_bar": 1},
-    "outputs"         : {"storm_rod": 1},
-    "workAmount"      : 12,
-    "toolTierRequired": 1,
-    "researchRequired": "arcane_lapidary"
-  },
-  {
     "id"              : "make_copper_rod",
     "station"         : "casting_hearth",
     "inputs"          : {"wooden_haft": 1, "cut_citrine": 1, "copper_bar": 1, "category:fastener": 2},
@@ -6065,42 +4953,6 @@
     "workAmount"      : 12,
     "toolTierRequired": 1,
     "researchRequired": "steel_making"
-  },
-  {
-    "id"              : "make_emberglass_scepter",
-    "station"         : "attunement_altar",
-    "inputs"          : {"sanded_haft": 1, "attuned_ruby": 1, "silver_bar": 1},
-    "outputs"         : {"emberglass_scepter": 1},
-    "workAmount"      : 20,
-    "toolTierRequired": 2,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_rimeglass_scepter",
-    "station"         : "attunement_altar",
-    "inputs"          : {"sanded_haft": 1, "attuned_sapphire": 1, "silver_bar": 1},
-    "outputs"         : {"rimeglass_scepter": 1},
-    "workAmount"      : 20,
-    "toolTierRequired": 2,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_stormglass_scepter",
-    "station"         : "attunement_altar",
-    "inputs"          : {"sanded_haft": 1, "attuned_topaz": 1, "silver_bar": 1},
-    "outputs"         : {"stormglass_scepter": 1},
-    "workAmount"      : 20,
-    "toolTierRequired": 2,
-    "researchRequired": "attunement"
-  },
-  {
-    "id"              : "make_manaforge_greatstaff",
-    "station"         : "attunement_altar",
-    "inputs"          : {"seasoned_haft": 1, "attuned_ruby": 1, "attuned_sapphire": 1, "attuned_topaz": 1, "magic_alloy_bar": 1},
-    "outputs"         : {"manaforge_greatstaff": 1},
-    "workAmount"      : 60,
-    "toolTierRequired": 2,
-    "researchRequired": "mythic_attunement"
   },
   {
     "id"              : "make_bronze_arrow",
@@ -6425,81 +5277,6 @@
     "discipline"      : "metalworking",
     "researchRequired": "steel_making",
     "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 1}}
-  },
-  {
-    "id"              : "make_rune_graven_cuirass",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 4, "gem_dust": 2, "boarhide": 1, "enchant_thread": 12},
-    "outputs"         : {"rune_graven_cuirass": 1},
-    "workAmount"      : 60,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_graven_helm",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "boarhide": 1, "enchant_thread": 4},
-    "outputs"         : {"rune_graven_helm": 1},
-    "workAmount"      : 40,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_graven_vambraces",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "enchant_thread": 2},
-    "outputs"         : {"rune_graven_vambraces": 1},
-    "workAmount"      : 24,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_graven_greaves",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "enchant_thread": 3},
-    "outputs"         : {"rune_graven_greaves": 1},
-    "workAmount"      : 28,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_stitched_lamellar",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "enchant_thread": 9, "gem_dust": 1},
-    "outputs"         : {"rune_stitched_lamellar": 1},
-    "workAmount"      : 48,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription",
-    "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 2}}
-  },
-  {
-    "id"              : "make_rune_stitched_coif",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "enchant_thread": 3, "gem_dust": 1},
-    "outputs"         : {"rune_stitched_coif": 1},
-    "workAmount"      : 30,
-    "toolTierRequired": 2,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_woven_robe",
-    "station"         : "runic_loom",
-    "inputs"          : {"silk_cloth": 9, "enchant_thread": 4, "gem_dust": 1},
-    "outputs"         : {"rune_woven_robe": 1},
-    "workAmount"      : 36,
-    "toolTierRequired": 2,
-    "discipline"      : "weaving",
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_woven_hood",
-    "station"         : "runic_loom",
-    "inputs"          : {"silk_cloth": 2, "enchant_thread": 1, "gem_dust": 1},
-    "outputs"         : {"rune_woven_hood": 1},
-    "workAmount"      : 20,
-    "toolTierRequired": 2,
-    "discipline"      : "weaving",
-    "researchRequired": "runic_inscription"
   },
   {
     "id"              : "make_jackal_head",
@@ -6947,42 +5724,6 @@
     "discipline"      : "leatherworking"
   },
   {
-    "id"              : "make_rune_stitched_bracers",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"prime_wolf_leather": 2, "magic_alloy_bar": 2, "steel_rivet": 8},
-    "outputs"         : {"rune_stitched_bracers": 1},
-    "workAmount"      : 20,
-    "toolTierRequired": 3,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_stitched_gloves",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"prime_wolf_leather": 1, "magic_alloy_bar": 1, "steel_rivet": 4},
-    "outputs"         : {"rune_stitched_gloves": 1},
-    "workAmount"      : 18,
-    "toolTierRequired": 3,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_stitched_greaves",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"prime_wolf_leather": 2, "magic_alloy_bar": 2, "steel_rivet": 10},
-    "outputs"         : {"rune_stitched_greaves": 1},
-    "workAmount"      : 22,
-    "toolTierRequired": 3,
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_stitched_boots",
-    "station"         : "runecarver_bench",
-    "inputs"          : {"prime_wolf_leather": 2, "magic_alloy_bar": 2, "steel_rivet": 6},
-    "outputs"         : {"rune_stitched_boots": 1},
-    "workAmount"      : 20,
-    "toolTierRequired": 3,
-    "researchRequired": "runic_inscription"
-  },
-  {
     "id"              : "make_hippogriff_head",
     "station"         : "curriers_bench",
     "inputs"          : {"prime_hippogriff_leather": 2, "category:thread": 1},
@@ -7026,26 +5767,6 @@
     "workAmount"      : 20,
     "toolTierRequired": 3,
     "discipline"      : "leatherworking"
-  },
-  {
-    "id"              : "make_rune_woven_gloves",
-    "station"         : "runic_loom",
-    "inputs"          : {"silk_cloth": 2, "enchant_thread": 1},
-    "outputs"         : {"rune_woven_gloves": 1},
-    "workAmount"      : 18,
-    "toolTierRequired": 3,
-    "discipline"      : "weaving",
-    "researchRequired": "runic_inscription"
-  },
-  {
-    "id"              : "make_rune_woven_boots",
-    "station"         : "runic_loom",
-    "inputs"          : {"silk_cloth": 3, "enchant_thread": 1},
-    "outputs"         : {"rune_woven_boots": 1},
-    "workAmount"      : 20,
-    "toolTierRequired": 3,
-    "discipline"      : "weaving",
-    "researchRequired": "runic_inscription"
   },
   {
     "id": "make_sackcloth_hood",
@@ -7168,21 +5889,6 @@
     "workAmount": 8,
     "toolTierRequired": 1
   },
-          {
-    "id": "make_rune_woven_hose",
-    "discipline": "weaving",
-    "station": "runic_loom",
-    "inputs": {
-      "silk_cloth": 3,
-      "enchant_thread": 1
-    },
-    "outputs": {
-      "rune_woven_hose": 1
-    },
-    "workAmount": 13,
-    "toolTierRequired": 3,
-    "researchRequired": "runic_inscription"
-  },
     {
     "id": "make_copper_scale_gloves",
     "discipline": "metalworking",
@@ -7231,32 +5937,6 @@
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
   },
-    {
-    "id": "make_rune_graven_gauntlets",
-    "discipline": "metalworking",
-    "station": "runecarver_bench",
-    "inputs": {"magic_alloy_bar": 1,
-      "gem_dust": 1, "enchant_thread": 2},
-    "outputs": {
-      "rune_graven_gauntlets": 1
-    },
-    "workAmount": 14,
-    "toolTierRequired": 3,
-    "researchRequired": "runic_inscription"
-  },
-    {
-    "id": "make_rune_graven_sabatons",
-    "discipline": "metalworking",
-    "station": "runecarver_bench",
-    "inputs": {"magic_alloy_bar": 1,
-      "gem_dust": 1, "enchant_thread": 3},
-    "outputs": {
-      "rune_graven_sabatons": 1
-    },
-    "workAmount": 14,
-    "toolTierRequired": 3,
-    "researchRequired": "runic_inscription"
-  },
   {
     "id": "make_iron_buckler",
     "discipline": "metalworking",
@@ -7279,18 +5959,6 @@
     "workAmount": 16,
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
-  },
-    {
-    "id": "make_rune_graven_kite",
-    "discipline": "metalworking",
-    "station": "runecarver_bench",
-    "inputs": {"magic_alloy_bar": 3, "gem_dust": 2, "boarhide": 1, "enchant_thread": 8},
-    "outputs": {
-      "rune_graven_kite": 1
-    },
-    "workAmount": 20,
-    "toolTierRequired": 3,
-    "researchRequired": "runic_inscription"
   },
   {
     "id": "make_branch_bracers",

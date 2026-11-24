@@ -37,6 +37,7 @@ import {
 } from './drawnSprites.js';
 import { WindClock, type Heading } from './painted/wind.js';
 import { WaveClock, waterStill, type MapMotion, type SeaWeather } from './painted/waves.js';
+import { FLUID_DEFS, FluidClock, WATER_FLUID, type FluidSet } from './painted/fluids.js';
 import { FallingLeaves } from './painted/leaves.js';
 
 const LIGHT_ATLAS_UNIT = 7;
@@ -117,6 +118,8 @@ export class WebGLRendererCore {
   private leaves: FallingLeaves | null = null;
   private readonly wind = new WindClock();
   private readonly waves = new WaveClock();
+  private readonly fluidClock = new FluidClock();
+  private fluids: FluidSet = FLUID_DEFS;
   private season: string | undefined = undefined;
   private rings: { list: readonly GroundRing[]; ink: RingInk } | null = null;
   private pointLights: readonly PointLight[] = [];
@@ -321,6 +324,8 @@ export class WebGLRendererCore {
     this.swayOn = motion.sway;
     this.wavesOn = motion.waves;
     this.waveMix = motion.waveMix;
+    this.fluids = motion.fluids;
+    this.waves.water = motion.fluids[WATER_FLUID] ?? FLUID_DEFS[WATER_FLUID];
     this.groundBlend?.setWaterStyle(motion.waves);
   }
 
@@ -405,7 +410,7 @@ export class WebGLRendererCore {
 
       const gl = await this.webglState.initialize({ depth: this.rowDepth });
 
-      this.shaderManager = await createTileRendererShaders(gl, this.debug);
+      this.shaderManager = await createTileRendererShaders(gl, this.debug, PAINTED_TILES);
       if (!this.shaderManager) throw new Error('Shader init failed');
 
       try {
@@ -769,6 +774,7 @@ export class WebGLRendererCore {
       tone,
       waterTime: waterTime(performance.now()),
       sea: this.wavesOn ? this.seaFrame() : undefined,
+      fluid: this.fluidFrame(),
       lightSampler: this.lightSampler ?? undefined,
       lightTime,
       lightVersion: this.lightVersion,
@@ -784,6 +790,13 @@ export class WebGLRendererCore {
     this.waves.tick(performance.now(), strength, dir, waterStill(this.tileWidth));
     const artPerPx = (this.painted?.tileset.tile ?? BASE_TILE_PX) / this.tileWidth;
     return this.waves.uniforms(strength, dir, artPerPx, this.waveMix, this.seaWeather);
+  }
+
+  private fluidFrame(): Float32Array {
+    const { strength, dir } = this.wind;
+    const hold = !this.wavesOn || waterStill(this.tileWidth);
+    this.fluidClock.tick(performance.now(), this.fluids, strength, dir, hold);
+    return this.fluidClock.uniforms(this.fluids);
   }
 
   private bindPaintedAtlas(gl: WebGL2RenderingContext, painted: LoadedPaintedTileset): void {

@@ -110,6 +110,7 @@ function watchScenario(loaded) {
 
 /** @param {string} id */
 const scenarioLoaded = (id) => `Loaded scenario preset '${id}'`;
+export const GLYPH_RENDERER = 'painted=0';
 /** @param {string} id */
 export const scenarioQuery = (id) => `?scenario=${encodeURIComponent(id)}`;
 /** @param {string} id @returns {InitScript} */

@@ -34,7 +34,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `gpu/stall.mjs` | Prints the longest busy stretch of a CPU profile with its time per function. | `node tools/gpu/stall.mjs <file.cpuprofile>...` |
 | `coverage/gate.mjs` | Runs the whole test suite with line coverage of `src/lib/game` and writes the total and each changed file's coverage for the Check notes. | `pnpm test:coverage`, run by the `coverage` job |
 | `mutants/pins.mjs` | Applies each mutant in `mutants/registry.json` (a file, an exact text to find, its replacement, and the tests expected to kill it) to a scratch copy of the tree, runs those tests, and fails naming every mutant that survives. In CI it runs the mutants a change reaches, and the whole registry nightly. A test that closes a mutation gap adds its killed mutant to the registry. | `pnpm test:mutants [--base <ref>] [--only <id,...>] [--jobs N]` |
-| `work-pins/` | Call counts of the simulation tick and the browser frame, base against head. | `pnpm work-pins`, `pnpm work-pins:gate` |
+| `work-pins/` | Call counts of the simulation tick and the browser frame, base against head. The browser harnesses open the game with `?painted=0`: CI draws with software GL, where a painted frame takes over a second. | `pnpm work-pins`, `pnpm work-pins:gate` |
 | `gungraun/gate.mjs` | Instruction counts for `sim-core` and `spatial-core`, base against head. | `node tools/gungraun/gate.mjs --base <ref>` |
 | `gpu/` | Frame measurement on a rented GPU: `vast.mjs` rents the machine, `probe.mjs` tries Chromium's GPU flags, `frames.mjs` times frames. | `node tools/gpu/<script>.mjs` |
 | `hooks/` | Git hooks: commit message shape, private words, branch names, branches of blocked issues, and the card of a pushed branch. | `pnpm hooks:install` |

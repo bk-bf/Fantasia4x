@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
+  GRADED_CHAINS,
   conditionIcon,
   iconConditions,
   iconFor,
@@ -43,11 +44,34 @@ describe('condition icons', () => {
     expect(ids.filter((id) => !iconConditions().includes(id))).toEqual([]);
   });
 
-  it('draws every icon, with and without its mark', () => {
+  it('draws every icon', () => {
     for (const id of iconConditions()) {
       const found = iconFor(event({ conditionId: `${id}:moderate` }))!;
-      const [s] = icon(found.id, found.mark);
+      const [s] = icon(found.id);
       expect(s.c.some(Boolean)).toBe(true);
+    }
+  });
+
+  it('gives no two conditions the same icon unless they grade one trait', () => {
+    const chainOf = new Map(
+      Object.entries(GRADED_CHAINS).flatMap(([look, chain]) => chain.map((c) => [c, look]))
+    );
+    const byIcon = new Map<string, string[]>();
+    for (const id of iconConditions()) {
+      const look = conditionIcon(id)!.id;
+      byIcon.set(look, [...(byIcon.get(look) ?? []), id]);
+    }
+    const shared = [...byIcon.entries()].filter(
+      ([look, ids]) => ids.length > 1 && !ids.every((id) => chainOf.get(id) === look)
+    );
+    expect(shared).toEqual([]);
+  });
+
+  it('tells each step of a graded chain apart by its severity arrows', () => {
+    for (const [look, chain] of Object.entries(GRADED_CHAINS)) {
+      expect(chain.map((id) => conditionIcon(id))).toEqual(
+        chain.map((_, i) => ({ id: look, grade: i + 1 }))
+      );
     }
   });
 
@@ -83,7 +107,7 @@ describe('condition icons', () => {
     expect(shown.filter((c) => !conditionIcon(c.id)).map((c) => c.id)).toEqual([]);
     for (const c of shown) {
       const look = conditionIcon(c.id)!;
-      expect(icon(look.id, look.mark)[0].w).toBeGreaterThan(4);
+      expect(icon(look.id)[0].w).toBeGreaterThan(4);
     }
   });
 });

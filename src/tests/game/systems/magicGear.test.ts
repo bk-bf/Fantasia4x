@@ -34,11 +34,6 @@ function pawnWearing(slot: string, itemId: string): Pawn {
   } as unknown as Pawn;
 }
 
-function refResolves(ref: string): boolean {
-  if (!ref.startsWith('category:')) return itemService.getItemById(ref) != null;
-  return itemService.getItemsByCategory(ref.slice('category:'.length)).length > 0;
-}
-
 describe('§M passive buff: worn gear → magical condition', () => {
   it('wearing a ruby ring grants the Might condition', () => {
     const synced = syncTransientConditions(pawnWearing('ring', 'ruby_ring'));
@@ -160,9 +155,6 @@ describe('§M item & recipe integrity', () => {
     };
     for (const m of MINERALS) {
       check(`cut_${m}`, CUT_AT[m]);
-      check(`attuned_${m}`, 'attunement_bench');
-      check(`${m}_ring`, 'attunement_bench');
-      check(`${m}_amulet`, 'attunement_bench');
     }
   });
 });
@@ -207,17 +199,6 @@ describe('§M arcane staves', () => {
     } as unknown as Pawn);
     expect(synced.transientConditions).toContain('might');
   });
-
-  it('staff recipes are wired to the two arcane benches with real inputs', () => {
-    const station = (id: string) => recipeService.getRecipeForItem(id)?.station;
-    for (const id of T1_STAVES) expect(station(id), id).toBe('runecarver_bench');
-    for (const id of T2_STAVES) expect(station(id), id).toBe('attunement_altar');
-    for (const id of [...T1_STAVES, ...T2_STAVES]) {
-      const r = recipeService.getRecipeForItem(id)!;
-      for (const ref of [...Object.keys(r.inputs), ...Object.keys(r.outputs)])
-        expect(refResolves(ref), `recipe ${id} ref ${ref}`).toBe(true);
-    }
-  });
 });
 
 const REGALIA: Record<string, { slot: string; conds: string[] }> = {
@@ -232,7 +213,7 @@ const REGALIA: Record<string, { slot: string; conds: string[] }> = {
 };
 
 describe('§M regalia (combo & head jewelry)', () => {
-  it('each piece is armour in its declared slot, grants only real magical conditions, and is craftable', () => {
+  it('each piece is armour in its declared slot, and grants only real magical conditions', () => {
     const magicalIds = new Set(MAGICAL_CONDS.map((c) => c.id));
     for (const [id, spec] of Object.entries(REGALIA)) {
       const def = itemService.getItemById(id);
@@ -241,11 +222,6 @@ describe('§M regalia (combo & head jewelry)', () => {
       expect(def!.armorProperties?.equipmentSlot, id).toBe(spec.slot);
       expect(def!.grantsConditions, id).toEqual(spec.conds);
       for (const c of def!.grantsConditions!) expect(magicalIds.has(c), `${id}→${c}`).toBe(true);
-      const r = recipeService.getRecipeForItem(id);
-      expect(r, id).toBeDefined();
-      expect(r!.station).toBe('attunement_bench');
-      for (const ref of [...Object.keys(r!.inputs), ...Object.keys(r!.outputs)])
-        expect(refResolves(ref), `recipe ${id} ref ${ref}`).toBe(true);
     }
   });
 

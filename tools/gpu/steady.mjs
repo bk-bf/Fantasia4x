@@ -20,7 +20,7 @@ const watchWorker = () => {
 };
 const { page, cdp, log, tile, wheel, setPaused, finish } = await openGpuGame({
   tree: TREE, label: LABEL, outDir: OUT_DIR, init: [watchWorker],
-  usage: 'usage: CHROME=<chromium binary> [F4X_QUERY=?painted=1&blend=1] node tools/gpu/steady.mjs <app tree> <label> <out dir> [seconds per cell]'
+  usage: 'usage: CHROME=<chromium binary> [F4X_QUERY=?painted=0] node tools/gpu/steady.mjs <app tree> <label> <out dir> [seconds per cell]'
 });
 const PROFILE = process.env.F4X_PROFILE === '1';
 if (PROFILE) {

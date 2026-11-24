@@ -63,7 +63,7 @@ const GROUND = [
   { id: 'mud', f: GT.mud, dec: [['puddle', 1.2], ['twig', .4]] },
   { id: 'moss', f: cover(GT.mud, GT.swamp, .58), dec: [['tuft', 2.6, P.mossSwamp], ['puddle', .5]] },
   { id: 'bog', f: bogTex, dec: [['lily', 1.6], ['bubble', .8], ['reedlet', 1]] },
-  { id: 'clay', f: plates(P.clay, 10, 63, 1), dec: [['pebble', .6, P.rockWarm]] },
+  { id: 'clay', f: plates(P.clayGround, 10, 63, 1), dec: [['pebble', .6, P.rockWarm]], ragged: 1 },
   { id: 'shallow_water', f: (x, y) => waterCol(x, y, 1) },
   { id: 'water', f: (x, y) => waterCol(x, y, 2) },
   { id: 'rapids', f: (x, y) => waterCol(x, y, 3) },

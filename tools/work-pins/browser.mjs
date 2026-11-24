@@ -5,6 +5,7 @@ import { parseArgs } from 'node:util';
 
 import {
   DEFAULT_FIXTURE,
+  GLYPH_RENDERER,
   MAP,
   assertRunning,
   focusMap,
@@ -309,7 +310,8 @@ async function main() {
     fixture: opts.fixture,
     serverLog: `${out}.dev-server.log`,
     args: [EXACT_CALL_COUNTS],
-    log
+    log,
+    query: `?${GLYPH_RENDERER}`
   });
   try {
     const { page, cdp } = game;

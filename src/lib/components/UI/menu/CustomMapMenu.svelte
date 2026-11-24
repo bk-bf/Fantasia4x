@@ -2,6 +2,7 @@
   import { get } from 'svelte/store';
   import { onDestroy } from 'svelte';
   import { gameState } from '$lib/stores/gameState';
+  import { debugMode } from '$lib/stores/uiPrefs';
   import { setActiveCommitted, isActiveCommitted } from '$lib/stores/saveManager';
   import {
     getBiomeConfig,
@@ -17,7 +18,6 @@
   import MapTopRow from './MapTopRow.svelte';
   import MapLands from './MapLands.svelte';
   import MapGenOverlay from './MapGenOverlay.svelte';
-  import MapGeneratorRow from './MapGeneratorRow.svelte';
   import { mapSizes, rebalanceShares } from './customMap';
 
   let { onClose }: { onClose: () => void } = $props();
@@ -29,6 +29,7 @@
 
   const SIZES = mapSizes(import.meta.env.VITE_DEBUG_MODE === 'true');
   const L_DIM = 750;
+  if (!get(debugMode)) gameState.setMapSize(L_DIM, L_DIM);
   let size = $state<number>(gameState.getMapSize().w);
 
   let generating = $state(false);
@@ -153,7 +154,7 @@
 
 <ModalWindow id="newgame" title="A new land" width={760} onclose={back}>
   <MapTopRow
-    sizes={SIZES}
+    sizes={$debugMode ? SIZES : []}
     {size}
     {seed}
     onsize={setSize}
@@ -163,7 +164,6 @@
   />
   {#if size >= L_DIM}
     <p class="warn">vast lands are still rough, and may run slow</p>
-    <MapGeneratorRow onchange={previewNow} />
   {/if}
   <MapLands
     {biomes}

@@ -2809,7 +2809,7 @@
     "category": "clay",
     "maxDurability": 120,
     "deteriorationRate": 0.01,
-    "description": "Raw earthenware clay dug from a clay, mud or bog bank. The bulk ceramics and construction material.",
+    "description": "Raw earthenware clay dug from a mud, bog or river bank. The bulk ceramics and construction material.",
     "color": "#B5651D",
     "amount": 0,
     "weightKg": 1.5,

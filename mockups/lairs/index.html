@@ -9,19 +9,34 @@
 <link rel="stylesheet" href="lairs.css">
 </head>
 <body>
-<main id="stage"><div id="frame"><canvas id="view"></canvas><div id="pins"></div></div></main>
-<aside id="cards"><section id="legend" hidden></section><section id="loot" hidden></section></aside>
 <header id="mock">
-  <div class="mrow"><strong>Lairs as places</strong><button id="mockhide">Hide · `</button></div>
-  <div class="mrow"><span class="grp" data-k="lair"><span class="lab">Lair</span><button data-v="wolves">Wolves</button><button data-v="bear">Bear</button><button data-v="goblins">Goblins</button><button data-v="fen">Fen</button><button data-v="harpies">Harpies</button></span></div>
-  <div class="mrow"><span class="grp" data-k="age" data-def="2"><span class="lab">Age</span><button data-v="1">Fresh</button><button data-v="2">Settled</button><button data-v="3">Old</button></span><span class="grp" data-k="state"><button data-v="lived">Lived in</button><button data-v="cleared">Cleared</button></span></div>
-  <div class="mrow"><span class="grp" data-k="speed" data-def="1"><span class="lab">Play</span><button data-v="0">Pause</button><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="4">4×</button></span><input id="time" type="range" min="0" max="40" step="0.1" aria-label="Moment in the loop"></div>
-  <div class="mrow"><span class="grp" data-k="parts" data-def="on"><span class="lab">Parts</span><button data-v="off">Off</button><button data-v="on">On</button></span><span class="grp" data-k="zoom"><span class="lab">Zoom</span><button data-v="fit">Fit</button><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="3">3×</button></span></div>
+  <div class="mrow"><strong>Lairs as places</strong><a href="region.html">Region</a><button id="mockhide">Hide · `</button></div>
+  <div class="mrow"><span class="grp" data-k="lair"><button data-v="wolves">Wolves</button><button data-v="bear">Bear</button><button data-v="goblins">Goblins</button><button data-v="fen">Fen</button><button data-v="harpies">Harpies</button></span></div>
+  <div class="mrow"><span class="grp" data-k="age" data-def="2"><button data-v="1">Fresh</button><button data-v="2">Settled</button><button data-v="3">Old</button></span><span class="grp" data-k="state"><button data-v="lived">Lived in</button><button data-v="cleared">Cleared</button></span></div>
+  <div class="mrow"><span class="grp" data-k="show"><span class="lab">Show</span><button data-v="parts">Parts</button><button data-v="rules">Rules</button><button data-v="none">Nothing</button></span></div>
+  <div class="mrow"><span class="grp" data-k="speed" data-def="1"><button data-v="0">Pause</button><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="4">4×</button></span><span class="grp" data-k="zoom"><span class="lab">Zoom</span><button data-v="fit">Fit</button><button data-v="2">2</button><button data-v="3">3</button></span></div>
   <div class="mrow"><span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span></div>
-  <p class="mnote">mock scenes on the painted art · resting poses and loot counts invented</p>
+  <p class="mnote">mock scenes · routines, ranges and loot counts invented</p>
 </header>
-<script src="sprites.js"></script>
-<script src="scenes.js"></script>
-<script src="lairs.js"></script>
+<main id="screen">
+  <div id="world"><canvas id="mapday"></canvas><canvas id="mapdusk"></canvas><canvas id="mapnight"></canvas><div id="marks"></div></div>
+  <aside id="cards"></aside>
+  <footer id="daybar"></footer>
+  <div id="busy">Painting the lair…</div>
+</main>
+<script src="../fantasia4x-hud/ambient.js"></script>
+<script src="../fantasia4x-tileset/registry-scripts.js"></script>
+<script>
+document.write([...REGISTRY_SCRIPTS, 'motion-rig-pawn.js', 'motion-rig-beast.js', 'motion-rig-quadfb.js', 'motion-rig-critter.js', 'motion-poses.js', 'motion-poses-critter.js', 'motion-poses-fb.js', 'motion-bake.js', 'motion-timeline.js', 'motion-stage.js', 'motion-fell.js', 'motion-scene.js'].map(src => '<script src="../fantasia4x-tileset/' + src + '"><\/script>').join(''));
+</script>
+<script src="lair-kit.js"></script>
+<script src="lair-props.js"></script>
+<script src="lair-harpy.js"></script>
+<script src="scene-wolves.js"></script>
+<script src="scene-bear.js"></script>
+<script src="scene-goblins.js"></script>
+<script src="scene-fen.js"></script>
+<script src="scene-harpies.js"></script>
+<script src="lair-stage.js"></script>
 </body>
 </html>

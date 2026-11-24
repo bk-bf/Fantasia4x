@@ -27,6 +27,24 @@ const CARRY = {
 const held = (c, s) => (CARRY[c.tool] ? CARRY[c.tool](s) : { hr: [s * 5.5, 10 - Math.abs(s) * 1.2] });
 const flow = (c, u, k) => c.lvl > 2 ? { cape: k + sn(u * 2 + .18) * 1.6, hair: rnd(sn(u * 2 + .22) * 1.2) } : {};
 const face = c => ({ face: c.face });
+const HOLD = {
+  light: { gait: [.58, 10.5, 3, 2.6], by: [.3, .7], side: { hr: [3, 7], lean: 1 }, fb: { hr: [0, 8.2] } },
+  bulky: { gait: [.62, 8, 2.4, 2.2], by: [.6, .6], side: { hr: [6, 5.5], hl: [7, 5], lean: -1 }, fb: { hl: [3, 6.5], hr: [-3, 6.5] } },
+  heavy: { gait: [.68, 6, 1.6, 1.6], by: [1.6, .8], side: { hr: [2, -1], hl: [4, -1], lean: 2.6, hd: [1, 1.5] }, fb: { hl: [-1, -4], hr: [1, -4], hd: [0, 1] } },
+};
+const HOLDS = { light: ['tote', 'toteStand'], bulky: ['heft', 'heftStand'], heavy: ['bear', 'bearStand'] };
+const turned = (p, keys) => { for (const k of keys) if (p[k]) p[k] = [-p[k][0], p[k][1]]; return p; };
+function carried(hold, u, c, go) {
+  const h = HOLD[hold], [duty, S, H, up] = h.gait, a = sn(u), side = c.face === 's', push = c.lvl > 2 && go ? 1 : 0;
+  const p = { face: c.face, carry: hold, item: null, ...(side ? h.side : h.fb), by: h.by[0] + (go ? cs(u * 2) * h.by[1] : 0), br: !go && u > .35 && u < .8 ? 1 : 0 };
+  if (side) { p.fr = go ? stride(u, duty, S, H) : [1.5, 0]; p.fl = go ? stride(u + .5, duty, S, H) : [-1.5, 0]; }
+  else { p.fl = [0, go ? Math.max(0, a) * up : 0]; p.fr = [0, go ? Math.max(0, -a) * up : 0]; }
+  if (hold === 'light') p.hl = side ? [go * a * 5, 10 - go * Math.abs(a) * 1.2] : [0, 9.2 + go * a * 1.6];
+  if (hold === 'heavy' && push) { p.by += Math.max(0, cs(u * 2)) * .8; p.bx = side ? 0 : a * .7; }
+  if (hold === 'bulky' && push && !side) p.bx = a * .5;
+  if (push) Object.assign(p, flow(c, u, hold === 'light' ? 2.2 : 1.2));
+  return c.face === 'b' ? turned(p, ['hl', 'hr', 'hd']) : p;
+}
 
 const PAWN_ANIMS = {
   idle: { label: 'Standing', group: 'Idle life', dur: 2.8, n: 4, pose(u, c) {
@@ -56,16 +74,15 @@ const PAWN_ANIMS = {
   stalk: { label: 'Stalking', group: 'Movement', dist: 9.5, n: 8, pose(u, c) {
     return { face: 's', fr: stride(u, .7, 6.5, 2), fl: stride(u + .5, .7, 6.5, 2), by: 2.4 + cs(u * 2) * .4, lean: 2.6, hd: [1, 0], hl: [6, 7], hr: [5, 7.5], tool: 62, ...flow(c, u, 1) };
   } },
-  haul: { label: 'Hauling', group: 'Movement', dist: 12.5, n: 8, pose(u, c) {
-    if (c.face !== 's') { const a = sn(u); return { ...face(c), fl: [0, Math.max(0, a) * 2.6], fr: [0, Math.max(0, -a) * 2.6], by: .6 + cs(u * 2) * .7, carry: 'log', item: null, tilt: c.lvl > 2 ? a * .8 : 0 }; }
-    return { face: 's', fr: stride(u, .62, 7.2, 2.2), fl: stride(u + .5, .62, 7.2, 2.2), by: .7 + cs(u * 2) * .7, lean: 1.4, carry: 'log', item: null, hr: [3, -4], hl: [5, -3], tilt: c.lvl > 2 ? sn(u * 2 + .1) * 1 : 0, ...flow(c, u, 2) };
-  } },
-  lug: { label: 'Carrying game', group: 'Movement', dist: 12.5, n: 8, pose(u, c) {
-    if (c.face !== 's') { const a = sn(u); return { ...face(c), fl: [0, Math.max(0, a) * 2.6], fr: [0, Math.max(0, -a) * 2.6], by: .6 + cs(u * 2) * .7, carry: 'sack', item: null }; }
-    return { face: 's', fr: stride(u, .62, 7.2, 2.2), fl: stride(u + .5, .62, 7.2, 2.2), by: .7 + cs(u * 2) * .7, lean: 1.6, carry: 'sack', item: null, hr: [-2, -3], hl: [0, -2], ...flow(c, u, 2) };
-  } },
+  tote: { label: 'Light carry', group: 'Carrying', dist: 18, n: 8, pose(u, c) { return carried('light', u, c, 1); } },
+  heft: { label: 'Bulky carry', group: 'Carrying', dist: 12.9, n: 8, pose(u, c) { return carried('bulky', u, c, 1); } },
+  bear: { label: 'Heavy carry', group: 'Carrying', dist: 8.8, n: 8, pose(u, c) { return carried('heavy', u, c, 1); } },
+  toteStand: { label: 'Standing with a light load', group: 'Carrying', dur: 2.8, n: 4, pose(u, c) { return carried('light', u, c, 0); } },
+  heftStand: { label: 'Standing with a bulky load', group: 'Carrying', dur: 2.8, n: 4, pose(u, c) { return carried('bulky', u, c, 0); } },
+  bearStand: { label: 'Standing with a heavy load', group: 'Carrying', dur: 2.2, n: 4, pose(u, c) { return carried('heavy', u, c, 0); } },
   lift: { label: 'Picking up', group: 'Work', dur: 1.1, n: 7, once: 1, pose(u, c) {
-    return keyed(u, { face: 's', item: null, hr: HANG, hl: HANG, by: 0, lean: 0, hd: [0, 0] }, [[0, {}], [.4, { by: 5, lean: 4, hr: [8, 8], hl: [9, 8], hd: [2, 3], fl: [-3, 0], fr: [3, 0] }], [.55, { by: 5, lean: 4, hr: [8, 8], hl: [9, 8], hd: [2, 3], fl: [-3, 0], fr: [3, 0] }], [.8, { by: 1.5, lean: 2, hr: [5, -2], hl: [6, -2], carry: 'log' }, 'o'], [1, { by: .7, lean: 1.4, hr: [3, -4], hl: [5, -3], carry: 'log' }]]);
+    const crouch = { by: 5, lean: 4, hr: [8, 8], hl: [9, 8], hd: [2, 3], fl: [-3, 0], fr: [3, 0] };
+    return keyed(u, { face: 's', item: null, hr: HANG, hl: HANG, by: 0, lean: 0, hd: [0, 0], fl: [0, 0], fr: [0, 0], cu: 0 }, [[0, {}], [.4, crouch], [.55, { ...crouch, carry: c.bulk }], [1, { ...carried(c.bulk, 0, { ...c, face: 's' }, 0), cu: 1 }, 'o']]);
   } },
   chop: { label: 'Woodcutting', group: 'Work', dur: 1.25, n: 10, hit: [.55, 'chips'], pose(u, c) {
     const x = c.lvl > 2 ? 1 : 0;

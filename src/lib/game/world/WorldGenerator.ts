@@ -15,7 +15,6 @@ import { biomeBaseMoisture, baseMoistureFromWater } from '../services/Environmen
 import { makeSeededRng } from '../core/util/rng';
 import { chamferDistance } from './chamfer';
 import { Cover, generateLandforms, type LandformTargets } from './landforms';
-import { getMapGenerator, usesLandforms, type MapGenerator } from './mapGenerator';
 
 const TERRAIN_FREQUENCY = 0.005;
 const DETAIL_FREQUENCY = 0.05;
@@ -25,6 +24,8 @@ const TERRAIN_GAIN = 0.6;
 const WARP_FREQUENCY = 0.01;
 const WARP_AMOUNT = 35;
 const WATER_FREQUENCY = 0.012;
+const POOL_FREQUENCY = 0.18;
+const POOL_OFFSET = { x: 731.3, y: -419.7 };
 
 function fbm(noise2d: (x: number, y: number) => number, x: number, y: number): number {
   let value = 0,
@@ -86,6 +87,9 @@ export function getTerraceNoise(
 
 type Noise = (x: number, y: number) => number;
 
+const poolAt = (detailNoise: Noise, x: number, y: number) => () =>
+  detailNoise(x * POOL_FREQUENCY + POOL_OFFSET.x, y * POOL_FREQUENCY + POOL_OFFSET.y);
+
 interface ClassicCell {
   biome: string;
   subType: string;
@@ -106,7 +110,7 @@ function classicCell(
   const density = Math.max(0, Math.min(1, (raw + 1) / 2));
   const detail = detailNoise(x * DETAIL_FREQUENCY, y * DETAIL_FREQUENCY);
   const biome = pickBiome(density) ?? 'plains';
-  let subType = pickSubterrain(biome, detail);
+  let subType = pickSubterrain(biome, detail, poolAt(detailNoise, x, y));
   if (waterLevel > 0 && biome !== 'mountain') {
     const wv = (waterNoise((x + wx) * WATER_FREQUENCY, (y + wy) * WATER_FREQUENCY) + 1) / 2;
     if (wv < waterLevel) subType = wv < waterLevel * 0.55 ? 'water' : 'shallow_water';
@@ -203,7 +207,8 @@ function landformWorld(
       const i = y * width + x;
       const biome = cover[i] === Cover.Mountain ? 'mountain' : targets.lowland[lowland[i]].biome;
       const detail = detailNoise(x * DETAIL_FREQUENCY, y * DETAIL_FREQUENCY);
-      const subType = LANDFORM_SUBTYPE[cover[i]] ?? pickSubterrain(biome, detail);
+      const subType =
+        LANDFORM_SUBTYPE[cover[i]] ?? pickSubterrain(biome, detail, poolAt(detailNoise, x, y));
       const range = BIOMES[biome]?.densityRange ?? [0, 1];
       const tile = makeTile(x, y, biome, subType, (range[0] + range[1]) / 2);
       if (cover[i] === Cover.River) tile.river = true;
@@ -225,7 +230,7 @@ export function generateWorld(
   width: number,
   height: number,
   seed: number,
-  opts?: { skipResources?: boolean; tidyWater?: boolean; generator?: MapGenerator }
+  opts?: { skipResources?: boolean }
 ): WorldTile[][] {
   const detailSeed = (seed * 6971) >>> 0;
 
@@ -236,22 +241,14 @@ export function generateWorld(
   const cell = (x: number, y: number) =>
     classicCell(terrainNoise, detailNoise, waterNoise, waterLevel, x, y);
 
-  const landforms = usesLandforms(opts?.generator ?? getMapGenerator(), width, height);
-  let world: WorldTile[][];
-  if (landforms) {
-    world = landformWorld(width, height, seed, detailNoise, classicTargets(width, height, cell));
-    tidyWaterbodies(world, (t) => t.walkable && t.terrainType !== 'mountain');
-  } else {
-    world = [];
-    for (let y = 0; y < height; y++) {
-      world[y] = [];
-      for (let x = 0; x < width; x++) {
-        const c = cell(x, y);
-        world[y][x] = makeTile(x, y, c.biome, c.subType, c.density);
-      }
-    }
-    if (opts?.tidyWater !== false) tidyWaterbodies(world, (t) => !isWaterTile(t));
-  }
+  const world = landformWorld(
+    width,
+    height,
+    seed,
+    detailNoise,
+    classicTargets(width, height, cell)
+  );
+  tidyWaterbodies(world, (t) => t.walkable && t.terrainType !== 'mountain');
 
   promoteBiomeVariants(world, detailNoise);
 
@@ -381,7 +378,7 @@ function promoteBiomeVariants(
         const t = world[y][x];
         t.terrainType = variant;
         const detail = detailNoise(x * DETAIL_FREQUENCY, y * DETAIL_FREQUENCY);
-        const newSub = pickSubterrain(variant, detail);
+        const newSub = pickSubterrain(variant, detail, poolAt(detailNoise, x, y));
         if (newSub === t.subType) continue;
         const sub = SUBTERRAINS[newSub] ?? SUBTERRAIN_FALLBACK;
         t.subType = newSub;

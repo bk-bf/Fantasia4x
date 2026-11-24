@@ -23,7 +23,9 @@
 </script>
 
 <div class="top">
-  <SegmentedRow label="Size" options={sizes} value={size} onSelect={onsize} />
+  {#if sizes.length}
+    <SegmentedRow label="Size" options={sizes} value={size} onSelect={onsize} />
+  {/if}
   <span class="lbl">Seed</span>
   <label class="seed" {@attach chrome('well')}>
     <input

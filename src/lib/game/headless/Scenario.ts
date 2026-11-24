@@ -13,7 +13,6 @@ import {
   spawnPawnsOnMap
 } from '../core/state/initialState';
 import { generateWorld } from '../world/WorldGenerator';
-import type { MapGenerator } from '../world/mapGenerator';
 import { generateColonyPawns } from '../core/gen/colonyPawns';
 import { generateWorldKin } from '../core/gen/pawnKin';
 import { resetPawnDebugIds } from '../core/gen/pawnBuild';
@@ -51,7 +50,6 @@ export interface ScenarioSpec {
     w?: number;
     h?: number;
     preset?: 'flat' | 'generated';
-    generator?: MapGenerator;
   };
   pawns?: ScenarioPawnGroup[];
   research?: string[];
@@ -127,7 +125,7 @@ export function buildScenario(spec: ScenarioSpec): GameState {
   const h = spec.map?.h ?? 96;
   const generated = spec.map?.preset === 'generated';
   const world = generated
-    ? generateWorld(w, h, seed, { generator: spec.map?.generator })
+    ? generateWorld(w, h, seed)
     : flatWorld(w, h);
   scenarioLog(
     `map ${w}x${h} preset=${generated ? 'generated' : 'flat'}` +

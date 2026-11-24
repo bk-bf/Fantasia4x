@@ -51,11 +51,11 @@ function recordingGl(calls: [string, unknown[]][]): WebGL2RenderingContext {
 }
 
 describe('the ground blend switch', () => {
-  it('reads ?blend=1 or the stored switch', () => {
-    expect(readGroundBlendFlag('?blend=1', null)).toBe(true);
-    expect(readGroundBlendFlag('?painted=1', '1')).toBe(true);
-    expect(readGroundBlendFlag('?painted=1', null)).toBe(false);
-    expect(readGroundBlendFlag('?blend=0', '0')).toBe(false);
+  it('is on unless ?blend=0 or the stored switch turns it off', () => {
+    expect(readGroundBlendFlag('', null)).toBe(true);
+    expect(readGroundBlendFlag('?blend=1', '1')).toBe(true);
+    expect(readGroundBlendFlag('?blend=0', null)).toBe(false);
+    expect(readGroundBlendFlag('', '0')).toBe(false);
   });
 });
 

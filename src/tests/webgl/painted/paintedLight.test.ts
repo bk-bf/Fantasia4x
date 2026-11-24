@@ -56,7 +56,7 @@ function ours(l: MockupLight, rad: number, lk: number): Float32Array {
 describe('painted light switch', () => {
   it('is on with the painted tiles unless turned off', () => {
     expect(readPaintedLightFlag('', null)).toBe(true);
-    expect(readPaintedLightFlag('?painted=1', null)).toBe(true);
+    expect(readPaintedLightFlag('?light=new', '1')).toBe(true);
     expect(readPaintedLightFlag('?light=old', null)).toBe(false);
     expect(readPaintedLightFlag('', '0')).toBe(false);
   });

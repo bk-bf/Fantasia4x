@@ -1,10 +1,15 @@
 import type { Rgb } from '../palette';
-import { GORE, HONEY, HURT, tint, word, type Pair } from './glyphs';
+import { GORE, HONEY, tint, word, type Pair } from './glyphs';
 import { P, Spr, copy, hex, melt } from './spr';
 import { hash } from '../noise';
 import { paint } from '../canvas';
 import { toArt, type Art } from '../picture';
-import { art, bane, boon, keys, lit, stamp } from './iconArt';
+import { art, keys, lit, stamp } from './iconArt';
+import { AILMENTS } from './conditionArt/ailments';
+import { FACES } from './conditionArt/faces';
+import { FARE } from './conditionArt/fare';
+import { GEMS } from './conditionArt/gems';
+import { TRAITS } from './conditionArt/traits';
 import { MOTIFS, type MotifId } from './motifs';
 
 type MockIconId =
@@ -17,12 +22,9 @@ type MockIconId =
   | 'sick'
   | 'burning'
   | 'frozen'
-  | 'starving'
   | 'exhausted'
-  | 'moodbreak'
   | 'wellfed'
-  | 'rested'
-  | 'healed';
+  | 'rested';
 
 function flake(): Spr {
   const s = new Spr(15, 15, 7, 14);
@@ -217,25 +219,6 @@ const MOCK_ICONS: Record<MockIconId, () => Spr> = {
       255
     ),
   frozen: flake,
-  starving: () =>
-    art(
-      [
-        '.........44...',
-        '.........454..',
-        '........4554..',
-        '........45543.',
-        '.44....455543.',
-        '4554..4555543.',
-        '45554455555433',
-        '4555555w555433',
-        '.4555555554333',
-        '..4555555433..',
-        '...444444333..',
-        '....33333.....'
-      ],
-      { ...keys(tint('#d4786c'), '012345'), w: lit(hex('#ffe0d0'), 230) },
-      170
-    ),
   exhausted: () =>
     art(
       [
@@ -255,105 +238,59 @@ const MOCK_ICONS: Record<MockIconId, () => Spr> = {
       { ...keys(DUSK, '012345'), z: lit(hex('#b4d4ea'), 220) },
       180
     ),
-  moodbreak: () =>
+  wellfed: () =>
     art(
       [
-        '....44444....',
-        '..445555544..',
-        '.45555555554.',
-        '.455k555k554.',
-        '45kkk555kkk54',
-        '455t55555t554',
-        '455t55555t554',
-        '45t5555555t54',
-        '45555kkk55554',
-        '.455k555k554.',
-        '..444444443..',
-        '....33333....'
+        '...3444......',
+        '..345554.....',
+        '.34555543....',
+        '.345555432...',
+        '.345555432...',
+        '.334554322...',
+        '..33443221...',
+        '...3332215...',
+        '....22215b...',
+        '.......5b5b..',
+        '........b55b.',
+        '.......5b.b5.'
       ],
-      { ...keys(tint('#c4a0e0'), '012345'), k: P.ink, t: lit(hex('#7ec8ff'), 240) },
-      180
-    ),
-  wellfed: () =>
-    boon(
-      art(
-        [
-          '...3444......',
-          '..345554.....',
-          '.34555543....',
-          '.345555432...',
-          '.345555432...',
-          '.334554322...',
-          '..33443221...',
-          '...3332215...',
-          '....22215b...',
-          '.......5b5b..',
-          '........b55b.',
-          '.......5b.b5.'
-        ],
-        { ...keys(P.copper, '012345'), b: P.bone[4] },
-        170
-      )
+      { ...keys(P.copper, '012345'), b: P.bone[4] },
+      170
     ),
   rested: () =>
-    boon(
-      art(
-        [
-          '......5......',
-          '..5...5...5..',
-          '...5.....5...',
-          '....44444....',
-          '5..4555554..5',
-          '.5.4555554.5.',
-          '..455555554..',
-          '3333333333333',
-          '.22222222222.'
-        ],
-        keys(HONEY, '012345'),
-        230
-      )
-    ),
-  healed: () =>
-    boon(
-      art(
-        [
-          '.344...443.',
-          '34554.45543',
-          '35555w54443',
-          '35555w44443',
-          '355wwwww433',
-          '.3555w4443.',
-          '.3554w4433.',
-          '..3544433..',
-          '...34433...',
-          '....333....',
-          '.....3.....'
-        ],
-        { ...keys(HURT, '012345'), w: lit(hex('#fff6e0'), 255) },
-        190
-      )
+    art(
+      [
+        '......5......',
+        '..5...5...5..',
+        '...5.....5...',
+        '....44444....',
+        '5..4555554..5',
+        '.5.4555554.5.',
+        '..455555554..',
+        '3333333333333',
+        '.22222222222.'
+      ],
+      keys(HONEY, '012345'),
+      230
     )
 };
 
-export type IconId = MockIconId | MotifId;
-export type IconMark = 'up' | 'down';
+const CONDITION_ART = { ...AILMENTS, ...FACES, ...FARE, ...GEMS, ...TRAITS };
 
-const ICONS: Record<IconId, () => Spr> = { ...MOCK_ICONS, ...MOTIFS };
+export type IconId = MockIconId | MotifId | keyof typeof CONDITION_ART;
+
+const ICONS: Record<IconId, () => Spr> = { ...MOCK_ICONS, ...MOTIFS, ...CONDITION_ART };
 
 export const ICON_IDS = Object.keys(ICONS) as IconId[];
-const BANE_COL = hex('#c05060');
-const BANE_RIM = hex('#ffb0b8');
 
 const memo = new Map<string, Pair>();
 const pair = (s: Spr): Pair => [s, melt(s, 0.5)];
 
-export function icon(id: IconId, mark?: IconMark): Pair {
-  const key = mark ? `${id}+${mark}` : id;
-  let p = memo.get(key);
+export function icon(id: IconId): Pair {
+  let p = memo.get(id);
   if (!p) {
-    const base = ICONS[id]();
-    p = pair(mark === 'up' ? boon(base) : mark === 'down' ? bane(base, BANE_COL, BANE_RIM) : base);
-    memo.set(key, p);
+    p = pair(ICONS[id]());
+    memo.set(id, p);
   }
   return p;
 }
@@ -432,14 +369,13 @@ export function floater(
   id: IconId | null,
   label: string | null,
   col: string,
-  mark?: IconMark,
   trend: Trend = 0,
   struck = false
 ): Pair {
-  const key = `${id ?? ''}|${mark ?? ''}|${label ?? ''}|${col}|${trend}|${struck}`;
+  const key = `${id ?? ''}|${label ?? ''}|${col}|${trend}|${struck}`;
   let p = memo.get(key);
   if (p) return p;
-  const look = id ? icon(id, mark) : null;
+  const look = id ? icon(id) : null;
   const text = label ? word(label, tint(col), { small: true }) : null;
   const up = arrows(trend);
   if (!up && !(look && text)) p = (look ?? text)!;
@@ -462,8 +398,7 @@ export function floater(
   return p;
 }
 
-export const worded = (id: IconId, label: string, col: string, mark?: IconMark): Pair =>
-  floater(id, label, col, mark);
+export const worded = (id: IconId, label: string, col: string): Pair => floater(id, label, col);
 
 const dressed = new WeakMap<Spr, Map<IconId, Pair>>();
 
@@ -531,11 +466,11 @@ export function crumbled(s: Spr): Spr[] {
 
 const pictures = new Map<string, Art>();
 
-export function iconArt(id: IconId, mark?: IconMark): Art {
-  const key = mark ? `${id}+${mark}` : id;
+export function iconArt(id: IconId, grade: Trend = 0): Art {
+  const key = `${id}+${grade}`;
   let art = pictures.get(key);
   if (!art) {
-    const s = icon(id, mark)[0];
+    const s = floater(id, null, '', grade)[0];
     art = toArt(paint(s.w, s.h, (x, y) => s.c[y * s.w + x]));
     pictures.set(key, art);
   }

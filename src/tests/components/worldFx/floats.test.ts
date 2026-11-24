@@ -133,9 +133,7 @@ describe('condition floaters', () => {
     draw(list, both, t0);
     const first = draw(list, both, t0 + 300);
     expect(first).toHaveLength(FLOATERS_PER_TARGET);
-    expect(first.map((d) => d.s)).not.toContain(
-      floater('pain', 'Pain-Shock', '#9575cd', undefined, 1)[0]
-    );
+    expect(first.map((d) => d.s)).not.toContain(floater('pain', 'Pain-Shock', '#9575cd', 1)[0]);
     draw(list, both, t0 + 1800);
     const later = draw(list, both, t0 + 2000);
     expect(later.length).toBeGreaterThan(0);
@@ -153,8 +151,8 @@ describe('condition floaters', () => {
     expect(new Set([one, two, three, eased]).size).toBe(4);
     expect(two.w - one.w).toBe(arrows(2)!.w - arrows(1)!.w);
     expect(three.w - two.w).toBe(arrows(3)!.w - arrows(2)!.w);
-    expect(one).toBe(floater('bleeding', 'Bleeding', '#9575cd', undefined, 1)[0]);
-    expect(eased).toBe(floater('bleeding', 'Bleeding', '#9575cd', undefined, -1)[0]);
+    expect(one).toBe(floater('bleeding', 'Bleeding', '#9575cd', 1)[0]);
+    expect(eased).toBe(floater('bleeding', 'Bleeding', '#9575cd', -1)[0]);
   });
 
   it('drifts a lost condition in from above, strikes it through, then crumbles it', () => {
@@ -188,7 +186,7 @@ describe('condition floaters', () => {
 
   it('fades a lost condition so it never looks like the gain', () => {
     const gain = floater('drops', 'Wet', '#4fa3d1')[0];
-    const loss = floater('drops', 'Wet', '#4fa3d1', undefined, 0, true)[0];
+    const loss = floater('drops', 'Wet', '#4fa3d1', 0, true)[0];
     expect([loss.w, loss.h]).toEqual([gain.w, gain.h]);
     const colour = (s: typeof gain) =>
       s.c.reduce((n, c) => n + (c ? Math.max(...c) - Math.min(...c) : 0), 0) /

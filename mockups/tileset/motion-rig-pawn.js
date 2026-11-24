@@ -162,15 +162,15 @@ function rigPawn(o, p) {
     const c = L === skin ? skin[clamp(lit ? sn - 1 - (e ? 1 : 0) - (last ? 1 : 0) : sn - 3 + (e ? 1 : 0) - (last ? 1 : 0), 0, sn)] : lit ? pick3(L, k / aw * .5, j === 6 ? -1 : 0) : pick3(L, .7, (e ? 1 : 0) + (j === 6 ? -1 : 0));
     return far ? dark(c, .8) : c;
   };
-  const arm = (ax, ay, tgt, lit, far, bend, rim) => {
+  const arm = (ax, ay, tgt, lit, far, bend, rim, S) => {
     const tot = armLen - 1, l1 = Math.ceil(tot / 2), l2 = tot - l1, t = tgt || [0, tot];
     if (!side && Math.abs(t[0]) < 2.5 && t[1] > 4) {
       const len = Math.hypot(t[0], t[1]), col = armCol(lit, far);
-      rigLimb(s, [[ax, ay], [ax + t[0], ay + t[1]]], aw, (d, k) => col(d * tot / len, k), rim ? shade : null);
+      rigLimb(S || s, [[ax, ay], [ax + t[0], ay + t[1]]], aw, (d, k) => col(d * tot / len, k), rim ? shade : null);
       return [rnd(ax + t[0]), rnd(ay + t[1])];
     }
     const [ex, ey, hx, hy] = ik2(ax, ay, ax + t[0], ay + t[1], l1, l2, bend);
-    rigLimb(s, [[ax, ay], [ex, ey], [hx, hy]], aw, armCol(lit, far), rim ? shade : null);
+    rigLimb(S || s, [[ax, ay], [ex, ey], [hx, hy]], aw, armCol(lit, far), rim ? shade : null);
     return [rnd(hx), rnd(hy)];
   };
   const pad = (x0, lit) => { if (!o.armor) return; s.rect(x0, tTop - br, aw + 1, 4, o.armor[lit ? 4 : 2]); s.rect(x0, tTop - br, aw + 1, 1, o.armor[lit ? o.armor.length - 1 : 4]); s.rect(x0, tTop + 3 - br, aw + 1, 1, o.armor[1]); };
@@ -183,6 +183,7 @@ function rigPawn(o, p) {
   };
   const knuckle = (hx, hy) => { s.set(hx, hy, skin[sn - 1]); s.set(hx, hy + 1, skin[Math.max(0, sn - 3)]); s.set(hx - 1, hy, skin[sn - 2]); };
   const capeLen = f.tl + f.legs - 4, cs = p.cape || 0;
+  let parts = null, holds = null, hand = null;
 
   if (side) {
     const sy = tTop + 1 - br, far = [sx0, sy], near = [sx0 - 1, sy], bowing = kind === 'bow' && p.bow !== undefined;
@@ -198,9 +199,9 @@ function rigPawn(o, p) {
     torso();
     rigHead(s, f, o, HX + 1, hTop, 's', p);
     pad(sx0 - 3, true);
-    if (p.carry === 'log') logOn(s, sx0 + 1, tTop - 5 - br, 14, p.tilt || 0);
-    if (p.carry === 'sack') sackOn(s, sx0 - 3, tTop - 3 - br);
-    const nh = arm(near[0], near[1], hr, true, false, 1, true);
+    const nearArm = S => arm(near[0], near[1], hr, true, false, 1, true, S), nh = nearArm(s);
+    parts = { head: [S => rigHead(S, f, o, HX + 1, hTop, 's', p)], 'near arm': [nearArm] };
+    hand = [nh[0], nh[1] + 1]; holds = { light: hand, bulky: [nh[0] - 1, nh[1] + 2], heavy: [sx0 - 1, tTop + 1 - br] };
     if (!bowing && !p.carry) { grip(nh[0], nh[1], ang); if (pts.tip) knuckle(nh[0], nh[1]); }
     if (p.two && pts.tip) { const a = ang * D2R; knuckle(rnd(nh[0] + Math.sin(a) * p.two), rnd(nh[1] - Math.cos(a) * p.two)); }
     pts.hand = nh; pts.mouth = [HX + f.hd + 2, hTop + Math.floor(f.hh * .5) + 3]; pts.head = [HX + 1, hTop - 3];
@@ -212,8 +213,9 @@ function rigPawn(o, p) {
     legF(-1, fl); legF(1, fr);
     torso();
     let hL = null, hR = null;
-    if (!raised(tl)) hL = arm(xL, sy, tl, true, false, 1, false);
-    if (!raised(tr)) hR = arm(xR, sy, tr, false, false, -1, false);
+    const armL = (rim, S) => arm(xL, sy, tl, true, false, 1, rim, S), armR = (rim, S) => arm(xR, sy, tr, false, false, -1, rim, S);
+    if (!raised(tl)) hL = armL(false);
+    if (!raised(tr)) hR = armR(false);
     if (!tl && !p.carry) s.set(xL - (aw >> 1), sy, null);
     pad(cx - hw - aw + rnd(lean), true); pad(cx + hw - 1 + rnd(lean), false);
     if (f.tail) for (let k = 0; k < 9; k++) s.rect(cx + hw + aw + k, legTop + 1 + rnd(Math.sin(k * .5 + (p.tail || 0)) * 2) + (k >> 2), 1, k < 5 ? 3 : 2, skin[k < 5 ? sn - 2 : sn - 3]);
@@ -223,18 +225,23 @@ function rigPawn(o, p) {
       s.set(xa, tTop + 1 + j, o.cape[3]); s.set(xb, tTop + 1 + j, o.cape[1]);
     }
     rigHead(s, f, o, HX, hTop, face, p);
-    if (raised(tl)) hL = arm(xL, sy, tl, true, false, 1, true);
-    if (raised(tr)) hR = arm(xR, sy, tr, false, false, -1, true);
+    if (raised(tl)) hL = armL(true);
+    if (raised(tr)) hR = armR(true);
     if (!back && o.shield) shield(hL[0] - 1, hL[1] - 3);
     const th = back ? hL : hR, off = (back ? -1 : 1) * (aw - (aw >> 1));
-    if (p.carry === 'log') { logOn(s, cx, tTop + 4, 14, p.tilt || 0); for (const g of [-9, 6]) { s.rect(cx + g, tTop + 5, 3, 3, skin[sn - 1]); s.rect(cx + g, tTop + 7, 3, 1, skin[Math.max(0, sn - 3)]); } }
-    else if (p.carry === 'sack') sackOn(s, cx, tTop + 6);
+    const head = S => rigHead(S, f, o, HX, hTop, face, p), arms = [S => armL(true, S), S => armR(true, S)], mid = cx + rnd(lean);
+    const gripped = draw => S => { const t = new Spr(s.w, s.h), h = draw(t); for (let y = h[1] - 2; y <= h[1] + 2; y++) for (let x = h[0] - 2; x <= h[0] + 2; x++) if (t.get(x, y)) S.set(x, y, t.get(x, y)); };
+    parts = { head: [head], arms, hands: arms.map(gripped), 'carrying arm': [arms[back ? 0 : 1]] };
+    hand = p.carry === 'light' ? [th[0], th[1] + 1] : [mid, Math.max(hL[1], hR[1]) + 2]; holds = { light: hand, bulky: hand, heavy: [mid, tTop + (back ? 5 : 2) - br] };
+    if (p.carry) pts.hold = hand;
     else if (kind === 'bow' && p.bow !== undefined) { const bh = back ? hR : hL; toolAt(s, 'bow', bh[0] + (back ? 1 : -1), bh[1] - 6, 0, { pull: p.bow, mirror: back ? 0 : 1 }); pts.tip = [bh[0], bh[1] - 6]; }
     else grip(th[0] + off, th[1] - 1 - (kind === 'bow' ? 6 : 0), p.tool, { mirror: back ? 1 : 0, under: p.under });
     pts.hand = th; pts.mouth = [HX, hTop + Math.floor(f.hh * .5) + 4]; pts.head = [HX, hTop - 3];
     pts.feet = [[cx - hw + 2, base - fl[1]], [cx + 3, base - fr[1]]];
   }
+  if (p.carry) { const cu = p.cu === undefined ? 1 : p.cu, to = holds[p.carry]; pts.carry = [rnd(mix(hand[0], to[0], cu)), rnd(mix(hand[1], to[1], cu))]; }
   s.outline();
+  if (p.carry) s.mask = rigMask(s, RIG_OVER[p.carry][face], parts);
   s.sh = { rx: 9, ry: 3.4, dx: 4, dy: 0 };
   return s;
 }
