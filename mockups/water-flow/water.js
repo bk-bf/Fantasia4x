@@ -26,7 +26,9 @@
   const SEICHE_SECS = 14;
   const RIVER_CLOCK_WRAP = 3600;
   const FIT_TILES = [128, 64, 32, 16, 8, 4];
-  const STYLES = { glide: 0, streaks: 1, lively: 2 };
+  const FLOW_PACE = 46;
+  const PUSH = 0.8;
+  const CYCLE_WRAP = 2.4 * 400;
 
   const WIND_WORDS = [['still air', 0.03], ['light air', 0.15], ['slightly windy', 0.25], ['fairly windy', 0.4], ['extremely windy', 0.9], ['very windy', 0.7], ['windy', 0.5], ['gale', 1]];
   const TOWARD = { n: 's', ne: 'sw', e: 'w', se: 'nw', s: 'n', sw: 'ne', w: 'e', nw: 'se' };
@@ -117,24 +119,24 @@
     constructor() {
       this.waveT = 0;
       this.t = 0;
-      this.river = 0;
+      this.flow = 0;
       this.drift = { x: 0, y: 0 };
       this.ripple = { x: 0, y: 0 };
       this.glint = { x: 0, y: 0 };
       this.gust = 0;
     }
 
-    tick(secs, wind, dir, current) {
+    tick(secs, wind, dir, current, push) {
       this.waveT += secs * seaFor(wind).speed;
       this.t += secs;
-      this.river = wrap(this.river + secs * current, RIVER_CLOCK_WRAP);
+      this.flow = wrap(this.flow + secs * current * push, RIVER_CLOCK_WRAP);
       const pace = lerp(DRIFT.calm, DRIFT.gale, Math.min(1, Math.max(0, wind)));
       this.drift.x += dir.x * pace * secs;
       this.drift.y += dir.y * pace * secs;
       const fresh = 0.4 + 1.2 * wind;
       const step = (acc, speed) => {
-        acc.x = wrap(acc.x + dir.x * speed * secs, FIELD);
-        acc.y = wrap(acc.y + dir.y * speed * secs, FIELD);
+        acc.x = wrap(acc.x - dir.x * speed * secs, FIELD);
+        acc.y = wrap(acc.y - dir.y * speed * secs, FIELD);
       };
       step(this.ripple, RIPPLE_PX * fresh);
       step(this.glint, GLINT_PX * (0.5 + wind));
@@ -170,6 +172,11 @@
       ]);
     }
 
+    zoom(artPerPx) {
+      const perPx = artPerPx / ART_PER_UNIT;
+      return { fade: LAMBDA.map((l) => smoothstep(3, 7, l / perPx)), chop: smoothstep(3, 7, 3.3 / perPx) };
+    }
+
     body(dir) {
       const sway = Math.sin((TAU * this.t) / SEICHE_SECS);
       return {
@@ -203,7 +210,7 @@
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const u = {};
-    for (const name of ['u_kinds', 'u_mapSize', 'u_tileArt', 'u_origin', 'u_viewH', 'u_tide', 'u_waterField', 'u_waterBlock', 'u_sea[0]', 'u_grain', 'u_body', 'u_weather', 'u_ice', 'u_flow', 'u_river', 'u_step'])
+    for (const name of ['u_kinds', 'u_mapSize', 'u_tileArt', 'u_origin', 'u_viewH', 'u_tide', 'u_waterField', 'u_waterBlock', 'u_sea[0]', 'u_grain', 'u_body', 'u_weather', 'u_ice', 'u_flow', 'u_river', 'u_step', 'u_stream', 'u_air', 'u_fade'])
       u[name] = gl.getUniformLocation(prog, name);
 
     const kinds = Uint8Array.from(MAP.classes, (c) => c + 1);
@@ -225,6 +232,8 @@
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, MAP_W, MAP_H, 0, gl.RGBA, gl.UNSIGNED_BYTE, tide);
     tex(3, gl.LINEAR);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, MAP.flow.w, MAP.flow.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, MAP.flow.texture);
+    tex(4, gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, MAP.flow.w, MAP.flow.h, 0, gl.RGBA, gl.FLOAT, MAP.flow.stream.texture);
     tex(2, gl.NEAREST);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, field);
@@ -232,6 +241,7 @@
     gl.uniform1i(u.u_tide, 1);
     gl.uniform1i(u.u_waterField, 2);
     gl.uniform1i(u.u_flow, 3);
+    gl.uniform1i(u.u_stream, 4);
     gl.uniform2i(u.u_mapSize, MAP_W, MAP_H);
     gl.uniform1f(u.u_tileArt, TILE_ART);
     return { gl, u };
@@ -268,6 +278,13 @@
   const showWind = () => { windOut.textContent = Math.round(windIn.value * 100) + '%'; };
   windIn.addEventListener('input', () => { showWind(); F4X.write({ wind: windIn.value }, { wind: String(weatherSea(state.weather).ws) }); });
   showWind();
+
+  const pushIn = document.getElementById('push');
+  const pushOut = document.getElementById('pushout');
+  pushIn.value = q.get('push') ?? String(PUSH);
+  const showPush = () => { pushOut.textContent = Math.round(pushIn.value * 100) + '%'; };
+  pushIn.addEventListener('input', () => { showPush(); F4X.write({ push: pushIn.value }, { push: String(PUSH) }); });
+  showPush();
 
   const iceIn = document.getElementById('ice');
   const iceOut = document.getElementById('iceout');
@@ -425,7 +442,8 @@
     const wind = Number(windIn.value) * calm;
     const heading = (HEADINGS[state.dir] * Math.PI) / 180;
     const dir = { x: Math.cos(heading), y: Math.sin(heading) };
-    clock.tick(secs, wind, dir, Number(state.current));
+    const push = Number(pushIn.value);
+    clock.tick(secs, wind, dir, Number(state.current), push);
     const { gl, u } = gpu;
     gl.uniform4fv(u['u_sea[0]'], clock.sea(wind, dir, view.artPerPx));
     gl.uniform1i(u.u_waterBlock, view.shift);
@@ -433,7 +451,11 @@
     const sky = weatherSea(state.weather);
     gl.uniform4f(u.u_weather, sky.gusty, sky.temp < 0 ? 0 : sky.rain, clock.t % 1000, 0);
     gl.uniform4f(u.u_ice, ice, 0, 0, 0);
-    gl.uniform4f(u.u_river, STYLES[state.river] ?? 0, clock.river, 0, state.river === 'off' ? 0 : 1);
+    gl.uniform4f(u.u_river, push, clock.flow * MAP.flow.stream.pace * FLOW_PACE / ART_PER_UNIT, Number(state.current), state.river === 'off' ? 0 : 1);
+    const fresh = 0.4 + 1.2 * wind;
+    const zoom = clock.zoom(view.artPerPx);
+    gl.uniform4f(u.u_air, wind, RIPPLE_PX * fresh, clock.t % CYCLE_WRAP, zoom.chop);
+    gl.uniform4fv(u.u_fade, zoom.fade);
     gl.viewport(0, 0, waterCanvas.width, waterCanvas.height);
     const { grain, body } = clock.body(dir);
     gl.uniform4fv(u.u_grain, grain);
@@ -455,6 +477,6 @@
   addEventListener('resize', layout);
   if (!q.has('dir')) ui.set('dir', weatherSea(state.weather).toward);
   layout();
-  if (q.has('t')) clock.tick(Number(q.get('t')), Number(windIn.value), { x: Math.cos((HEADINGS[state.dir] * Math.PI) / 180), y: Math.sin((HEADINGS[state.dir] * Math.PI) / 180) }, Number(state.current));
+  if (q.has('t')) clock.tick(Number(q.get('t')), Number(windIn.value), { x: Math.cos((HEADINGS[state.dir] * Math.PI) / 180), y: Math.sin((HEADINGS[state.dir] * Math.PI) / 180) }, Number(state.current), Number(pushIn.value));
   requestAnimationFrame(frame);
 })();

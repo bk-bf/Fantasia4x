@@ -17,10 +17,14 @@
   const LAKE = { x: 47, y: 21.5, rx: 12.5, ry: 9.5 };
   const GUIDES = [
     { key: 'inflow', head: 1350, pts: [[0.5, 9], [6, 5.5], [12, 9], [12.5, 15.5], [18, 19.5], [24.5, 16], [30.5, 20.5], [37, 22]], fall: [[0, 0.6], [0.16, 0.565], [0.3, 0.46], [1, 0.292]] },
-    { key: 'branch', head: 1080, pts: [[3, 43.5], [8.5, 36], [7, 30], [12.5, 25.5], [18, 19.5]], fall: [[0, 0.62], [1, 0.425]] },
+    { key: 'branch', head: 1080, joins: 'inflow', pts: [[3, 43.5], [8.5, 36], [7, 30], [12.5, 25.5], [18, 19.5]], fall: [[0, 0.62], [1, 0.425]] },
     { key: 'outlet', head: 0, pts: [[57, 26.5], [62.5, 30], [61, 36], [66, 39.5], [71.5, 42.5]], fall: [[0, SPILL], [1, 0.12]] }
   ];
-  const NARROWS = { x: 26.5, y: 17.2, reach: 3, squeeze: 0.75 };
+  const STRAND_REACH = 6;
+  const STRAND_PACE = 0.45;
+  const STRAND_SLOWEST = 0.25;
+  const TILE_UNITS = 16;
+  const NARROWS ={ x: 26.5, y: 17.2, reach: 3, squeeze: 0.75 };
 
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -245,6 +249,79 @@
       return to;
     };
     return pass(pass(src, true), false);
+  }
+
+  function strand(g, speedAt) {
+    const pts = spline(g.pts).map((p) => [p.x, p.y]);
+    const reach = (from, to, len) => {
+      const dx = from[0] - to[0];
+      const dy = from[1] - to[1];
+      const l = Math.hypot(dx, dy) || 1;
+      return Array.from({ length: len }, (_, k) => [from[0] + (dx / l) * (k + 1), from[1] + (dy / l) * (k + 1)]);
+    };
+    const head = reach(pts[0], pts[1], STRAND_REACH).reverse();
+    const tail = g.joins ? [] : reach(pts[pts.length - 1], pts[pts.length - 2], STRAND_REACH);
+    const line = [...head, ...pts, ...tail];
+    const along = [0];
+    for (let i = 1; i < line.length; i++) {
+      const [ax, ay] = line[i - 1];
+      const [bx, by] = line[i];
+      const v = clamp(speedAt((ax + bx) / 2, (ay + by) / 2), STRAND_SLOWEST, 1);
+      along.push(along[i - 1] + (Math.hypot(bx - ax, by - ay) * STRAND_PACE) / v);
+    }
+    return { key: g.key, joins: g.joins, line, along, first: head.length, last: head.length + pts.length - 1 };
+  }
+
+  function streamField(fw, fh, mask, speedAt) {
+    const strands = GUIDES.map((g) => strand(g, speedAt));
+    for (const s of strands) {
+      if (!s.joins) continue;
+      const into = strands.find((o) => o.key === s.joins);
+      const [jx, jy] = s.line[s.last];
+      let best = 0;
+      into.line.forEach(([x, y], i) => { if (Math.hypot(x - jx, y - jy) < Math.hypot(into.line[best][0] - jx, into.line[best][1] - jy)) best = i; });
+      const shift = into.along[best] - s.along[s.last];
+      s.along = s.along.map((v) => v + shift);
+    }
+    const segs = [];
+    for (const s of strands)
+      for (let i = 1; i < s.line.length; i++) {
+        const [ax, ay] = s.line[i - 1];
+        const [bx, by] = s.line[i];
+        const len = Math.hypot(bx - ax, by - ay) || 1;
+        segs.push([ax, ay, bx - ax, by - ay, 1 / (len * len), s.along[i - 1], s.along[i] - s.along[i - 1], len]);
+      }
+    const seg = Float64Array.from(segs.flat());
+    const SEG = 8;
+    const out = new Float32Array(fw * fh * 4);
+    for (let ty = 0; ty < fh; ty++)
+      for (let tx = 0; tx < fw; tx++) {
+        const t = ty * fw + tx;
+        if (mask[t] < 1e-4) continue;
+        const px = (tx + 0.5) / RES;
+        const py = (ty + 0.5) / RES;
+        let near = Infinity;
+        let k = -1;
+        let at = 0;
+        for (let j = 0; j < seg.length; j += SEG) {
+          const rx = px - seg[j];
+          const ry = py - seg[j + 1];
+          const f = clamp((rx * seg[j + 2] + ry * seg[j + 3]) * seg[j + 4], 0, 1);
+          const dx = rx - seg[j + 2] * f;
+          const dy = ry - seg[j + 3] * f;
+          const d = dx * dx + dy * dy;
+          if (d < near) { near = d; k = j; at = f; }
+        }
+        const len = seg[k + 7];
+        const ux = seg[k + 2] / len;
+        const uy = seg[k + 3] / len;
+        const stretch = seg[k + 6] / len;
+        out[t * 4] = (seg[k + 5] + seg[k + 6] * at) * TILE_UNITS;
+        out[t * 4 + 1] = (-uy * (px - seg[k]) + ux * (py - seg[k + 1])) * TILE_UNITS;
+        out[t * 4 + 2] = ux * stretch;
+        out[t * 4 + 3] = uy * stretch;
+      }
+    return { texture: out, pace: STRAND_PACE };
   }
 
   function build() {
@@ -486,9 +563,14 @@
       return { x: mix(vx), y: mix(vy), mask: mix(mask) };
     };
 
+    const stream = streamField(fw, fh, mask, (px, py) => {
+      const f = flowAt(px, py);
+      return Math.hypot(f.x, f.y);
+    });
+
     return {
       W, H, RES, CATCHMENT, classes, lake, river, centre, parent, acc, dir8, speedOf, toLand,
-      flow: { w: fw, h: fh, texture, at: flowAt },
+      flow: { w: fw, h: fh, texture, at: flowAt, stream },
       look: { mouth: [mouths[0].x + 3, mouths[0].y], outlet: [outlets[0].x, outlets[0].y], narrows: [NARROWS.x, NARROWS.y], rapids: [(steepest % W) + 0.5, ((steepest / W) | 0) + 0.5] },
       mouths, outlets,
       util: { hash, noise, distanceTo, clamp, lerp, smoothstep }
