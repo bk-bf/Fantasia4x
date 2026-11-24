@@ -4,7 +4,7 @@ import type { GameGrid } from '../game-grid.js';
 import type { ShaderManager } from '../shaders.js';
 import { BASE_TILE_PX } from '../tile-types.js';
 import type { LoadedGroundField, LoadedPaintedTileset } from './loader.js';
-import { groundLayer, stillWater } from './groundLevels.js';
+import { groundFluid, groundLayer } from './groundLevels.js';
 import { paintedGroundIds } from './tileset.js';
 import { LIGHT_FIELD_UNIT } from './lightPass.js';
 import { DEEP, DIST_STEPS, LAND, SHALLOW, distanceTo, shoreField } from './shoreField.js';
@@ -48,6 +48,7 @@ export interface GroundBlendFrame {
   tone: [number, number];
   waterTime: number;
   sea?: Float32Array;
+  fluid?: Float32Array;
   lightSampler?: LightSampler;
   lightTime: number;
   lightVersion: number;
@@ -82,13 +83,13 @@ export function groundKindTable(painted: LoadedPaintedTileset): {
     patch.set(
       art
         ? art.bare
-          ? [art.bare.x, art.bare.y, art.bare.side, stillWater(id)]
-          : [0, 0, 0, stillWater(id)]
+          ? [art.bare.x, art.bare.y, art.bare.side, groundFluid(id)]
+          : [0, 0, 0, groundFluid(id)]
         : [
             Math.round(first.u1 * tileset.atlasW),
             Math.round(first.v1 * tileset.atlasH),
             variant.patch * tileset.tile,
-            stillWater(id)
+            groundFluid(id)
           ],
       k * 4
     );
@@ -96,7 +97,7 @@ export function groundKindTable(painted: LoadedPaintedTileset): {
     layer.set([level, water, art?.ramps.x ?? NO_BLOCK, art?.ramps.y ?? NO_BLOCK], k * 4);
     tide.set([water >= DEEP_WATER ? FULL : 0, level > SHORE_LEVEL ? FULL : 0], k * 2);
     shore[k] = water >= DEEP_WATER ? DEEP : water > 0 ? SHALLOW : LAND;
-    still[k] = stillWater(id) > 0 ? 1 : 0;
+    still[k] = groundFluid(id) > 0 ? 1 : 0;
   });
   return { patch, layer, tide, shore, still };
 }
@@ -213,6 +214,7 @@ export class GroundBlend {
       'u_waterStyle',
       'u_waterBlock',
       'u_sea[0]',
+      'u_fluid[0]',
       'u_ice',
       'u_flow',
       'u_stream'
@@ -522,6 +524,7 @@ export class GroundBlend {
     gl.uniform1i(this.at.u_waterStyle, f.sea ? this.waveStyle : 0);
     gl.uniform1i(this.at.u_waterBlock, waterBlockShift(this.artPerBase / f.zoom[0]));
     if (f.sea) gl.uniform4fv(this.at['u_sea[0]'], f.sea);
+    if (f.fluid) gl.uniform4fv(this.at['u_fluid[0]'], f.fluid);
     gl.uniform2i(this.at.u_mapSize, this.w, this.h);
     this.bindOn(ATLAS_UNIT, this.atlas);
     this.bindOn(KIND_UNIT, this.kindTex);

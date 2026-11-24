@@ -25,7 +25,7 @@ export class WaterIce {
   private readonly gl: WebGL2RenderingContext;
   private readonly tex: WebGLTexture;
   private levels = new Uint8Array(0);
-  private still = new Uint8Array(0);
+  private still: Uint8Array = new Uint8Array(0);
   private w = 0;
   private h = 0;
   private grid: GameGrid | null = null;

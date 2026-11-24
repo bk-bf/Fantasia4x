@@ -1,3 +1,5 @@
+import { fluidIndex } from './fluids.js';
+
 export interface GroundLayer {
   level: number;
   water: number;
@@ -44,10 +46,6 @@ export function groundLayer(subType: string): GroundLayer {
   return WATER[subType] ?? { level: LAND[subType] ?? UNLISTED_LEVEL, water: 0 };
 }
 
-const STILL_WATER: Record<string, number> = {
-  bog: 1
-};
-
-export function stillWater(subType: string): number {
-  return STILL_WATER[subType] ?? 0;
+export function groundFluid(subType: string): number {
+  return WATER[subType] ? 0 : fluidIndex(subType) + 1;
 }
