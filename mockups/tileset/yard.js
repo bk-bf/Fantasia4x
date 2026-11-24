@@ -62,6 +62,13 @@
   const chunked = (list, size) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
   const families = state => FAMILIES.flatMap(kinds => chunked(ownedAs(...kinds), STRIP).map(ids => bundles(state, ids)));
 
+  const SPOILED = ['rotten_food', 'rotten_meat'];
+  function spoiled(state) {
+    const heaps = SPOILED.filter(id => items.get(id)).flatMap((id, i) => WORLD_GEAR.of(items.get(id)).stages.map((quantity, j) => drop(id, quantity, 1 + i * 2, 1 + j)));
+    const made = ruled(10, 5, [...heaps, drop(items.get('carried_pawn') && 'carried_pawn', 1, 6, 2)], { pawns: [[8, 2]] });
+    return framed(made.img, +state.zoom, state.labels === 'on' ? made.labels : []);
+  }
+
   const titled = (title, note) => { const h = el('h2', '', title); if (note) h.append(el('small', '', note)); return h; };
   function render(state) {
     document.getElementById('seed').textContent = seedNow();
@@ -71,7 +78,8 @@
       titled('Weapons, tools and gear', 'top row beside a wall, lower rows in open grass'), loose(state, WORLD_ITEMS.ids()), loose(state, [...TOOLS, ...WORN]),
       loose(state, ownedAs('pack', 'belt', 'quiver')), ...chunked(ownedAs('vessel', 'hauler', 'organ'), STRIP + 2).map(ids => loose(state, ids)), bundles(state, ownedAs('ammo')),
       titled('Small goods by family', 'one, a few and many of each, top to bottom'), ...families(state),
-      titled('Bone, horn and feather', 'one, a few and many of each, top to bottom'), ...chunked(ownedAs('bone', 'plucked'), STRIP).map(ids => bundles(state, ids)));
+      titled('Bone, horn and feather', 'one, a few and many of each, top to bottom'), ...chunked(ownedAs('bone', 'plucked'), STRIP).map(ids => bundles(state, ids)),
+      titled('Spoiled food and the fallen', 'one, a few and many of each, and a downed colonist'), spoiled(state));
   }
 
   const ui = F4X.bar(state => render(state));

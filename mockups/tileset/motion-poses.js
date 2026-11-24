@@ -150,6 +150,7 @@ const PAWN_ANIMS = {
   } },
   down: { label: 'Collapsed', group: 'Combat', dur: 3, n: 1, pose() { return { lie: 1, blink: 1 }; } },
   sleep: { label: 'Sleeping', group: 'Needs', dur: 3.4, n: 4, pose(u) { return { lie: 1, blink: 1, br: u > .35 && u < .8 ? 1 : 0, rest: 1 }; } },
+  out: { label: 'Unconscious', group: 'Needs', dur: 5.6, n: 4, pose(u) { return { lie: 1, blink: 1, out: 1, br: u > .5 && u < .75 ? 1 : 0 }; } },
 };
 
 const GAITS = {

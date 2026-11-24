@@ -75,7 +75,7 @@ function procOp(A, st, def, u) {
   return op;
 }
 function procFrame(A, st, def, u, lvl) {
-  const a = st.anim, lie = a === 'sleep' || a === 'down' || (a === 'fall' && u > .5);
+  const a = st.anim, lie = a === 'sleep' || a === 'down' || a === 'out' || (a === 'fall' && u > .5);
   if (!lvl) {
     if (lie && A.rig !== 'pawn') return a === 'sleep' ? { s: cachedFrame(A.look + '|0', () => A.base), dx: 0, dy: 0 } : null;
     const s = lie ? cachedFrame(A.look + '|0lie', () => laid(A.base)) : cachedFrame(A.look + '|0', () => A.base);
@@ -97,7 +97,7 @@ function frameOf(A, st, lvl, smooth) {
   let flip = !!st.flip, make, pose;
   if (A.rig === 'pawn') {
     pose = c.face !== 's' && FB_POSES[st.anim] ? fbPose(st.anim, u, c) : def.pose(u, c);
-    if (pose.lie) { const q = { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, bent: A.seed > .5 ? 1 : 0 }, fl = !!st.flip; return { s: cachedFrame(A.look + '|lie' + JSON.stringify(q) + (fl ? 'F' : ''), () => { const s = rigPawnLie(A.o, q); return fl ? mirror(s) : s; }), dx: 0, dy: 0 }; }
+    if (pose.lie) { const q = { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, out: pose.out ? 1 : 0, bent: A.seed > .5 ? 1 : 0 }, fl = !!st.flip; return { s: cachedFrame(A.look + '|lie' + JSON.stringify(q) + (fl ? 'F' : ''), () => { const s = rigPawnLie(A.o, q); return fl ? mirror(s) : s; }), dx: 0, dy: 0 }; }
     for (const k of ['hl', 'hr']) if (pose[k]) pose[k] = [pose[k][0] * A.as, pose[k][1] * A.as];
     for (const k of ['fl', 'fr']) if (pose[k]) pose[k] = [pose[k][0] * A.ls, pose[k][1] * A.ls];
     if (pose.by) pose.by *= A.ls;
