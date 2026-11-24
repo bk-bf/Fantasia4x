@@ -1,15 +1,16 @@
 'use strict';
 function paintLook(s, look, skin, hair, face, pose) {
-  const g = lookGeometry(look, face, pose, s.pts), pen = canvasPen(s);
+  const g = lookGeometry(look, face, pose, s.pts), pen = canvasPen(s), head = canvasPen(s, s.front);
   paintGarb(pen, g, look, skin, s);
   paintBuild(pen, g, look);
-  paintWomanFace(pen, g, look, skin);
+  paintWomanFace(head, g, look, skin);
   paintSkin(pen, g, look, skin, hair);
-  paintEyes(pen, g, look, skin);
-  paintHair(pen, g, look, hair, skin);
-  paintBeard(pen, g, look, hair, skin);
-  paintEyewear(pen, g, look, skin);
-  paintHead(pen, g, look, skin, hair);
+  paintFaceMarks(head, g, look, skin);
+  paintEyes(head, g, look, skin);
+  paintHair(head, g, look, hair, skin);
+  paintBeard(head, g, look, hair, skin);
+  paintEyewear(head, g, look, skin);
+  paintHead(head, g, look, skin, hair);
   paintLimbs(pen, g, look, skin, s);
   paintBack(pen, g, look, skin, hair);
 }
@@ -52,6 +53,10 @@ function paintSkin(pen, g, look, skin, hair) {
   if (m.emberSkin === 1) each((x, y, i) => { if (hash(x, y, 2) > .8) pen.put(x, y, skin[Math.max(0, i - 2)]); else if (hash(x, y, 8 + pose.i) > .985) pen.put(x, y, P.ember[4], 160); });
   if (m.emberSkin === 2) each((x, y) => { if (hash(x, y, 2 + (pose.i >> 1)) > .9) pen.put(x, y, P.ember[5], 200); });
   if (m.emberSkin >= 3) { const hot = pose.wave() > 0 ? P.gold[4] : P.ember[5]; each((x, y) => { if (((x * 2 + y) % 7 === 0 || hash(x, y, 2 + (pose.i >> 1)) > .93) && !faceCore(x, y)) pen.put(x, y, hot, 230); }); }
+}
+
+function paintFaceMarks(pen, g, look, skin) {
+  const m = look.marks, sn = skin.length - 1, idx = new Map(skin.map((c, i) => [c, i])), { X, hd, hTop, er, face } = g;
   if (m.pox) for (let k = 0; k < 6; k++) { const x = X - hd + 1 + Math.floor(hash(k, 1, 6) * (2 * hd - 2)), y = er + 1 + Math.floor(hash(k, 2, 6) * 3); if (idx.has(pen.get(x, y))) pen.put(x, y, skin[Math.max(0, sn - 3)]); }
   if (m.burn && face !== 'b') {
     const big = /critical/.test(look.from.burn) ? 2 : /serious/.test(look.from.burn) ? 1 : 0, x0 = face === 's' ? g.F - 4 : X - hd + 1;

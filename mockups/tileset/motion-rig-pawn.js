@@ -102,6 +102,8 @@ function rigHead(s, f, o, X, hTop, face, p) {
   return er;
 }
 
+const rimOf = (was, c) => !!(was && c) && c[0] === was[0] * .6 && c[1] === was[1] * .6;
+
 function rigPawn(o, p) {
   p = p || {};
   const f = FOLK[o.race || 'human'], s = new Spr(RG.W, RG.H, RG.CX, RG.BASE), face = p.face || 'f', side = face === 's', back = face === 'b';
@@ -183,7 +185,7 @@ function rigPawn(o, p) {
   };
   const knuckle = (hx, hy) => { s.set(hx, hy, skin[sn - 1]); s.set(hx, hy + 1, skin[Math.max(0, sn - 3)]); s.set(hx - 1, hy, skin[sn - 2]); };
   const capeLen = f.tl + f.legs - 4, cs = p.cape || 0;
-  let parts = null, holds = null, hand = null;
+  let parts = null, holds = null, hand = null, headDone = null;
 
   if (side) {
     const sy = tTop + 1 - br, far = [sx0, sy], near = [sx0 - 1, sy], bowing = kind === 'bow' && p.bow !== undefined;
@@ -198,6 +200,7 @@ function rigPawn(o, p) {
     legS(fl, true); legS(fr, false);
     torso();
     rigHead(s, f, o, HX + 1, hTop, 's', p);
+    headDone = s.c.slice();
     pad(sx0 - 3, true);
     const nearArm = S => arm(near[0], near[1], hr, true, false, 1, true, S), nh = nearArm(s);
     parts = { head: [S => rigHead(S, f, o, HX + 1, hTop, 's', p)], 'near arm': [nearArm] };
@@ -225,6 +228,7 @@ function rigPawn(o, p) {
       s.set(xa, tTop + 1 + j, o.cape[3]); s.set(xb, tTop + 1 + j, o.cape[1]);
     }
     rigHead(s, f, o, HX, hTop, face, p);
+    headDone = s.c.slice();
     if (raised(tl)) hL = armL(true);
     if (raised(tr)) hR = armR(true);
     if (!back && o.shield) shield(hL[0] - 1, hL[1] - 3);
@@ -241,6 +245,7 @@ function rigPawn(o, p) {
   }
   pts.torso = [sx0, tTop - br, lean]; pts.hip = [cx, legTop];
   if (p.carry) { const cu = p.cu === undefined ? 1 : p.cu, to = holds[p.carry]; pts.carry = [rnd(mix(hand[0], to[0], cu)), rnd(mix(hand[1], to[1], cu))]; }
+  s.front = s.c.map((c, i) => c !== headDone[i] && !rimOf(headDone[i], c) ? 1 : 0);
   s.outline();
   if (p.carry) s.mask = rigMask(s, RIG_OVER[p.carry][face], parts);
   s.sh = { rx: 9, ry: 3.4, dx: 4, dy: 0 };
