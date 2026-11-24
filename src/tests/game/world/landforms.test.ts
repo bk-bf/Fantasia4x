@@ -123,4 +123,45 @@ describe('landforms on an L map', () => {
     expect(deep).toBeGreaterThan(0);
     expect(nearShore).toBe(0);
   });
+
+  it('marks every river tile and gives its centreline a downstream course', () => {
+    let river = 0;
+    let course = 0;
+    for (const row of world)
+      for (const t of row) {
+        if (t.river) {
+          river++;
+          expect(WATER.has(t.subType)).toBe(true);
+        }
+        if (!t.riverCourse) continue;
+        course++;
+        expect(t.river).toBe(true);
+        expect(t.riverCourse.down).not.toBe(4);
+        expect(t.riverCourse.discharge).toBeGreaterThanOrEqual(1);
+      }
+    expect(course).toBeGreaterThan(500);
+    expect(river).toBeGreaterThan(course * 2);
+  });
+
+  it('follows each course downstream to standing water or the map edge, gathering water as it goes', () => {
+    const step = (t: WorldTile) => {
+      const code = t.riverCourse!.down;
+      return world[t.y + Math.floor(code / 3) - 1]?.[t.x + (code % 3) - 1];
+    };
+    let ends = 0;
+    for (const row of world)
+      for (const start of row) {
+        if (!start.riverCourse) continue;
+        let t: WorldTile | undefined = start;
+        let last = start.riverCourse.discharge;
+        for (let k = 0; t?.riverCourse && k < L * 4; k++) {
+          expect(t.riverCourse.discharge).toBeGreaterThanOrEqual(last);
+          last = t.riverCourse.discharge;
+          t = step(t);
+        }
+        expect(t === undefined || WATER.has(t.subType)).toBe(true);
+        if (t && !t.river) ends++;
+      }
+    expect(ends).toBeGreaterThan(0);
+  });
 });

@@ -18,10 +18,18 @@ export interface LandformTargets {
   lowland: ReadonlyArray<{ biome: string; share: number }>;
 }
 
+export interface RiverCourses {
+  tiles: Int32Array;
+  down: Uint8Array;
+  discharge: Float32Array;
+  slope: Float32Array;
+}
+
 export interface Landforms {
   cover: Uint8Array;
   lowland: Uint8Array;
   rank: Float32Array;
+  courses: RiverCourses;
 }
 
 const DEEP_FROM_SHORE = 6;
@@ -34,6 +42,7 @@ const RANGE_STRETCH = 0.42;
 const FIELD_STEP = 3;
 const MIN_PEAK_SHARE = 6e-5;
 const PASS_REACH = 2;
+const SLOPE_RUN = 4;
 
 function smoothstep(a: number, b: number, v: number): number {
   const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
@@ -404,8 +413,10 @@ export function generateLandforms(
   }
   const catchment = n * RIVER_CATCHMENT;
   const river = new Uint8Array(n);
+  const centre: number[] = [];
   for (let i = 0; i < n; i++) {
     if (acc[i] < catchment || cover[i] === Cover.Lake) continue;
+    centre.push(i);
     const radius = Math.min(3.2, 0.5 + 0.8 * Math.log2(acc[i] / catchment));
     const x = i % w;
     const y = (i / w) | 0;
@@ -465,5 +476,40 @@ export function generateLandforms(
     while (b < cuts.length && rank[i] >= cuts[b]) b++;
     lowland[i] = b;
   }
-  return { cover, lowland, rank };
+  return {
+    cover,
+    lowland,
+    rank,
+    courses: riverCourses(w, cover, centre, parent, fill, acc, catchment)
+  };
+}
+
+function riverCourses(
+  w: number,
+  cover: Uint8Array,
+  centre: number[],
+  parent: Int32Array,
+  fill: Float32Array,
+  acc: Float32Array,
+  catchment: number
+): RiverCourses {
+  const kept = centre.filter((i) => cover[i] === Cover.River && parent[i] >= 0);
+  const courses: RiverCourses = {
+    tiles: Int32Array.from(kept),
+    down: new Uint8Array(kept.length),
+    discharge: new Float32Array(kept.length),
+    slope: new Float32Array(kept.length)
+  };
+  kept.forEach((i, k) => {
+    const x = i % w;
+    const y = (i / w) | 0;
+    const p = parent[i];
+    courses.down[k] = (((p / w) | 0) - y + 1) * 3 + (p % w) - x + 1;
+    let j = i;
+    for (let s = 0; s < SLOPE_RUN && parent[j] >= 0; s++) j = parent[j];
+    const run = Math.hypot((j % w) - x, ((j / w) | 0) - y);
+    courses.slope[k] = run > 0 ? (fill[i] - fill[j]) / run : 0;
+    courses.discharge[k] = acc[i] / catchment;
+  });
+  return courses;
 }

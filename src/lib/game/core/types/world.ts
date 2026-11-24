@@ -1,3 +1,9 @@
+export interface RiverCourse {
+  down: number;
+  discharge: number;
+  slope: number;
+}
+
 export interface WorldTile {
   x: number;
   y: number;
@@ -19,6 +25,8 @@ export interface WorldTile {
   fertilityWear?: number;
   snow?: number;
   ice?: number;
+  river?: boolean;
+  riverCourse?: RiverCourse;
   territoryOwner: string;
   gCost?: number;
   hCost?: number;
