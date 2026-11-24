@@ -1,4 +1,4 @@
-import { writable, derived, type Writable } from 'svelte/store';
+import { derived, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import { perfContext } from '$lib/dev/perfContext';
 import type { ActivityLogEntry, CombatTurnEntry } from '$lib/game/core/defs/events';
@@ -11,16 +11,32 @@ import {
   scheduleSaveDebugLog
 } from './saveManager';
 
-interface BatchableStore<T> extends Writable<T> {
+interface BatchableLog<T> extends Writable<T[]> {
+  append(entry: T): void;
   beginBatch(): void;
   endBatch(): void;
 }
-function batchable<T>(initial: T): BatchableStore<T> {
-  let value = initial;
-  const subs = new Set<(v: T) => void>();
+
+export function appendCapped<T>(log: readonly T[], added: readonly T[], cap: number): T[] {
+  const drop = Math.max(0, log.length + added.length - cap);
+  const out = log.slice(Math.min(drop, log.length));
+  for (let i = Math.max(0, drop - log.length); i < added.length; i++) out.push(added[i]);
+  return out;
+}
+
+function batchableLog<T>(cap: number): BatchableLog<T> {
+  let value: T[] = [];
+  const pending: T[] = [];
+  const subs = new Set<(v: T[]) => void>();
   let depth = 0;
   let dirty = false;
+  const settle = () => {
+    if (pending.length === 0) return;
+    value = appendCapped(value, pending, cap);
+    pending.length = 0;
+  };
   const fire = () => {
+    settle();
     for (const s of subs) s(value);
   };
   const notify = () => {
@@ -28,17 +44,24 @@ function batchable<T>(initial: T): BatchableStore<T> {
     else fire();
   };
   return {
-    subscribe(run: (v: T) => void) {
+    subscribe(run: (v: T[]) => void) {
+      settle();
       subs.add(run);
       run(value);
       return () => subs.delete(run);
     },
-    set(v: T) {
+    set(v: T[]) {
+      pending.length = 0;
       value = v;
       notify();
     },
-    update(fn: (v: T) => T) {
+    update(fn: (v: T[]) => T[]) {
+      settle();
       value = fn(value);
+      notify();
+    },
+    append(entry: T) {
+      pending.push(entry);
       notify();
     },
     beginBatch() {
@@ -53,13 +76,19 @@ function batchable<T>(initial: T): BatchableStore<T> {
   };
 }
 
-export const activityLog = batchable<ActivityLogEntry[]>([]);
+const ACTIVITY_LOG_CAP = 1000;
+export const activityLog = batchableLog<ActivityLogEntry>(ACTIVITY_LOG_CAP);
+
+const DEBUG_LOG_CAP = 2500;
+export const debugLog = batchableLog<ActivityLogEntry>(DEBUG_LOG_CAP);
 
 export function batchLogReplay(fn: () => void): void {
   activityLog.beginBatch();
+  debugLog.beginBatch();
   try {
     fn();
   } finally {
+    debugLog.endBatch();
     activityLog.endBatch();
   }
 }
@@ -69,7 +98,7 @@ if (browser) {
     if (saved.length > 0) {
       activityLog.update((live) => {
         const seen = new Set(saved.map((e) => e.id));
-        return [...saved, ...live.filter((e) => !seen.has(e.id))].slice(-1000);
+        return [...saved, ...live.filter((e) => !seen.has(e.id))].slice(-ACTIVITY_LOG_CAP);
       });
     }
     activityLog.subscribe((log) => scheduleSaveActivityLog(log));
@@ -118,17 +147,11 @@ export function logActivity(entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>): 
     timestamp: new Date()
   };
 
-  activityLog.update((log) => {
-    const newLog = [...log, fullEntry];
-    return newLog.slice(-1000);
-  });
+  activityLog.append(fullEntry);
 
   mirrorToFile(fullEntry);
   return fullEntry.id;
 }
-
-const DEBUG_LOG_CAP = 2500;
-export const debugLog = writable<ActivityLogEntry[]>([]);
 
 if (browser) {
   loadDebugLog().then((saved) => {
@@ -158,10 +181,7 @@ export function logDiag(e: LogEventInput): string {
     severity: e.severity ?? 'info',
     details: e.data
   };
-  debugLog.update((log) => {
-    const next = [...log, entry];
-    return next.length > DEBUG_LOG_CAP ? next.slice(-DEBUG_LOG_CAP) : next;
-  });
+  debugLog.append(entry);
   mirrorToFile(entry);
   return entry.id;
 }
