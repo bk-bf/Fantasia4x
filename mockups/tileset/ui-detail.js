@@ -86,12 +86,14 @@
     const e = all.find(v => v.variant === st.variant) || DBX.pick(o.cat, o.id, st.season), b = DBX.bake(e);
     const big = el('div', 'view'), cv = el('canvas'), im = o.cat === 'item' || e.icon ? b : DBX.scene(e, DBX.seasonOf(e, st.season));
     UI.paint(cv, im, Math.max(1, Math.min(4, Math.floor(340 / im.w)))); big.append(cv); d.append(big);
-    const facings = ['s', 'e', 'n', 'w'].map(f => all.find(v => v.variant === f)).filter(Boolean);
-    if (facings.length > 1) {
-      const row = el('div', 'faces');
-      for (const v of facings) { const c = el('canvas'), fb = DBX.bake(v); UI.paint(c, fb, fb.w > 70 || fb.h > 90 ? 1 : 2); c.title = v.variant; if (v === e) c.className = 'on'; c.onclick = () => UI.select(key, v.variant); row.append(c); }
-      d.append(row);
-    }
+    const row = list => {
+      const r = el('div', 'faces');
+      for (const v of list) { const c = el('canvas'), fb = DBX.bake(v); UI.paint(c, fb, fb.w > 70 || fb.h > 90 ? 1 : 2); c.title = v.worn || v.variant; if (v === e) c.className = 'on'; c.onclick = () => UI.select(key, v.variant); r.append(c); }
+      d.append(r);
+    };
+    const facings = ['s', 'e', 'n', 'w'].map(f => all.find(v => v.variant === f)).filter(Boolean), worn = all.filter(v => v.worn);
+    if (facings.length > 1) row(facings);
+    if (worn.length) row(worn);
     if (e.kind !== 'world' && o.cat !== 'condition') d.append(inScene(o, e, b));
     return { all, e, b };
   }

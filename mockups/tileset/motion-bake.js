@@ -8,7 +8,7 @@ let SEEDS = 0;
 function mkActor(rig, kind, over) {
   const A = { rig, kind, seed: (++SEEDS * .618) % 1, id: rig + ':' + kind + ':' + SEEDS };
   const cast = rig === 'pawn' && LOOK_CAST[kind];
-  if (cast) { A.lookOf = cast.look; A.gear = { ...(over || {}) }; A.o = { ...lookRig(cast.look).o, ...A.gear }; A.base = drawLook(cast.look, 's', null, { face: 's' }, A.gear); A.name = cast.name; A.ls = FOLK[A.o.race].legs / 10; A.as = (FOLK[A.o.race].tl - 1) / 11; A.look = JSON.stringify(cast.look) + JSON.stringify(A.gear); }
+  if (cast) { A.lookOf = cast.look; A.gear = { ...(cast.gear || {}), ...(over || {}) }; A.o = { ...lookRig(cast.look).o, ...A.gear }; A.base = drawLook(cast.look, 's', null, { face: 's' }, A.gear); A.name = cast.name; A.ls = FOLK[A.o.race].legs / 10; A.as = (FOLK[A.o.race].tl - 1) / 11; A.look = JSON.stringify(cast.look) + JSON.stringify(A.gear); }
   else if (rig === 'pawn') { A.o = { ...PAWNS[kind].o, ...(over || {}) }; A.base = mkPawn(A.o); A.name = PAWNS[kind].name; A.ls = FOLK[A.o.race || 'human'].legs / 10; A.as = (FOLK[A.o.race || 'human'].tl - 1) / 11; A.look = JSON.stringify(Object.entries(A.o).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])); }
   else { A.base = mkBeast(kind); A.name = (BEASTS[kind] || {}).name || OTHER[kind]; A.look = kind; }
   A.anims = rig === 'pawn' ? PAWN_ANIMS : rig === 'quad' ? QUAD_ANIMS : rig === 'fowl' ? FOWL_ANIMS : rig === 'rabbit' ? RABBIT_ANIMS : rig === 'critter' ? CRIT_ANIMS[kind] : QUAD_ANIMS;

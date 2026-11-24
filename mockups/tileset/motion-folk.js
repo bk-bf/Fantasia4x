@@ -5,6 +5,9 @@ const MOTION_FOLK = (() => {
     { kind: 'kirtle', name: 'Woman in a kirtle', culture: 'rynek', pawn: { sex: 'female', age: 27, height: 166, weight: 61, traits: [] }, look: { style: 'braids', sleeves: 'long', apron: true, pouch: true, hat: 'none', cloak: null } },
     { kind: 'maimed', name: 'One-armed man', culture: 'krixul', pawn: { sex: 'male', age: 44, height: 172, weight: 74, traits: ['one-armed', 'one-legged', 'rending-claws', 'webbed-limbs'] }, look: { style: 'short', beard: 'full', sleeves: 'long', hat: 'none', cloak: null } },
     { kind: 'winged', name: 'Winged woman', culture: 'rynock', pawn: { sex: 'female', age: 23, height: 158, weight: 55, traits: ['wings', 'prehensile-tail', 'nub-horns', 'feathered'] }, look: { style: 'long', sleeves: 'rolled', apron: false, hat: 'none', cloak: null } },
+    { kind: 'soldier', name: 'Man-at-arms', culture: 'rynek', pawn: { sex: 'male', age: 31, height: 178, weight: 80, traits: [] }, look: { style: 'short', beard: 'full' }, wear: ['linen_gambeson', 'mail_hauberk', 'linen_hose', 'hide_boots', 'iron_nasal_helm', 'wool_cloak'] },
+    { kind: 'knight', name: 'Knight in plate', culture: 'vexast', pawn: { sex: 'female', age: 29, height: 170, weight: 66, traits: [] }, look: { style: 'bun' }, wear: ['arming_doublet', 'plate_cuirass', 'steel_greaves', 'steel_sabatons', 'sallet'] },
+    { kind: 'sage', name: 'Robed sage', culture: 'krixul', pawn: { sex: 'male', age: 61, height: 169, weight: 64, traits: [] }, look: { style: 'long', beard: 'full' }, wear: ['silk_robe', 'linen_boots', 'scholars_circlet'] },
   ];
   const GROUP = 'Composed folk', PACE = 19, AXE = { tool: 'axe', shield: null }, BARE = { tool: null, shield: null };
   const P1 = (kind, steps, at, over) => ({ rig: 'pawn', kind: 'folk-' + kind, steps, at: at || [0, 0], over: over || BARE });
@@ -28,7 +31,7 @@ const MOTION_FOLK = (() => {
   function init(data) {
     for (const p of PEOPLE) {
       const culture = data.cultures.find(c => c.id === p.culture), pawn = { id: 'motion-' + p.kind, ...p.pawn };
-      LOOK_CAST['folk-' + p.kind] = { name: p.name, look: { ...pawnLookOf(pawn, culturePreference(culture), data.traitRarity), ...p.look } };
+      LOOK_CAST['folk-' + p.kind] = { name: p.name, look: { ...pawnLookOf(pawn, culturePreference(culture), data.traitRarity), ...p.look }, gear: p.wear ? WORN.dress(p.wear.map(id => DBX.data.find(o => o.id === id))) : null };
     }
   }
   return { init, GROUP };

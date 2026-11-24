@@ -1,7 +1,7 @@
 'use strict';
 function rigPawnLie(o, p) {
   p = p || {};
-  const f = FOLK[o.race || 'human'], s = new Spr(RG.W, RG.H, RG.CX, RG.BASE), skin = o.skin || f.skin, sn = skin.length - 1, tunic = o.tunic || (o.bare ? skin : P.cloth), pants = o.pants || (o.bare ? skin : P.leather), body = o.armor || tunic, boots = o.boots || (o.bare ? skin : P.leather), belted = !o.bare || !!(o.tunic || o.armor), hair = o.hair || P.furBrown, hn = hair.length - 1;
+  const f = FOLK[o.race || 'human'], s = new Spr(RG.W, RG.H, RG.CX, RG.BASE), skin = o.skin || f.skin, sn = skin.length - 1, tunic = o.tunic || (o.bare ? skin : P.cloth), pants = o.pants || (o.bare ? skin : P.leather), body = o.armor || tunic, boots = o.boots || (o.bare ? skin : P.leather), belted = o.belt === undefined ? !o.bare || !!(o.tunic || o.armor) : !!o.belt, hair = o.hair || P.furBrown, hn = hair.length - 1;
   const rest = !!p.rest, out = !!p.out, tucked = !!p.tucked, br = p.br ? 1 : 0, gy = RG.BASE - 1, th = Math.round(f.hw * 1.7), L = f.hh + f.tl + f.legs, x0 = RG.CX - (L >> 1), tx0 = x0 + f.hh - 1, lx0 = tx0 + f.tl, top = gy - th + 1, legH = Math.max(3, th >> 1);
   const headH = 2 * f.hd, hTop = gy - headH + 1 - (rest ? 1 : 0) + (out ? 1 : 0), noHair = o.bald || f.bald, rowU = y => clamp((y - top) / Math.max(1, th - 1), 0, 1);
   if (rest) {
@@ -35,7 +35,7 @@ function rigPawnLie(o, p) {
     s.set(x, y, c);
   }
   if (o.cape && !rest) for (let x = tx0 - 1; x < lx0 + 4; x++) { s.set(x, gy + 1, o.cape[2]); s.set(x, gy + 2, o.cape[1]); }
-  const aw = f.aw, armC = (t, k) => { const hand = t > f.tl - 4.5, bare = o.sleeves === 0 || t > 7; return hand || bare ? skin[clamp(sn - 1 - (k === aw - 1 ? 1 : 0), 0, sn)] : pick3(body, k / aw * .5, 0); };
+  const aw = f.aw, armC = (t, k) => { const hand = t > f.tl - 4.5, bare = o.sleeves === 0 || t > 7; return hand || bare ? skin[clamp(sn - 1 - (k === aw - 1 ? 1 : 0), 0, sn)] : pick3(o.sleeve || body, k / aw * .5, 0); };
   const sh0 = [tx0 + 2, gy - (aw >> 1)];
   const limp = len => (t, k) => t > len - 3.5 || o.sleeves === 0 ? skin[clamp(sn - 1 - (k === aw - 1 ? 1 : 0) + (t > len - 1.5 ? 1 : 0), 0, sn)] : pick3(body, k / aw * .5, 0);
   const flung = [[tx0 + 2, top + 1], [x0 + f.hh * .5, top - 3], [x0 - 1, top - 2], [x0 - 4, top + 1]], flopped = tucked ? [[tx0 + 3, gy - 3], [tx0 + 8, gy - 2], [tx0 + 12, gy - 3]] : [[tx0 + 3, gy - 2], [tx0 + 7, gy + 2], [tx0 + 12, gy + 1]];
