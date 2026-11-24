@@ -97,12 +97,12 @@ function paintBodice(pen, g, look, skin) {
   reink(pen, cx - hw - 1, waistTop - 2, cx + hw, belt + 3);
 }
 
-function paintGarb(pen, g, look, skin, s) {
+function paintGarb(pen, body, g, look, skin, s) {
   const cloth = DYES[look.garb];
   paintSleeves(pen, g, look, skin, cloth, s);
   paintSkirt(pen, g, look, cloth);
-  paintFigure(pen, g, look, cloth);
-  paintBodice(pen, g, look, skin);
+  paintFigure(body, g, look, cloth);
+  paintBodice(body, g, look, skin);
 }
 
 function paintBuild(pen, g, look) {

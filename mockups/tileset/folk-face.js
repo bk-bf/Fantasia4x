@@ -11,16 +11,17 @@ function lookGeometry(look, face, pose, pts) {
   const b = look.body, base = RG.BASE, at = pts && pts.hip ? pts : null;
   const cx = at ? at.hip[0] : RG.CX, legTop = at ? at.hip[1] : base - b.legs + 1, tTop = legTop - b.tl, sTop = at ? at.torso[1] : tTop - pose.br;
   const hTop = at ? at.head[1] + 3 : sTop - b.hh, X = at ? at.head[0] : face === 's' ? cx + 1 : cx, er = hTop + Math.floor(b.hh * .5), lean = at ? at.torso[2] : 0;
-  return { ...b, cx, base, legTop, tTop, sTop, hTop, X, er, F: X + b.hd, face, pose, lean };
+  const lx = y => y < sTop || y >= legTop ? 0 : Math.round(lean * clamp(1 - Math.max(0, y - tTop) / b.tl, 0, 1));
+  return { ...b, cx, base, legTop, tTop, sTop, hTop, X, er, F: X + b.hd, face, pose, lean, lx };
 }
 
-function canvasPen(s, behind) {
-  const at = (x, y) => y * s.w + x;
+function canvasPen(s, behind, shift) {
+  const at = (x, y) => y * s.w + x, sx = shift || (() => 0);
   const pen = {
-    ok: (x, y) => s.ok(x, y),
-    get: (x, y) => (s.ok(x, y) ? s.c[at(x, y)] : null),
-    put: (x, y, c, e) => { if (s.ok(x, y) && !(behind && behind[at(x, y)])) { s.c[at(x, y)] = c; s.e[at(x, y)] = e || 0; } },
-    under: (x, y, c, e) => { if (s.ok(x, y) && !s.c[at(x, y)]) pen.put(x, y, c, e); },
+    ok: (x, y) => s.ok(x + sx(y), y),
+    get: (x, y) => (pen.ok(x, y) ? s.c[at(x + sx(y), y)] : null),
+    put: (x, y, c, e) => { x += sx(y); if (s.ok(x, y) && !(behind && behind[at(x, y)])) { s.c[at(x, y)] = c; s.e[at(x, y)] = e || 0; } },
+    under: (x, y, c, e) => { if (pen.ok(x, y) && !pen.get(x, y)) pen.put(x, y, c, e); },
     rect: (x, y, w, h, c, e) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) pen.put(x + i, y + j, c, e); },
     line: (x0, y0, x1, y1, c, e, behind) => {
       const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
