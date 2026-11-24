@@ -14,6 +14,7 @@
     "tools:pack": "node tools/dev-tools/pack.mjs",
     "tileset:bake": "node tools/tileset/bake.mjs",
     "tileset:sync": "node tools/tileset/sync.mjs",
+    "tileset:storage": "node tools/tileset/storage.mjs",
     "tileset:colony": "node tools/tileset/colony.mjs",
     "tileset:weather": "node tools/tileset/weather.mjs",
     "tileset:sway": "node tools/tileset/sway.mjs",

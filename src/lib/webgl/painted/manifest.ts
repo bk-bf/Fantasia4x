@@ -63,12 +63,26 @@ export interface ManifestGround {
   kinds: Record<string, ManifestGroundKind>;
 }
 
+export interface ManifestDrop {
+  pile?: string[];
+  lean?: string[];
+  lie?: string[];
+  ground?: string;
+}
+
+export interface ManifestDrops {
+  grass: Record<string, number>;
+  items: Record<string, ManifestDrop>;
+  cover: Record<string, string>;
+}
+
 export interface PaintedManifest {
   tile: number;
   atlas: { w: number; h: number };
   sprites: Record<string, ManifestSprite>;
   map: Partial<Record<PaintedKind, Record<string, string[]>>>;
   pieces?: Record<string, ManifestPieces>;
+  drops?: ManifestDrops;
   water?: ManifestField;
   ground?: ManifestGround;
 }
@@ -147,6 +161,23 @@ export interface PaintedGround {
   kinds: Map<string, PaintedGroundKind>;
 }
 
+export interface PaintedProp {
+  sprite: PaintedSprite;
+  cover?: readonly PaintedSprite[];
+}
+
+export interface PaintedDrop {
+  pile?: readonly PaintedProp[];
+  lean?: readonly PaintedProp[];
+  lie?: readonly PaintedProp[];
+  ground?: PaintedProp;
+}
+
+export interface PaintedDrops {
+  grass: ReadonlyMap<string, number>;
+  items: ReadonlyMap<string, PaintedDrop>;
+}
+
 export interface PaintedTileset {
   tile: number;
   atlasW: number;
@@ -157,6 +188,7 @@ export interface PaintedTileset {
   pieces: Map<string, PaintedPieces>;
   scenery: Map<string, PaintedVariant[]>;
   ground?: PaintedGround;
+  drops?: PaintedDrops;
 }
 
 const SCENERY: Readonly<Record<string, string>> = { reeds: 'plant/reeds/' };
@@ -285,9 +317,46 @@ function readGround(raw: unknown): ManifestGround {
   };
 }
 
+function readDrop(id: string, raw: unknown): ManifestDrop {
+  if (!isObject(raw)) throw new Error(`drops.items.${id} is not an object`);
+  const { pile, lean, lie, ground } = raw;
+  const out: ManifestDrop = {};
+  for (const [pose, ids] of Object.entries({ pile, lean, lie })) {
+    if (ids === undefined) continue;
+    if (!isStrings(ids) || ids.length === 0)
+      throw new Error(`drops.items.${id}.${pose} is not a list of sprites`);
+    out[pose as 'pile' | 'lean' | 'lie'] = ids;
+  }
+  if (ground !== undefined) {
+    if (typeof ground !== 'string') throw new Error(`drops.items.${id}.ground is not a sprite`);
+    out.ground = ground;
+  }
+  if (!out.pile && !out.lie && !out.ground)
+    throw new Error(`drops.items.${id} has no sprite to rest on the ground`);
+  return out;
+}
+
+function readDrops(raw: unknown): ManifestDrops {
+  if (!isObject(raw) || !isObject(raw.grass) || !isObject(raw.items) || !isObject(raw.cover))
+    throw new Error('manifest drops names no grass, items or cover');
+  const grass: Record<string, number> = {};
+  for (const [kind, ramp] of Object.entries(raw.grass)) {
+    if (!isInt(ramp) || ramp < 0) throw new Error(`drops.grass.${kind} is not a ramp index`);
+    grass[kind] = ramp;
+  }
+  const items: Record<string, ManifestDrop> = {};
+  for (const [id, drop] of Object.entries(raw.items)) items[id] = readDrop(id, drop);
+  const cover: Record<string, string> = {};
+  for (const [sprite, blades] of Object.entries(raw.cover)) {
+    if (typeof blades !== 'string') throw new Error(`drops.cover.${sprite} is not a sprite`);
+    cover[sprite] = blades;
+  }
+  return { grass, items, cover };
+}
+
 export function parseManifest(raw: unknown): PaintedManifest {
   if (!isObject(raw)) throw new Error('manifest is not an object');
-  const { tile, atlas, sprites, map, pieces, water, ground } = raw;
+  const { tile, atlas, sprites, map, pieces, drops, water, ground } = raw;
   if (!isInt(tile) || tile <= 0) throw new Error('manifest tile is not a positive integer');
   if (!isObject(atlas) || !isInt(atlas.w) || !isInt(atlas.h) || atlas.w <= 0 || atlas.h <= 0)
     throw new Error('manifest atlas size is missing');
@@ -313,6 +382,7 @@ export function parseManifest(raw: unknown): PaintedManifest {
     out.pieces = {};
     for (const [set, p] of Object.entries(pieces)) out.pieces[set] = readPieces(set, p);
   }
+  if (drops !== undefined) out.drops = readDrops(drops);
   if (water !== undefined) out.water = readField('water', water);
   if (ground !== undefined) out.ground = readGround(ground);
   return out;
@@ -425,6 +495,7 @@ export function buildTileset(
     if (variants.length > 0) scenery.set(id, variants);
   }
   const ground = m.ground && resolveGround(m, m.ground, problems);
+  const drops = m.drops && resolveDrops(m, m.drops, problems);
   return {
     tileset: {
       tile: m.tile,
@@ -435,10 +506,52 @@ export function buildTileset(
       sprites: resolved,
       pieces,
       scenery,
-      ...(ground ? { ground } : null)
+      ...(ground ? { ground } : null),
+      ...(drops ? { drops } : null)
     },
     problems
   };
+}
+
+function resolveDrops(m: PaintedManifest, d: ManifestDrops, problems: string[]): PaintedDrops {
+  const ramps = Math.max(-1, ...Object.values(d.grass)) + 1;
+  const cells = new Map<string, PaintedSprite | undefined>();
+  const cell = (sid: string): PaintedSprite | undefined => {
+    if (!cells.has(sid)) {
+      const s = m.sprites[sid];
+      if (!s) problems.push(`drops names unknown sprite ${sid}`);
+      cells.set(sid, s && cellOf(s, s.x, s.y, s, m));
+    }
+    return cells.get(sid);
+  };
+  const prop = (sid: string): PaintedProp[] => {
+    const sprite = cell(sid);
+    if (!sprite) return [];
+    const blades = d.cover[sid];
+    if (blades === undefined) return [{ sprite }];
+    const cover = Array.from({ length: ramps }, (_, ramp) => cell(`${blades}/${ramp}`));
+    return [cover.every((c) => c) ? { sprite, cover: cover as PaintedSprite[] } : { sprite }];
+  };
+  const items = new Map<string, PaintedDrop>();
+  for (const [id, drop] of Object.entries(d.items)) {
+    const pile = drop.pile?.flatMap(prop);
+    const lean = drop.lean?.flatMap(prop);
+    const lie = drop.lie?.flatMap(prop);
+    const ground = drop.ground === undefined ? undefined : prop(drop.ground)[0];
+    const whole =
+      pile?.length === drop.pile?.length &&
+      lean?.length === drop.lean?.length &&
+      lie?.length === drop.lie?.length &&
+      (drop.ground === undefined) === (ground === undefined);
+    if (!whole) continue;
+    items.set(id, {
+      ...(pile ? { pile } : null),
+      ...(lean ? { lean } : null),
+      ...(lie ? { lie } : null),
+      ...(ground ? { ground } : null)
+    });
+  }
+  return { grass: new Map(Object.entries(d.grass)), items };
 }
 
 function resolveGround(
