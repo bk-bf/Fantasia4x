@@ -1,58 +1,193 @@
 'use strict';
-function paintMarks(s, look, skin) {
-  const b = look.body, m = look.marks, cx = RG.CX, base = RG.BASE;
-  const legTop = base - b.legs + 1, tTop = legTop - b.tl, hTop = tTop - b.hh, er = hTop + Math.floor(b.hh * .5);
-  const sn = skin.length - 1, hair = HAIRS[look.hair].ramp, idx = new Map(skin.map((c, i) => [c, i]));
-  const at = (x, y) => y * s.w + x;
-  const isSkin = (x, y) => s.ok(x, y) && idx.has(s.c[at(x, y)]);
-  const empty = (x, y) => s.ok(x, y) && !s.c[at(x, y)];
-  const put = (x, y, c, e) => { if (s.ok(x, y)) { s.c[at(x, y)] = c; s.e[at(x, y)] = e || 0; } };
-  const putEmpty = (x, y, c) => { if (empty(x, y)) put(x, y, c); };
-  const eachSkin = f => { for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) if (isSkin(x, y)) f(x, y, idx.get(s.c[at(x, y)])); };
-  const face = (x, y) => y >= hTop && y < tTop && Math.abs(x - cx + .5) < b.hd - 1;
+function paintLook(s, look, skin, hair, face) {
+  const g = lookGeometry(look, face), pen = canvasPen(s);
+  paintSkin(pen, g, look, skin, hair);
+  paintEyes(pen, g, look, skin);
+  paintHair(pen, g, look, hair, skin);
+  paintBeard(pen, g, look, hair, skin);
+  paintEyewear(pen, g, look);
+  paintHead(pen, g, look, skin, hair);
+  paintLimbs(pen, g, look, skin, s);
+  paintBack(pen, g, look, skin, hair);
+}
 
-  if (m.scales) eachSkin((x, y, i) => { if (!face(x, y) && ((x + (y >> 1) * 2) & 3) === 0) put(x, y, skin[Math.max(0, i - 1)]); else if (m.scales > 1 && ((x + y) & 3) === 1) put(x, y, skin[Math.min(sn, i + 1)]); });
-  if (m.chitin) eachSkin((x, y, i) => { if (!face(x, y) && y % 3 === 0) put(x, y, skin[Math.max(0, i - 2)]); if (!face(x, y) && y % 3 === 1 && (x & 1)) put(x, y, skin[sn]); });
-  if (m.feathers) eachSkin((x, y) => { if (!face(x, y) && hash(x, y, 5) > .55) put(x, y, P.furWhite[hash(x, y, 9) > .5 ? 3 : 2]); });
-  if (m.fur) eachSkin((x, y) => { if (!face(x, y) || hash(x, y, 3) > .7) put(x, y, hair[clamp(hair.length - 2 - (hash(x, y, 4) > .5 ? 1 : 0), 0, hair.length - 1)]); });
-  if (m.fur > 2) for (let j = 0; j < b.hh + 3; j++) for (const sd of [-1, 1]) for (let k = 0; k < 2; k++) putEmpty(cx + (sd < 0 ? -b.hd - 2 - k : b.hd + 1 + k), hTop + j, hair[hair.length - 2 - k]);
-  if (m.slick) eachSkin((x, y) => { if (hash(x, y, 7) > .86) put(x, y, skin[sn]); });
-  if (m.emberSkin) eachSkin((x, y, i) => { if (hash(x, y, 2) > .8) put(x, y, P.ember[5], 220); });
+function paintSkin(pen, g, look, skin, hair) {
+  const m = look.marks, sn = skin.length - 1, idx = new Map(skin.map((c, i) => [c, i]));
+  const { X, hd, hTop, tTop, er, face } = g;
+  const faceCore = (x, y) => face !== 'b' && y >= hTop && y < tTop && (face === 's' ? x > X : Math.abs(x - X + .5) < hd - 1.5);
+  const each = f => { for (let y = 0; y < RG.H; y++) for (let x = 0; x < RG.W; x++) { const i = idx.get(pen.get(x, y)); if (i !== undefined) f(x, y, i); } };
+  const sc = m.scales || 0;
+  if (sc === 2) each((x, y, i) => { if (!faceCore(x, y) && hash(x, y, 11) > .72) pen.put(x, y, skin[Math.max(0, i - 1)]); });
+  if (sc >= 3) each((x, y, i) => {
+    if (sc < 4 && faceCore(x, y)) return;
+    const p = (x + ((y >> 1) & 1) * 2) & 3;
+    if (p === 0) pen.put(x, y, skin[Math.max(0, i - (sc >= 4 ? 2 : 1))]);
+    else if (p === 2 && !(y & 1)) pen.put(x, y, skin[Math.min(sn, i + 1)]);
+    if (sc >= 4 && hash(x, y, 13) > .94) pen.put(x, y, P.gold[4], 140);
+  });
+  if (m.chitin) each((x, y, i) => {
+    if (faceCore(x, y) && m.chitin < 4) return;
+    if (m.chitin === 2 && y < tTop + 2) return;
+    if (y % 3 === 0) pen.put(x, y, skin[Math.max(0, i - 2)]);
+    else if (y % 3 === 1 && (x & 1) && m.chitin >= 3) pen.put(x, y, skin[sn], m.chitin >= 4 ? 60 : 0);
+  });
+  if (m.ironSkin) each((x, y, i) => { if ((x - X) % 4 === 0 && !faceCore(x, y)) pen.put(x, y, skin[0]); else if ((x - X) % 4 === 1 && y % 3 === 0) pen.put(x, y, skin[sn], 90); });
+  if (m.feathers >= 3) each((x, y) => { if (!faceCore(x, y) && hash(x, y, 5) > .5) pen.put(x, y, P.furWhite[hash(x, y, 9) > .5 ? 4 : 3]); });
+  if (m.feathers) for (let x = X - hd - 1; x < X + hd + 1; x++) for (let k = 0; k < 2; k++) if (hash(x, k, 31) > .35) pen.under(x, tTop - 1 + k, P.furWhite[3 + (k ? 0 : 1)]);
+  if (m.fur) each((x, y) => { if (!faceCore(x, y) || hash(x, y, 3) > .75) pen.put(x, y, hair[clamp(hair.length - 2 - (hash(x, y, 4) > .5 ? 1 : 0), 0, hair.length - 1)]); });
+  if (m.slick) each((x, y) => { if (hash(x, y, 7) > (m.slick >= 3 ? .8 : .9)) pen.put(x, y, skin[sn], 40); });
+  if (m.leafSkin) each((x, y) => { if (((x + y) % 5 === 0) && !faceCore(x, y)) pen.put(x, y, P.oak[5]); });
+  if (m.emberSkin === 1) each((x, y, i) => { if (hash(x, y, 2) > .8) pen.put(x, y, skin[Math.max(0, i - 2)]); else if (hash(x, y, 8) > .985) pen.put(x, y, P.ember[4], 160); });
+  if (m.emberSkin === 2) each((x, y) => { if (hash(x, y, 2) > .9) pen.put(x, y, P.ember[5], 200); });
+  if (m.emberSkin >= 3) each((x, y) => { if (((x * 2 + y) % 7 === 0 || hash(x, y, 2) > .93) && !faceCore(x, y)) pen.put(x, y, P.gold[4], 230); });
+  if (m.pox) for (let k = 0; k < 6; k++) { const x = X - hd + 1 + Math.floor(hash(k, 1, 6) * (2 * hd - 2)), y = er + 1 + Math.floor(hash(k, 2, 6) * 3); if (idx.has(pen.get(x, y))) pen.put(x, y, skin[Math.max(0, sn - 3)]); }
+  if (m.burn && face !== 'b') {
+    const big = /critical/.test(look.from.burn) ? 2 : /serious/.test(look.from.burn) ? 1 : 0, x0 = face === 's' ? g.F - 5 : X - hd + 1;
+    for (let y = hTop + 4; y < hTop + 7 + big * 2; y++) for (let x = x0; x < x0 + 3 + big; x++) if (idx.has(pen.get(x, y))) pen.put(x, y, hash(x, y, 17) > .5 ? P.red[3] : P.red[4]);
+  }
+  if (m.scar && face !== 'b') {
+    const len = /critical/.test(look.from.scar) ? 5 : /serious/.test(look.from.scar) ? 4 : 3, x0 = face === 's' ? g.F - 4 : X + 1;
+    for (let k = 0; k < len; k++) if (idx.has(pen.get(x0 + (k >> 1), hTop + 3 + k))) pen.put(x0 + (k >> 1), hTop + 3 + k, skin[0]);
+  }
+}
 
-  if (m.pox) for (let k = 0; k < 6; k++) { const x = cx - b.hd + 1 + Math.floor(hash(k, 1, 6) * (2 * b.hd - 2)), y = er + 1 + Math.floor(hash(k, 2, 6) * 3); if (isSkin(x, y)) put(x, y, skin[Math.max(0, sn - 3)]); }
-  if (m.scar) for (let k = 0; k < 2 + m.scar; k++) { const x = cx + 1 + k - 1, y = hTop + 2 + k; if (isSkin(x, y)) put(x, y, skin[0]); }
-  if (m.oneEye) { put(cx - 3, er, skin[0]); put(cx - 2, er, skin[1]); put(cx - 4, er - 1, skin[0]); put(cx - 1, er + 1, skin[0]); }
-  if (m.extraEyes) {
-    const eyes = [[cx - 2, er - 2], [cx + 1, er - 2], [cx - 3, er - 3], [cx + 2, er - 3], [cx - 1, er - 4], [cx, er - 4]].slice(0, m.extraEyes * 2);
-    for (const [x, y] of eyes) put(x, y, P.ink);
-  }
-  if (m.beak) {
-    const len = 2 + m.beak;
-    for (let j = 0; j < len; j++) for (let i = -2 + (j >> 1); i < 2 - (j >> 1) + (j === 0 ? 0 : 0); i++) put(cx + i, er + 1 + j, P.gold[j === 0 ? 4 : i < 0 ? 3 : 2]);
-    put(cx - 1, er + len, P.gold[1]);
-  }
-  if (m.fangs) for (let k = 0; k < m.fangs; k++) { put(cx - 2, er + 4 + k, P.bone[5]); put(cx + 1, er + 4 + k, P.bone[5]); }
+function paintHead(pen, g, look, skin, hair) {
+  const m = look.marks, { X, er, F, hd, hTop, hh, face } = g, side = face === 's', bone = P.bone;
   if (m.horns) {
-    const len = 1 + m.horns * 2;
-    for (const sd of [-1, 1]) for (let k = 0; k < len; k++) {
-      const x = cx + (sd < 0 ? -b.hd + 1 : b.hd - 2) + sd * Math.round(k * k / (len * 1.6)), y = hTop - 1 - k;
-      put(x, y, P.bone[k > len - 2 ? 5 : sd < 0 ? 4 : 3]); if (k < len / 2) put(x - sd, y, P.bone[2]);
+    const great = m.horns >= 4, len = m.horns === 2 ? 2 : great ? 12 : 6;
+    for (const sd of side ? [-1] : [-1, 1]) {
+      const rx = side ? X - 1 : X + (sd < 0 ? -hd + 2 : hd - 3), path = [];
+      for (let k = 0; k < len; k++) {
+        const t = k / Math.max(1, len - 1);
+        if (great) { const dir = side ? -1 : sd, ccx = (side ? X - 1 : X + sd * (hd + 1)) + dir * 2, ccy = hTop + 1, a = Math.PI * (.75 - 1.7 * t), r = 4 - 1.5 * t; path.push([ccx + dir * r * Math.cos(a) - dir * 1, ccy - r * Math.sin(a)]); }
+        else path.push([rx + (side ? -1 : sd) * k * .55, hTop - 1 - k * (m.horns === 2 ? .6 : .95) + (t > .7 ? (t - .7) * 3 : 0)]);
+      }
+      path.forEach(([x, y], k) => {
+        const t = k / Math.max(1, len - 1), w = great ? (t < .5 ? 3 : t < .85 ? 2 : 1) : m.horns === 2 ? 2 : (t < .5 ? 2 : 1);
+        for (let i = 0; i < w; i++) for (let j = 0; j < (great ? 2 : 1); j++) pen.put(Math.round(x) + i - (w >> 1), Math.round(y) + j, bone[clamp(5 - Math.floor(t * 2) - (i === 0 ? 0 : 1) - (great && k % 3 === 1 ? 2 : 0), 1, 5)]);
+      });
     }
+    reink(pen, X - hd - 10, hTop - 10, X + hd + 10, hTop + hh);
   }
-  if (m.claws) for (const hx of [cx - b.hw - b.aw, cx + b.hw + b.aw - 1]) for (let k = 0; k < m.claws; k++) for (const dx of [-1, 1]) putEmpty(hx + dx, tTop + b.tl + 1 + k, P.bone[5 - k]);
-  if (m.wings) {
-    const span = 3 + m.wings * 4, drop = 5 + m.wings * 3, col = m.feathers ? P.furWhite : hair;
-    for (const sd of [-1, 1]) for (let k = 0; k < span; k++) {
-      const x = cx + sd * (b.hw + b.aw + 1 + k) - (sd > 0 ? 1 : 0), top = tTop - 2 - Math.round(k * .6 * (1 - k / span) * 2), h = Math.max(1, Math.round(drop * (1 - k / span)) + 2);
-      for (let j = 0; j < h; j++) putEmpty(x, top + j, col[clamp(col.length - 2 - (j === 0 ? -1 : 0) - ((k + j) % 4 === 0 ? 1 : 0), 0, col.length - 1)]);
+  if (m.scales >= 4 || m.fur >= 4 || m.feathers >= 3) {
+    const tint = m.scales >= 4 ? skin[0] : m.feathers ? P.furWhite[4] : P.furWhite[3];
+    const crest = side ? [X - 2, X - 4, X - 6] : [X - 2, X, X + 1];
+    crest.forEach((x, i) => { const tall = m.scales >= 4 ? 3 - (i === 1 ? 0 : 1) : 2; for (let k = 1; k <= tall; k++) pen.put(x, hTop - k, tint); });
+  }
+  if (m.fur >= 4) {
+    const mx = side ? X - 2 : X, my = hTop + Math.floor(hh * .6), rx = hd + 5, ry = Math.floor(hh / 2) + 5, tint = P.furWhite;
+    for (let y = my - ry; y <= my + ry + 3; y++) for (let x = mx - rx - 1; x <= mx + rx; x++) {
+      const dx = (x - mx + .5) / rx, dy = (y - my) / ry, d = dx * dx + dy * dy, edge = 1 + hash(x, y, 29) * .25;
+      if (d > edge || (side && x > X + 1 && y < g.er + 3)) continue;
+      pen.under(x, y, d > .85 ? tint[4] : d > .55 ? tint[3 - ((x + y * 2) % 3 === 0 ? 1 : 0)] : tint[2 - ((x * 3 + y) % 4 === 0 ? 1 : 0)]);
     }
+    reink(pen, mx - rx - 3, my - ry - 2, mx + rx + 3, my + ry + 5);
   }
+  if (face === 'b') return;
+  const mx = side ? F - 2 : X - 1;
+  if (m.beak) {
+    const len = m.beak + 1, col = m.beak >= 4 ? bone : P.gold;
+    for (let j = 0; j < len; j++) {
+      const w = Math.max(1, 3 - (j >> 1));
+      for (let i = 0; i < w; i++) pen.put(side ? F - 1 + i + (j >> 1) : X - 1 - (w >> 1) + i + 1, er + 1 + j, col[j === 0 ? 4 : i === 0 ? 3 : 2]);
+    }
+    pen.put(side ? F + (len >> 1) + 1 : X, er + len, m.beak >= 4 ? P.ink : col[1]);
+  }
+  if (m.fangs) for (let k = 0; k < Math.min(4, m.fangs); k++) { pen.put(mx - (side ? 0 : 1), er + 4 + k, bone[5]); if (!side) pen.put(mx + 2, er + 4 + k, bone[5]); }
+  if (m.tusks >= 4) for (const sd of side ? [1] : [-1, 1]) for (let k = 0; k < 3; k++) pen.put((side ? F - 1 : X + sd * 3 - (sd > 0 ? 1 : 0)) + (side ? k >> 1 : 0), er + 2 - k, bone[5 - (k >> 1)]);
+  if (m.gills) for (const sd of side ? [-1] : [-1, 1]) {
+    const gx = side ? X - 2 : X + sd * (hd - 1) - (sd > 0 ? 1 : 0);
+    for (let k = 0; k < 3; k++) pen.put(gx, g.er + 1 + k, skin[0]);
+    if (/frill/.test(look.from.gills)) for (let j = 0; j < 5; j++) for (let k = 1; k < 4 - Math.abs(j - 2); k++) pen.under(gx + (side ? -k : sd * k), g.er + j, j & 1 ? P.red[3] : P.red[2]);
+  }
+}
+
+function reink(pen, x0, y0, x1, y1) {
+  const solid = (x, y) => { const c = pen.get(x, y); return c && c !== P.ink; };
+  const near = (x, y, f) => f(x - 1, y) || f(x + 1, y) || f(x, y - 1) || f(x, y + 1);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (pen.get(x, y) === P.ink && !near(x, y, solid)) pen.put(x, y, null);
+  const add = [];
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!pen.get(x, y) && near(x, y, solid)) add.push([x, y]);
+  for (const [x, y] of add) pen.put(x, y, P.ink);
+}
+
+function paintLimbs(pen, g, look, skin, s) {
+  const m = look.marks, { cx, hw, aw, tTop, legTop, legs, base, face } = g, sn = skin.length - 1;
+  if (face === 's') return;
+  const wrap = [P.cloth[4], P.cloth[3]];
   if (m.oneArm) {
-    for (let y = tTop - 2; y < legTop + 2; y++) for (let x = 0; x < cx - b.hw; x++) if (s.c[at(x, y)] && !face(x, y)) put(x, y, null);
-    for (let y = tTop - 1; y < tTop + 3; y++) put(cx - b.hw - 1, y, P.ink);
+    const x0 = face === 'b' ? cx + hw : cx - hw - aw - 3, x1 = face === 'b' ? cx + hw + aw + 2 : cx - hw - 1, cut = tTop + 4;
+    for (let y = cut; y <= base; y++) for (let x = x0; x <= x1; x++) pen.put(x, y, null);
+    for (let x = x0; x <= x1; x++) if (pen.get(x, cut - 1) && pen.get(x, cut - 1) !== P.ink) pen.put(x, cut - 1, wrap[x & 1]);
+    reink(pen, x0 - 1, tTop - 2, x1 + 1, base + 1);
   }
   if (m.oneLeg) {
-    for (let y = legTop + 2; y <= base + 1; y++) for (let x = cx - b.hw - 2; x < cx - 1; x++) put(x, y, null);
-    for (let x = cx - b.hw - 1; x < cx - 1; x++) put(x, legTop + 2, P.ink);
+    const x0 = face === 'b' ? cx : cx - hw - 2, x1 = face === 'b' ? cx + hw + 1 : cx - 2, cut = legTop + Math.ceil(legs * .4);
+    for (let y = cut; y <= base + 1; y++) for (let x = x0; x <= x1; x++) pen.put(x, y, null);
+    for (let x = x0; x <= x1; x++) if (pen.get(x, cut - 1) && pen.get(x, cut - 1) !== P.ink) pen.put(x, cut - 1, wrap[x & 1]);
+    reink(pen, x0 - 1, legTop - 1, x1 + 1, base + 1);
   }
+  if ((m.claws || m.webbed) && s.pts.hand) {
+    const [hx, hy] = s.pts.hand, hands = face === 's' ? [hx] : [hx, 2 * cx - 1 - hx];
+    if (m.webbed) for (const x of hands) { pen.under(x - 1, hy + 2, skin[Math.max(0, sn - 2)]); pen.under(x + 1, hy + 2, skin[Math.max(0, sn - 2)]); pen.under(x, hy + 3, skin[Math.max(0, sn - 1)]); }
+    const n = m.claws >= 3 ? 3 : 2, len = m.claws >= 4 ? 4 : m.claws >= 3 ? 3 : 1;
+    if (m.claws) for (const x of hands) for (let c = 0; c < n; c++) {
+      const dx = c - (n >> 1);
+      for (let k = 0; k < len; k++) pen.under(x + dx + (k >= len - 1 && len > 2 ? (x < cx ? -1 : 1) : 0), hy + 2 + k, k === len - 1 ? P.bone[2] : P.bone[5 - (k >> 1)]);
+    }
+  }
+}
+
+function paintBack(pen, g, look, skin, hair) {
+  const m = look.marks, { cx, hw, aw, tTop, legTop, legs, base, face } = g, back = face === 'b', side = face === 's';
+  const tailCol = m.fur ? hair : m.scales >= 3 || m.chitin ? skin : skin;
+  if (m.tail) {
+    const pts = back ? [[cx - 1, legTop - 1], [cx - 1, legTop + 3], [cx + 2, legTop + 6], [cx + 6, legTop + 6], [cx + 9, legTop + 3], [cx + 9, legTop]]
+      : side ? [[cx - hw - 1, legTop + 1], [cx - hw - 4, legTop + 4], [cx - hw - 8, legTop + 4], [cx - hw - 10, legTop + 1], [cx - hw - 9, legTop - 2]]
+        : [[cx + hw - 1, legTop + 3], [cx + hw + 3, legTop + 6], [cx + hw + 7, legTop + 5], [cx + hw + 9, legTop + 2], [cx + hw + 8, legTop - 1]];
+    const n = tailCol.length - 1;
+    pts.slice(1).forEach(([x1, y1], i) => {
+      const [x0, y0] = pts[i], w = i < 2 ? 2 : 1;
+      for (let d = 0; d < w; d++) pen.line(x0, y0 + d, x1, y1 + d, tailCol[clamp(n - 1 - (d ? 1 : 0), 0, n)], 0, !back);
+    });
+    if (m.fur) { const [tx, ty] = pts[pts.length - 1]; pen.rect(tx - 1, ty - 1, 3, 2, hair[n]); }
+    reink(pen, cx - hw - 12, legTop - 4, cx + hw + 12, legTop + 9);
+  }
+  if (m.membrane && !side) for (const sd of [-1, 1]) for (let y = tTop + 3; y < legTop + 4; y++) {
+    const w = y < legTop ? 2 : 1;
+    for (let k = 0; k < w; k++) pen.under(cx + sd * (hw + aw + 1 + k) - (sd > 0 ? 1 : 0), y, skin[k ? 1 : 2]);
+  }
+  if (!m.wings) return;
+  const leathery = (m.scales >= 3 || m.chitin || m.emberSkin >= 3) && !m.feathers;
+  const plumes = [P.furWhite, P.furGrey, P.furDark, P.hay, P.furBrown].filter(r => r !== hair);
+  const ramp = leathery ? skin : m.feathers ? P.furWhite : plumes[seedOf(look.id + ':plume') % plumes.length], rn = ramp.length - 1;
+  const great = look.from.wings === 'great-wings', span = m.wings <= 3 ? 5 : great ? 19 : 13, rise = m.wings <= 3 ? 4 : great ? 17 : 12;
+  const drop = m.wings === 3 ? 6 : legTop + Math.round(legs * .4) - tTop;
+  const draw = back ? pen.put : pen.under;
+  if (side) {
+    const w = m.wings <= 3 ? 3 : great ? 7 : 5, top = tTop - Math.round(rise * .6), low = m.wings <= 3 ? tTop + 4 : legTop + Math.round(legs * (great ? .7 : .45));
+    for (let k = 0; k < w; k++) {
+      const x = cx - hw + 2 - k, y0 = top + Math.round(k * k * .4), y1 = low - (leathery && k % 2 ? 2 : 0) - Math.round(k * .5);
+      for (let y = y0; y <= y1; y++) pen.put(x, y, y - y0 < 2 ? ramp[rn] : y > y1 - 2 ? ramp[Math.max(0, rn - 3)] : ramp[clamp(rn - 1 - (k & 1), 0, rn)]);
+    }
+    reink(pen, cx - hw - w - 2, top - 2, cx + 2, low + 2);
+    return;
+  }
+  const wrist = Math.round(span * .55), root = m.wings <= 3 ? hw - 2 : 2;
+  for (const sd of [-1, 1]) for (let k = 0; k <= span; k++) {
+    const x = cx + sd * (root + k) - (sd > 0 ? 1 : 0);
+    const top = k <= wrist ? Math.round(tTop + 2 - rise * k / wrist) : Math.round(tTop + 2 - rise + 4 * (k - wrist) / Math.max(1, span - wrist));
+    const reachDown = Math.round(drop * (1 - .55 * k / span));
+    let bottom = Math.max(top + 2, tTop + reachDown - (k > wrist ? Math.round((k - wrist) * 1.2) : 0));
+    if (leathery && k > 2 && k % 4 >= 2) bottom -= 2;
+    if (!leathery && k > wrist && (k & 1)) bottom -= 1;
+    for (let y = top; y <= bottom; y++) {
+      const d = y - top;
+      let c;
+      if (leathery) c = d === 0 || (k === wrist && d < (bottom - top) * .8) || (k % 4 === 0 && k > wrist && d < (bottom - top) * .7) ? ramp[Math.max(0, rn - 3)] : ramp[clamp(rn - 1 - (d > (bottom - top) * .6 ? 1 : 0), 0, rn)];
+      else c = d < 2 ? ramp[rn] : d < 4 ? ramp[Math.max(0, rn - 1)] : y > bottom - 2 ? ramp[Math.max(0, rn - 3)] : ramp[clamp(rn - 1 - (k & 1) - (k > wrist ? 1 : 0), 0, rn)];
+      draw(x, y, c);
+    }
+  }
+  reink(pen, cx - span - 4, tTop - rise - 3, cx + span + 4, tTop + drop + 2);
 }

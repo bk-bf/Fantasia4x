@@ -19,20 +19,40 @@ const HAIRS = {
 };
 const EYES = {
   dark: { col: P.ink, word: 'dark-eyed' },
+  brown: { col: P.furBrown[3], word: 'brown-eyed' },
+  hazel: { col: P.oak[4], word: 'hazel-eyed' },
   amber: { col: P.gold[4], word: 'amber-eyed' },
   blue: { col: P.blue[4], word: 'blue-eyed' },
+  ice: { col: P.frost[5], word: 'pale-eyed' },
   green: { col: P.green[4], word: 'green-eyed' },
   grey: { col: P.furWhite[2], word: 'grey-eyed' },
+  violet: { col: P.purple[4], word: 'violet-eyed' },
+  red: { col: P.red[4], word: 'red-eyed' },
 };
+const GARB = {
+  undyed: P.cloth, moss: P.green, madder: P.red, woad: P.blue, murex: P.purple,
+  hide: P.leather, soot: P.furDark, ochre: P.gold, fern: P.oak, rust: P.copper,
+};
+const LEGWEAR = { hide: P.leather, soot: P.furDark, undyed: P.cloth, woad: P.blue, bark: P.furBrown };
+const TRIMS = [null, null, P.gold, P.red, P.blue, P.cloth];
 
 const STYLES = [
-  { id: 'short', sexes: ['male', 'female'] },
-  { id: 'long', sexes: ['female', 'male'], o: { longhair: 1 } },
-  { id: 'bun', sexes: ['female'], o: { bun: 1 } },
-  { id: 'mohawk', sexes: ['male', 'female'], o: { mohawk: true } },
-  { id: 'bald', sexes: ['male'], o: { bald: 1 } },
+  { id: 'short', sexes: { male: 4, female: 2 } },
+  { id: 'crop', sexes: { male: 3, female: 1 }, o: { bald: 1 } },
+  { id: 'long', sexes: { male: 1, female: 4 }, o: { longhair: 1 } },
+  { id: 'bun', sexes: { female: 3 }, o: { bun: 1 } },
+  { id: 'ponytail', sexes: { male: 2, female: 3 } },
+  { id: 'braids', sexes: { male: 1, female: 3 } },
+  { id: 'topknot', sexes: { male: 2, female: 1 } },
+  { id: 'curls', sexes: { male: 2, female: 2 } },
+  { id: 'pigtails', sexes: { female: 2 } },
+  { id: 'fringe', sexes: { male: 1, female: 2 } },
+  { id: 'mohawk', sexes: { male: 1, female: 1 } },
+  { id: 'bald', sexes: { male: 2 }, o: { bald: 1 } },
 ];
-const BEARD = { sexes: ['male'] };
+const BEARDS = { none: 5, full: 3, moustache: 2, goatee: 2, stubble: 3, braided: 1 };
+
+const RANK = { negative: 1, common: 1, uncommon: 2, rare: 3, epic: 4, mythic: 5, legendary: 5 };
 
 function weighted(r, weights) {
   const keys = Object.keys(weights), total = keys.reduce((a, k) => a + weights[k], 0);
@@ -41,16 +61,24 @@ function weighted(r, weights) {
   return keys[keys.length - 1];
 }
 
+function lean(r, table, strong) {
+  const keys = Object.keys(table), w = Object.fromEntries(keys.map(k => [k, 1]));
+  const first = keys[Math.floor(r() * keys.length)];
+  w[first] += strong;
+  if (r() < .5) { const second = keys[Math.floor(r() * keys.length)]; w[second] += strong / 2; }
+  return w;
+}
+
 function culturePreference(culture) {
   const r = rng(seedOf(culture.id + ':colour'));
-  const lean = (table, strong) => {
-    const keys = Object.keys(table), w = Object.fromEntries(keys.map(k => [k, 1]));
-    const first = keys[Math.floor(r() * keys.length)];
-    w[first] += strong;
-    if (r() < .5) { const second = keys[Math.floor(r() * keys.length)]; w[second] += strong / 2; }
-    return w;
+  const eyes = Object.fromEntries(Object.keys(EYES).map(k => [k, k === 'red' || k === 'violet' ? .15 : 1]));
+  const eyeLean = lean(r, eyes, 2 + r() * 6);
+  const garbKeys = Object.keys(GARB), garb = {};
+  for (let i = 0; i < 3; i++) garb[garbKeys[Math.floor(r() * garbKeys.length)]] = 3 - i;
+  return {
+    skin: lean(r, SKINS, 2 + r() * 10), hair: lean(r, HAIRS, 2 + r() * 8), eyes: eyeLean,
+    garb, legwear: lean(r, LEGWEAR, 3), trim: TRIMS[Math.floor(r() * TRIMS.length)],
   };
-  return { skin: lean(SKINS, 2 + r() * 10), hair: lean(HAIRS, 2 + r() * 8), eyes: lean(EYES, 2 + r() * 6) };
 }
 
 function topShare(weights) {
@@ -72,32 +100,43 @@ function colouringPhrase(pref) {
 }
 
 const MARKS = [
-  { id: 'horns', traits: { 'nub-horns': 1, 'gore-horns': 2, 'great-horns': 3 } },
-  { id: 'tusks', traits: { 'small-tusks': 1, tusks: 2, 'great-tusks': 3 } },
-  { id: 'beak', traits: { 'pecking-beak': 1, 'tearing-beak': 2, 'rending-beak': 3 } },
-  { id: 'fangs', traits: { 'feeding-fangs': 1, 'jagged-teeth': 1, 'goring-fangs': 2, 'sabre-fangs': 3, venomous: 1, 'mild-venom': 1, 'deathly-venom': 2 } },
-  { id: 'wings', traits: { 'budding-wings': 1, 'gliding-membrane': 1, wings: 2, 'great-wings': 3 } },
-  { id: 'tail', traits: { 'prehensile-tail': 1 } },
-  { id: 'extraEyes', traits: { 'spider-eyes-lesser': 1, 'spider-eyes': 2, 'spider-eyes-greater': 3 } },
-  { id: 'claws', traits: { 'budding-claws': 1, 'rending-claws': 2, 'burrowing-claws': 2, 'dragon-claws': 3, 'crushing-claws': 3, 'raking-talons': 2, 'hooked-talons': 2, 'raptor-talons': 3, 'ripping-talons': 2 } },
-  { id: 'scales', traits: { 'scaled-hide': 1, 'pebbled-skin': 1, 'dragon-scales': 2, 'granite-hide': 2 } },
-  { id: 'feathers', traits: { feathered: 1, 'downy-coat': 1 } },
-  { id: 'fur', traits: { 'thick-fur': 2, 'winter-mane': 3 } },
-  { id: 'chitin', traits: { 'chitin-plating': 1, 'chitin-plates': 2, ironshell: 2, 'shell-ironshell': 2 } },
-  { id: 'ironSkin', traits: { 'iron-skin': 1 } },
-  { id: 'emberSkin', traits: { 'flame-touched': 1, emberheart: 1, 'tinder-skin': 1 } },
-  { id: 'leafSkin', traits: { photosynthetic: 1 } },
-  { id: 'slick', traits: { 'slick-hide': 1, 'moist-skinned': 1, 'webbed-limbs': 1, gilled: 1, 'gill-frills': 1 } },
-  { id: 'oneEye', traits: { 'one-eyed': 1 } },
-  { id: 'oneArm', traits: { 'one-armed': 1 } },
-  { id: 'oneLeg', traits: { 'one-legged': 1 } },
-  { id: 'pox', traits: { 'pox-marked': 1 } },
-  { id: 'scar', traits: { 'head-scar-minor': 1, 'head-scar-serious': 2, 'head-scar-critical': 3, scarred: 1, 'head-burn-minor': 1, 'head-burn-critical': 2 } },
+  { id: 'horns', traits: ['nub-horns', 'gore-horns', 'great-horns'] },
+  { id: 'tusks', traits: ['small-tusks', 'tusks', 'great-tusks'] },
+  { id: 'beak', traits: ['pecking-beak', 'tearing-beak', 'rending-beak'] },
+  { id: 'fangs', traits: ['feeding-fangs', 'jagged-teeth', 'goring-fangs', 'sabre-fangs', 'venomous', 'mild-venom', 'deathly-venom'] },
+  { id: 'wings', traits: ['budding-wings', 'wings', 'great-wings'] },
+  { id: 'membrane', traits: ['gliding-membrane'] },
+  { id: 'tail', traits: ['prehensile-tail'] },
+  { id: 'spiderEyes', traits: ['spider-eyes-lesser', 'spider-eyes', 'spider-eyes-greater'] },
+  { id: 'claws', traits: ['budding-claws', 'rending-claws', 'burrowing-claws', 'dragon-claws', 'crushing-claws', 'raking-talons', 'hooked-talons', 'raptor-talons', 'ripping-talons'] },
+  { id: 'scales', traits: ['pebbled-skin', 'scaled-hide', 'granite-hide', 'dragon-scales'] },
+  { id: 'feathers', traits: ['feathered', 'downy-coat'] },
+  { id: 'fur', traits: ['thick-fur', 'winter-mane'] },
+  { id: 'chitin', traits: ['chitin-plates', 'chitin-plating', 'ironshell', 'shell-ironshell'] },
+  { id: 'ironSkin', traits: ['iron-skin'] },
+  { id: 'emberSkin', traits: ['tinder-skin', 'emberheart', 'flame-touched'] },
+  { id: 'leafSkin', traits: ['photosynthetic'] },
+  { id: 'slick', traits: ['moist-skinned', 'slick-hide'] },
+  { id: 'webbed', traits: ['webbed-limbs'] },
+  { id: 'gills', traits: ['gilled', 'gill-frills'] },
+  { id: 'dragonEyes', traits: ['dragon-eyes'] },
+  { id: 'beastEyes', traits: ['beast-eyed'] },
+  { id: 'murkEyes', traits: ['murk-eyes'] },
+  { id: 'oneEye', traits: ['one-eyed'] },
+  { id: 'oneArm', traits: ['one-armed'] },
+  { id: 'oneLeg', traits: ['one-legged'] },
+  { id: 'pox', traits: ['pox-marked'] },
+  { id: 'scar', traits: ['head-scar-minor', 'head-scar-serious', 'head-scar-critical'] },
+  { id: 'burn', traits: ['head-burn-minor', 'head-burn-serious', 'head-burn-critical'] },
 ];
 
-function lookMarks(traits) {
+function lookMarks(traits, rarity) {
   const marks = {}, from = {};
-  for (const m of MARKS) for (const t of traits) if (m.traits[t] && (marks[m.id] || 0) < m.traits[t]) { marks[m.id] = m.traits[t]; from[m.id] = t; }
+  for (const m of MARKS) for (const t of traits) {
+    if (!m.traits.includes(t)) continue;
+    const s = RANK[rarity[t]] || 1;
+    if ((marks[m.id] || 0) < s) { marks[m.id] = s; from[m.id] = t; }
+  }
   return { marks, from };
 }
 
@@ -112,31 +151,51 @@ function bodyOf(p) {
   return { legs, tl, hw, aw, hh, hd };
 }
 
-function pawnLookOf(p, pref) {
+function greying(r, age, hair) {
+  if (hair === 'white') return hair;
+  const p = age >= 58 ? .8 : age >= 46 ? .4 : age >= 38 ? .1 : 0;
+  return r() < p ? (age >= 58 && r() < .5 ? 'white' : 'grey') : hair;
+}
+
+function pawnLookOf(p, pref, rarity) {
   const r = rng(seedOf(p.id + ':look'));
-  const skin = weighted(r, pref.skin), hair = weighted(r, pref.hair), eyes = weighted(r, pref.eyes);
-  const styles = STYLES.filter(s => s.sexes.includes(p.sex));
-  const style = styles[Math.floor(r() * styles.length)];
-  const beard = BEARD.sexes.includes(p.sex) && r() < .45;
-  const { marks, from } = lookMarks(p.traits);
-  return { sex: p.sex, body: bodyOf(p), skin, hair, eyes, style: style.id, beard, marks, from };
+  const skin = weighted(r, pref.skin), eyes = weighted(r, pref.eyes);
+  const odd = r() < .04 ? Object.keys(EYES)[Math.floor(r() * Object.keys(EYES).length)] : null;
+  const hair = greying(r, p.age, weighted(r, pref.hair));
+  const style = weighted(r, Object.fromEntries(STYLES.filter(s => s.sexes[p.sex]).map(s => [s.id, s.sexes[p.sex]])));
+  const beard = p.sex === 'male' ? weighted(r, BEARDS) : 'none';
+  const garb = weighted(r, pref.garb), legwear = weighted(r, pref.legwear);
+  const { marks, from } = lookMarks(p.traits, rarity);
+  if (p.blind) { marks.blind = 1; delete marks.oneEye; }
+  return { id: p.id, sex: p.sex, body: bodyOf(p), skin, hair, eyes, oddEye: odd !== eyes ? odd : null, style, beard, garb, legwear, trim: pref.trim, marks, from };
+}
+
+const HAIR_GREY = { grey: P.furGrey };
+const hairRamp = h => (HAIRS[h] || { ramp: HAIR_GREY[h] }).ramp;
+
+const DRAGON = [P.green, P.red, P.blue, P.copper, P.purple];
+function skinOf(look) {
+  const m = look.marks;
+  if (m.ironSkin) return P.iron.slice(1, 6);
+  if (m.scales >= 4) return DRAGON[seedOf(look.id) % DRAGON.length].slice(0, 5);
+  if (m.chitin >= 4) return P.chitin;
+  if (m.emberSkin >= 3) return P.ember.slice(1, 6);
+  if (m.leafSkin) return P.oak.slice(1, 6);
+  return SKINS[look.skin].ramp;
 }
 
 let LOOKS = 0;
 function drawLook(look, face) {
-  const key = 'look' + (++LOOKS);
-  let skin = SKINS[look.skin].ramp;
-  if (look.marks.ironSkin) skin = P.iron.slice(1, 6);
-  if (look.marks.emberSkin) skin = P.ember.slice(1, 6);
-  if (look.marks.leafSkin) skin = P.green;
-  if (look.marks.chitin) skin = P.chitin;
-  const b = look.body;
-  FOLK[key] = { ...b, skin, eyes: EYES[look.eyes].col, tusks: look.marks.tusks ? 1 : 0, tail: look.marks.tail ? 1 : 0, pointears: look.marks.fur ? 1 : 0 };
-  const style = STYLES.find(s => s.id === look.style);
-  const o = { race: key, tunic: P.cloth, pants: P.leather, hair: HAIRS[look.hair].ramp, seed: 7, ...(style.o || {}), ...(look.beard ? { beard: 1 } : {}) };
-  if (o.mohawk) o.mohawk = HAIRS[look.hair].ramp;
+  const key = 'look' + (++LOOKS), m = look.marks;
+  const skin = skinOf(look), eye = m.dragonEyes ? P.gold[4] : m.beastEyes ? P.gold[3] : m.murkEyes ? P.frost[5] : EYES[look.eyes].col;
+  FOLK[key] = { ...look.body, skin, eyes: eye, tusks: m.tusks ? 1 : 0, pointears: m.fur >= 3 || m.scales >= 4 ? 1 : 0 };
+  const style = STYLES.find(s => s.id === look.style), hair = hairRamp(look.hair);
+  const o = { race: key, tunic: GARB[look.garb], pants: LEGWEAR[look.legwear], hair, seed: seedOf(look.id) % 97 + 1, ...(style.o || {}) };
+  if (look.trim) o.trim = look.trim;
+  if (look.style === 'mohawk') o.mohawk = hair;
+  if (look.beard === 'full' || look.beard === 'braided') o.beard = 1;
   const s = rigPawn(o, { face: face || 'f' });
   delete FOLK[key];
-  paintMarks(s, look, skin);
+  paintLook(s, look, skin, hair, face || 'f');
   return s;
 }
