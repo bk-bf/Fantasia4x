@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { createRequire } from 'node:module';
 
-const [, , TREE, PORT, WORLD, OUT, X0, Y0, TW, TH] = process.argv;
+const [, , TREE, PORT, WORLD, OUT, X0, Y0, TW, TH, QUERY = ''] = process.argv;
 const MARGIN = 6;
 const TILE = 32;
 const x0 = +X0 - MARGIN,
@@ -11,7 +11,7 @@ const x0 = +X0 - MARGIN,
   th = +TH + 2 * MARGIN;
 const { chromium } = createRequire(`${TREE}/package.json`)('playwright');
 const world = JSON.parse(gunzipSync(readFileSync(WORLD)).toString('utf8'));
-const hud = readFileSync(`${TREE}/mockups/hud/ambient.js`, 'utf8');
+const hud = readFileSync(new URL('../../hud/ambient.js', import.meta.url), 'utf8');
 const HUD = new Function(`${hud.replace("'use strict';", '')}; return HUD;`)();
 const noon = HUD.ambient.compute(13, 'clear');
 
@@ -64,6 +64,17 @@ const setup = async (o) => {
   };
 };
 
+const settle = () => {
+  const core = window.__core;
+  for (let i = 0; i < 4000; i++) {
+    core.beginFrame();
+    core.endFrame();
+    const p = core.peaks;
+    if (!p || (!p.job && [...p.chunks.values()].every((c) => c.baked && !c.stale))) return i;
+  }
+  return -1;
+};
+
 const frame = (a) => {
   const core = window.__core,
     gl = core.getContext();
@@ -101,9 +112,10 @@ const browser = await chromium.launch({
 try {
   const page = await browser.newPage();
   page.on('pageerror', (e) => console.log('pageerror', e.message));
-  await page.goto(`http://127.0.0.1:${PORT}/__scene?painted=1&blend=1`, { waitUntil: 'load', timeout: 180000 });
+  await page.goto(`http://127.0.0.1:${PORT}/__scene?painted=1&blend=1${QUERY}`, { waitUntil: 'load', timeout: 180000 });
   const info = await page.evaluate(setup, { map, W, H, margin: MARGIN, light: noon.light, tint: noon.tint });
   if (!info.ok) throw new Error('the painted tileset or its rock top did not load');
+  console.log('settled after', await page.evaluate(settle), 'frames');
   save(await page.evaluate(frame, { W, H }), `${OUT}/today.rgba`);
   save(await page.evaluate(frame, { W, H, shade: 0 }), `${OUT}/shade0.rgba`);
   save(await page.evaluate(frame, { W, H, shade: 6 }), `${OUT}/shade6.rgba`);

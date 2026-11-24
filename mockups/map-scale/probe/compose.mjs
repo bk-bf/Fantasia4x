@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { loadScene, distanceInside, blur, TILE } from '../../mountain-tops/probe/field.mjs';
 import { DIRECTIONS } from '../../mountain-tops/probe/directions.mjs';
 import { peakLayer, sunlight } from '../../mountain-tops/probe/layer.mjs';
+import { excavate } from '../../mountain-tops/probe/mine.mjs';
 import { loadArt, growTree } from './trees.mjs';
 import { snowDepth } from './lands.mjs';
 import { fbm, noise } from './grid.mjs';
@@ -30,19 +31,53 @@ const snowy = spec.snowfield ? (x, y) => snowDepth(spec.x0 + x / TILE, spec.y0 +
 
 for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (top[y * W + x]) rockRow[y * W + x] = y + LIFT;
 
-if (spec.peaks) {
+const UNDER = 0.74;
+const outcrop = spec.top ? (await import(spec.top.module))[spec.top.name] : null;
+let rockPlants = [];
+let dig = null;
+let lifted = null;
+if (spec.peaks || outcrop) {
   const grain = scene.art(2048).rockTone;
   const box = { x0: 0, x1: FW, y0: 0, y1: FH };
   const { dist, nearX, nearY } = distanceInside(foot, FW, FH);
-  const dir = DIRECTIONS.c({ grain, A: scene.art(4096), FW, FH, foot, dist, nearX, nearY, blur, box, snow: true });
+  const ctx = { grain, A: scene.art(4096), FW, FH, foot, dist, nearX, nearY, blur, box, snow: !outcrop };
+  const dir = outcrop ? outcrop(ctx, spec.top.options) : DIRECTIONS.c(ctx);
+  rockPlants = dir.plants ?? [];
+  lifted = dir.height;
+  dig = spec.mined ? excavate({ ...scene, A: scene.art(4096), grain }) : null;
+  const RIM = { [dig?.PART.rimLit]: 1.24, [dig?.PART.rimDark]: 0.74 };
   const { layer, drawn, source } = peakLayer(scene, dir, box);
   const ramp = A.P.rock,
     bright = lum(ramp[4]);
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
       const ci = y * W + x,
-        fi = (y + M) * FW + x + M;
-      if (!top[ci] || !drawn[fi]) continue;
+        fx = x + M,
+        fy = y + M,
+        fi = fy * FW + fx;
+      const peak = top[ci] && drawn[fi] && !(dig && dig.seeThrough(fx, fy));
+      if (dig) {
+        const stands = dig.ground[fi] > 0 && (peak ? source[fi] : dig.cover(fx, fy)) < dig.ground[fi];
+        const dug = !peak && !stands ? dig.part[fi] : 0;
+        if (stands) {
+          for (let k = 0; k < 3; k++) img[ci * 3 + k] = dig.folk[fi * 3 + k] * (top[ci] ? lightAt(ci, k) : noon[k]);
+          continue;
+        }
+        if (dug === dig.PART.floor || dug === dig.PART.face) {
+          for (let k = 0; k < 3; k++) img[ci * 3 + k] = dig.colour[fi * 3 + k] * (top[ci] ? lightAt(ci, k) : noon[k]) * (dug === dig.PART.face ? UNDER : 1);
+          rockRow[ci] = 0;
+          continue;
+        }
+        if (dug) {
+          for (let k = 0; k < 3; k++) img[ci * 3 + k] *= RIM[dug] * UNDER;
+          continue;
+        }
+        if (!peak && top[ci] && drawn[fi]) {
+          for (let k = 0; k < 3; k++) img[ci * 3 + k] *= UNDER;
+          continue;
+        }
+      }
+      if (!peak) continue;
       let c = [layer[fi * 3], layer[fi * 3 + 1], layer[fi * 3 + 2]];
       if (snowy && lum(c) >= bright && snowy(x, y) > 0) c = A.rp(A.P.snow, 0.5 + (lum(c) - bright) / 90, x, y, 0.4);
       for (let k = 0; k < 3; k++) img[ci * 3 + k] = s0[ci * 4 + k] + (c[k] - ramp[0][k]) * lightAt(ci, k);
@@ -115,6 +150,15 @@ for (const t of plan.trees.filter((p) => inView([p.x, p.y], 14, 4, 24))) {
   const sprite = tree(t);
   sprites.push({ sprite, x: px(t.x) + TILE / 2, base: (t.y - spec.y0) * TILE + TRUNK_FOOT, order: (t.y - spec.y0) * TILE + TRUNK_FOOT, crown: true });
 }
+for (const p of rockPlants) {
+  const x = p.x - M,
+    y = p.y - M;
+  if (x < -20 || y < -10 || x >= W + 20 || y >= H + 40) continue;
+  if (dig && dig.seeThrough(p.x, p.y - LIFT - Math.round(lifted[p.y * FW + p.x]))) continue;
+  const sprite = p.tree ? tree({ kind: p.tree, seed: p.seed, f: p.f }) : A.mkPlant(p.plant, p.seed, 'summer');
+  const lift = LIFT + Math.round(lifted[p.y * FW + p.x]);
+  sprites.push({ sprite, x, base: y - lift + (p.tree ? 4 : 2), depth: y, order: y, crown: Boolean(p.tree), onRock: true });
+}
 for (const [tx, ty] of plan.reeds.filter((p) => inView(p, 2, 2, 3))) {
   const hx = Math.floor(tx * 7),
     hy = Math.floor(ty * 7);
@@ -126,7 +170,7 @@ sprites.sort((a, b) => a.order - b.order);
 
 const shade = new Uint8Array(W * H);
 for (const s of sprites) {
-  if (!s.crown || !s.sprite.sh) continue;
+  if (!s.crown || !s.sprite.sh || s.onRock) continue;
   const { rx, ry, dx } = s.sprite.sh,
     cx = s.x + dx,
     cy = s.base;
@@ -152,7 +196,7 @@ for (const s of sprites) {
       const c = sprite.c[i];
       if (!c) continue;
       const ci = y * W + x;
-      if (rockRow[ci] > s.base + 2) continue;
+      if (rockRow[ci] > (s.depth ?? s.base) + 2) continue;
       if (s.crown && sprite.crown[i] && cutaway(x, y)) continue;
       for (let k = 0; k < 3; k++) img[ci * 3 + k] = c[k] * sun[k];
     }
