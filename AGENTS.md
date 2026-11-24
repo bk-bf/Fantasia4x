@@ -190,11 +190,18 @@ one does not land. Commit in logical groups. On ubuntuserver the checkout is rea
 with no editor and no git UI, so an uncommitted tree there is invisible, and the tools that read
 that tree stop on it.
 
-**All work lands on `dev`.** `main` is the branch the owner plays and builds from, and only his
-promotion changes it: `pnpm promote` and `.github/workflows/promote.yml` hold what a
-promotion runs. Nothing automated writes to `main`.
+**`dev` takes only crucial work until the look overhaul settles.** Crucial is a perf fix, a fix for
+a crash, a stuck sim or lost state, and tools, CI, tests, agent config, skills and mockups.
+Everything else is look work and lands on `test/look-overhaul`, where the owner plays and judges
+it: UI, rendering, art, item and recipe data, map generation, and any new feature. A change that is
+not plainly crucial is look work.
 
-Branch from `dev`, merge to `dev`, and never push `main`.
+`main` is the branch the owner plays and builds from, and only his promotion changes it:
+`pnpm promote` and `.github/workflows/promote.yml` hold what a promotion runs. Nothing automated
+writes to `main`.
+
+Branch from `dev` for crucial work and from `test/look-overhaul` for look work, and never push
+`main`.
 
 This applies to subagents you dispatch.
 
@@ -353,8 +360,9 @@ edit belongs to that work, do it on that branch.
 are refused, naming the blocker. Work on it and test it locally; it is pushed once the blocker
 closes. `pnpm issue blocked-by <n> <blocker>` adds the link.
 
-**Work an agent does on an issue goes through a pull request into `dev`.** CI reports on it,
-and it merges once CI passes. The pull request is where he reads the diff and where he writes what
+**Work an agent does on an issue goes through a pull request into `dev`.** CI reports on it.
+Crucial work merges once CI passes. A pull request for look work stays unmerged: merge its branch
+into `test/look-overhaul` to put it in front of the owner, and leave its merge into `dev` to him. The pull request is where he reads the diff and where he writes what
 is wrong with it; read those comments before the next attempt. Several related fixes belong in one branch and one pull request, not one each.
 
 **Read a pull request's Check notes before calling it ready or merging it.** The `perf-notes` job
@@ -373,8 +381,10 @@ is acted on when you see it: tell the agent whose change broke it with `SendMess
 child agent to fix it. Test fixes found by the nightly pass land only on `fix/test-health`; the
 `test-health` skill holds that pass.
 
-**Work done in a conversation needs no issue and no pull request; it is pushed straight to
-`dev`.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
+**Work done in a conversation needs no issue and no pull request.** Look work branches from
+`origin/test/look-overhaul` the same way as below, is rebased onto it, and is pushed with
+`git push origin HEAD:test/look-overhaul`; nothing holds that push, so read the CI run it starts
+and fix what it reports. Crucial work is pushed straight to `dev`: branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
 <type>/<title> <path> origin/dev`, because a branch that tracks `origin/dev` lets an editor's Sync
 push it without the gate. Commit, bring it up to date with `git fetch origin && git rebase
 origin/dev`, run `pnpm chain` on the branch, and once it is green push the same commit with
