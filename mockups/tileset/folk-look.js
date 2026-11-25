@@ -146,7 +146,7 @@ function bodyOf(p) {
   const frame = p.sex === 'female' ? { shoulders: .86, arms: .8 } : { shoulders: 1, arms: 1 };
   const hw = clamp(Math.round(6 * k * girth * frame.shoulders), 3, 12);
   const aw = clamp(Math.round(3 * Math.sqrt(k) * Math.pow(girth, .8) * frame.arms), 2, 5);
-  return { legs, tl, hw, aw, hh, hd, build, girth };
+  return { legs, tl, hw, aw, hh, hd, build, girth, tall: k };
 }
 
 function greying(r, age, hair) {

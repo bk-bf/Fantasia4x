@@ -298,12 +298,13 @@ const FOLK_PARTS = (() => {
   const armRows = d => d.tl - d.neck - shoulderRows(d) + Math.round(2 * d.legs / REF.legs);
   const slope = (k, n) => Math.round(Math.pow((n - k) / n, 1.6) * n * 1.2);
   const centred = (text, width) => { const left = (width - text.length) >> 1; return ' '.repeat(left) + text + ' '.repeat(width - text.length - left); };
-  const bellyRows = (n, d) => [Math.round(n * (d.belly > 1 ? .4 : .55)), n - 2];
+  const bellyRows = (n, d) => [Math.min(n - 2, Math.round(n * (d.belly > 1 ? .4 : .55))), n - 2];
   function girdled(row, arm, belly) {
     const cells = [...row], end = cells.length - arm;
     let first = arm, last = end - 1;
     while (first < last && cells[first] === ' ') first++;
     while (last > first && cells[last] === ' ') last--;
+    if (belly < 0 && last - first < 5) return row;
     if (belly < 0) { cells[first] = ' '; cells[first + 1] = 'l'; cells[last] = ' '; cells[last - 1] = 'd'; return cells.join(''); }
     for (let k = 1; k <= (belly > 1 ? arm + cells.length : 1); k++) { if (first - k >= arm) cells[first - k] = 'l'; if (last + k < end) cells[last + k] = 'd'; }
     return cells.join('');
@@ -417,14 +418,13 @@ const FOLK_PARTS = (() => {
     return s;
   }
   const luma = col => col[0] * .3 + col[1] * .59 + col[2] * .11;
-  const typicalHw = sex => bodyOf({ sex, height: 175, weight: TYPICAL_WEIGHT.scale * Math.pow(175, TYPICAL_WEIGHT.power) }).hw;
 
   function look(lk, face, time) {
     face = face || 'f';
     const pose = idlePose(lk, time), rig = lookRig(lk), f = FOLK[rig.o.race], b = lk.body, sex = lk.sex === 'female' ? 'woman' : 'man';
     const c = { skin: tinted(kitTones('skin' + (SALLOW[lk.skin] || lk.skin)), skinTint(lk)), hair: kitTones('hair' + lk.hair), eye: f.eyes };
-    const frame = b.hw / b.girth / typicalHw(lk.sex), hw = Math.max(3, Math.round(REF.hw * frame * (1 + (b.girth - 1) * .5)));
-    const aw = Math.max(1, Math.min(b.aw, Math.round(ARM[sex][0].length * Math.max(3, Math.round(REF.hw * frame)) / REF.hw)));
+    const hw = Math.max(3, Math.round(REF.hw * b.tall * (1 + (b.girth - 1) * .5)));
+    const aw = Math.max(1, Math.min(b.aw, Math.round(ARM[sex][0].length * Math.max(3, Math.round(REF.hw * b.tall)) / REF.hw)));
     const neck = b.tl >= 23 ? 3 : b.tl >= 17 ? 2 : 1, belly = b.girth >= 1.36 ? 2 : b.girth >= 1.1 ? 1 : b.girth < .9 ? -1 : 0;
     const d = { hw, aw, neck, belly, tl: b.tl, legs: b.legs, br: pose.br, sway: Math.round(pose.wave() * 1.2), oneArm: rig.o.oneArm, oneLeg: rig.o.oneLeg, beard: rig.o.beard };
     const X = RG.CX, legTop = RG.BASE + 1 - d.legs, sTop = legTop - d.tl - d.br, hTop = sTop - HEAD_ROWS, er = hTop + (HEAD_ROWS >> 1), half = d.hw + d.aw, hy = sTop + d.neck + shoulderRows(d) + armRows(d) - 2;
