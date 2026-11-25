@@ -200,7 +200,7 @@ const FOLK_SHAPE = (() => {
     };
   }
 
-  const KIT = { skin: { pale: 'skinpale', tan: 'skintan', dark: 'skindark', ashen: 'skinashen', green: 'skingreen', olive: 'skinsallow' }, hair: { brown: 'hairbrown', fair: 'hairfair', black: 'hairblack', red: 'hairred', copper: 'haircopper', white: 'hairwhite', grey: 'hairgrey' } };
+  const KIT = { skin: { pale: 'skinpale', fair: 'skinfair', tan: 'skintan', dark: 'skindark', ashen: 'skinashen', green: 'skingreen', olive: 'skinsallow' }, hair: { brown: 'hairbrown', fair: 'hairfair', black: 'hairblack', red: 'hairred', copper: 'haircopper', white: 'hairwhite', grey: 'hairgrey' } };
   const nearest = (tones, c) => tones.reduce((best, t) => { const d = (t[0] - c[0]) ** 2 + (t[1] - c[1]) ** 2 + (t[2] - c[2]) ** 2; return d < best[0] ? [d, t] : best; }, [Infinity, null])[1];
   const lum = c => c[0] * .3 + c[1] * .59 + c[2] * .11;
   const EDGE = .34;

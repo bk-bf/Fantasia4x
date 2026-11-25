@@ -40,7 +40,7 @@
     return div;
   }
 
-  const SKIN_KEY = { pale: 'pale', tan: 'tan', dark: 'dark', ashen: 'ashen', green: 'green', sallow: 'olive' };
+  const SKIN_KEY = { pale: 'pale', fair: 'fair', tan: 'tan', dark: 'dark', ashen: 'ashen', green: 'green', sallow: 'olive' };
   function lookOf(person, st) {
     const sex = person.sex === 'woman' ? 'female' : 'male';
     const look = pawnLookOf({ id: 'trial-' + sex, sex, age: 30, height: 175, weight: typical(175), traits: [] }, { skin: { tan: 1 }, hair: { brown: 1 }, eyes: { dark: 1 } }, FOLK_CAST.traitRarity);

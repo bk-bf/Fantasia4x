@@ -2,7 +2,8 @@
 const seedOf = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0) % 100003; };
 
 const SKINS = {
-  pale: { ramp: P.skinPale, word: 'pale-skinned' },
+  pale: { ramp: R('#8a6a60 #b8958a #d8b8ac #eed6ca #fdf3ec'), word: 'pale-skinned' },
+  fair: { ramp: P.skinPale, word: 'fair-skinned' },
   tan: { ramp: P.skinTan, word: 'sun-browned' },
   dark: { ramp: P.skinDark, word: 'dark-skinned' },
   ashen: { ramp: P.skinGrey, word: 'ashen' },

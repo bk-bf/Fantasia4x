@@ -67,7 +67,7 @@ function paintSkin(pen, g, look, skin, hair) {
   if (m.emberSkin === 1) each((x, y, i) => { if (hash(x, y, 2) > .9 && !faceCore(x, y)) pen.put(x, y, skin[Math.max(0, i - 1)]); });
   if (m.emberSkin === 2) {
     const hx = face === 'b' ? g.cx - 2 : g.cx + 1, hy = tTop + 4, glow = .5 + .5 * pose.wave();
-    for (const [dx, dy, share] of [[0, 0, .75], [-1, 0, .4], [0, 1, .4], [0, -1, .25]]) { const i = idx.get(pen.get(hx + dx, hy + dy)); if (i !== undefined) pen.put(hx + dx, hy + dy, toward(skin[i], P.ember[4], share * (.45 + .55 * glow)), Math.round(120 * share * glow)); }
+    for (const [dx, dy, heat, share] of HEART) { const i = idx.get(pen.get(hx + dx, hy + dy)); if (i !== undefined) pen.put(hx + dx, hy + dy, toward(skin[i], P.ember[heat], share * (.65 + .35 * glow)), Math.round(160 * share * glow)); }
   }
   if (m.emberSkin >= 3) each((x, y, i) => {
     if (faceCore(x, y) || hash((x + y) >> 1, Math.floor((x - y) / 3), 23) < .8 || (x + 2 * y) % 3) return;
@@ -149,6 +149,7 @@ function paintHead(pen, g, look, skin, hair) {
 }
 
 const PLATE = 4;
+const HEART = [[0, 0, 5, .95], [-1, 0, 4, .75], [1, 0, 4, .75], [0, -1, 4, .75], [0, 1, 4, .75], [-1, -1, 3, .4], [1, -1, 3, .4], [-1, 1, 3, .4], [1, 1, 3, .4], [0, 2, 3, .3]];
 const VENOM = { weak: [150, 196, 96], strong: [96, 184, 64], deathly: [148, 84, 176] };
 const FANGS = {
   'feeding-fangs': { at: [-1, 0], len: 2 },
