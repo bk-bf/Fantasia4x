@@ -110,6 +110,21 @@ export const COLONY_ART = [
   'scene.js'
 ];
 
+export const FOLK_ART = [
+  'gfx.js',
+  'mat.js',
+  'registry/world.js',
+  'actors.js',
+  'registry/motion-rig-core.js',
+  'registry/motion-rig-pawn.js',
+  'registry/pixel-kit.js',
+  'registry/folk-look.js',
+  'registry/folk-face.js',
+  'registry/folk-body.js',
+  'registry/folk-marks.js',
+  'registry/folk-parts.js'
+];
+
 export const HAND_PORTED = ['periodic.js', 'world.js', 'ground.js'];
 
 export const mockupName = (artPath = '') => artPath.replace(/^registry\//, '');

@@ -2,12 +2,12 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
-import { BAKE_ART, COLONY_ART, HAND_PORTED, REGISTRY_ART, mockupName } from './sources.mjs';
+import { BAKE_ART, COLONY_ART, FOLK_ART, HAND_PORTED, REGISTRY_ART, mockupName } from './sources.mjs';
 
 const ART = join(dirname(fileURLToPath(import.meta.url)), 'art');
 
 export const syncedFiles = () =>
-  [...new Set([...BAKE_ART, ...REGISTRY_ART, ...COLONY_ART])].filter((f) => !HAND_PORTED.includes(f));
+  [...new Set([...BAKE_ART, ...REGISTRY_ART, ...COLONY_ART, ...FOLK_ART])].filter((f) => !HAND_PORTED.includes(f));
 
 const LITERALS = new Set([
   ts.SyntaxKind.StringLiteral,
@@ -72,10 +72,15 @@ export function clean(src = '') {
   return text;
 }
 
-export function sync(from = '') {
+export function sync(from = '', only = ['']) {
   const src = resolve(from);
   if (src === resolve(ART)) throw new Error('the mockup folder cannot be tools/tileset/art itself');
-  const files = syncedFiles();
+  const named = only.filter(Boolean);
+  const unknown = named.filter((f) => !syncedFiles().some((s) => s === f || mockupName(s) === f));
+  if (unknown.length) throw new Error(`not a synced file: ${unknown.join(', ')}`);
+  const files = syncedFiles().filter(
+    (f) => !named.length || named.includes(f) || named.includes(mockupName(f))
+  );
   const missing = files.map(mockupName).filter((f) => !existsSync(join(src, f)));
   if (missing.length) throw new Error(`${src} has no ${missing.join(', ')}`);
   let newest = 0;
@@ -94,12 +99,12 @@ export function sync(from = '') {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const from = process.argv[2];
+  const [from, ...only] = process.argv.slice(2);
   if (!from) {
-    console.error('usage: pnpm tileset:sync <mockup folder>');
+    console.error('usage: pnpm tileset:sync <mockup folder> [file ...]');
     process.exit(1);
   }
-  const { changed, newest } = sync(from);
+  const { changed, newest } = sync(from, only);
   console.log(changed.length ? `updated ${changed.join(', ')}` : 'already up to date');
   console.log(`newest source file ${newest.toISOString()}`);
   console.log(`not synced, ported by hand: ${HAND_PORTED.map((f) => `art/${f}`).join(', ')}`);

@@ -111,7 +111,26 @@ const PX = (() => {
     jam: '#200610 #5a1430 #a03a5c #d8748e',
     poppy: '#2e1424 #7a4a66 #c88ba8 #f0c8dc',
     poultice: '#18260c #4a7a24 #9ccc65 #d4f0a4',
-    tincture: '#1e2618 #66745a #b8c7a8 #e4eedc'
+    tincture: '#1e2618 #66745a #b8c7a8 #e4eedc',
+    skinpale: '#5c4038 #d2ad9f #eed6ca #fdf3ec',
+    skinfair: '#4a2c20 #b88462 #e0b490 #f6dcc0',
+    skintan: '#3a1f14 #8f5a3c #bc8660 #dcae86',
+    skindark: '#1e100c #523122 #7e503a #a0705a',
+    skinashen: '#24242c #5a5e68 #8a8e96 #b4b8bc',
+    skingreen: '#1e2618 #55664a #84946c #aab890',
+    skinsallow: '#2c2816 #75693e #a69a62 #c9bf88',
+    hairbrown: '#1e1410 #3e2a1e #644630 #8c6c46',
+    hairfair: '#4a3e14 #96802e #c8b04a #e6d272',
+    hairblack: '#0e0c0a #26201c #3c332a #584c40',
+    hairred: '#2e160a #74400f #b06a20 #dc9a30',
+    haircopper: '#2c140a #6a3218 #a45a26 #c88240',
+    hairwhite: '#4e525c #9a9ea4 #d0d2d0 #f2f2ee',
+    hairgrey: '#1a1c22 #44484e #7c8084 #b0b2b0',
+    eyedark: '#0d0a10 #0d0a10 #0d0a10 #ece6d8',
+    eyebrown: '#0d0a10 #3e2a1e #644630 #ece6d8',
+    eyeblue: '#0d0a10 #23406e #3f72b8 #ece6d8',
+    eyegreen: '#0d0a10 #2a482a #558246 #ece6d8',
+    lip: '#3a1418 #8a3a3a #b85a52 #d88a7a'
   };
   const THREADS = new Set(['string', 'venom', 'gleam', 'stench', 'midge']);
 
