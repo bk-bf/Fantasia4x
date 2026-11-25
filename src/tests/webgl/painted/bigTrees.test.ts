@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import manifest from '../../../../static/tilesets/painted/manifest.json';
 import { buildTileset, parseManifest, TREE_AGES, TREE_SEASONS } from '$lib/webgl/painted/manifest';
 import { MATURE_SHARE, treeAge, treeSeason } from '$lib/webgl/painted/treeAge';
+import { readFileSync } from 'node:fs';
 import { ATLAS_MAX } from '../../../../tools/tileset/bake.mjs';
+import { decodePng } from '../../../../tools/tileset/png.mjs';
 
 const parsed = parseManifest(manifest);
 const { tileset, problems } = buildTileset(parsed);
@@ -26,6 +28,21 @@ describe('big trees in the painted atlas', () => {
             tileset.trees.get(id)?.[age][season].length,
             `${id} ${age} ${season}`
           ).toBeGreaterThan(0);
+  });
+
+  it('marks the parts of tree pixels and of nothing else, so the cutaway takes only trees', () => {
+    const light = decodePng(
+      readFileSync(new URL('../../../../static/tilesets/painted/atlas-light.png', import.meta.url))
+    );
+    const parted = (s: { x: number; y: number; w: number; h: number }) => {
+      for (let y = 0; y < s.h; y++)
+        for (let x = 0; x < s.w; x++)
+          if (light.rgba[((s.y + y) * light.w + s.x + x) * 4 + 2]) return true;
+      return false;
+    };
+    const sprites = Object.entries(parsed.sprites);
+    expect(sprites.filter(([id, s]) => !/^trees?\//.test(id) && parted(s))).toEqual([]);
+    expect(parted(parsed.sprites['trees/oak/mature/summer/0'])).toBe(true);
   });
 
   it('draws a mature tree wider and taller than a young one', () => {

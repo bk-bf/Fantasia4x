@@ -162,13 +162,12 @@ highp float cutNoise(highp vec2 p) {
     return mix(top, bottom, f.y);
 }
 
-bool leafPart(vec2 uv) {
-    int part = int(texture(u_lightAtlas, uv).b * 255.0 + 0.5);
-    return part == 3 || part == 4 || part == 5 || part == 7;
+bool treePart(vec2 uv) {
+    return texture(u_lightAtlas, uv).b > 0.0;
 }
 
 bool cutAway(highp vec2 at, vec2 uv) {
-    if (u_cuts < 0.5 || !leafPart(uv)) return false;
+    if (u_cuts < 0.5 || !treePart(uv)) return false;
     highp float edge = CUT_EDGE + (cutNoise(at / 7.0) - 0.5) * CUT_WOBBLE;
     float keep = 1.0;
     for (int i = 0; i < CUT_MAX; i++) {
