@@ -28,8 +28,12 @@ describe('the wind sway table', () => {
 
   it('drops leaves only from trees in leaf', () => {
     expect(committed.leafy.length).toBeGreaterThan(0);
-    expect(
-      committed.leafy.every((id) => id.startsWith('tree/') && !id.startsWith('tree/dead/'))
-    ).toBe(true);
+    expect(committed.leafy.every((id) => /^trees?\//.test(id) && !/^trees?\/dead\//.test(id))).toBe(
+      true
+    );
+    expect(committed.leafy.some((id) => id.startsWith('trees/oak/mature/summer/'))).toBe(true);
+    expect(committed.leafy.some((id) => /^trees\/(oak|ash|birch)\/\w+\/winter\//.test(id))).toBe(
+      false
+    );
   });
 });

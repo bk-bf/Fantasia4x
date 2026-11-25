@@ -296,6 +296,13 @@ export class ShaderManager {
     return true;
   }
 
+  setUniformVec4s(programName: string, uniformName: string, value: Float32Array): boolean {
+    const location = this.programs.get(programName)?.uniforms.get(uniformName);
+    if (!location) return false;
+    this.gl.uniform4fv(location, value);
+    return true;
+  }
+
   getAttributeLocation(programName: string, attributeName: string): number {
     const program = this.programs.get(programName);
     if (!program) {

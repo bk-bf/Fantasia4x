@@ -54,6 +54,15 @@ uniform highp float u_atlasScale;
 uniform highp float u_rowPx;
 uniform highp float u_rowDepth;
 
+const int CUT_MAX = 16;
+uniform highp vec4 u_cut[CUT_MAX];
+uniform float u_cuts;
+const highp float CUT_EDGE = 34.0;
+const highp float CUT_SOFT = 6.0;
+const highp float CUT_WOBBLE = 12.0;
+const float CUT_KEEP = 0.14;
+const float BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
+
 const int VEIN_EDGE = 4;
 const int VEIN_TILE = 32;
 const int FACE_ALPHA = 254;
@@ -136,6 +145,44 @@ vec2 paintedUv(highp vec2 uv) {
     return clamp(uv, cell.xy + inset, cell.zw - inset);
 }
 
+highp float cutCell(highp ivec2 c) {
+    highp uint h = uint(c.x) * 374761393u + uint(c.y) * 668265263u;
+    h = (h ^ (h >> 13u)) * 1274126177u;
+    h = h ^ (h >> 16u);
+    return float(h & 65535u) / 65535.0;
+}
+
+highp float cutNoise(highp vec2 p) {
+    highp vec2 i = floor(p);
+    highp vec2 f = p - i;
+    f = f * f * (3.0 - 2.0 * f);
+    highp ivec2 c = ivec2(i);
+    highp float top = mix(cutCell(c), cutCell(c + ivec2(1, 0)), f.x);
+    highp float bottom = mix(cutCell(c + ivec2(0, 1)), cutCell(c + ivec2(1, 1)), f.x);
+    return mix(top, bottom, f.y);
+}
+
+bool leafPart(vec2 uv) {
+    int part = int(texture(u_lightAtlas, uv).b * 255.0 + 0.5);
+    return part == 3 || part == 4 || part == 5 || part == 7;
+}
+
+bool cutAway(highp vec2 at, vec2 uv) {
+    if (u_cuts < 0.5 || !leafPart(uv)) return false;
+    highp float edge = CUT_EDGE + (cutNoise(at / 7.0) - 0.5) * CUT_WOBBLE;
+    float keep = 1.0;
+    for (int i = 0; i < CUT_MAX; i++) {
+        if (float(i) >= u_cuts) break;
+        highp vec4 c = u_cut[i];
+        if (c.z >= v_row) continue;
+        highp float d = length((at - c.xy) * vec2(1.0, 1.1));
+        if (d < edge) keep = min(keep, CUT_KEEP + (1.0 - CUT_KEEP) * clamp((d - edge + CUT_SOFT) / CUT_SOFT, 0.0, 1.0));
+    }
+    if (keep >= 1.0) return false;
+    highp ivec2 p = ivec2(floor(at)) & 3;
+    return (BAYER[p.y * 4 + p.x] + 0.5) / 16.0 >= keep;
+}
+
 highp float groundDepth(highp float ground) {
     return 0.5 - 0.5 * ground / u_rowPx * u_rowDepth;
 }
@@ -181,6 +228,7 @@ void main() {
             if (glow > 0.0) light = mix(u_ambient, vec3(1.0), glow);
         }
         highp vec2 at = v_world * u_atlasScale;
+        if (sprite.a > 0.0 && !off && cutAway(at, uv)) discard;
         int alpha = int(sprite.a * 255.0 + 0.5);
         highp float ground = v_row * u_rowPx + OBJECT_FOOT;
         if (alpha == 255 && sprite.r > 0.99 && sprite.b > 0.99 && sprite.g < 0.05) {

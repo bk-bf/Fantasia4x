@@ -7,7 +7,10 @@ import {
   type PaintedPieces,
   type PaintedSprite,
   type PaintedTileset,
-  type PaintedVariant
+  type PaintedVariant,
+  TREE_AGES,
+  type TreeAge,
+  type TreeSeason
 } from './manifest.js';
 
 import { pawnLook, type PawnLookOf, type PawnLookPool } from './pawnLook.js';
@@ -48,6 +51,22 @@ export function paintedTile(
   const variants = active?.lookup.get(kind)?.get(id);
   if (!variants) return undefined;
   return spriteAt(pickVariant(variants, positionHash(x, y)), x, y);
+}
+
+export function paintedTree(
+  id: string,
+  age: TreeAge,
+  season: TreeSeason,
+  x: number,
+  y: number
+): PaintedSprite | undefined {
+  const variants = active?.trees.get(id)?.[age][season];
+  return variants && spriteAt(pickVariant(variants, positionHash(x, y)), x, y);
+}
+
+export function paintedTreeTurns(id: string, a: TreeSeason, b: TreeSeason): boolean {
+  const tree = active?.trees.get(id);
+  return !!tree && TREE_AGES.some((age) => tree[age][a][0] !== tree[age][b][0]);
 }
 
 export function paintedScenery(id: string, x: number, y: number): PaintedSprite | undefined {

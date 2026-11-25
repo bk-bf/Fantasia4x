@@ -39,6 +39,7 @@ import { WindClock, type Heading } from './painted/wind.js';
 import { WaveClock, waterStill, type MapMotion, type SeaWeather } from './painted/waves.js';
 import { FLUID_DEFS, FluidClock, WATER_FLUID, type FluidSet } from './painted/fluids.js';
 import { FallingLeaves } from './painted/leaves.js';
+import { CUT_MAX, CUT_UNIFORM, cutPoints } from './painted/cutaway.js';
 
 const LIGHT_ATLAS_UNIT = 7;
 
@@ -611,6 +612,7 @@ export class WebGLRendererCore {
         this.drawShadowCast(gl, viewportTilesW, viewportTilesH);
       }
       this.drawGroundRings();
+      this.setCutaway(viewportTilesW, viewportTilesH);
       for (const layer of SPRITE_LAYERS) {
         if (!passOn(LAYER_PASS[layer])) continue;
         const chunk = CHUNKED[layer];
@@ -666,6 +668,22 @@ export class WebGLRendererCore {
       [this.buildingOverlayGrid, this.resourceOverlayGrid, this.resourceTallOverlayGrid],
       view
     );
+  }
+
+  private readonly cuts = new Float32Array(CUT_MAX * 4);
+
+  private setCutaway(viewportTilesW: number, viewportTilesH: number): void {
+    if (!this.shaderManager) return;
+    const n = this.painted
+      ? cutPoints(
+          this.overlayGrid,
+          { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH },
+          this.painted.tileset.tile,
+          this.cuts
+        )
+      : 0;
+    if (n > 0) this.shaderManager.setUniformVec4s('tileRenderer', CUT_UNIFORM, this.cuts);
+    this.shaderManager.setUniform('tileRenderer', 'u_cuts', n);
   }
 
   private leafTree = (x: number, y: number) => {

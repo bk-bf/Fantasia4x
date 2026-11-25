@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { art } from './bake.mjs';
+import { art, treeSet } from './bake.mjs';
 import { UNPAINTED } from './map.mjs';
 import { loadRegistry, registryEntries } from './registry.mjs';
 import { shoreSprites } from './shoreArt.mjs';
@@ -15,7 +15,6 @@ const OUT = join(
   'painted'
 );
 const VARIANTS = new Map([
-  ['tree', 4],
   ['plant', 3],
   ['crop', 3]
 ]);
@@ -23,7 +22,6 @@ const VARIANTS = new Map([
 export function swayTable() {
   const A = art();
   const makers = {
-    tree: [A.TREES, A.mkTree],
     plant: [A.PLANTS, A.mkPlant],
     crop: [A.CROPS, A.mkCrop]
   };
@@ -42,6 +40,7 @@ export function swayTable() {
   const unpainted = (cat = '', dbId = '') => skipped.has(`${cat}/${dbId}`);
   for (const r of registryEntries(DBX, unpainted)) drawn.push([r.spriteId, DBX.bake(r.entry)]);
   for (const { id, sprite } of shoreSprites(A)) drawn.push([id, sprite]);
+  for (const t of treeSet(A).drawn) drawn.push([t.id, { sway: t.sway, leaf: t.leafy }]);
   const { sprites } = JSON.parse(readFileSync(join(OUT, 'manifest.json'), 'utf8'));
   const sway = new Map();
   const leafy = new Set();

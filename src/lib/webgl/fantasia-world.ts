@@ -23,11 +23,14 @@ import {
   paintedPieces,
   paintedScenery,
   paintedTile,
+  paintedTree,
+  paintedTreeTurns,
   paintedTileset
 } from './painted/tileset.js';
 import { groundTufts } from './painted/tufts.js';
 import { hiddenUnderFluid } from './painted/fluids.js';
 import { shorePlantAt } from './painted/shorePlants.js';
+import { treeAge, treeSeason } from './painted/treeAge.js';
 import { isWet } from '$lib/game/world/shores.js';
 import type { PaintedPieces, PaintedSprite } from './painted/manifest.js';
 
@@ -577,7 +580,9 @@ export function applyResourceToGrid(
   const scale = drawScale !== 1 ? drawScale : undefined;
   const piece = rockPiece(tile, hiddenMask, worldMap);
   const painted = PAINTED_TILES
-    ? (piece ?? paintedTile('resource', resDef.id, tile.x, tile.y))
+    ? (piece ??
+      paintedTree(resDef.id, treeAge(tile), treeSeason(season), tile.x, tile.y) ??
+      paintedTile('resource', resDef.id, tile.x, tile.y))
     : undefined;
   const tall = rs !== undefined && rs > 1;
   blank(tall ? gridShort : gridTall);
@@ -597,6 +602,7 @@ export function resourceSeasonChanges(tile: WorldTile, a: Season, b: Season): bo
   const active = resolveActiveResource(tile);
   if (!active) return false;
   const { resDef } = active;
+  if (PAINTED_TILES && paintedTreeTurns(resDef.id, treeSeason(a), treeSeason(b))) return true;
   if (!resDef.seasonVariants) return false;
   const va = resDef.seasonVariants[a];
   const vb = resDef.seasonVariants[b];
