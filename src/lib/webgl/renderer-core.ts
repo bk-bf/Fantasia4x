@@ -10,7 +10,7 @@ import type { FontAtlas } from './types.js';
 import { BASE_TILE_PX } from './tile-types.js';
 import { WORK_PINS } from '../workPins/flag.js';
 import { addFrameTotals } from '../workPins/page.js';
-import { GROUND_BLEND, PAINTED_LIGHT, PAINTED_TILES } from './painted/flag.js';
+import { GROUND_BLEND, PAINTED_LIGHT, PAINTED_TILES, ROCK_TIERS } from './painted/flag.js';
 import { passOn } from './passes.js';
 import { loadPaintedTileset, type LoadedPaintedTileset } from './painted/loader.js';
 import { GroundBlend, waterTime } from './painted/groundBlend.js';
@@ -40,8 +40,10 @@ import { WaveClock, waterStill, type MapMotion, type SeaWeather } from './painte
 import { FLUID_DEFS, FluidClock, WATER_FLUID, type FluidSet } from './painted/fluids.js';
 import { FallingLeaves } from './painted/leaves.js';
 import { CUT_MAX, CUT_UNIFORM, cutPoints } from './painted/cutaway.js';
+import { TIER_NOISE_UNIT, TIER_TILE_UNIT, Tiers } from './painted/tiers.js';
 
 const LIGHT_ATLAS_UNIT = 7;
+const WINTER = 'winter';
 
 export const ROW_DEPTH_RANGE = 8192;
 
@@ -117,6 +119,7 @@ export class WebGLRendererCore {
   private vignette: PaintedVignette | null = null;
   private groundRings: GroundRings | null = null;
   private leaves: FallingLeaves | null = null;
+  private tiers: Tiers | null = null;
   private readonly wind = new WindClock();
   private readonly waves = new WaveClock();
   private readonly fluidClock = new FluidClock();
@@ -195,6 +198,7 @@ export class WebGLRendererCore {
 
   setGrid(grid: GameGrid, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
     this.gameGrid = grid;
+    this.tiers?.setGrids(grid, this.resourceOverlayGrid, dirtyTiles);
     this.groundBlend?.setGrid(grid, dirtyTiles);
     if (dirtyTiles && dirtyTiles.length > 0) {
       this.gridRenderer?.markTerrainChunksDirty(dirtyTiles);
@@ -226,6 +230,8 @@ export class WebGLRendererCore {
   }
 
   setResourceOverlayGrid(grid: GameGrid | null): void {
+    if (this.gameGrid && grid !== this.resourceOverlayGrid)
+      this.tiers?.setGrids(this.gameGrid, grid);
     this.resourceOverlayGrid = grid;
   }
 
@@ -459,6 +465,8 @@ export class WebGLRendererCore {
       if (this.lightPass) this.vignette = PaintedVignette.create(gl, this.shaderManager);
       this.groundRings = GroundRings.create(gl, this.shaderManager);
       if (this.painted) this.leaves = FallingLeaves.create(gl, this.shaderManager);
+      if (this.painted) this.tiers = Tiers.create(gl, this.shaderManager, this.painted);
+      if (this.gameGrid) this.tiers?.setGrids(this.gameGrid, this.resourceOverlayGrid);
 
       if (this.debug) console.log('✅ WebGL2 renderer ready');
       return true;
@@ -553,6 +561,7 @@ export class WebGLRendererCore {
         1 / this.fontAtlas.atlasHeight
       ]);
     }
+    this.tiers?.sync();
     if (this.painted) this.bindPaintedAtlas(gl, this.painted);
     if (this.rowDepth) {
       this.shaderManager.setUniform('tileRenderer', 'u_rowDepth', 1 / ROW_DEPTH_RANGE);
@@ -568,6 +577,7 @@ export class WebGLRendererCore {
         lightFrame?.grade.saturation ?? 1,
         lightFrame?.grade.brightness ?? 1
       ]);
+    this.tiers?.bindShared();
     const gridStats = passOn('terrain')
       ? this.gridRenderer.renderGrid(this.gameGrid, {
           tileWidth: BASE_TILE_PX,
@@ -626,6 +636,8 @@ export class WebGLRendererCore {
         );
         if (layer === 'resource' && this.snowGrid && passOn('snow'))
           this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
+        if (layer === 'resource' && ROCK_TIERS && this.rowDepth)
+          this.drawTiers(gl, viewportTilesW, viewportTilesH, lightFrame);
       }
       this.drawLeaves(windSecs, viewportTilesW, viewportTilesH, lightFrame);
       this.stats.overlayMs = performance.now() - tOverlay;
@@ -641,6 +653,42 @@ export class WebGLRendererCore {
         strength: lightFrame.grade.vignette,
         tilePx: this.tileWidth
       });
+  }
+
+  private drawTiers(
+    gl: WebGL2RenderingContext,
+    viewportTilesW: number,
+    viewportTilesH: number,
+    lightFrame: LightPassFrame | null
+  ): void {
+    if (!this.tiers || !this.painted || !this.shaderManager || !this.fontTexture) return;
+    const art = this.painted.tileset.tile;
+    this.stats.drawCalls += this.tiers.draw({
+      view: {
+        x0: this.viewTileX * art,
+        y0: this.viewTileY * art,
+        x1: (this.viewTileX + viewportTilesW + 1) * art,
+        y1: (this.viewTileY + viewportTilesH + 1) * art
+      },
+      projection: this.projectionMatrix,
+      viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
+      zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
+      ambient: lightFrame
+        ? lightFrame.grade.ambient
+        : [
+            this.ambientLight * this.ambientTint[0],
+            this.ambientLight * this.ambientTint[1],
+            this.ambientLight * this.ambientTint[2]
+          ],
+      fieldLit: lightFrame !== null,
+      tone: [lightFrame?.grade.saturation ?? 1, lightFrame?.grade.brightness ?? 1],
+      rowPx: art,
+      rowDepth: 1 / ROW_DEPTH_RANGE,
+      snow: this.season === WINTER
+    });
+    this.shaderManager.useProgram('tileRenderer');
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
   }
 
   private lightFrame(
@@ -839,7 +887,14 @@ export class WebGLRendererCore {
     this.shaderManager.setUniform('tileRenderer', 'u_shade', SHADOW_SHADE);
     this.shaderManager.setUniform('tileRenderer', 'u_shadowDepth', SHADOW_DEPTH);
     this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 0);
+    this.shaderManager.setUniform('tileRenderer', 'u_tierTileTexture', TIER_TILE_UNIT);
+    this.shaderManager.setUniform('tileRenderer', 'u_tierNoiseTexture', TIER_NOISE_UNIT);
+    this.shaderManager.setUniform('tileRenderer', 'u_snow', this.season === WINTER ? 1 : 0);
     if (!painted.top) return;
+    this.shaderManager.setUniform('tileRenderer', 'u_snowRamp', [
+      painted.top.snow.x,
+      painted.top.snow.y
+    ]);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, painted.top.texture);
     gl.activeTexture(gl.TEXTURE3);
@@ -966,6 +1021,8 @@ export class WebGLRendererCore {
     this.groundRings = null;
     this.leaves?.dispose();
     this.leaves = null;
+    this.tiers?.dispose();
+    this.tiers = null;
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.light);
     if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.texture);
