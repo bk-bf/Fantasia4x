@@ -171,8 +171,26 @@ function paintHair(pen, g, look, hair, skin) {
   }
 }
 
+const DOWN = {
+  f: [[-5, -3, 2, 4], [-5, 4], [-6, 5], [-5, 4]],
+  s: [[-5, -1], [-5, 4], [-6, 5], [-5, 3]],
+  b: [[-5, 4], [-5, 4], [-6, 5], [-5, 4]],
+};
+function paintDown(pen, g, hair) {
+  const { X, er, hTop, hh, face } = g, hn = hair.length - 1, chin = hTop + hh - 1, rows = DOWN[face];
+  rows.forEach((spans, j) => {
+    for (let k = 0; k < spans.length; k += 2) for (let x = X + spans[k]; x <= X + spans[k + 1]; x++) {
+      const lit = j === 0 || (j === 1 && x < X), deep = j === rows.length - 1 || x === X + spans[spans.length - 1];
+      pen.put(x, chin - 1 + j, hair[clamp(hn - (lit ? 0 : 1) - (deep ? 1 : 0) + (hash(x, j, 61) > .78 ? 1 : 0), 0, hn)]);
+    }
+  });
+  if (face !== 'f') return;
+  for (const x of [X - 5, X + 4]) for (let y = er + 1; y < chin - 1; y++) pen.put(x, y, hair[hn - (x > X ? 1 : 0)]);
+}
+
 function paintBeard(pen, g, look, hair, skin) {
   const { X, er, F, hTop, hh, face } = g, hn = hair.length - 1, mid = hair[Math.max(0, hn - 1)], low = hair[Math.max(0, hn - 2)], sn = skin.length - 1;
+  if (look.beard === 'downy') paintDown(pen, g, hair);
   if (face === 'b' || look.beard === 'none') return;
   const skinSet = new Set(skin), side = face === 's', lip = er + 2, goatee = look.beard === 'goatee';
   if (look.beard === 'moustache' || goatee) {
@@ -188,18 +206,6 @@ function paintBeard(pen, g, look, hair, skin) {
     const jaw = [];
     for (let y = lip; y < hTop + hh; y++) for (let x = X - g.hd; x < X + g.hd + 1; x++) if (skinSet.has(pen.get(x, y)) && inside(x, y) && (y > lip || (side ? x >= F - 3 : x >= X - 2 && x <= X + 1))) jaw.push([x, y]);
     for (const [x, y] of jaw) { const c = pen.get(x, y); if (!shade.has(c)) shade.set(c, toward(c, low, .22)); pen.put(x, y, shade.get(c)); }
-  }
-  if (look.beard === 'downy') {
-    const chin = hTop + hh - 1, x0 = face === 's' ? X - g.hd : X - g.hd - 1, x1 = face === 's' ? F : X + g.hd;
-    const fluff = (x, y) => hair[hash(x, y, 61) > .55 ? hair.length - 1 : hair.length - 2], deep = hair[Math.max(0, hair.length - 4)];
-    for (let y = chin - 3; y <= chin + 2; y++) for (let x = x0; x <= x1; x++) {
-      const up = chin - y, edge = Math.min(x - x0, x1 - x);
-      if (up > 0 && edge > up) continue;
-      if (up >= 0 && !skinSet.has(pen.get(x, y)) && pen.get(x, y) !== P.ink) continue;
-      if (y === chin + 2 && (edge < 2 || hash(x, y, 67) > .5)) continue;
-      if (y === chin + 1 && edge < 1) continue;
-      pen.put(x, y, y === chin + 2 ? deep : fluff(x, y));
-    }
   }
   if (look.beard === 'braided') { const bx = face === 's' ? F - 2 : X - 1; for (let y = hTop + hh + 4; y < hTop + hh + 8; y++) pen.put(bx, y, hair[(y & 1) ? 2 : 3]); pen.put(bx, hTop + hh + 8, look.trim ? look.trim[3] : P.gold[3]); }
 }
