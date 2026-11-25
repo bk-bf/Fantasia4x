@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tree ground</title>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+<style>
+  :root { --bg: #e9e4d8; --ink: #2a241c; --frame: #b9ae98; --chip: rgb(236 230 214 / .92); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121014; --ink: #eee6d4; --frame: #35303c; --chip: rgb(10 8 12 / .82); } }
+  :root[data-theme="dark"] { --bg: #121014; --ink: #eee6d4; --frame: #35303c; --chip: rgb(10 8 12 / .82); }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font: 12px/1.4 system-ui, sans-serif; }
+  #stage { position: fixed; inset: 0; display: grid; gap: 6px; padding: 6px; box-sizing: border-box; grid-template: 1fr / 1fr 1fr; touch-action: none; cursor: grab; }
+  #stage.held { cursor: grabbing; }
+  #stage.one { grid-template: 1fr / 1fr; }
+  @media (max-aspect-ratio: 4/5) { #stage:not(.one) { grid-template: 1fr 1fr / 1fr; } }
+  .pane { position: relative; margin: 0; overflow: hidden; outline: 1px solid var(--frame); background: var(--bg); min-width: 0; min-height: 0; }
+  #stage.one .pane:not(.shown) { display: none; }
+  .pane canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; image-rendering: pixelated; }
+  .pane figcaption { position: absolute; left: 6px; top: 6px; padding: 1px 7px; background: var(--chip); color: var(--ink); font-weight: 650; letter-spacing: .02em; pointer-events: none; }
+  #mock .brk { flex-basis: 100%; height: 0; }
+</style>
+</head>
+<body>
+<main id="stage">
+  <figure class="pane" data-pane="today"><canvas></canvas><figcaption>Today</figcaption></figure>
+  <figure class="pane" data-pane="new"><canvas></canvas><figcaption>With surround</figcaption></figure>
+</main>
+<header id="mock">
+  <div class="mrow"><strong>Tree ground</strong><button id="mockhide">Hide · `</button></div>
+  <div class="mrow"><span class="grp" data-k="show" data-def="both"><span class="lab">Show</span><button data-v="both">Both</button><button data-v="today">Today</button><button data-v="new">Surround</button></span><span class="grp" data-k="surround" data-def="on"><span class="lab">Surround · S</span><button data-v="on">On</button><button data-v="off">Off</button></span></div>
+  <div class="mrow"><span class="grp" data-k="season" data-def="summer"><span class="lab">Season</span><button data-v="summer">Summer</button><button data-v="autumn">Autumn</button><button data-v="winter">Winter</button></span><span class="grp" data-k="zoom" data-def="2"><span class="lab">Zoom</span><button data-v="0.5">½×</button><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="3">3×</button></span></div>
+  <div class="mrow"><span class="grp" data-k="crowns" data-def="on"><span class="lab">Crowns</span><button data-v="on">On</button><button data-v="off">Off</button></span><span class="grp" data-k="folk" data-def="on"><span class="lab">Folk</span><button data-v="on">On</button><button data-v="off">Off</button></span></div>
+  <div class="mrow"><span class="grp" data-k="tree" data-def="mixed"><span class="lab">Tree</span><button data-v="mixed">As mapped</button><button data-v="oak">Oak</button><button data-v="ash">Ash</button><button data-v="birch">Birch</button><button data-v="apple">Apple</button><button data-v="willow">Willow</button><button data-v="pine">Pine</button><button data-v="yew">Yew</button><button data-v="dead">Dead</button><span class="brk"></span><span class="lab">Magical</span><button data-v="heartwood">Heartwood</button><button data-v="frostheart">Frostheart</button><button data-v="moonwood">Moonwood</button><button data-v="ironwood">Ironwood</button><button data-v="emberwood">Emberwood</button><button data-v="soulwood">Soulwood</button><button data-v="witchwood">Witchwood</button><button data-v="bonewood">Bonewood</button></span></div>
+  <div class="mrow"><span class="grp" data-k="at" data-def="lone"><span class="lab">Look at</span><button data-v="lone">Lone tree</button><button data-v="forest">Forest</button><button data-v="edge">Ground boundary</button><button data-v="water">Water</button><button data-v="rock">Rock</button><button data-v="elder">Elder</button><button data-v="grounds">Every ground</button><button data-v="free" hidden>Free</button></span></div>
+  <p class="mnote">L map · seed 1337 · 32 px tiles · game render with trees and surround painted on · Every ground is laid by hand</p>
+</header>
+<script src="noise.js"></script>
+<script src="kinds.js"></script>
+<script src="props.js"></script>
+<script src="surround.js"></script>
+<script src="view.js"></script>
+</body>
+</html>
