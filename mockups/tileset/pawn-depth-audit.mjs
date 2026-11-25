@@ -14,7 +14,7 @@ function load(read, layered) {
   const motion = read('motion.html').match(/data-then="([^"]+)"/)[1].split(' ').filter(f => !/^motion\.js$|motion-folk|motion-sheet|motion-stage|motion-fell|motion-timeline/.test(f) && !registry.includes(f));
   const source = [...registry, ...motion].map(read).join('\n;');
   const data = JSON.parse(read('catalog-data.json'));
-  return new Function('DATA', source + '\nDBX.fromData(DATA); MOTION_LOAD.init(DATA);' + (layered ? 'RIG_KEEP.layers = true;' : '') + '\nreturn { PAWN_ANIMS, FB_POSES, fbPose, PAWNS, FOLK, TOOLS, rigPawn, fitted, HAUL, MOTION_LOAD, HOLDS, P, mkActor' + (layered ? ', shade' : '') + ' };')(data.objects);
+  return new Function('DATA', source + '\nDBX.fromData(DATA); MOTION_LOAD.init(DATA);' + (layered ? 'RIG_KEEP.layers = true;' : '') + '\nreturn { PAWN_ANIMS, FB_POSES, fbPose, posed, PAWNS, FOLK, TOOLS, SEEN, rigPawn, fitted, HAUL, MOTION_LOAD, HOLDS, P, mkActor' + (layered ? ', shade' : '') + ' };')(data.objects);
 }
 const NOW = load(fromDisk, true), THEN = imageRef ? load(fromGit(imageRef), false) : null;
 
@@ -36,7 +36,7 @@ function frame(G, kind, over, anim, face, u, loadId) {
   A.lookOf = null;
   const c = { face, lvl: 3, t: 0, seed: A.seed, tool: A.o.tool, hold: load ? load.hold : 'chest', o: null };
   if (load && G.HAUL.span) Object.assign(c, G.HAUL.span(load, load.hold, face));
-  const pose = face !== 's' && G.FB_POSES[anim] ? G.fbPose(anim, u, c) : def.pose(u, c);
+  const pose = G.posed(anim, def, u, c);
   G.fitted(A, pose);
   const layer = pose.carry && load ? G.HAUL.layer(load, pose.carry, c.face, pose.down > .5) : null;
   if (layer) pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0];
@@ -50,6 +50,7 @@ const isBody = l => BODY.includes(l.name), isArm = l => !!l.limb, isTool = l => 
 const sameInk = c => c[0] === NOW.P.ink[0] && c[1] === NOW.P.ink[1] && c[2] === NOW.P.ink[2];
 
 const HELD = l => (isTool(l) || isLoad(l)), SHIELD = l => l.name === 'shield';
+const SPACE_TOL = { length: .05, grip: 1.2, skin: 1.2, ground: .6 }, CARRYING = { wide: 16, tall: 13, belowHip: 2 };
 const REACH = 2, JUMP = { held: 8, struck: 16 }, HIDDEN = .6, FACE = { up: 6, half: 3, side: 6 };
 const pixelsOf = l => { const out = []; for (let i = 0; i < l.spr.c.length; i++) if (l.spr.c[i]) out.push(i); return out; };
 const boxOf = (px, w) => { let x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1; for (const i of px) { const x = i % w, y = (i / w) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return px.length ? [x0, y0, x1, y1] : null; };
@@ -61,7 +62,7 @@ const SHIELD_SIDE = { f: 'front', b: 'inside', s: 'edge' }, SLUNG_SIDE = { f: 'i
 
 function audit(now, shown, face) {
   const stack = [...now.rigged.layers, ...(now.spr.loadLayer ? [now.spr.loadLayer] : [])].map((l, k) => [l, k]).sort((a, b) => a[0].cam - b[0].cam || a[1] - b[1]).map(x => x[0]);
-  const w = now.spr.w, n = w * now.spr.h, counts = { a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, i: 0, j: 0 }, torsoCam = stack.find(l => l.name === 'torso').cam;
+  const w = now.spr.w, n = w * now.spr.h, counts = { a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, i: 0, j: 0, k: 0, l: 0, m: 0, n: 0, p: 0 }, torsoCam = stack.find(l => l.name === 'torso').cam;
   const at = (l, i) => l.spr.c[i], wanted = i => { for (let k = stack.length - 1; k >= 0; k--) if (at(stack[k], i)) return stack[k]; return null; };
   const drawn = i => { const want = wanted(i); if (want && shows(shown[i], at(want, i))) return want; for (let k = stack.length - 1; k >= 0; k--) if (at(stack[k], i) && shows(shown[i], at(stack[k], i))) return stack[k]; return null; };
   const region = now.pose.covers || now.fused ? null : faceOf(now.rigged.pts, face), over = new Map(), head = stack.find(l => l.name === 'head'), chin = now.rigged.pts.chin;
@@ -116,6 +117,31 @@ function audit(now, shown, face) {
   }
   const tool = boxOf(stack.filter(isTool).flatMap(pixelsOf), w), all = boxOf(shown.map((c, i) => c ? i : -1).filter(i => i >= 0), w);
   counts.over = [...over].map(([name, n]) => name + ' ' + n).join(', ');
+  const sp = now.rigged.space, len = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  if (sp && sp.arms) {
+    for (const key of ['R', 'L']) { const arm = sp.arms[key]; if (Math.abs(len(arm.S, arm.E) - sp.upper) > SPACE_TOL.length || Math.abs(len(arm.E, arm.H) - sp.fore) > SPACE_TOL.length) counts.k++; }
+    if (sp.arms.second && len(sp.arms.second.want, sp.arms.second.got) > SPACE_TOL.grip) counts.l++;
+    const inHead = q => len(q, sp.head.at) < sp.head.r - SPACE_TOL.skin, inTorso = q => Math.abs(q[0]) < sp.torso.half - SPACE_TOL.skin && Math.abs(q[1]) < sp.torso.deep - SPACE_TOL.skin && q[2] < -SPACE_TOL.skin && q[2] > -sp.torso.tall;
+    const points = [sp.arms.R.H, sp.arms.L.H], inside = [];
+    counts.inside = inside;
+    if (sp.tool && sp.tool !== 'bow' && sp.arms.aim) {
+      const at = sp.arms.R.H, aim = sp.arms.aim;
+      for (let t = -sp.butt; t <= sp.reach; t += 2) points.push([at[0] + aim[0] * t, at[1] + aim[1] * t, at[2] + aim[2] * t]);
+      for (const t of [-sp.butt, sp.reach]) if (sp.shoulderZ + at[2] + aim[2] * t < -SPACE_TOL.ground) counts.m++;
+    }
+    points.forEach((q, n) => { if (inHead(q) || inTorso(q)) { counts.p++; inside.push((n === 0 ? 'right hand' : n === 1 ? 'left hand' : 'tool at ' + (-sp.butt + (n - 2) * 2)) + ' in ' + (inHead(q) ? 'head' : 'torso') + ' ' + q.map(v => v.toFixed(1))); } });
+    for (const key of ['R', 'L']) if (sp.shoulderZ + sp.arms[key].H[2] < -SPACE_TOL.ground) counts.m++;
+  }
+  if (sp) {
+    const ahead = sp.tool && sp.arms && sp.arms.aim ? Math.max(0, ...[-sp.butt, 0, sp.reach].map(t => (face === 'b' ? -1 : 1) * ((sp.tool === 'bow' ? sp.arms.L.H : sp.arms.R.H)[1] + sp.arms.aim[1] * t))) : 0, allowed = sp.groundRow + 1 + (face === 's' ? 0 : Math.ceil(NOW.SEEN.depth * ahead));
+    for (const l of stack.filter(l => isTool(l) || SHIELD(l))) { const b = boxOf(pixelsOf(l), w); if (b && b[3] > allowed) counts.m++; }
+    const carriedLoad = stack.find(isLoad);
+    if (carriedLoad && !(now.pose.down > .5)) {
+      const b = boxOf(pixelsOf(carriedLoad), w);
+      if (b && b[3] > sp.groundRow) counts.m++;
+      if (b && ['hip', 'chest', 'low'].includes(now.pose.carry) && (now.pose.cu === undefined || now.pose.cu >= 1) && (b[2] - b[0] + 1 > CARRYING.wide || b[3] - b[1] + 1 > CARRYING.tall || b[3] > sp.hipRow + CARRYING.belowHip)) counts.n++;
+    }
+  }
   const toolPx = stack.filter(isTool).flatMap(pixelsOf), seen = toolPx.filter(i => { const got = drawn(i); return got && isTool(got); }).length;
   counts.hidden = toolPx.length > 0 && seen < toolPx.length * HIDDEN;
   counts.size = tool ? Math.hypot(tool[2] - tool[0] + 1, tool[3] - tool[1] + 1) : 0;
@@ -123,8 +149,8 @@ function audit(now, shown, face) {
   return counts;
 }
 
-const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
-const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side' };
+const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'p'];
+const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', p: 'inside the body' };
 const anims = Object.keys(NOW.PAWN_ANIMS).filter(a => !only || new RegExp(only).test(a));
 const totals = Object.fromEntries(KEYS.map(k => [k, 0])), rows = [], notes = [], ground = new Map();
 let frames = 0;
@@ -141,7 +167,7 @@ for (const anim of anims) {
         const u = (i + .5) / n, now = frame(NOW, kind, over, anim, face, u, loadId);
         if (now.pose.lie || now.pose.face !== face) { sizes.push(null); continue; }
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId) : now).spr.c, face), where = kind + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
-        for (const k of KEYS) if (got[k]) { sum[k] += got[k]; if (noted && 'bcefij'.includes(k)) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + NAMED[k] + ' ' + got[k] + (k === 'f' ? ' (' + got.over + ')' : '')); }
+        for (const k of KEYS) if (got[k]) { sum[k] += got[k]; if (noted && 'bcefijklmnp'.includes(k)) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + NAMED[k] + ' ' + got[k] + (k === 'f' ? ' (' + got.over + ')' : k === 'p' ? ' (' + got.inside.join('; ') + ')' : '')); }
         if (got.low > floor) { sum.h++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + (got.low - floor) + ' px below the ground'); }
         const expects = !loadId && !now.pose.carry && now.pose.item !== null && NOW.TOOLS[now.pose.item === undefined ? NOW.mkActor('pawn', kind, over).o.tool : now.pose.item];
         if (expects && !got.size) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': the tool is not drawn'); }

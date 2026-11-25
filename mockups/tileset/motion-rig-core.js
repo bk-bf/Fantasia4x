@@ -123,9 +123,9 @@ function aimed(ang, stow, back) {
   return { ang: along + turn * (1 - stow), fore: mix(SEEN.depth, 1, 1 - stow) };
 }
 const BOW = { half: 11, sag: 4, nock: 10, grip: 4.5 };
-const SIDE_DEPTH = { far: -3, farHeld: -2.9, farHand: -2.85, shield: -2.8, cape: -2, tail: -1.9, farLeg: -1, nearLeg: -.9, torso: 0, over: .25, head: .3, pad: .4, tucked: .9, near: 1, tool: 1.5, hand: 1.6, fingers: 1.7 };
-const TOWARD_DEPTH = { slung: -3.5, cape: -.45, tail: -.4, legs: -.3, torso: -.2, head: .3, upper: 1, pad: 1.5, fore: 2, shield: 2.5, hand: 3, butt: -.5, step: .05 };
-const AWAY_DEPTH = { shield: -3.5, hand: -3, fore: -2, upper: -1, tail: -.4, legs: -.3, torso: -.2, pad: -.1, cape: .1, slung: .2, head: .3, butt: 3.2, step: .05 };
+const SIDE_DEPTH = { far: -3, farHeld: -2.9, farHand: -2.85, shield: -2.8, cape: -2, tail: -1.9, farLeg: -1, nearLeg: -.9, torso: 0, over: .25, head: .3, pad: .9, tucked: .9, near: 1, tool: 1.5, hand: 1.6, fingers: 1.7 };
+const TOWARD_DEPTH = { slung: -3.5, cape: -1.3, tail: -1.25, legs: -.3, torso: -.2, head: .3, upper: 1, pad: 1.5, fore: 2, shield: 2.5, hand: 3, butt: -.5, step: .05 };
+const AWAY_DEPTH = { shield: -3.5, hand: -3, fore: -2, upper: -1, tail: -.4, legs: -.3, torso: -.2, pad: -.15, cape: -.12, slung: .2, head: .3, butt: 3.2, step: .05 };
 const ON_ONE_SHOULDER = ['shoulder', 'game', 'drape'], IN_BOTH_ARMS = ['chest', 'low'], HELD_LOW = { chest: 8, low: 10 };
 const HELD = {
   hip: { s: { at: .95, palm: 'around' }, f: { at: 2.95, palm: 'around' }, b: { at: -3.05, palm: 'around' } },
@@ -138,6 +138,46 @@ const HELD = {
 };
 const REST = { toes: 4, along: 3, edge: 2, raised: .7 };
 const RIG_KEEP = { layers: false };
+const SPACE = { flat: .15, pole: [1, -.15, -.8], least: .12, cam: { s: [.35, 6, 6], f: [-.2, 3, 6], b: [-.2, 3, 6] }, ahead: 1, before: 4.5, carried: 3, jut: 1.5, held: .02, shield: .2 };
+const add3 = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], mul3 = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
+const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], len3 = a => Math.hypot(a[0], a[1], a[2]), unit3 = a => mul3(a, 1 / (len3(a) || 1));
+const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const VIEWS = {
+  s: { at: v => [v[1], SEEN.depth * SPACE.flat * v[0] - v[2]], depth: v => v[0], seen: v => [v[1], SPACE.flat * v[0], v[2]] },
+  f: { at: v => [-v[0], SEEN.depth * v[1] - v[2]], depth: v => v[1], seen: v => [-v[0], v[1], v[2]] },
+  b: { at: v => [v[0], -SEEN.depth * v[1] - v[2]], depth: v => -v[1], seen: v => [v[0], -v[1], v[2]] },
+};
+function armSolved(S, T, l1, l2, sign) {
+  let d = sub3(T, S), D = len3(d) || .001;
+  const m = clamp(D, Math.abs(l1 - l2) + .01, l1 + l2 - .01);
+  d = mul3(d, m / D); D = m;
+  const axis = mul3(d, 1 / D), a = (l1 * l1 - l2 * l2 + D * D) / (2 * D), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+  const pole = [SPACE.pole[0] * sign, SPACE.pole[1], SPACE.pole[2]], off = sub3(pole, mul3(axis, dot3(pole, axis))), n = len3(off) > .001 ? unit3(off) : [sign, 0, 0];
+  return { S, E: add3(add3(S, mul3(axis, a)), mul3(n, h)), H: add3(S, d) };
+}
+function aimGrounded(aim, handZ, tip, butt, head) {
+  const flat = Math.hypot(aim[0], aim[1]);
+  let up = aim[2];
+  for (let n = 0; n < 4; n++) {
+    const clear = (head || 0) * Math.sqrt(Math.max(0, 1 - up * up));
+    if (handZ + up * tip < clear) up = Math.max(-1, (clear - handZ) / tip);
+  }
+  if (handZ - up * butt < 0) up = Math.min(1, handZ / butt);
+  if (up === aim[2] || flat < .001) return aim;
+  const k = Math.sqrt(Math.max(0, 1 - up * up)) / flat;
+  return [aim[0] * k, aim[1] * k, up];
+}
+function toolSeen(view, aim) {
+  const v = view.at(aim);
+  return { ang: Math.atan2(v[0], -v[1]) / D2R, fore: Math.max(SPACE.least, Math.hypot(v[0], v[1])) };
+}
+function staveOf(aim, cant) {
+  const up = [0, 0, 1], off = sub3(up, mul3(aim, dot3(up, aim))), u = len3(off) > .2 ? unit3(off) : unit3(sub3([0, 1, 0], mul3(aim, aim[1]))), c = (cant || 0) * D2R;
+  return add3(mul3(u, Math.cos(c)), mul3(cross3(aim, u), Math.sin(c)));
+}
+const TOOL_REACH = { axe: 24, pick: 23, hoe: 23, hammer: 17, sword: 21, spear: 34, club: 20, torch: 12, staff: 30, ladle: 11, cup: 3, bread: 2 };
+const TWO_HANDED = { axe: [0, -3], pick: [0, -3], hoe: [-8, 4], spear: [-10, 4], staff: [-10, 4] }, TOOL_HEAD = { axe: 7, pick: 8, hoe: 6, hammer: 4, club: 4, staff: 3 };
+const TOOL_AIM = { sword: [0, .9, -.44], club: [0, .9, -.44], hammer: [0, .9, -.44], axe: [0, .9, -.44], pick: [0, .9, -.44], spear: [0, 1, .04], staff: [0, 1, .04], hoe: [0, 1, .04], torch: [0, .35, .94], ladle: [0, .3, -.95], cup: [0, 0, 1], bread: [0, 1, 0] };
 const STRUCK = { reach: 1.5 };
 const TWO_HANDS = { apart: 3 };
 function aheadSeen(ang, ahead, back) {
@@ -170,9 +210,9 @@ function bowSeen(S, gx, gy, o) {
   const { half, sag, nock } = BOW, pull = o.pull || 0, mix3 = (t, off) => o.u.map((c, i) => c * t + o.v[i] * off);
   const at = (t, off) => { const p = seenAt(mix3(t, off)); return [rnd(gx + p[0]), rnd(gy + p[1])]; };
   const upright = Math.abs(seenAt(o.u)[1]) >= Math.abs(seenAt(o.u)[0]), thick = upright ? [1, 0] : [0, 1];
-  for (let t = -half; t <= half; t += .5) { const [x, y] = at(t, -sag - pull * (1 - Math.abs(t) / half)); S.set(x, y, P.cloth[4]); }
-  if (o.arrow) for (let d = -sag - pull; d <= nock; d += .5) { const [x, y] = at(0, d); S.set(x, y, d > nock - 2.5 ? P.iron[6] : d < -sag - pull + 1.5 ? P.cloth[5] : P.wood[5]); }
-  for (let t = -half; t <= half; t += .5) {
+  if (o.only !== 'stave') for (let t = -half; t <= half; t += .5) { const [x, y] = at(t, -sag - pull * (1 - Math.abs(t) / half)); S.set(x, y, P.cloth[4]); }
+  if (o.arrow && o.only !== 'stave') for (let d = -sag - pull; d <= nock; d += .5) { const [x, y] = at(0, d); S.set(x, y, d > nock - 2.5 ? P.iron[6] : d < -sag - pull + 1.5 ? P.cloth[5] : P.wood[5]); }
+  if (o.only !== 'string') for (let t = -half; t <= half; t += .5) {
     const [x, y] = at(t, -sag * t * t / (half * half)), held = Math.abs(t) <= 1.5;
     S.set(x, y, held ? P.leather[3] : P.wood[4]); S.set(x + thick[0], y + thick[1], held ? P.leather[1] : P.wood[2]);
   }

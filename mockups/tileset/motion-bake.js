@@ -97,6 +97,7 @@ function procFrame(A, st, def, u, lvl) {
 
 function fitted(A, pose) {
   for (const k of ['hl', 'hr']) if (pose[k]) pose[k] = [pose[k][0] * A.as, pose[k][1] * A.as];
+  for (const k of ['R', 'L']) if (pose[k]) pose[k] = pose[k].map(v => v * A.as);
   for (const k of ['fl', 'fr']) if (pose[k]) pose[k] = [pose[k][0] * A.ls, pose[k][1] * A.ls];
   if (pose.by) pose.by *= A.ls;
   if (pose.two) pose.two *= A.as;
@@ -108,7 +109,7 @@ function frameOf(A, st, lvl, smooth) {
   const c = { face: st.face || 's', lvl, t: st.t || 0, seed: A.seed, tool: A.o && A.o.tool, hold: A.load ? A.load.hold : 'chest', ...(A.load ? HAUL.span(A.load, A.load.hold, st.face || 's') : null), o: A.rig === 'quad' ? BEASTS[A.kind].o : null }, ang = smooth ? 2 : 5;
   let flip = !!st.flip, make, pose;
   if (A.rig === 'pawn') {
-    pose = c.face !== 's' && FB_POSES[st.anim] ? fbPose(st.anim, u, c) : def.pose(u, c);
+    pose = posed(st.anim, def, u, c);
     if (pose.lie) { const q = { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, out: pose.out ? 1 : 0, bent: A.seed > .5 ? 1 : 0 }, fl = !!st.flip; return { s: cachedFrame(A.look + '|lie' + JSON.stringify(q) + (fl ? 'F' : ''), () => { const s = A.lookOf ? drawLook(A.lookOf, 's', null, { lie: 1, ...q }, A.gear) : rigPawnLie(A.o, q); return fl ? mirror(s) : s; }), dx: 0, dy: 0 }; }
     fitted(A, pose);
     if (pose.face !== 's') flip = false;
