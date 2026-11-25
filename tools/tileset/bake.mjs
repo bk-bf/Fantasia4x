@@ -174,6 +174,7 @@ function pieceSprites(
   }
 ) {
   add('rock/ramp', ramp(A.P.rock));
+  add('snow/ramp', ramp(A.P.snow));
   for (const [ore, colours] of Object.entries(A.ORE)) add(`vein/${ore}`, ramp(colours));
   const veins = Object.fromEntries(
     Object.entries(MAP.resource)
@@ -211,7 +212,8 @@ function pieceSprites(
           size: TOP_SIZE,
           veinSize: VEIN_SIZE,
           lift: LIFT,
-          ramp: 'rock/ramp'
+          ramp: 'rock/ramp',
+          snow: 'snow/ramp'
         },
         veins,
         layouts: Array.from({ length: 1 << NEIGHBOURS.length }, (_, m) =>

@@ -21,6 +21,7 @@ export interface LoadedPieceTop {
   veins: WebGLTexture;
   lift: number;
   ramp: { x: number; y: number };
+  snow: { x: number; y: number };
 }
 
 export interface LoadedGroundField {
@@ -262,7 +263,8 @@ export async function loadPaintedTileset(
           texture: uploadAtlas(gl, loaded.top.image),
           veins: uploadAtlas(gl, loaded.top.veins),
           lift: loaded.top.piece.lift,
-          ramp: loaded.top.piece.ramp
+          ramp: loaded.top.piece.ramp,
+          snow: loaded.top.piece.snow
         }
       : null;
     const light = loaded.light ? uploadAtlas(gl, loaded.light) : unlitTexture(gl);
