@@ -22,10 +22,10 @@ describe('big trees in the painted atlas', () => {
     );
     expect(trees.length).toBeGreaterThan(10);
     for (const [id] of trees)
-      for (const age of TREE_AGES)
+      for (const age of TREE_AGES.filter((a) => a !== 'elder'))
         for (const season of TREE_SEASONS)
           expect(
-            tileset.trees.get(id)?.[age][season].length,
+            tileset.trees.get(id)?.[age]?.[season].length,
             `${id} ${age} ${season}`
           ).toBeGreaterThan(0);
   });
@@ -45,10 +45,19 @@ describe('big trees in the painted atlas', () => {
     expect(parted(parsed.sprites['trees/oak/mature/summer/0'])).toBe(true);
   });
 
+  it('gives each magical tree an elder, and no other tree', () => {
+    const magic = ['heartwood_grove', 'frostheart_pine', 'soulwood_grove', 'bonewood_snag'];
+    for (const id of magic) expect(tileset.trees.get(id)?.elder?.winter.length, id).toBe(1);
+    expect(tileset.trees.get('oak_tree')?.elder).toBeUndefined();
+    const elder = tileset.trees.get('heartwood_grove')!.elder!.summer[0].cells[0];
+    const mature = tileset.trees.get('heartwood_grove')!.mature!.summer[0].cells[0];
+    expect(elder.w).toBeGreaterThan(mature.w * 1.6);
+  });
+
   it('draws a mature tree wider and taller than a young one', () => {
     const oak = tileset.trees.get('oak_tree')!;
-    const young = oak.young.summer[0].cells[0];
-    const mature = oak.mature.summer[0].cells[0];
+    const young = oak.young!.summer[0].cells[0];
+    const mature = oak.mature!.summer[0].cells[0];
     expect(mature.w).toBeGreaterThan(young.w * 1.6);
     expect(mature.h).toBeGreaterThan(young.h * 1.3);
   });
@@ -56,11 +65,12 @@ describe('big trees in the painted atlas', () => {
   it('gives a deciduous tree its own autumn and winter, and an evergreen its own winter', () => {
     const oak = tileset.trees.get('oak_tree')!;
     const pine = tileset.trees.get('pine_tree')!;
-    for (const age of TREE_AGES) {
-      expect(oak[age].autumn[0]).not.toBe(oak[age].summer[0]);
-      expect(oak[age].winter[0]).not.toBe(oak[age].summer[0]);
-      expect(pine[age].autumn[0]).toBe(pine[age].summer[0]);
-      expect(pine[age].winter[0]).not.toBe(pine[age].summer[0]);
+    for (const age of ['young', 'mature'] as const) {
+      const [o, p] = [oak[age]!, pine[age]!];
+      expect(o.autumn[0]).not.toBe(o.summer[0]);
+      expect(o.winter[0]).not.toBe(o.summer[0]);
+      expect(p.autumn[0]).toBe(p.summer[0]);
+      expect(p.winter[0]).not.toBe(p.summer[0]);
     }
   });
 });

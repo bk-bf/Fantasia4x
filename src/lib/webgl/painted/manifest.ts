@@ -76,12 +76,13 @@ export interface ManifestDrops {
   cover: Record<string, string>;
 }
 
-export const TREE_AGES = ['young', 'mature'] as const;
+export const TREE_AGES = ['young', 'mature', 'elder'] as const;
 export type TreeAge = (typeof TREE_AGES)[number];
+const EVERY_TREE_HAS: readonly TreeAge[] = ['young', 'mature'];
 export const TREE_SEASONS = ['summer', 'autumn', 'winter'] as const;
 export type TreeSeason = (typeof TREE_SEASONS)[number];
-export type ManifestTree = Record<TreeAge, Record<TreeSeason, string[]>>;
-export type PaintedTree = Record<TreeAge, Record<TreeSeason, PaintedVariant[]>>;
+export type ManifestTree = Partial<Record<TreeAge, Record<TreeSeason, string[]>>>;
+export type PaintedTree = Partial<Record<TreeAge, Record<TreeSeason, PaintedVariant[]>>>;
 
 export interface PaintedManifest {
   tile: number;
@@ -354,14 +355,16 @@ function readTree(id: string, raw: unknown): ManifestTree {
   const out = {} as ManifestTree;
   for (const age of TREE_AGES) {
     const bySeason = raw[age];
+    if (bySeason === undefined && !EVERY_TREE_HAS.includes(age)) continue;
     if (!isObject(bySeason)) throw new Error(`trees.${id}.${age} is not an object`);
-    out[age] = {} as Record<TreeSeason, string[]>;
+    const seasons = {} as Record<TreeSeason, string[]>;
     for (const season of TREE_SEASONS) {
       const ids = bySeason[season];
       if (!isStrings(ids) || ids.length === 0)
         throw new Error(`trees.${id}.${age}.${season} is not a list of sprites`);
-      out[age][season] = ids;
+      seasons[season] = ids;
     }
+    out[age] = seasons;
   }
   return out;
 }
@@ -536,15 +539,18 @@ export function buildTileset(
     const tree = {} as PaintedTree;
     let whole = true;
     for (const age of TREE_AGES) {
-      tree[age] = {} as Record<TreeSeason, PaintedVariant[]>;
+      const named = t[age];
+      if (!named) continue;
+      const seasons = {} as Record<TreeSeason, PaintedVariant[]>;
       for (const season of TREE_SEASONS) {
-        const variants = t[age][season].flatMap((sid) => variantOf(sid) ?? []);
-        if (variants.length !== t[age][season].length) {
+        const variants = named[season].flatMap((sid) => variantOf(sid) ?? []);
+        if (variants.length !== named[season].length) {
           problems.push(`trees.${id}.${age}.${season} names an unknown sprite`);
           whole = false;
         }
-        tree[age][season] = variants;
+        seasons[season] = variants;
       }
+      tree[age] = seasons;
     }
     if (whole) trees.set(id, tree);
   }

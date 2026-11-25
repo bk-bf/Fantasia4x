@@ -23,6 +23,7 @@ import {
   paintedPieces,
   paintedScenery,
   paintedTile,
+  paintedElder,
   paintedTree,
   paintedTreeTurns,
   paintedTileset
@@ -30,7 +31,7 @@ import {
 import { groundTufts } from './painted/tufts.js';
 import { hiddenUnderFluid } from './painted/fluids.js';
 import { shorePlantAt } from './painted/shorePlants.js';
-import { treeAge, treeSeason } from './painted/treeAge.js';
+import { treeAgeIn, treeSeason } from './painted/treeAge.js';
 import { isWet } from '$lib/game/world/shores.js';
 import type { PaintedPieces, PaintedSprite } from './painted/manifest.js';
 
@@ -581,7 +582,13 @@ export function applyResourceToGrid(
   const piece = rockPiece(tile, hiddenMask, worldMap);
   const painted = PAINTED_TILES
     ? (piece ??
-      paintedTree(resDef.id, treeAge(tile), treeSeason(season), tile.x, tile.y) ??
+      paintedTree(
+        resDef.id,
+        treeAgeIn(tile, worldMap, paintedTileset() ? paintedElder : null),
+        treeSeason(season),
+        tile.x,
+        tile.y
+      ) ??
       paintedTile('resource', resDef.id, tile.x, tile.y))
     : undefined;
   const tall = rs !== undefined && rs > 1;

@@ -60,13 +60,18 @@ export function paintedTree(
   x: number,
   y: number
 ): PaintedSprite | undefined {
-  const variants = active?.trees.get(id)?.[age][season];
+  const tree = active?.trees.get(id);
+  const variants = (tree?.[age] ?? tree?.mature)?.[season];
   return variants && spriteAt(pickVariant(variants, positionHash(x, y)), x, y);
+}
+
+export function paintedElder(id: string): boolean {
+  return !!active?.trees.get(id)?.elder;
 }
 
 export function paintedTreeTurns(id: string, a: TreeSeason, b: TreeSeason): boolean {
   const tree = active?.trees.get(id);
-  return !!tree && TREE_AGES.some((age) => tree[age][a][0] !== tree[age][b][0]);
+  return !!tree && TREE_AGES.some((age) => tree[age]?.[a][0] !== tree[age]?.[b][0]);
 }
 
 export function paintedScenery(id: string, x: number, y: number): PaintedSprite | undefined {

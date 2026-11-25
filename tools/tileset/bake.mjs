@@ -69,7 +69,8 @@ const A = art(SIDE);
 export const ROCK = rockArt(A);
 
 export const TREE_SEASONS = ['summer', 'autumn', 'winter'];
-export const TREE_AGES = { young: 4, mature: 2 };
+export const TREE_AGES = { young: 4, mature: 2, elder: 1 };
+const TREE_SEED = { young: (v = 0) => v, mature: (v = 0) => 3 + v * 5, elder: (v = 0) => 41 + v };
 
 const treeSpecies = () =>
   Object.entries(MAP.resource).flatMap(([id, refs]) => {
@@ -90,13 +91,20 @@ export function treeSet(A = art()) {
     treeSpecies().map(([resource, kind]) => {
       if (!kinds.includes(kind)) throw new Error(`${resource} names no tree ${kind}`);
       const k = A.TREES[kind];
-      const ages = Object.entries(TREE_AGES).map(([age, count]) => {
+      const ages = Object.entries(TREE_AGES).flatMap(([age, count]) => {
+        if (age === 'elder' && !F.MAGIC.has(kind)) return [];
         const bySeason = TREE_SEASONS.map((season) => {
           const own = season !== 'autumn' || !k.ever;
           const look = own ? season : 'summer';
           for (let v = 0; own && v < count; v++) {
+            const seed =
+              TREE_SEED[age === 'young' ? 'young' : age === 'mature' ? 'mature' : 'elder'](v);
             const s =
-              age === 'young' ? F.young(kind, v, season) : F.mature(kind, 3 + v * 5, season);
+              age === 'young'
+                ? F.young(kind, seed, season)
+                : age === 'mature'
+                  ? F.mature(kind, seed, season)
+                  : F.elder(kind, seed, season);
             drawn.push({
               id: treeSprite(kind, age, season, v),
               sprite: s,
@@ -108,7 +116,7 @@ export function treeSet(A = art()) {
           }
           return [season, Array.from({ length: count }, (_, v) => treeSprite(kind, age, look, v))];
         });
-        return [age, Object.fromEntries(bySeason)];
+        return [[age, Object.fromEntries(bySeason)]];
       });
       return [resource, Object.fromEntries(ages)];
     })
