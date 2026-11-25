@@ -44,6 +44,7 @@ const HOLD = {
   game: { gait: 'heavy', sink: .9, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 2.4, hd: [1, 1] }, fb: { hl: [-5.5, -4], wing: 1, lean: 1.5, hd: [1, 1] } },
   drape: { gait: 'heavy', sink: .4, free: 1, side: { hr: [5, 3.5], hl: [6, 4], lean: 1.8 }, fb: { hl: [4, 4], crook: ['hl'], fore: ['hl'] } },
 };
+const FELL = { lets: .2, gives: .36, lands: .72, leans: 20, flat: 80 };
 const LIFT = { reaches: .4, grips: .5, lands: .9, stands: 24, bends: 8 };
 const stooped = c => clamp((LIFT.stands - (c.tall || 0) - 1) / LIFT.bends, 0, 1);
 const lifted = (u, base, crouch, end) => u >= LIFT.lands ? end : { ...keyed(u / LIFT.lands, base, [[0, {}], [LIFT.reaches, crouch], [LIFT.grips, crouch], [1, { ...end, cu: 1 }, 'o']]), down: u / LIFT.lands < LIFT.grips ? 1 : 0 };
@@ -215,14 +216,15 @@ const PAWN_ANIMS = {
     return keyed(u, { face: 's', hr: [3, 8], hl: [3, 8], tool: 118, lean: 0, bx: 0, hd: [0, 0], blink: 0, by: 0 }, [[0, {}], [.25, { lean: -3, bx: -2, hd: [-1, -1], hr: [5, 5], hl: [5, 4], tool: 95, blink: 1, by: 1 }, 'o'], [.55, { lean: -2.4, bx: -2, hd: [-1, 0], hr: [5, 6], hl: [4, 5], tool: 105, blink: 1, by: 1 }], [1, {}]]);
   } },
   stagger: { label: 'Staggering', group: 'Combat', dur: .9, n: 6, once: 1, pose(u, c) {
-    return keyed(u, { face: 's', hr: [2, 8], hl: [3, 8], tool: 118, lean: 0, bx: 0, hd: [0, 0], by: 0, fl: [0, 0], fr: [0, 0], blink: 0 }, [[0, {}], [.2, { lean: -3, bx: -2, hd: [-1, -1], hr: [6, 4], hl: [6, 2], tool: 90, fr: [-3, 2], blink: 1 }, 'o'], [.45, { lean: -2, bx: -4, hr: [5, 6], hl: [5, 4], tool: 105, fr: [-5, 0], fl: [-3, 2], by: 1 }], [.7, { lean: 2, bx: -4, hd: [1, 1], hr: [4, 8], hl: [5, 8], fr: [-5, 0], fl: [-6, 0], by: 1.5 }], [1, { lean: 1, bx: -4, fr: [-5, 0], fl: [-6, 0], by: 1 }]]);
+    return keyed(u, { face: 's', hr: [2, 8], hl: [3, 8], lean: 0, bx: 0, hd: [0, 0], by: 0, fl: [-2, 0], fr: [2, 0], blink: 0 }, [[0, {}], [.2, { lean: -2, hd: [-1, -1], hr: [-3, 3], hl: [6, 2], blink: 1, by: .5 }, 'o'], [.45, { lean: -1.5, bx: -1, hr: [-2, 5], hl: [5, 4], by: 1 }], [.7, { lean: 1.5, hd: [1, 1], hr: [4, 8], hl: [5, 8], by: 1 }], [1, { lean: .5, by: .5 }]]);
   } },
   fall: { label: 'Collapsing', group: 'Combat', dur: 1, n: 7, once: 1, pose(u, c) {
-    if (u >= .7) return { lie: 1, blink: 1, drop: 0 };
-    return keyed(u, { face: 's', item: null, hr: [2, 8], hl: [3, 8], lean: 0, bx: 0, hd: [0, 0], by: 0, fl: [0, 0], fr: [0, 0], blink: 1 }, [[0, {}], [.22, { lean: -3, bx: -2, hd: [-1, -1], hr: [-3, 3], hl: [6, 2], by: 1 }, 'o'], [.5, { lean: -5, bx: -3, hd: [-2, 2], hr: [-2, 8], hl: [1, 8], by: 6, fl: [2, 0], fr: [5, 0] }, 'i'], [.7, { lean: -7, bx: -4, hd: [-3, 4], hr: [-3, 9], hl: [0, 9], by: 7, fl: [3, 0], fr: [6, 0] }]]);
+    if (u >= FELL.lands) return { lie: 1, blink: 1, loose: 1 };
+    const held = u < FELL.lets ? {} : { item: null };
+    return { ...keyed(u, { face: 's', hr: [2, 8], hl: [3, 8], lean: 0, bx: 0, hd: [0, 0], by: 0, fl: [-2, 0], fr: [2, 0], blink: 1, tip: 0, loose: 0 }, [[0, {}], [FELL.lets, { lean: -2, hd: [-1, -1], hr: [-3, 3], hl: [6, 2], by: 1 }, 'o'], [FELL.gives, { lean: -2, hd: [-1, 0], hr: [-2, 5], hl: [5, 4], by: 3, tip: FELL.leans, loose: .5 }], [FELL.lands, { lean: -1, hr: [-3, 6], hl: [4, 5], by: 3, tip: FELL.flat, loose: 1 }, 'i']]), ...held };
   } },
-  down: { label: 'Collapsed', group: 'Combat', dur: 3, n: 1, pose() { return { lie: 1, blink: 1 }; } },
-  sleep: { label: 'Sleeping', group: 'Needs', dur: 3.4, n: 4, pose(u) { return { lie: 1, blink: 1, br: u > .35 && u < .8 ? 1 : 0, rest: 1 }; } },
+  down: { label: 'Collapsed', group: 'Combat', dur: 3, n: 1, pose() { return { lie: 1, blink: 1, loose: 1 }; } },
+  sleep: { label: 'Sleeping', group: 'Needs', dur: 3.4, n: 4, pose(u, c) { return { lie: 1, blink: 1, br: u > .35 && u < .8 ? 1 : 0, rest: 1, bent: c && c.seed > .5 ? 1 : 0 }; } },
   out: { label: 'Unconscious', group: 'Needs', dur: 5.6, n: 4, pose(u) { return { lie: 1, blink: 1, out: 1, br: u > .5 && u < .75 ? 1 : 0 }; } },
 };
 

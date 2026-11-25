@@ -110,7 +110,7 @@ function frameOf(A, st, lvl, smooth) {
   let flip = !!st.flip, make, pose;
   if (A.rig === 'pawn') {
     pose = posed(st.anim, def, u, c);
-    if (pose.lie) { const q = { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, out: pose.out ? 1 : 0, bent: A.seed > .5 ? 1 : 0 }, fl = !!st.flip; return { s: cachedFrame(A.look + '|lie' + JSON.stringify(q) + (fl ? 'F' : ''), () => { const s = A.lookOf ? drawLook(A.lookOf, 's', null, { lie: 1, ...q }, A.gear) : rigPawnLie(A.o, q); return fl ? mirror(s) : s; }), dx: 0, dy: 0 }; }
+    if (pose.lie) { const q = { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, out: pose.out ? 1 : 0, bent: pose.bent ? 1 : 0 }, fl = !!st.flip, let_go = pose.loose && c.tool ? c.tool : ''; return { s: cachedFrame(A.look + '|lie' + JSON.stringify(q) + (fl ? 'F' : '') + let_go, () => { const lying = A.lookOf ? drawLook(A.lookOf, 's', null, { lie: 1, ...q }, A.gear) : rigPawnLie(A.o, q), s = let_go ? dropped(lying, let_go, 's', 1) : lying; return fl ? mirror(s) : s; }), dx: 0, dy: 0 }; }
     fitted(A, pose);
     if (pose.face !== 's') flip = false;
     make = () => A.lookOf ? drawLook(A.lookOf, pose.face, null, JSON.parse(key0), A.gear) : rigPawn(A.o, JSON.parse(key0));
@@ -123,9 +123,26 @@ function frameOf(A, st, lvl, smooth) {
   const layer = pose.carry && A.load ? HAUL.layer(A.load, pose.carry, c.face, pose.down > .5) : null;
   if (layer && A.rig === 'pawn') pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0];
   const key0 = quant(pose, ang), key = A.look + '|' + lvl + (c.face !== 's' ? c.face : '') + (flip ? 'F' : '') + key0 + (layer ? '|' + layer.key : '');
-  return { s: cachedFrame(key, () => { const bare = make(), s = layer && bare.mask ? MOTION_LOAD.put(bare, layer) : bare; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
+  return { s: cachedFrame(key + (pose.loose && c.tool ? '|' + c.tool : ''), () => { const bare = make(), laden = layer && bare.mask ? MOTION_LOAD.put(bare, layer) : bare, leant = pose.tip ? tipped(laden, pose.tip) : laden, s = pose.loose && c.tool ? dropped(leant, c.tool, c.face, pose.loose) : leant; if (!s.pts) s.pts = {}; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
 }
 
+const DROPPED = { rest: [-4, 6], lies: 90, falls: 140, from: { s: [7, -9], f: [-8, -9], b: [8, -9] } };
+function dropped(pawn, kind, face, k) {
+  const loose = new Spr(pawn.w, pawn.h, pawn.ax, pawn.ay), from = DROPPED.from[face], x = pawn.ax + rnd(mix(from[0], DROPPED.rest[0], k)), y = pawn.ay + rnd(mix(from[1], DROPPED.rest[1], k * k));
+  toolAt(loose, kind, x, y, mix(DROPPED.falls, DROPPED.lies, k), {});
+  loose.outline();
+  for (let q = 0; q < loose.c.length; q++) if (loose.c[q] && !pawn.c[q]) { pawn.c[q] = loose.c[q]; pawn.e[q] = loose.e[q]; }
+  return pawn;
+}
+function tipped(src, deg) {
+  const a = -deg * D2R, cs2 = Math.cos(a), sn2 = Math.sin(a), s = new Spr(src.w, src.h, src.ax, src.ay);
+  for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
+    const dx = x - src.ax, dy = y - src.ay, sx = rnd(src.ax + dx * cs2 + dy * sn2), sy = rnd(src.ay - dx * sn2 + dy * cs2);
+    if (src.ok(sx, sy) && src.c[sy * src.w + sx]) { s.c[y * s.w + x] = src.c[sy * src.w + sx]; s.e[y * s.w + x] = src.e[sy * src.w + sx]; }
+  }
+  s.sh = src.sh;
+  return s;
+}
 function rotated(src, deg, dir) {
   const a = deg * D2R * dir, cs2 = Math.cos(a), sn2 = Math.sin(a), R = Math.ceil(Math.hypot(src.w, src.h)), s = new Spr(R * 2, R * 2, R, R);
   for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {

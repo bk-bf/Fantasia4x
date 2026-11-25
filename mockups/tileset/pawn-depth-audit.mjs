@@ -165,7 +165,7 @@ for (const anim of anims) {
       const floor = standing(kind, over, face), sizes = [];
       for (let i = 0; i < n; i++) {
         const u = (i + .5) / n, now = frame(NOW, kind, over, anim, face, u, loadId);
-        if (now.pose.lie || now.pose.face !== face) { sizes.push(null); continue; }
+        if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); continue; }
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId) : now).spr.c, face), where = kind + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
         for (const k of KEYS) if (got[k]) { sum[k] += got[k]; if (noted && 'bcefijklmnp'.includes(k)) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + NAMED[k] + ' ' + got[k] + (k === 'f' ? ' (' + got.over + ')' : k === 'p' ? ' (' + got.inside.join('; ') + ')' : '')); }
         if (got.low > floor) { sum.h++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + (got.low - floor) + ' px below the ground'); }

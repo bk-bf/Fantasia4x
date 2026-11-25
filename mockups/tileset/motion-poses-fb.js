@@ -59,8 +59,12 @@ const FB_POSES = {
     return keyed(u, { hl: [3, 8], hr: [-3, 8], bow: 0, cant: 54, yaw: 60, hd: [0, 0] }, [[0, {}], [.22, aimed], [.3, aimed], [.6, { ...aimed, bow: 5, by: tr }, 'o'], [.75, { ...aimed, bow: 5, by: tr }], [.76, { ...aimed, bow: 0, hr: [-6, 5] }, 'l'], [.9, { hl: [4, 8], hr: [-5, 6] }], [1, {}]]);
   },
   hit(u) { return keyed(u, { hr: [3, 8.5], hl: [2, 8], tool: 176, bx: 0, hd: [0, 0], blink: 0, by: 0 }, [[0, {}], [.25, { bx: -1, hd: [0, -2], hr: [6, 5], hl: [6, 3], tool: 170, blink: 1, by: -1 }, 'o'], [.55, { bx: 0, hd: [0, -1], hr: [5, 6], hl: [5, 5], tool: 172, blink: 1, by: 0 }], [1, {}]]); },
-  stagger(u) { return keyed(u, { hr: [3, 8.5], hl: [2, 8], tool: 178, bx: 0, hd: [0, 0], by: 0, fl: [0, 0], fr: [0, 0], blink: 0 }, [[0, {}], [.2, { hd: [0, -2], hr: [6, 5], hl: [7, 2], tool: 172, fr: [0, 3], by: -1, blink: 1 }, 'o'], [.45, { bx: -2, hr: [5, 6], hl: [6, 4], tool: 174, fr: [0, 0], fl: [0, 3], by: 0 }], [.7, { bx: 1, hd: [0, 1], hr: [3, 8.5], hl: [3, 8], tool: 178, fl: [0, 0], by: 1.5 }], [1, { bx: 0, by: 1 }]]); },
-  fall(u) { if (u >= .7) return { lie: 1, blink: 1 }; return keyed(u, { item: null, hr: [-2, 8], hl: [2, 8], hd: [0, 0], by: 0, blink: 1 }, [[0, {}], [.22, { hd: [0, -2], hr: [-7, 2], hl: [7, 2], by: -1 }, 'o'], [.5, { hd: [0, 3], hr: [-4, 9], hl: [4, 9], by: 6 }, 'i'], [.7, { hd: [0, 4], hr: [-5, 9], hl: [5, 9], by: 8 }]]); },
+  stagger(u) { return keyed(u, { hr: [-2, 8], hl: [2, 8], bx: 0, hd: [0, 0], by: 0, fl: [0, 0], fr: [0, 0], blink: 0 }, [[0, {}], [.2, { hd: [0, -1], hr: [-6, 3], hl: [6, 3], by: .5, blink: 1 }, 'o'], [.45, { bx: -1, hr: [-5, 5], hl: [5, 5], by: 1 }], [.7, { bx: 1, hd: [0, 1], hr: [-3, 8], hl: [3, 8], by: 1 }], [1, { by: .5 }]]); },
+  fall(u, c) {
+    if (u >= FELL.lands) return { lie: 1, blink: 1, loose: 1 };
+    const held = u < FELL.lets ? {} : { item: null };
+    return { ...keyed(u, { hr: [-2, 8], hl: [2, 8], hd: [0, 0], by: 0, bx: 0, blink: 1, tip: 0, loose: 0 }, [[0, {}], [FELL.lets, { hd: [0, -1], hr: [-6, 3], hl: [6, 3], by: 1 }, 'o'], [FELL.gives, { hd: [0, 0], hr: [-5, 5], hl: [5, 5], by: 3, tip: FELL.leans, loose: .5 }], [FELL.lands, { hr: [-4, 6], hl: [4, 6], by: 3, tip: FELL.flat, loose: 1 }, 'i']]), ...held };
+  },
 };
 const FB_READY = {
   one: (u, c) => ({ hr: [c.tool === 'spear' ? 1 : -1, 5 + sn(u) * .5], tool: c.tool === 'spear' ? 8 : 40, hl: [5, 7], by: 1 + sn(u) * .4, fl: [0, 0], fr: [0, 0] }),
@@ -119,6 +123,7 @@ const ARMS3 = {
   thrust: (u, c) => keyed(u, { R: [0, 3, -5], aim: [0, 20, 1], L: [1, 6.5, -4] }, [[0, {}], [.3, { R: [.5, -1, -4] }, 'o'], [.45, { R: [-.5, 8.5, -2.5] }, 'i'], [.62, { R: [-.5, 8.5, -2.5] }], [1, {}]]),
   block: (u, c) => keyed(u, GUARD3.one(c), [[0, {}], [.3, { L: [2, 7, -5] }], [.48, { L: [2, 7, -5] }], [.56, { L: [2, 6, -5] }, 'o'], [.8, { L: [2, 7, -5] }], [1, {}]]),
   shoot: u => { const up = { L: [3, 8, 0], aim: [0, 20, 0], cant: -50 }; return keyed(u, { L: [3, 6, -5], R: HANGS.R, aim: [0, 19, -5], bow: 0, arrow: 0, pull: 0, cant: -50 }, [[0, {}], [.1, { R: [1, -4, 3], L: [3, 7, -4] }], [.16, { ...up, R: [1, -4, 3], arrow: 1 }], [.22, { ...up, bow: 1, arrow: 1 }], [.3, { ...up, bow: 1, arrow: 1 }], [.6, { ...up, bow: 1, arrow: 1, pull: 2.5 }, 'o'], [.75, { ...up, bow: 1, arrow: 1, pull: 2.5 }], [.76, { ...up, bow: 0, R: [-6, 2, -1] }, 'l'], [.9, { L: [3, 7, -4], aim: [0, 20, -2], R: [-3, 2, -5] }], [1, {}]]); },
+  fall: (u, c) => u < FELL.lets ? carried3(c, 0) : null,
   hit: (u, c) => { const rest = carried3(c, 0), by = d => rest.R.map((v, i) => v + d[i]); return rest && rest.R ? keyed(u, rest, [[0, {}], [.25, { R: by([2, 0, 2]) }, 'o'], [.55, { R: by([1.5, 0, 1.5]) }], [1, {}]]) : rest; },
   stagger: (u, c) => { const rest = carried3(c, 0), by = d => rest.R.map((v, i) => v + d[i]); return rest && rest.R ? keyed(u, rest, [[0, {}], [.2, { R: by([2.5, -.5, 2.5]) }, 'o'], [.45, { R: by([2, 0, 1.5]) }], [.7, {}], [1, {}]]) : rest; },
 };
