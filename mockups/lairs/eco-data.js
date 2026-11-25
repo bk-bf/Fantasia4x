@@ -37,6 +37,13 @@ const ECO_DATA = (() => {
     stoat: { rarity: 'common', style: 'pursuit', active: 'night', small: 1, solo: 1, life: 5, social: 'solo', litter: [4, 8] },
   };
 
+  const DISEASES = {
+    warren_plague: { name: 'warren plague', hosts: ['rabbit', 'giant_rat'], incubate: 2, sick: 4, lethal: .8, beta: .9, spark: .025, reach: 50, contact: .7, immune: 2, wasting: .15, season: [1.3, 1.2, .9, .4] },
+    murrain: { name: 'murrain', hosts: ['deer', 'elk', 'aurochs', 'mountain_goat', 'boar'], incubate: 10, sick: 20, lethal: .45, beta: .18, spark: .03, reach: 80, contact: .25, immune: 1.5, wasting: .25, season: [.5, 1.6, 1.2, .2], dry: 2 },
+    fowl_pox: { name: 'fowl pox', hosts: ['wild_chicken', 'hoarfowl'], incubate: 5, sick: 12, lethal: .35, beta: .25, spark: .02, reach: 45, contact: .35, immune: 2, wasting: .1, season: [1.3, .8, 1.3, .4], wet: 2 },
+    mange: { name: 'mange', hosts: ['wolf', 'jackal', 'fox', 'worg'], incubate: 14, sick: 45, lethal: .35, beta: .12, spark: .15, reach: 0, contact: .25, immune: .5, wasting: .2, season: [1, 1, 1, 1.3] },
+  };
+
   function lines(objects) {
     const objs = new Map(objects.map(o => [o.cat + '/' + o.id, o])), by = new Map(), out = {}, left = [];
     for (const o of objects) if (o.cat === 'creature' && o.raw && o.raw.species && o.raw.tier) { if (!by.has(o.raw.species)) by.set(o.raw.species, []); by.get(o.raw.species).push(o); }
@@ -67,6 +74,6 @@ const ECO_DATA = (() => {
     }
     return { lines: out, left: left.map(o => ({ id: o.raw.species, name: o.name, diet: o.raw.diet })) };
   }
-  return { lines, PROFILE, BIOME };
+  return { lines, PROFILE, BIOME, DISEASES };
 })();
 if (typeof module !== 'undefined') module.exports = ECO_DATA;

@@ -4,7 +4,7 @@
   const lctx = land.getContext('2d'), ctx = life.getContext('2d'), graph = $('graph'), gctx = graph.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1);
   const DEN = { den: (d) => LAIR_PROPS.den(3, [46], d), cave: (d) => LAIR_PROPS.overhang(4, d), camp: (d) => LAIR_PROPS.hut(2, d), nest: (d) => LAIR_PROPS.eggs(1, 4, d), spire: (d) => LAIR_PROPS.spire(3, 40, false, d) };
   const DEN_TALL = { den: 15, cave: 22, camp: 19, nest: 12, spire: 30 }, DECAY = { 'lived in': 0, abandoned: 1, overgrown: 2, ruin: 3 };
-  const PING = { death: '#f0564a', clash: '#f29a3c', found: '#7ad06a', gone: '#b8b2a6', in: '#6cb4f0', out: '#6cb4f0', raid: '#ecdc48', steal: '#b06a2c', split: '#c8a0f0', fire: '#ff7a1a', rise: '#ffd24a' };
+  const PING = { death: '#f0564a', clash: '#f29a3c', found: '#7ad06a', gone: '#b8b2a6', in: '#6cb4f0', out: '#6cb4f0', raid: '#ecdc48', steal: '#b06a2c', split: '#c8a0f0', fire: '#ff7a1a', rise: '#ffd24a', sick: '#a8c83a' };
   const TODAY = { wolf: 55, bear: 32, mire_crocodile: 24, goblin: 65, harpy: 85 }, MIX = [['mire_crocodile', .5], ['goblin', .14], ['bear', .14], ['harpy', .12], ['wolf', .1]];
   const WX = { clear: 'Clear', rain: 'Rain', storm: 'Storm', snow: 'Snow', drought: 'Drought' }, ICON = new Map(), LAIRICON = {}, FACE = new Map(), STORE = 'f4x-region-runs', LEDGER = 'f4x-region-ledger';
   const q = new URLSearchParams(location.search);
@@ -111,6 +111,7 @@
     if (col) { ring(col.x * k, col.y * k, (col.r + 130) * k, '#ffffff', .35, [3 * dpr, 5 * dpr]); ctx.fillStyle = '#17131a'; ctx.fillRect(col.x * k - 8 * dpr, col.y * k - 8 * dpr, 16 * dpr, 16 * dpr); ctx.fillStyle = '#f2e2b0'; ctx.fillRect(col.x * k - 6 * dpr, col.y * k - 6 * dpr, 12 * dpr, 12 * dpr); ctx.fillStyle = '#a8322c'; ctx.fillRect(col.x * k - 6 * dpr, col.y * k - 6 * dpr, 12 * dpr, 5 * dpr); }
     else ring(S.N / 2 * k, S.N / 2 * k, 70 * k, '#ffffff', .3, [2 * dpr, 4 * dpr]);
     for (const f of S.fires) { const a = S.day - f.day; if (a < ECO.YEAR) label(a < 4 ? 'fire' : 'burn · deadwood, morels', f.x * k - 30 * dpr, f.y * k, a < 4 ? '#ff9a3c' : '#e0d6b8'); }
+    for (const ev of S.plagues || []) { const a = ev.end < 0 ? 0 : S.day - ev.end; if (a < ECO.SEASON_DAYS * 2) label(ev.end < 0 ? ev.name : ev.name + ' passed · ' + ev.dead + ' dead', ev.x * k - 30 * dpr, ev.y * k - 14 * dpr, ev.end < 0 ? PING.sick : '#e0d6b8'); }
     for (const m of S.marks) { const a = m.kg > .5 && S.day <= m.until ? Math.min(.9, .3 + m.kg / 40) : 0; if (a <= 0) continue; ctx.globalAlpha = a; ctx.fillStyle = '#efe6d2'; ctx.fillRect(m.x * k - 3 * dpr, m.y * k - dpr * .5, 6 * dpr, dpr); ctx.fillRect(m.x * k - dpr * .5, m.y * k - 3 * dpr, dpr, 6 * dpr); ctx.globalAlpha = 1; }
     if (rings) for (const g of S.groups) if (g.lair) ring(g.lair.x * k, g.lair.y * k, g.k.range * k, '#e0d6b8', g.lair === pick ? .95 : .35);
     for (const l of S.lairs) put(lairIcon(LINES[l.kind].den, ECO.age(S, l)), l.x * k, l.y * k + 4 * dpr);
@@ -126,6 +127,7 @@
       spots.sort((a, b) => a[1] - b[1]);
       for (const [ox, oy, c] of spots) put(c, x + ox, y + oy + home + c.height * .3);
       label(String(g.n + g.young), x + spread + 5 * dpr, y + home + 4 * dpr, prey ? '#fff' : TIERCOL[g.tier]);
+      if (ECO.sickNow(g) >= .5) { ctx.fillStyle = PING.sick; ctx.beginPath(); ctx.arc(x - spread - 4 * dpr, y + home, 3 * dpr, 0, Math.PI * 2); ctx.fill(); }
       if (g === pick) ring(x, y + home, spread + 12 * dpr, '#ffffff', .9);
     }
     if (pick && pick.story) ring(pick.x * k, pick.y * k, 16 * dpr, '#ffffff', .9);
@@ -198,6 +200,7 @@
     return out;
   }
   const ledBy = g => { const b = ECO.lead(g); return b ? ` · led by ${b.form ? b.form + ' ' : ''}${ECO.stageOf(S, g, b)} ${ECO.SEXN[b.sex]}${g.pair.length > 1 ? ' and mate' : ''}` : ''; };
+  const ill = g => { const D = g.k.dz && ECO.DZ[g.k.dz]; if (!D) return ''; const n = Math.round(ECO.sickNow(g)), e = Math.round(g.e * g.n), r = Math.round(g.imm * g.n); return n || e ? `${D.name}: ${n} sick${e ? ', ' + e + ' coming down with it' : ''}${r ? ', ' + r + ' immune' : ''}` : r ? `${r} immune to ${D.name}` : ''; };
   const breeders = g => g.pair && g.pair.length ? '<p>' + g.pair.map(b => `${ECO.SEXN[b.sex][0].toUpperCase() + ECO.SEXN[b.sex].slice(1)}, tier ${b.tier}${b.branch ? ' ' + b.branch : ''}${b.form ? ', ' + b.form : ''}, ${Math.round((S.day - b.born) / ECO.YEAR)} years, ${ECO.stageOf(S, g, b)}, ${b.wins} fights won`).join('<br>') + '</p>' : '';
   const pickedId = () => !pick ? null : pick.story ? (S.groups.find(o => o.lair === pick) || {}).id : pick.id;
   function ledger() {
@@ -207,7 +210,7 @@
     const f = VAL[view.key] || VAL.size, dir = view.dir;
     rows.sort((a, b) => { const x = f(a), y = f(b); return (typeof x === 'string' ? x.localeCompare(y) : x - y) * dir || b.id - a.id; });
     const T = titles(), me = pickedId();
-    const where = g => g.end !== undefined ? g.fate : (S.away || []).includes(g) ? 'wintering away' : (g.lair ? g.lair.name + ' · ' + g.mood : g.k.prey ? g.state : g.state + ', no lair') + ledBy(g);
+    const where = g => g.end !== undefined ? g.fate : (S.away || []).includes(g) ? 'wintering away' : (g.lair ? g.lair.name + ' · ' + g.mood : g.k.prey ? g.state : g.state + ', no lair') + ledBy(g) + (ECO.sickNow(g) >= .5 ? ' · ' + ECO.DZ[g.k.dz].name : '');
     el.innerHTML = '<thead><tr>' + COLS.map(([key, name]) => key === 'rank' ? `<th>${name}</th>` : `<th data-sort="${key}" class="${view.key === key ? 'on' : ''}">${name}${view.key === key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '</tr></thead><tbody>' +
       rows.map((g, i) => {
         const gone = g.end !== undefined, tags = (T.get(g.id) || []).map(t => `<span class="tag">${t}</span>`).join(''), fed = Math.round(g.cond * 100);
@@ -233,6 +236,7 @@
   $('ledger').addEventListener('mouseover', ev => { const tr = ev.target.closest('tr[data-id]'); const id = tr ? +tr.dataset.id : null; if (id === hoverId) return; hoverId = id; for (const r of document.querySelectorAll('#ledger tr.hover')) r.classList.remove('hover'); if (tr) tr.classList.add('hover'); });
   $('ledger').addEventListener('mouseleave', () => { hoverId = null; for (const r of document.querySelectorAll('#ledger tr.hover')) r.classList.remove('hover'); });
 
+  const sickAll = () => Math.round(S.groups.reduce((a, g) => a + ECO.sickNow(g), 0));
   function side() {
     const when = $('when');
     if (still) {
@@ -241,7 +245,7 @@
       return;
     }
     const col = S.colony;
-    when.innerHTML = `<b>Year ${ECO.year(S)} · ${ECO.SEASONS[ECO.season(S)]} ${S.day % ECO.SEASON_DAYS + 1}</b><span><i id="hour"></i> · ${WX[S.wx.kind]}${ECO.season(S) === 3 ? ' · snow ' + Math.round((S.snow || 0) * 100) + '%' : ''}${S.wx.hard ? ' · hard winter' : ''}${(S.away || []).length ? ' · ' + S.away.length + ' herds wintering away' : ''}</span>` +
+    when.innerHTML = `<b>Year ${ECO.year(S)} · ${ECO.SEASONS[ECO.season(S)]} ${S.day % ECO.SEASON_DAYS + 1}</b><span><i id="hour"></i> · ${WX[S.wx.kind]}${ECO.season(S) === 3 ? ' · snow ' + Math.round((S.snow || 0) * 100) + '%' : ''}${S.wx.hard ? ' · hard winter' : ''}${(S.away || []).length ? ' · ' + S.away.length + ' herds wintering away' : ''}${sickAll() ? ' · ' + sickAll() + ' sick' : ''}</span>` +
       `<span>${col ? `Colony landed ${hours(S.day - col.since)} h of play ago at 1× (${hours((S.day - col.since) / 4)} h at 4×)` : `${ECO.year(S) - 1} years of history, no colony yet`}</span><span class="dim">A year is ${ECO.YEAR} days of ${ECO.DAY_MIN} min: ${hours(ECO.YEAR)} h at 1×, ${hours(ECO.YEAR / 4)} h at 4×</span>${note ? `<span class="note">${esc(note)}</span>` : ''}`;
     shownHour = -1;
     chart();
@@ -259,17 +263,17 @@
     const T = S.tally, lived = S.lairs.filter(l => l.owner).length, pair = (a, b) => `<dt>${a}</dt><dd>${b}</dd>`;
     $('tally').innerHTML = pair('Lairs lived in · empty', `${lived} · ${S.lairs.length - lived}`) + pair('Hunts won', `${T.won} of ${T.tried} (${pct(T.won, T.tried)})`) + pair('Prey killed · born', `${T.kills} · ${T.preyBorn}`) + pair('Prey starved · aged', `${T.preyStarved} · ${T.preyAged}`) +
       (col ? pair('Prey taken by colonists', T.preyHunted) : '') + pair('Predators born', T.predBorn) + pair('Predators starved · aged', `${T.predStarved} · ${T.predAged}`) + pair('Lost hunting · in fights', `${T.predHunting} · ${T.predFight}`) + pair('Fights over ground', T.fights) +
-      pair('Leaders risen · grew old · fell to gaunt or crippled', `${T.risen} · ${T.aged} · ${T.downgraded}`) + pair('Leaders from outside · takeovers · packs broken up', `${T.adopted} · ${T.takeovers} · ${T.breakups}`) + pair('Contests over hunting ground', T.contests) + pair('Herds left for winter · came back · came in from the snow', `${T.migOut} · ${T.migBack} · ${T.winterIn}`) + pair('Dens moved a short way', T.shifted) + pair('Killed by winter', T.winterKill) + pair('Hunters killed · hurt by prey', `${T.gored} · ${T.injured}`) + pair('Wildfires', T.fires) + pair('Herds in · out', `${T.herdsIn} · ${T.herdsOut}`) + pair('Packs in · out · looked and moved on', `${T.packsIn} · ${T.packsOut} · ${T.passed}`) + pair('Lairs founded · retaken · left', `${T.founded} · ${T.reoccupied} · ${T.abandoned}`) + pair('Kills stolen by bears', T.stolen) + (col ? pair('Raids on the colony · killed there', `${T.raids} · ${T.predColony}`) : '');
-    $('years').innerHTML = '<tr><th>Yr</th><th>Prey</th><th>Pred</th><th>Lairs</th><th>Empty</th><th>Kills</th><th>Hunts</th><th title="prey · predators">Starved</th><th>Fights</th><th title="groups led by tier 3 or higher">T3+</th><th>Fires</th><th title="from hunters">Danger</th><th title="killed by winter">Winter</th><th title="lowest of the year">Grass</th></tr>' +
-      S.years.slice().reverse().map(y => `<tr><td>${y.year}</td><td>${y.prey}</td><td>${y.pred}</td><td>${y.lairs}</td><td>${y.empty}</td><td>${y.kills}</td><td>${pct(y.won, y.tried)}</td><td>${y.preyStarved} · ${y.predStarved}</td><td>${y.fights}</td><td>${y.high}</td><td>${y.fires}</td><td>${y.danger}</td><td>${y.winterKill || 0}</td><td>${Math.round(y.grassLow * 100)}%</td></tr>`).join('');
+      pair('Leaders risen · grew old · fell to gaunt or crippled', `${T.risen} · ${T.aged} · ${T.downgraded}`) + pair('Leaders from outside · takeovers · packs broken up', `${T.adopted} · ${T.takeovers} · ${T.breakups}`) + pair('Contests over hunting ground', T.contests) + pair('Herds left for winter · came back · came in from the snow', `${T.migOut} · ${T.migBack} · ${T.winterIn}`) + pair('Dens moved a short way', T.shifted) + pair('Killed by winter', T.winterKill) + pair('Plagues · groups they reached · died of sickness', `${T.outbreaks} · ${T.outbreaks + T.spread} · ${T.sickDied}`) + pair('Hunters killed · hurt by prey', `${T.gored} · ${T.injured}`) + pair('Wildfires', T.fires) + pair('Herds in · out', `${T.herdsIn} · ${T.herdsOut}`) + pair('Packs in · out · looked and moved on', `${T.packsIn} · ${T.packsOut} · ${T.passed}`) + pair('Lairs founded · retaken · left', `${T.founded} · ${T.reoccupied} · ${T.abandoned}`) + pair('Kills stolen by bears', T.stolen) + (col ? pair('Raids on the colony · killed there', `${T.raids} · ${T.predColony}`) : '');
+    $('years').innerHTML = '<tr><th>Yr</th><th>Prey</th><th>Pred</th><th>Lairs</th><th>Empty</th><th>Kills</th><th>Hunts</th><th title="prey · predators">Starved</th><th>Fights</th><th title="groups led by tier 3 or higher">T3+</th><th>Fires</th><th title="from hunters">Danger</th><th title="killed by winter">Winter</th><th title="plagues · died of sickness">Plague</th><th title="lowest of the year">Grass</th></tr>' +
+      S.years.slice().reverse().map(y => `<tr><td>${y.year}</td><td>${y.prey}</td><td>${y.pred}</td><td>${y.lairs}</td><td>${y.empty}</td><td>${y.kills}</td><td>${pct(y.won, y.tried)}</td><td>${y.preyStarved} · ${y.predStarved}</td><td>${y.fights}</td><td>${y.high}</td><td>${y.fires}</td><td>${y.danger}</td><td>${y.winterKill || 0}</td><td>${y.outbreaks || 0} · ${y.sickDied || 0}</td><td>${Math.round(y.grassLow * 100)}%</td></tr>`).join('');
     const p = $('pick');
     if (pick && pick.story) {
       const g = S.groups.find(o => o.lair === pick), state = ECO.age(S, pick);
       p.innerHTML = `<h2>${esc(pick.name)}</h2><p>${g ? `Lived in by ${head(g)} ${esc(ECO.variant(g).name.toLowerCase())}s (group ${g.id}) · ${esc(g.state)}` : esc(state[0].toUpperCase() + state.slice(1))}${pick.burnt ? ' · burnt' : ''}</p>` +
-        (g ? `<div class="bar"><i style="width:${clamp(ECO.stockDays(g) / 4, 0, 1) * 100}%"></i></div><p>${ECO.stockDays(g).toFixed(1)} days of food in the larder${g.hungry ? ' · hungry for ' + g.hungry + ' days' : ''} · ${esc(g.mood)}</p>${breeders(g)}` : '') +
+        (g ? `<div class="bar"><i style="width:${clamp(ECO.stockDays(g) / 4, 0, 1) * 100}%"></i></div><p>${ECO.stockDays(g).toFixed(1)} days of food in the larder${g.hungry ? ' · hungry for ' + g.hungry + ' days' : ''} · ${esc(g.mood)}</p>${breeders(g)}${ill(g) ? '<p>' + esc(ill(g)) + '</p>' : ''}` : '') +
         `<p>Bones of ${pick.kills} kills · most it ever held: ${pick.peak}</p><ul>${pick.story.slice(-10).map(t => `<li>${esc(t)}</li>`).join('')}</ul>`;
     } else if (pick && (S.groups.includes(pick) || (S.away || []).includes(pick))) {
-      p.innerHTML = `<h2>${esc(ECO.variant(pick).name)} ${pick.id}</h2><p>${head(pick)} · ${(S.away || []).includes(pick) ? 'wintering away' : esc(pick.state)} · tier ${pick.tier} · ${esc(pick.came)}</p><p>${pick.k.prey ? 'Condition ' + (pick.cond > .7 ? 'good' : pick.cond > .4 ? 'lean' : 'starving') + ' · fat ' + Math.round(pick.fat * 100) + '%' + (pick.k.migr ? ' · ' + (pick.migrant ? 'leaves for winter' : 'stays the winter') : '') : ECO.stockDays(pick).toFixed(1) + ' days of food, looking for ground'}</p>${breeders(pick)}<p>${pick.k.prey ? '' : pick.kills + ' kills · '}${pick.lost} lost · ${pick.born} born · most it ever held: ${pick.peak}</p>`;
+      p.innerHTML = `<h2>${esc(ECO.variant(pick).name)} ${pick.id}</h2><p>${head(pick)} · ${(S.away || []).includes(pick) ? 'wintering away' : esc(pick.state)} · tier ${pick.tier} · ${esc(pick.came)}</p><p>${pick.k.prey ? 'Condition ' + (pick.cond > .7 ? 'good' : pick.cond > .4 ? 'lean' : 'starving') + ' · fat ' + Math.round(pick.fat * 100) + '%' + (pick.k.migr ? ' · ' + (pick.migrant ? 'leaves for winter' : 'stays the winter') : '') : ECO.stockDays(pick).toFixed(1) + ' days of food, looking for ground'}</p>${breeders(pick)}${ill(pick) ? '<p>' + esc(ill(pick)) + '</p>' : ''}<p>${pick.k.prey ? '' : pick.kills + ' kills · '}${pick.lost} lost · ${pick.born} born · most it ever held: ${pick.peak}</p>`;
     } else if (pick && S.gone.includes(pick)) {
       p.innerHTML = `<h2>${esc(ECO.variant(pick).name)} ${pick.id}</h2><p>Gone: ${esc(pick.fate)} · ${esc(pick.came)} · lasted ${ago(span(pick))}</p><p>${pick.k.prey ? '' : pick.kills + ' kills · '}${pick.lost} lost · ${pick.born} born · most it ever held: ${pick.peak}</p>`;
     } else { pick = null; p.innerHTML = '<h3>Pick</h3><p>Click a lair or a group on the map for its story.</p>'; }
