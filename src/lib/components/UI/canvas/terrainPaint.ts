@@ -6,6 +6,7 @@ import {
   computeHiddenMaskState,
   type HiddenMaskState
 } from '$lib/webgl/fantasia-world.js';
+import { PAINTED_TILES } from '$lib/webgl/painted/flag.js';
 import { lightingService, type LightEmitter } from '$lib/game/services/LightingService.js';
 import type { WorldTile, PlacedBuilding, Season } from '$lib/game/core/types.js';
 
@@ -13,7 +14,7 @@ export interface FullTerrainBuild {
   terrainGrid: GameGrid;
   resourceGrid: GameGrid;
   resourceTallGrid: GameGrid;
-  snowGrid: GameGrid;
+  snowGrid: GameGrid | null;
   maskState: HiddenMaskState;
   emitterMap: Map<string, LightEmitter>;
   emitters: LightEmitter[];
@@ -29,7 +30,7 @@ export function fullRebuildTerrain(
   const maskState = computeHiddenMaskState(worldMap);
   const terrainGrid = buildGameGrid(worldMap, buildings, maskState.mask);
   const resources = buildResourceOverlay(worldMap, maskState.mask, season);
-  const snowGrid = buildSnowOverlay(worldMap, maskState.mask);
+  const snowGrid = PAINTED_TILES ? null : buildSnowOverlay(worldMap, maskState.mask);
 
   const buildingsById = new Map<string, { x: number; y: number; sig: string }>();
   for (const b of buildings) {

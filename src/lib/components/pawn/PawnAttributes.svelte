@@ -1,158 +1,35 @@
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
-  import statsData from '$lib/game/database/pawns/stats.json';
-  import PawnStatBanner from './PawnStatBanner.svelte';
-  import { APTITUDE_IDS, type AptitudeId } from '$lib/game/core/rules/body/aptitudes';
-  import { computeAptitudeView } from '$lib/components/util/statView';
-  import PawnSkillBanner from './PawnSkillBanner.svelte';
-  import StatTooltip from './StatTooltip.svelte';
-  import {
-    buildStatContext,
-    computeStatView,
-    type StatDef,
-    type StatView
-  } from '$lib/components/util/statView';
+  import { gameState } from '$lib/stores/gameState';
+  import { chrome } from '$lib/pixelArt/chrome';
+  import { attributeCategories, type AttrCell } from '$lib/components/util/attributeView';
+  import AttrTip from './AttrTip.svelte';
 
-  export let pawn: Pawn;
-  export let highlightCategory: string | null = null;
-  export let categories: string[] = ['physical', 'capacity', 'combat', 'resistance', 'work'];
+  let { pawn }: { pawn: Pawn } = $props();
 
-  const STATS = statsData as unknown as StatDef[];
-  const CAPACITY_IDS = STATS.filter((s) => s.category === 'capacity').map((s) => s.id);
-
-  $: relevant = (() => {
-    const set = new Set<string>();
-    if (!highlightCategory) return set;
-    const workStats = STATS.filter((s) => s.id.startsWith(`${highlightCategory}_`));
-    for (const ws of workStats) {
-      set.add(ws.id);
-      for (const cap of CAPACITY_IDS) {
-        if (new RegExp(`\\b${cap}\\b`).test(ws.formula)) set.add(cap);
-      }
-    }
-    return set;
-  })();
-
-  const CATEGORY_ORDER = ['physical', 'capacity', 'combat', 'resistance', 'social', 'work'];
-  const CATEGORY_LABEL: Record<string, string> = {
-    physical: 'PHYSICAL',
-    capacity: 'CAPACITIES',
-    combat: 'COMBAT',
-    resistance: 'RESISTANCES',
-    social: 'SOCIAL',
-    work: 'WORK'
-  };
-
-  $: ctx = buildStatContext(pawn);
-
-  function flipTip(cell: HTMLElement) {
-    const onEnter = () => {
-      const tip = cell.querySelector<HTMLElement>('.tip');
-      if (!tip) return;
-      let clip: HTMLElement | null = cell.parentElement;
-      while (clip && clip !== document.body) {
-        const oy = getComputedStyle(clip).overflowY;
-        if (oy === 'auto' || oy === 'scroll' || oy === 'hidden') break;
-        clip = clip.parentElement;
-      }
-      const cr =
-        clip && clip !== document.body
-          ? clip.getBoundingClientRect()
-          : ({ top: 0, bottom: window.innerHeight } as DOMRect);
-      const prev = tip.style.cssText;
-      tip.style.visibility = 'hidden';
-      tip.style.display = 'block';
-      tip.style.maxHeight = 'none';
-      const tipH = tip.offsetHeight;
-      tip.style.cssText = prev;
-      const r = cell.getBoundingClientRect();
-      const margin = 6;
-      const below = cr.bottom - r.bottom - margin;
-      const above = r.top - cr.top - margin;
-      const up = tipH <= below ? false : tipH <= above ? true : above > below;
-      cell.classList.toggle('up', up);
-      const avail = up ? above : below;
-      tip.style.maxHeight = tipH > avail ? `${Math.max(60, avail)}px` : '';
-    };
-    cell.addEventListener('mouseenter', onEnter);
-    return { destroy: () => cell.removeEventListener('mouseenter', onEnter) };
-  }
-
-  $: categoryOrder = [
-    ...CATEGORY_ORDER,
-    ...[...new Set(STATS.map((s) => s.category))].filter((cat) => !CATEGORY_ORDER.includes(cat))
-  ];
-
-  $: grouped = categoryOrder
-    .filter((cat) => categories.includes(cat))
-    .map((cat) => ({
-      cat,
-      label: CATEGORY_LABEL[cat] ?? cat.toUpperCase(),
-      stats: STATS.filter((s) => s.category === cat)
-    }))
-    .filter((g) => g.stats.length > 0);
-
-  const APT_META: Record<AptitudeId, { label: string; desc: string; mass?: boolean }> = {
-    hit_chance: { label: 'accuracy', desc: 'How reliably a swing finds its mark.' },
-    attack_speed: { label: 'attack speed', desc: 'How quickly blows follow one another.' },
-    hit_precision: {
-      label: 'precision',
-      desc: 'How often a blow finds something that ends a fight.'
-    },
-    armor_damage: {
-      label: 'leverage',
-      desc: 'How much force is put through a foe’s armour.',
-      mass: true
-    },
-    dodge: { label: 'evasion', desc: 'How readily a blow is slipped.', mass: true },
-    aim_accuracy: { label: 'marksmanship', desc: 'How true a shot flies.' },
-    block: { label: 'blocking', desc: 'How well a blow is caught on shield or guard.', mass: true }
-  };
-
-  $: catRows = buildRows(pawn, ctx, relevant);
-
-  function buildRows(..._deps: unknown[]) {
-    const rows = grouped.map((g) => ({
-      label: g.label,
-      cells: g.stats.map((s) => ({
-        id: s.id,
-        hl: relevant.has(s.id),
-        view: computeStatView(s.id, pawn, ctx) as StatView
-      }))
-    }));
-    if (categories.includes('combat'))
-      rows.unshift({
-        label: 'APTITUDES',
-        cells: APTITUDE_IDS.map((id) => {
-          const m = APT_META[id];
-          return {
-            id,
-            hl: false,
-            view: computeAptitudeView(id, pawn, m.label, m.desc, !!m.mass) as StatView
-          };
-        })
-      });
-    return rows;
-  }
+  const cats = $derived(attributeCategories(pawn, $gameState));
+  let tip = $state<{ key: string; x: number; y: number } | null>(null);
+  const shown = $derived<AttrCell | undefined>(
+    tip ? cats.flatMap((c) => c.cells).find((c) => c.key === tip?.key) : undefined
+  );
 </script>
 
 <div class="attrs">
-  <PawnStatBanner {pawn} />
-  {#if categories.includes('work')}
-    <PawnSkillBanner {pawn} />
-  {/if}
-
-  {#each catRows as g}
-    <div class="cat">
-      <div class="cat-hdr">{g.label}</div>
-      <div class="grid">
-        {#each g.cells as c (c.id)}
-          <div class="cell" class:hl={c.hl} use:flipTip>
-            <span class="nm">{c.view.name}</span>
-            <span class="vl" style="color: {c.view.trend.color}"
-              >{c.view.value}{c.view.unit}<span class="trend">{c.view.trend.glyph}</span></span
-            >
-            <div class="tip"><StatTooltip view={c.view} /></div>
+  {#each cats as g (g.label)}
+    <div class="dcat">
+      <h5>{g.label}</h5>
+      <div class="dcells">
+        {#each g.cells as c (c.key)}
+          <div
+            class="dcell"
+            role="note"
+            onmouseenter={(e) => (tip = { key: c.key, x: e.clientX, y: e.clientY })}
+            onmousemove={(e) => tip && (tip = { ...tip, x: e.clientX, y: e.clientY })}
+            onmouseleave={() => (tip = null)}
+            {@attach chrome('well')}
+          >
+            <em>{c.label}</em>
+            <b class={c.trend}>{c.value}</b>
           </div>
         {/each}
       </div>
@@ -160,85 +37,69 @@
   {/each}
 </div>
 
+{#if tip && shown}
+  <AttrTip {pawn} cell={shown} x={tip.x} y={tip.y} />
+{/if}
+
 <style>
   .attrs {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text-dim);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font: 16px/18px var(--font-pixel);
+    color: var(--text);
   }
-  .cat {
-    margin-bottom: 6px;
+  .dcat {
+    display: grid;
+    grid-template-columns: 76px 1fr;
+    align-items: start;
+    gap: 6px;
   }
-  .cat-hdr {
+  h5 {
+    margin: 4px 0 0;
+    font: inherit;
     color: var(--accent-hi);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    padding: 2px 6px;
-    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: 1.6px;
   }
-  .grid {
+  .dcells {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 0 8px;
+    gap: 2px;
   }
-  .cell {
-    position: relative;
+  .dcell {
     display: flex;
     justify-content: space-between;
-    gap: 6px;
-    padding: 1px 6px;
-    border-bottom: 1px dotted var(--border, #222);
+    gap: 8px;
+    padding: 1px 7px 2px;
+    white-space: nowrap;
     cursor: help;
   }
-  .cell:hover {
-    background: var(--bg-hover, #151c26);
+  .dcell:hover {
+    z-index: 2;
   }
-  .cell.hl {
-    background: color-mix(in srgb, var(--accent-hi) 16%, transparent);
-    box-shadow: inset 2px 0 0 var(--accent-hi);
-  }
-  .cell.hl .nm {
+  em {
+    font-style: normal;
     color: var(--text);
-  }
-  .tip {
-    display: none;
-    position: absolute;
-    z-index: 60;
-    left: 0;
-    top: 100%;
-    min-width: 220px;
-    max-width: 340px;
-    max-height: 60vh;
-    overflow-y: auto;
-    padding: 6px 8px;
-    background: var(--bg-panel, #0c1118);
-    border: 1px solid var(--border-hi, #3a4658);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-    color: var(--text);
-    font-size: 11px;
-    line-height: 1.5;
-    pointer-events: auto;
-  }
-  .cell:hover .tip {
-    display: block;
-  }
-  .cell:global(.up) .tip {
-    top: auto;
-    bottom: 100%;
-  }
-  .trend {
-    font-size: 9px;
-    margin-left: 3px;
-    vertical-align: middle;
-  }
-  .nm {
-    color: var(--text-dim);
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .vl {
-    color: var(--text);
+  b {
     flex-shrink: 0;
+    font-weight: normal;
+  }
+  b.up {
+    color: var(--pos);
+  }
+  b.down {
+    color: var(--neg);
+  }
+  b.up::after {
+    content: ' ▲';
+    font-size: 10px;
+  }
+  b.down::after {
+    content: ' ▼';
+    font-size: 10px;
   }
 </style>

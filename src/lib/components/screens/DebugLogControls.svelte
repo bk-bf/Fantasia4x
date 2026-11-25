@@ -1,4 +1,8 @@
 <script lang="ts">
+  import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
+  import SearchBar from '$lib/components/UI/widget/SearchBar.svelte';
+  import DebugField from './DebugField.svelte';
+
   let {
     filterTag = $bindable(),
     filterSeverity = $bindable(),
@@ -25,73 +29,39 @@
 </script>
 
 <div class="header">
-  <span class="title">DEBUG LOG</span>
-  <select class="sel" bind:value={filterTag} aria-label="Category filter">
-    <option value="ALL">cat:ALL</option>
-    {#each knownTags as t (t)}<option value={t}>{t}</option>{/each}
-  </select>
-  <select class="sel" bind:value={filterSeverity} aria-label="Severity filter">
-    {#each severities as s}<option value={s}>{s === 'ALL' ? 'sev:ALL' : s}</option>{/each}
-  </select>
-  <input class="search" type="text" placeholder="search…" bind:value={search} />
-  <button class="btn" class:on={autoscroll} onclick={() => (autoscroll = !autoscroll)}>
-    {autoscroll ? 'scroll■' : 'scroll□'}
-  </button>
-  <button class="btn" class:on={wrap} onclick={() => (wrap = !wrap)}>
-    {wrap ? 'wrap■' : 'wrap□'}
-  </button>
-  <button class="btn" onclick={onclear}>clear</button>
-  <span class="count">{shown}/{total}</span>
+  <DebugField>
+    <select bind:value={filterTag} aria-label="Category filter">
+      <option value="ALL">All kinds</option>
+      {#each knownTags as t (t)}<option value={t}>{t}</option>{/each}
+    </select>
+  </DebugField>
+  <DebugField>
+    <select bind:value={filterSeverity} aria-label="Severity filter">
+      {#each severities as s (s)}<option value={s}>{s === 'ALL' ? 'All levels' : s}</option>{/each}
+    </select>
+  </DebugField>
+  <SearchBar variant="well" bind:value={search} />
+  <ChromeButton on={autoscroll} onclick={() => (autoscroll = !autoscroll)}>Follow</ChromeButton>
+  <ChromeButton on={wrap} onclick={() => (wrap = !wrap)}>Wrap</ChromeButton>
+  <ChromeButton onclick={onclear}>Clear</ChromeButton>
+  <span class="count">{shown} of {total}</span>
 </div>
 
 <style>
   .header {
     display: flex;
     align-items: center;
-    gap: 0.4em;
+    gap: 6px;
     flex-wrap: wrap;
-    padding: 4px 6px;
-    background: var(--bg-panel);
-    border-bottom: 1px solid var(--border-hi);
     flex-shrink: 0;
+    padding: 0 0 6px;
   }
-  .title {
-    color: var(--accent-hi);
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    margin-right: auto;
-  }
-  .sel,
-  .search,
-  .btn {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: inherit;
-    font-size: 12px;
-    padding: 2px 5px;
-    cursor: pointer;
-    outline: none;
-  }
-  .sel:focus,
-  .search:focus {
-    border-color: var(--border-hi);
-  }
-  .search {
-    width: 9em;
-    cursor: text;
-  }
-  .btn:hover {
-    background: var(--bg-hover);
-    color: var(--accent-hi);
-  }
-  .btn.on {
-    color: var(--accent-hi);
-    border-color: var(--border-hi);
+  .header > :global(.field) {
+    width: 150px;
   }
   .count {
+    margin-left: auto;
     color: var(--text-muted);
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
+    font: 16px/18px var(--font-pixel);
   }
 </style>

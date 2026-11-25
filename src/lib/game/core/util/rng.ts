@@ -71,3 +71,9 @@ export const rng = new SeededRng();
 export function freshSeed(): number {
   return (Date.now() ^ (Math.random() * 0x100000000)) >>> 0;
 }
+
+export function stringSeed(key: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 0x01000193);
+  return h >>> 0;
+}

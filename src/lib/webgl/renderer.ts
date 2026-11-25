@@ -1,13 +1,32 @@
-import { WebGLRendererCore, type RenderStats, type RendererOptions } from './renderer-core.js';
+import type { MapMotion } from './painted/waves.js';
+import {
+  WebGLRendererCore,
+  type RenderStats,
+  type RendererOptions,
+  type SpriteLayer
+} from './renderer-core.js';
+import type { GroundRing, RingInk } from './groundRings.js';
+import type { DrawnFigure, Quad } from './drawnSprites.js';
 import type { ShaderManager } from './shaders.js';
 import type { CharacterRenderer } from './character-renderer.js';
 import type { GameGrid } from './game-grid.js';
 import type { FontAtlas } from './types.js';
+import { mapWeather, type PointLight, type Rgb } from './painted/lightGrade.js';
+import {
+  ambientWind,
+  weatherRain,
+  weatherIsHeavy,
+  weatherOverlayKind,
+  windVector
+} from '../game/services/EnvironmentService.js';
+import type { WeatherState } from '../game/core/types.js';
+import { heading } from './painted/wind.js';
 
-export type { RenderStats, RendererOptions };
+export type { RenderStats, RendererOptions, SpriteLayer };
 
 export class WebGLRenderer {
   private core: WebGLRendererCore;
+  private weather: string | null | undefined = null;
 
   constructor(options: RendererOptions) {
     this.core = new WebGLRendererCore(options);
@@ -43,6 +62,30 @@ export class WebGLRenderer {
 
   setResourceTallOverlayGrid(grid: GameGrid | null): void {
     this.core.setResourceTallOverlayGrid(grid);
+  }
+
+  setGroundRings(list: readonly GroundRing[], ink: RingInk): void {
+    this.core.setGroundRings(list, ink);
+  }
+
+  drawnAt(px: number, py: number): { layer: SpriteLayer; x: number; y: number } | null {
+    return this.core.drawnAt(px, py);
+  }
+
+  drawnBounds(layer: SpriteLayer, x: number, y: number): Quad | null {
+    return this.core.drawnBounds(layer, x, y);
+  }
+
+  drawnFigure(layer: SpriteLayer, x: number, y: number): DrawnFigure | null {
+    return this.core.drawnFigure(layer, x, y);
+  }
+
+  atlasCell(q: Quad): Uint8ClampedArray | null {
+    return this.core.atlasCell(q);
+  }
+
+  gradeWeights(): Rgb {
+    return this.core.gradeWeights();
   }
 
   setViewTileOffset(x: number, y: number): void {
@@ -89,12 +132,37 @@ export class WebGLRenderer {
     return this.core.getFontAtlas();
   }
 
-  setAmbient(light: number, tint: [number, number, number]): void {
-    this.core.setAmbient(light, tint);
+  setAmbient(
+    light: number,
+    tint: Rgb,
+    baseTint?: Rgb,
+    weather?: WeatherState,
+    season?: string
+  ): void {
+    this.core.setAmbient(light, tint, baseTint);
+    const { dx, dy } = windVector(weather?.windDir);
+    this.core.setWind(ambientWind(weather), heading(dx, dy), season);
+    this.core.setSeaWeather({ rain: weatherRain(weather?.type) });
+    const type = weather?.type;
+    if (type === this.weather) return;
+    this.weather = type;
+    this.core.setMapWeather(mapWeather(weatherOverlayKind(type), weatherIsHeavy(type)));
+  }
+
+  setPointLights(lights: readonly PointLight[]): void {
+    this.core.setPointLights(lights);
   }
 
   setDynamicLight(active: boolean): void {
     this.core.setDynamicLight(active);
+  }
+
+  setVignette(on: boolean): void {
+    this.core.setVignette(on);
+  }
+
+  setMotion(motion: MapMotion): void {
+    this.core.setMotion(motion);
   }
 
   setLightVersion(version: number): void {

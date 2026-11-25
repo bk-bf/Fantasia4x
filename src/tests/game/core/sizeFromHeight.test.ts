@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sizeFromHeight } from '$lib/game/core/gen/culture';
+import { sizeFromHeight } from '$lib/game/core/rules/body/size';
 
 describe('body size from height', () => {
   it('each size band starts at its cut height', () => {

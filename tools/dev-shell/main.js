@@ -3,7 +3,7 @@ const path = require('path');
 
 const APP_URL = process.env.SPIKE_URL || 'http://localhost:5173';
 const START_QUERY = [
-  process.env.F4X_PAINTED === '1' ? 'painted=1' : '',
+  process.env.F4X_PAINTED === '0' ? 'painted=0' : '',
   process.env.F4X_SCENARIO ? `scenario=${encodeURIComponent(process.env.F4X_SCENARIO)}` : ''
 ]
   .filter(Boolean)

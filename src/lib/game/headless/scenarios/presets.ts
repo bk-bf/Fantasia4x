@@ -153,7 +153,6 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
         { id: 'blast_furnace' },
         { id: 'crucible_steelworks' },
         { id: 'alchemy_lab' },
-        { id: 'manaforge' },
         { id: 'oven' },
         { id: 'larder_cupboard' },
         { id: 'feather_bed' },
@@ -184,7 +183,7 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
       'A 750×750 generated map, five fresh colonists and its natural wildlife on a fixed seed — the map perf runs compare on.',
     spec: {
       seed: 4242,
-      map: { w: 750, h: 750, preset: 'generated', generator: 'classic' },
+      map: { w: 750, h: 750, preset: 'generated' },
       pawns: [{ count: 5 }],
       seedEntities: true,
       wholeMapStockpile: false

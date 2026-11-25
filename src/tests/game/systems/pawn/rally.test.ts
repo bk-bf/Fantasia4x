@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { generatePawns } from '$lib/game/entities/Pawns';
+import { generatePawns } from '$lib/game/core/gen/pawnBuild';
 import { initialGameState } from '$lib/game/core/state/initialState';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { moodEffect } from '$lib/game/core/defs/moods';

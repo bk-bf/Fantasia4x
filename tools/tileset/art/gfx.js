@@ -62,6 +62,7 @@ const P = {
   bog: R('#12180f #1a2416 #24311b #314022 #42532b'),
   duck: R('#4e6a2a #6f8a3a #93a84c'),
   clay: R('#4f3226 #66412f #7e533a #956849 #ab7f5c'),
+  clayGround: R('#46362f #5a453b #6f5749 #846b5a #99816e'),
   clayBlue: R('#33414b #455862 #5b727c #768e96 #94a8aa'),
   sand: R('#5f5238 #7a6a48 #94835a #ae9d70 #c7b88a #dccfa4'),
   quick: R('#6d5c3a #8a7648 #a5905a #bfaa72 #d2c08c'),

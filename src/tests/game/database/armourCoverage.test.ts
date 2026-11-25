@@ -3,6 +3,7 @@ import itemsData from '$lib/game/database/items/items.json';
 import recipesData from '$lib/game/database/items/recipes.json';
 import type { EquipmentSlot, Item } from '$lib/game/core/types';
 import { SLOT_COVERAGE, coveredParts, coversPart } from '$lib/game/core/rules/gear/armorCoverage';
+import { RUNED_CONCEPT_ITEMS } from './runedConceptItems';
 
 const ITEMS = itemsData as unknown as Item[];
 const RECIPES = recipesData as unknown as {
@@ -61,7 +62,7 @@ const SLOTS: EquipmentSlot[] = [
 describe('armour is reachable through play', () => {
   it('every non-loot armour piece has a recipe', () => {
     const orphans = armour
-      .filter((i) => !craftable.has(i.id) && !LOOT_ONLY.has(i.id))
+      .filter((i) => !craftable.has(i.id) && !LOOT_ONLY.has(i.id) && !RUNED_CONCEPT_ITEMS.has(i.id))
       .map((i) => i.id);
     expect(
       orphans,

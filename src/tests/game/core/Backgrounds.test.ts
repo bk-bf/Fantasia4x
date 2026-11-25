@@ -13,7 +13,7 @@ import {
 import type { Background } from '$lib/game/core/defs/backgrounds';
 import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
 import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/gen/kingdom';
-import { generateColonyPawns } from '$lib/game/entities/Pawns';
+import { generateColonyPawns } from '$lib/game/core/gen/colonyPawns';
 import { kingdomService } from '$lib/game/services/KingdomService';
 import { rng } from '$lib/game/core/util/rng';
 import { MAX_WORK_LEVEL } from '$lib/game/core/rules/body/workExperience';
@@ -56,7 +56,11 @@ describe('BACKGROUNDS — origin & cohesion rules', () => {
 
   it('rollOrigin draws poorer kingdoms more often than richer ones, and raiders less than a destitute kingdom', () => {
     const { cultures } = world();
-    const bandKingdom = (band: WealthBand, id: string, relationBias: Kingdom['relationBias'] = 'derived'): Kingdom => ({
+    const bandKingdom = (
+      band: WealthBand,
+      id: string,
+      relationBias: Kingdom['relationBias'] = 'derived'
+    ): Kingdom => ({
       id,
       name: id,
       cultureMix: [{ cultureId: cultures[0].id, weight: 1 }],

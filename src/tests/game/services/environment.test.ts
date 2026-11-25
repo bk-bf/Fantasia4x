@@ -39,8 +39,6 @@ import {
   weatherLabel,
   weatherOverlayKind,
   weatherIsHeavy,
-  weatherFallSpeed,
-  weatherDensity,
   weatherPanelSaturation,
   weatherChronicleSeverity,
   weatherSightMul,
@@ -619,16 +617,6 @@ describe('EnvironmentService — data-driven weather/season metadata (jsonc)', (
     expect(weatherPanelSaturation('fog')).toBe(0.68);
     expect(weatherPanelSaturation('fog')).toBeLessThan(weatherPanelSaturation('rain'));
     expect(weatherPanelSaturation(undefined)).toBe(1);
-  });
-
-  it('overlay fall speed + density are data-driven (with kind defaults)', () => {
-    expect(weatherFallSpeed('rain')).toBe(680);
-    expect(weatherFallSpeed('heavy_rain')).toBe(950);
-    expect(weatherFallSpeed('snow')).toBe(80);
-    expect(weatherDensity('rain')).toBe(160);
-    expect(weatherDensity('heavy_rain')).toBe(240);
-    expect(weatherFallSpeed('not_a_weather')).toBe(0);
-    expect(weatherDensity('not_a_weather')).toBe(0);
   });
 
   it('chronicle severity is data-driven', () => {

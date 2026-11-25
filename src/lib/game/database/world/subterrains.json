@@ -160,7 +160,7 @@
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#754d17",
     "bg"          : "#17120a",
-    "biomes"      : { "swamp": [null, -0.2] }
+    "biomes"      : { "swamp": [null, 0] }
   },
   {
     "id"          : "bog",
@@ -170,7 +170,8 @@
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#754d17",
     "bg"          : "#17120a",
-    "biomes"      : { "swamp": [-0.2, 0.2] }
+    "biomes"      : { "swamp": [null, 0.5] },
+    "pools"       : { "swamp": [0.25, null] }
   },
   {
     "id"          : "clay",
@@ -180,7 +181,7 @@
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#754d17",
     "bg"          : "#17120a",
-    "biomes"      : { "swamp": [0.2, 0.5] }
+    "biomes"      : { "swamp": [0, 0.5] }
   },
   {
     "id"          : "quicksand",

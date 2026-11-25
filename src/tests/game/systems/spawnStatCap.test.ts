@@ -1,10 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { generateCulture, SPAWN_STAT_CAP } from '$lib/game/core/gen/culture';
-import { generatePawns } from '$lib/game/entities/Pawns';
+import { generateCulture } from '$lib/game/core/gen/culture';
+import { SPAWN_STAT_CAP } from '$lib/game/core/rules/body/spawnStatCap';
+import { generatePawns } from '$lib/game/core/gen/pawnBuild';
 import { rng } from '$lib/game/core/util/rng';
 import type { Pawn } from '$lib/game/core/types';
 
-const KEYS = ['strength', 'dexterity', 'constitution', 'perception', 'intelligence', 'charisma'] as const;
+const KEYS = [
+  'strength',
+  'dexterity',
+  'constitution',
+  'perception',
+  'intelligence',
+  'charisma'
+] as const;
 
 describe('SPAWN STAT CAP — growth-level-1 pawns are ordinary people', () => {
   it(`no generated pawn exceeds ${SPAWN_STAT_CAP} in any core stat`, () => {

@@ -1,0 +1,248 @@
+import vertexSource from '../shaders/leaf.vert.glsl?raw';
+import fragmentSource from '../shaders/leaf.frag.glsl?raw';
+import type { ShaderManager } from '../shaders.js';
+import type { AtlasTexels } from '../drawnSprites.js';
+import type { PaintedSprite } from './manifest.js';
+import { gustAt, WIND_SHAPE, type WindClock } from './wind.js';
+
+const PROGRAM = 'fallingLeaf';
+const FLOATS = 5;
+const SOLID = 1;
+const SHADE = 0.7;
+const PICKS = 8;
+const FLUTTER = 5;
+const FOOT_RISE = 9;
+const MARGIN = 3;
+const L = WIND_SHAPE.leaves;
+
+export interface LeafView {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface LeafFrame {
+  canvas: [number, number];
+  viewOffset: [number, number];
+  zoom: [number, number];
+  basePerArt: number;
+  artTile: number;
+  view: LeafView;
+  season: string | undefined;
+  treeAt: (x: number, y: number) => PaintedSprite | undefined;
+  texels: AtlasTexels | null;
+  light: { fieldLit: boolean; ambient: [number, number, number]; tone: [number, number] };
+}
+
+interface Leaf {
+  x: number;
+  gy: number;
+  z: number;
+  vz: number;
+  ph: number;
+  tx: number;
+  ty: number;
+  rest: number;
+}
+
+export function leafTarget(trees: number, season: string | undefined, scale: number): number {
+  const per = L.perTree[season as keyof typeof L.perTree] ?? L.perTree.summer;
+  return Math.min(L.max, Math.round(trees * per * Math.min(WIND_SHAPE.maxScale, scale)));
+}
+
+export function canopyTexel(
+  s: PaintedSprite,
+  texels: AtlasTexels | null,
+  rand: () => number
+): [number, number] | null {
+  if (!texels) return null;
+  const x0 = Math.round(s.u1 * texels.w);
+  const y0 = Math.round(s.v1 * texels.h);
+  const w = Math.round((s.u2 - s.u1) * texels.w);
+  const h = Math.round((s.v2 - s.v1) * texels.h);
+  for (let i = 0; i < PICKS; i++) {
+    const x = x0 + Math.floor(w * (0.15 + 0.7 * rand()));
+    const y = y0 + Math.floor(h * 0.55 * rand());
+    if (texels.kinds[y * texels.w + x] === SOLID) return [x, y];
+  }
+  return null;
+}
+
+export class LeafField {
+  leaves: Leaf[] = [];
+  trees = 0;
+  private census = 0;
+  private t = 0;
+
+  constructor(private readonly rand: () => number = Math.random) {}
+
+  step(secs: number, wind: Pick<WindClock, 'dir' | 'scroll' | 'scale'>, f: LeafFrame): void {
+    this.t += secs;
+    const { view, artTile } = f;
+    this.census -= secs;
+    if (this.census <= 0) {
+      this.census = L.census;
+      let hits = 0;
+      for (let i = 0; i < L.samples; i++)
+        if (
+          f.treeAt(
+            view.x + Math.floor(this.rand() * view.w),
+            view.y + Math.floor(this.rand() * view.h)
+          )
+        )
+          hits++;
+      this.trees = Math.round((hits / L.samples) * view.w * view.h);
+    }
+    const want = leafTarget(this.trees, f.season, wind.scale);
+    const tries = Math.ceil(L.triesPerSecond * secs);
+    for (let i = 0; this.leaves.length < want && i < tries; i++) {
+      const tx = view.x + Math.floor(this.rand() * view.w);
+      const ty = view.y + Math.floor(this.rand() * view.h);
+      const s = f.treeAt(tx, ty);
+      const at = s && canopyTexel(s, f.texels, this.rand);
+      if (!s || !at) continue;
+      const foot = (ty + 1) * artTile - FOOT_RISE;
+      const top = foot - (ty + s.oy) * artTile;
+      const high = this.leaves.length < want / 2 ? this.rand() : 1;
+      this.leaves.push({
+        x: (tx + 0.5) * artTile + (this.rand() - 0.5) * L.spread,
+        gy: foot - 8 + this.rand() * 22,
+        z: high * top * (L.canopy[0] + this.rand() * L.canopy[1]),
+        vz: L.fall[0] + this.rand() * L.fall[1],
+        ph: this.rand() * Math.PI * 2,
+        tx: at[0],
+        ty: at[1],
+        rest: 0
+      });
+    }
+    const pace = Math.max(0.3, wind.scale);
+    const left = (view.x - MARGIN) * artTile;
+    const right = (view.x + view.w + MARGIN) * artTile;
+    const upper = (view.y - MARGIN) * artTile;
+    const lower = (view.y + view.h + MARGIN) * artTile;
+    const t = this.t;
+    let kept = 0;
+    for (const p of this.leaves) {
+      const g = gustAt(p.x, p.gy, wind);
+      if (p.z > 0) {
+        p.z -= p.vz * secs * (0.8 + Math.sin(t * 3 + p.ph) * 0.5);
+        const push = (L.drift[0] + g * L.drift[1]) * pace * secs;
+        const wobble = Math.sin(t * 4 + p.ph) * 10 * secs;
+        p.x += wind.dir.x * push + wobble;
+        p.gy += wind.dir.y * push + Math.sin(t * 2 + p.ph) * 4 * secs;
+      } else {
+        p.z = 0;
+        p.rest += secs;
+        if (g > L.blow[0]) {
+          p.x += wind.dir.x * L.blow[1] * secs;
+          p.gy += wind.dir.y * L.blow[1] * secs;
+        }
+      }
+      if (p.rest > L.settle || p.x < left || p.x > right || p.gy < upper || p.gy > lower) continue;
+      this.leaves[kept++] = p;
+    }
+    this.leaves.length = kept;
+  }
+
+  pack(out: Float32Array): number {
+    let n = 0;
+    for (const p of this.leaves) {
+      if ((n + 1) * FLOATS > out.length) break;
+      const o = n * FLOATS;
+      out[o] = Math.round(p.x);
+      out[o + 1] = Math.round(p.gy - p.z);
+      out[o + 2] = p.tx;
+      out[o + 3] = p.ty;
+      out[o + 4] = p.z > 0 && Math.floor(this.t * FLUTTER + p.ph) & 1 ? 1 : 0;
+      n++;
+    }
+    return n;
+  }
+}
+
+export class FallingLeaves {
+  readonly field = new LeafField();
+  private readonly data = new Float32Array(L.max * FLOATS);
+  private readonly at: Record<string, WebGLUniformLocation | null>;
+
+  static create(gl: WebGL2RenderingContext, shaders: ShaderManager): FallingLeaves | null {
+    const made = shaders.createProgram(PROGRAM, vertexSource, fragmentSource);
+    const program = shaders.getProgram(PROGRAM)?.program;
+    if (!made.success || !program) {
+      console.warn('[falling leaves] off:', made.error);
+      return null;
+    }
+    return new FallingLeaves(gl, program);
+  }
+
+  private constructor(
+    private readonly gl: WebGL2RenderingContext,
+    private readonly program: WebGLProgram,
+    private readonly vao = gl.createVertexArray()!,
+    private readonly vbo = gl.createBuffer()!
+  ) {
+    const names = [
+      'u_canvas',
+      'u_viewOffset',
+      'u_zoom',
+      'u_basePerArt',
+      'u_paintAtlas',
+      'u_lightTexture',
+      'u_fieldLit',
+      'u_ambient',
+      'u_tone',
+      'u_shade'
+    ];
+    this.at = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(program, n)]));
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, this.data.byteLength, gl.DYNAMIC_DRAW);
+    const leaf = gl.getAttribLocation(program, 'a_leaf');
+    const turn = gl.getAttribLocation(program, 'a_turn');
+    gl.enableVertexAttribArray(leaf);
+    gl.vertexAttribPointer(leaf, 4, gl.FLOAT, false, FLOATS * 4, 0);
+    gl.vertexAttribDivisor(leaf, 1);
+    gl.enableVertexAttribArray(turn);
+    gl.vertexAttribPointer(turn, 1, gl.FLOAT, false, FLOATS * 4, 16);
+    gl.vertexAttribDivisor(turn, 1);
+    gl.bindVertexArray(null);
+  }
+
+  draw(
+    secs: number,
+    wind: WindClock,
+    f: LeafFrame,
+    units: { atlas: number; light: number }
+  ): number {
+    this.field.step(secs, wind, f);
+    const n = this.field.pack(this.data);
+    if (n === 0) return 0;
+    const gl = this.gl;
+    const depth = gl.isEnabled(gl.DEPTH_TEST);
+    gl.disable(gl.DEPTH_TEST);
+    gl.useProgram(this.program);
+    gl.bindVertexArray(this.vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data, 0, n * FLOATS);
+    gl.uniform2fv(this.at.u_canvas, f.canvas);
+    gl.uniform2fv(this.at.u_viewOffset, f.viewOffset);
+    gl.uniform2fv(this.at.u_zoom, f.zoom);
+    gl.uniform1f(this.at.u_basePerArt, f.basePerArt);
+    gl.uniform1i(this.at.u_paintAtlas, units.atlas);
+    gl.uniform1i(this.at.u_lightTexture, units.light);
+    gl.uniform1f(this.at.u_fieldLit, f.light.fieldLit ? 1 : 0);
+    gl.uniform3fv(this.at.u_ambient, f.light.ambient);
+    gl.uniform2fv(this.at.u_tone, f.light.tone);
+    gl.uniform1f(this.at.u_shade, SHADE);
+    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, n);
+    gl.bindVertexArray(null);
+    if (depth) gl.enable(gl.DEPTH_TEST);
+    return 1;
+  }
+
+  dispose(): void {
+    this.gl.deleteBuffer(this.vbo);
+    this.gl.deleteVertexArray(this.vao);
+  }
+}

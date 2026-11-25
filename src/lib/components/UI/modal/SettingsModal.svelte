@@ -1,12 +1,21 @@
 <script lang="ts">
-  import { fade, scale } from 'svelte/transition';
   import { onMount } from 'svelte';
   import SettingRow from '../menu/SettingRow.svelte';
-  import ScrollArea from '../widget/ScrollArea.svelte';
+  import SettingSection from '../menu/SettingSection.svelte';
+  import ThemeSection from '../menu/ThemeSection.svelte';
+  import AudioSection from '../menu/AudioSection.svelte';
+  import ChromeButton from '../widget/ChromeButton.svelte';
+  import ModalWindow from '../window/ModalWindow.svelte';
   import {
     weatherEffects,
     dayNightTint,
+    vignetteOn,
     showDialogBubbles,
+    conditionIcons,
+    conditionText,
+    floaterSize,
+    bubbleSize,
+    LABEL_SIZE,
     showFps,
     showTps,
     hideSidebars,
@@ -16,10 +25,10 @@
     defaultGameSpeed,
     debugMode,
     wasdPan,
-    masterVolume,
-    musicVolume,
-    sfxVolume,
-    ambientVolume
+    tipPlacement,
+    isTipPlacement,
+    tileTipStyle,
+    isTileTipStyle
   } from '$lib/stores/uiPrefs';
 
   let { onClose }: { onClose: () => void } = $props();
@@ -40,263 +49,140 @@
     } catch {}
   }
 
-  function onKey(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      e.stopPropagation();
-      onClose();
-    }
-  }
+  const flag = (store: { toggle: () => void }, on: boolean, label: string, sub = '') => ({
+    store,
+    on,
+    label,
+    sub
+  });
 </script>
 
-<svelte:window onkeydown={onKey} />
+{#snippet checks(rows: ReturnType<typeof flag>[])}
+  {#each rows as r (r.label)}
+    <SettingRow
+      type="checkbox"
+      label={r.label}
+      sub={r.sub}
+      checked={r.on}
+      onToggle={r.store.toggle}
+    />
+  {/each}
+{/snippet}
 
-<div class="settings-overlay" transition:fade={{ duration: 120 }}>
-  <button class="backdrop" aria-label="Close settings" onclick={onClose}></button>
-  <div
-    class="settings-panel"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Settings"
-    tabindex="-1"
-    transition:scale={{ duration: 140, start: 0.96 }}
-  >
-    <div class="hdr">
-      <h2 class="title">SETTINGS</h2>
-      <button class="close" aria-label="Close settings" onclick={onClose}>✕</button>
+<ModalWindow id="settings" title="Settings" width={640} onclose={onClose}>
+  <div class="cols">
+    <div>
+      <ThemeSection />
+      <SettingSection title="Display">
+        <SettingRow
+          type="select"
+          label="Window mode"
+          value={windowMode}
+          options={[
+            { value: 'windowed', label: 'Windowed' },
+            { value: 'fullscreen', label: 'Fullscreen' }
+          ]}
+          onSelect={setWindowMode}
+        />
+        {@render checks([flag(showFps, $showFps, 'Show FPS'), flag(showTps, $showTps, 'Show TPS')])}
+      </SettingSection>
+      <AudioSection />
     </div>
-
-    <ScrollArea class="body">
-      <div class="section">Display</div>
-      <SettingRow
-        type="select"
-        label="Window mode"
-        value={windowMode}
-        options={[
-          { value: 'windowed', label: 'Windowed' },
-          { value: 'fullscreen', label: 'Fullscreen' }
-        ]}
-        onSelect={setWindowMode}
-      />
-      <SettingRow
-        type="checkbox"
-        label="Show FPS"
-        sub="— render frames/sec in the top bar"
-        checked={$showFps}
-        onToggle={showFps.toggle}
-      />
-      <SettingRow
-        type="checkbox"
-        label="Show TPS"
-        sub="— simulation ticks/sec in the top bar"
-        checked={$showTps}
-        onToggle={showTps.toggle}
-      />
-
-      <div class="section">Audio</div>
-      <SettingRow
-        type="slider"
-        label="Master volume"
-        sliderValue={$masterVolume}
-        onInput={masterVolume.set}
-      />
-      <SettingRow
-        type="slider"
-        label="Music volume"
-        sliderValue={$musicVolume}
-        onInput={musicVolume.set}
-      />
-      <SettingRow
-        type="slider"
-        label="Ambient volume"
-        sub="— weather, nature, fire"
-        sliderValue={$ambientVolume}
-        onInput={ambientVolume.set}
-      />
-      <SettingRow
-        type="slider"
-        label="SFX volume"
-        sub="— creatures, work, combat, UI"
-        sliderValue={$sfxVolume}
-        onInput={sfxVolume.set}
-      />
-
-      <div class="section">Graphics</div>
-      <SettingRow
-        type="checkbox"
-        label="Weather effects"
-        checked={$weatherEffects}
-        onToggle={weatherEffects.toggle}
-      />
-      <SettingRow
-        type="checkbox"
-        label="Day/night UI tint"
-        checked={$dayNightTint}
-        onToggle={dayNightTint.toggle}
-      />
-      <SettingRow
-        type="checkbox"
-        label="Dialog bubbles"
-        checked={$showDialogBubbles}
-        onToggle={showDialogBubbles.toggle}
-      />
-
-      <div class="section">Interface</div>
-      <SettingRow
-        type="checkbox"
-        label="Cinematic layout"
-        checked={$hideSidebars}
-        onToggle={hideSidebars.toggle}
-      />
-
-      <div class="section">Controls</div>
-      <SettingRow
-        type="checkbox"
-        label="WASD camera panning"
-        sub="— alongside arrow keys"
-        checked={$wasdPan}
-        onToggle={wasdPan.toggle}
-      />
-
-      <div class="section">Gameplay</div>
-      <SettingRow
-        type="select"
-        label="Default game speed"
-        value={String($defaultGameSpeed)}
-        options={[
-          { value: '1', label: '1×' },
-          { value: '2', label: '2×' },
-          { value: '4', label: '4×' }
-        ]}
-        onSelect={(v) => defaultGameSpeed.set(Number(v))}
-      />
-      <SettingRow
-        type="checkbox"
-        label="Autosave"
-        checked={$autosaveEnabled}
-        onToggle={autosaveEnabled.toggle}
-      />
-      <SettingRow
-        type="checkbox"
-        label="Auto-pause on threat"
-        checked={$autoPauseOnThreat}
-        onToggle={autoPauseOnThreat.toggle}
-      />
-      <SettingRow
-        type="checkbox"
-        label="Auto-pause on death"
-        checked={$autoPauseOnDeath}
-        onToggle={autoPauseOnDeath.toggle}
-      />
-
-      <div class="section">Advanced</div>
-      <SettingRow
-        type="checkbox"
-        label="Debug mode"
-        checked={$debugMode}
-        onToggle={debugMode.toggle}
-      />
-    </ScrollArea>
-
-    <button class="done" onclick={onClose}>Done</button>
+    <div>
+      <SettingSection title="Graphics">
+        {@render checks([
+          flag(weatherEffects, $weatherEffects, 'Weather effects'),
+          flag(dayNightTint, $dayNightTint, 'Day/night UI tint'),
+          flag(vignetteOn, $vignetteOn, 'Vignette'),
+          flag(showDialogBubbles, $showDialogBubbles, 'Dialog bubbles')
+        ])}
+      </SettingSection>
+      <SettingSection title="Interface">
+        {@render checks([
+          flag(hideSidebars, $hideSidebars, 'Cinematic layout'),
+          flag(conditionIcons, $conditionIcons, 'Condition icons'),
+          flag(conditionText, $conditionText, 'Condition text')
+        ])}
+        <SettingRow
+          type="slider"
+          label="Floater size"
+          {...LABEL_SIZE}
+          sliderValue={$floaterSize}
+          readout="{$floaterSize}%"
+          onInput={floaterSize.set}
+        />
+        <SettingRow
+          type="slider"
+          label="Bubble size"
+          {...LABEL_SIZE}
+          sliderValue={$bubbleSize}
+          readout="{$bubbleSize}%"
+          onInput={bubbleSize.set}
+        />
+        <SettingRow
+          type="select"
+          label="Hover panels"
+          value={$tipPlacement}
+          options={[
+            { value: 'cursor', label: 'By cursor' },
+            { value: 'window', label: 'Under window' }
+          ]}
+          onSelect={(v) => isTipPlacement(v) && tipPlacement.set(v)}
+        />
+        <SettingRow
+          type="select"
+          label="Tile panel"
+          value={$tileTipStyle}
+          options={[
+            { value: 'hidden', label: 'Hidden' },
+            { value: 'transparent', label: 'Transparent' },
+            { value: 'panel', label: 'Panel' }
+          ]}
+          onSelect={(v) => isTileTipStyle(v) && tileTipStyle.set(v)}
+        />
+      </SettingSection>
+      <SettingSection title="Controls">
+        {@render checks([flag(wasdPan, $wasdPan, 'WASD camera panning', 'alongside arrow keys')])}
+      </SettingSection>
+      <SettingSection title="Gameplay">
+        <SettingRow
+          type="select"
+          label="Default game speed"
+          value={String($defaultGameSpeed)}
+          options={[
+            { value: '1', label: '1×' },
+            { value: '2', label: '2×' },
+            { value: '4', label: '4×' }
+          ]}
+          onSelect={(v) => defaultGameSpeed.set(Number(v))}
+        />
+        {@render checks([
+          flag(autosaveEnabled, $autosaveEnabled, 'Autosave'),
+          flag(autoPauseOnThreat, $autoPauseOnThreat, 'Auto-pause on threat'),
+          flag(autoPauseOnDeath, $autoPauseOnDeath, 'Auto-pause on death')
+        ])}
+      </SettingSection>
+      <SettingSection title="Advanced">
+        {@render checks([flag(debugMode, $debugMode, 'Debug mode')])}
+      </SettingSection>
+    </div>
   </div>
-</div>
+  <div class="foot">
+    <ChromeButton onclick={onClose}>Done</ChromeButton>
+  </div>
+</ModalWindow>
 
 <style>
-  .settings-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 1400;
-    background: rgba(6, 4, 2, 0.72);
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 22px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .foot {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-mono);
-  }
-  .backdrop {
-    position: absolute;
-    inset: 0;
-    border: none;
-    background: transparent;
-    cursor: default;
-    padding: 0;
-  }
-  .settings-panel {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    width: min(360px, 88vw);
-    max-height: 86vh;
-    padding: 16px 18px 14px;
-    background: var(--bg-panel);
-    border: 1px solid var(--border-hi);
-    box-shadow: 0 0 28px rgba(0, 0, 0, 0.6);
-    filter: url(#ambient-tint);
-  }
-  .hdr {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
-  .title {
-    color: var(--accent-hi);
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: 0.4em;
-    text-indent: 0.4em;
-    margin: 0;
-  }
-  .close {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    font-size: 16px;
-    cursor: pointer;
-    padding: 2px 4px;
-    line-height: 1;
-  }
-  .close:hover {
-    color: var(--accent-hi);
-  }
-  .settings-panel :global(.body) {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    margin-right: -18px;
-    padding-right: 10px;
-  }
-  .section {
-    color: var(--accent-hi);
-    font-size: 11px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    margin: 12px 0 4px;
-    padding-bottom: 3px;
-    border-bottom: 1px solid var(--border);
-  }
-  .section:first-child {
-    margin-top: 0;
-  }
-  .done {
-    margin-top: 14px;
-    padding: 9px 0;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 13px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition:
-      background 0.12s,
-      color 0.12s,
-      border-color 0.12s;
-  }
-  .done:hover {
-    background: var(--bg-hover);
-    color: var(--accent-hi);
-    border-color: var(--border-hi);
+    justify-content: flex-end;
+    margin-top: 6px;
   }
 </style>

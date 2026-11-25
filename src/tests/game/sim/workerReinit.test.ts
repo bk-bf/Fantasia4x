@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vites
 import { socialService } from '$lib/game/services/SocialService';
 import { findRelationship } from '$lib/game/core/rules/social/social';
 import { tryRally } from '$lib/game/systems/pawn/rally';
-import { generatePawns } from '$lib/game/entities/Pawns';
+import { generatePawns } from '$lib/game/core/gen/pawnBuild';
 import { initialGameState } from '$lib/game/core/state/initialState';
 import { TICKS_PER_GAME_HOUR } from '$lib/game/services/EnvironmentService';
 import { buildScenario } from '$lib/game/headless/Scenario';
@@ -19,7 +19,12 @@ interface Scope {
 const scope: Scope = { postMessage: () => {} };
 
 async function initWorker(seed: number): Promise<void> {
-  const state = buildScenario({ seed, map: { w: 12, h: 12 }, pawns: [{ count: 1 }], seedEntities: false });
+  const state = buildScenario({
+    seed,
+    map: { w: 12, h: 12 },
+    pawns: [{ count: 1 }],
+    seedEntities: false
+  });
   await scope.onmessage!({ data: { kind: 'init', state, seed } });
 }
 
@@ -71,7 +76,14 @@ function rallyScene() {
     ...initialGameState,
     pawns: [broken, ally],
     relationships: [
-      { pawnA: 'pawn-0', pawnB: 'pawn-1', score: 90, stage: 'best_friends', tags: [], points: { history: 0 } }
+      {
+        pawnA: 'pawn-0',
+        pawnB: 'pawn-1',
+        score: 90,
+        stage: 'best_friends',
+        tags: [],
+        points: { history: 0 }
+      }
     ]
   } as unknown as GameState;
   return { broken: broken as Pawn, state };

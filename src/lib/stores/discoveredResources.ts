@@ -58,7 +58,7 @@ function maybeScheduleRebuild(s: GameState) {
 gameState.subscribe(maybeScheduleRebuild);
 
 uiState.subscribe((s) => {
-  const open = s.currentScreen === 'exploration';
+  const open = s.windows.includes('exploration');
   if (open && !exploreOpen) {
     if (isStale(get(gameState))) rebuildNow();
   }

@@ -430,12 +430,10 @@ interface WeatherDef extends WeatherEffects {
   label: string;
   overlay: WeatherOverlayKind;
   heavy?: boolean;
-  fallSpeed?: number;
-  density?: number;
   panelSaturation?: number;
   windStrength?: number;
+  rain?: number;
   sightMul?: number;
-  particleColor?: [number, number, number];
   intensity: number;
   moistureBonus: number;
   tint: [number, number, number];
@@ -588,6 +586,10 @@ export function weatherWindStrength(type?: string): number {
   return def.windStrength ?? (def.heavy ? 0.6 : 0.2);
 }
 
+export function weatherRain(type?: string): number {
+  return weatherDef(type).rain ?? 0;
+}
+
 export function ambientWind(weather?: WeatherState): number {
   return Math.max(0, Math.min(1, Math.max(weatherWindStrength(weather?.type), weather?.wind ?? 0)));
 }
@@ -601,10 +603,6 @@ export function windDegreeWord(wind: number): string {
 
 export function weatherSightMul(type?: string): number {
   return weatherDef(type).sightMul ?? 1;
-}
-
-export function weatherParticleColor(type?: string): [number, number, number] | null {
-  return weatherDef(type).particleColor ?? null;
 }
 
 export function weatherPanelSaturation(type?: string): number {
@@ -622,37 +620,6 @@ export function effectivePanelSaturation(
 }
 export function weatherIsHeavy(type?: string): boolean {
   return weatherDef(type).heavy === true;
-}
-
-const FALL_SPEED_DEFAULT: Record<WeatherOverlayKind, number> = {
-  none: 0,
-  rain: 680,
-  snow: 80,
-  snowdust: 90,
-  leaves: 60,
-  dust: 40,
-  fog: 0,
-  foggy_rain: 560
-};
-const DENSITY_DEFAULT: Record<WeatherOverlayKind, number> = {
-  none: 0,
-  rain: 160,
-  snow: 80,
-  snowdust: 90,
-  leaves: 45,
-  dust: 70,
-  fog: 0,
-  foggy_rain: 110
-};
-
-export function weatherFallSpeed(type?: string): number {
-  const def = weatherDef(type);
-  return def.fallSpeed ?? FALL_SPEED_DEFAULT[def.overlay] ?? 680;
-}
-
-export function weatherDensity(type?: string): number {
-  const def = weatherDef(type);
-  return def.density ?? DENSITY_DEFAULT[def.overlay] ?? 160;
 }
 
 export function weatherChronicleSeverity(type: WeatherType): 'info' | 'warning' {

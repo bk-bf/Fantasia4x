@@ -5,6 +5,7 @@ import { parseArgs } from 'node:util';
 
 import {
   DEFAULT_FIXTURE,
+  GLYPH_RENDERER,
   assertRunning,
   frame,
   frames,
@@ -70,7 +71,13 @@ async function main() {
   const buckets = Math.ceil(Number(opts.ticks) / perFrame / bucketFrames);
   mkdirSync(out, { recursive: true });
   const started = Date.now();
-  const game = await openGame({ tree, fixture: opts.fixture, serverLog: `${out}.dev-server.log`, log });
+  const game = await openGame({
+    tree,
+    fixture: opts.fixture,
+    serverLog: `${out}.dev-server.log`,
+    log,
+    query: `?${GLYPH_RENDERER}`
+  });
   try {
     const { page, cdp, errors } = game;
     await cdp.send('Performance.enable');

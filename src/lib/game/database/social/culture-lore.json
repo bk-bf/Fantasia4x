@@ -202,6 +202,19 @@
             "woodcutting"   : ["fellers of the great timber", "woodsfolk who bring down the tallest timber"],
             "hauling"       : ["bearers of loads that break lesser backs", "tireless beasts of burden"]
         },
-        "quirkLeads": ["Strangest of all,", "Stranger still,", "Most curious of all,", "And it is whispered that"]
+        "quirkLeads": ["Strangest of all,", "Stranger still,", "Most curious of all,", "And it is whispered that"],
+        "colouring": {
+            "skin": { "pale": "pale-skinned", "fair": "fair-skinned", "tan": "sun-browned", "dark": "dark-skinned", "ashen": "ashen", "green": "green-skinned", "olive": "sallow" },
+            "hair": { "brown": "brown of hair", "fair": "fair of hair", "black": "black of hair", "red": "red of hair", "copper": "copper of hair", "white": "white of hair" },
+            "eyes": { "dark": "dark-eyed", "brown": "brown-eyed", "hazel": "hazel-eyed", "amber": "amber-eyed", "blue": "blue-eyed", "ice": "pale-eyed", "green": "green-eyed", "grey": "grey-eyed", "violet": "violet-eyed", "red": "red-eyed" },
+            "strong": 0.45,
+            "loose": 0.3,
+            "lines": {
+                "both"  : "Most are {strong}, and many {loose}.",
+                "strong": "Most are {strong}.",
+                "loose" : "Their colouring runs every way, though many are {loose}.",
+                "none"  : "No two of them share a colouring."
+            }
+        }
     }
 }

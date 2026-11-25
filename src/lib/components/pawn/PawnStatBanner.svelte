@@ -2,19 +2,18 @@
   import type { Pawn, StatKey } from '$lib/game/core/types';
   import { CORE_STATS } from '$lib/game/core/types';
   import { conditionStatMultipliers } from '$lib/game/core/rules/body/conditions';
+  import { chrome } from '$lib/pixelArt/chrome';
   export let pawn: Pawn;
 
   $: sm = conditionStatMultipliers(pawn);
   $: cells = CORE_STATS.map(
-    ({ id, abbr }) =>
-      [abbr, pawn.stats[id], id === 'charisma' ? 1 : sm[id], id] as const
+    ({ id, abbr }) => [abbr, pawn.stats[id], id === 'charisma' ? 1 : sm[id], id] as const
   );
   const isFav = (key: string) => pawn.favStats?.includes(key as keyof typeof pawn.stats) ?? false;
   const capOf = (key: string) =>
     pawn.maxStats?.[key as keyof typeof pawn.maxStats] as number | undefined;
 
   const eff = (base: number, mult: number) => Math.round(base * mult);
-  const pct = (mult: number) => `${mult < 1 ? '−' : '+'}${Math.abs(Math.round((mult - 1) * 100))}%`;
 
   function traitParts(key: StatKey): string {
     const parts: string[] = [];
@@ -34,85 +33,72 @@
   }
 </script>
 
-<div class="stats-grid">
+<div class="attrs">
   {#each cells as [lbl, base, mult, key]}
-    <div class="stat-cell" class:fav={isFav(key)} title={statTitle(lbl, key, base, mult)}>
-      <span class="stat-lbl">{lbl}</span>
-      <span class="stat-val-row">
-        <span class="stat-val" class:penalized={mult < 1} class:boosted={mult > 1}>
-          {eff(base, mult)}
-        </span>
-        {#if isFav(key)}
-          <span class="fav-star" title="a natural talent — grows faster and further">★</span>
-        {/if}
-        {#if capOf(key) != null}
-          <span class="stat-cap" title={`grows toward a cap of ${capOf(key)}`}>/{capOf(key)}</span>
-        {/if}
-      </span>
-      {#if mult !== 1}
-        <span class="stat-delta" class:neg={mult < 1}>{pct(mult)}</span>
+    <div
+      class="attr"
+      class:fav={isFav(key)}
+      title={statTitle(lbl, key, base, mult)}
+      {@attach chrome('well')}
+    >
+      <em
+        >{lbl}{#if isFav(key)}<span
+            class="fav-star"
+            title="a natural talent — grows faster and further">★</span
+          >{/if}</em
+      >
+      <b class:penalized={mult < 1} class:boosted={mult > 1}>{eff(base, mult)}</b>
+      {#if capOf(key) != null}
+        <span class="cap" title={`grows toward a cap of ${capOf(key)}`}>/{capOf(key)}</span>
       {/if}
     </div>
   {/each}
 </div>
 
 <style>
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 4px;
-    padding: 4px 8px;
-    border-bottom: 1px solid var(--border);
-  }
-  .stat-cell {
-    position: relative;
+  .attrs {
+    flex: none;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    padding: 2px 0;
-  }
-  .stat-val-row {
-    display: flex;
-    align-items: baseline;
     gap: 3px;
   }
-  .stat-cap {
-    font-size: 9px;
-    line-height: 1;
-    color: var(--text-dim);
-    opacity: 0.7;
+  .attr {
+    width: 50px;
+    height: 44px;
+    display: grid;
+    grid-template: 'k k' 16px 'v p' 1fr / auto auto;
+    justify-content: center;
+    align-items: baseline;
+    column-gap: 2px;
+    padding-top: 4px;
+    font: 16px/18px var(--font-pixel);
+  }
+  em {
+    grid-area: k;
+    text-align: center;
+    font-style: normal;
+    color: var(--text-muted);
+  }
+  .fav em {
+    color: var(--accent-hi);
   }
   .fav-star {
-    font-size: 9px;
-    line-height: 1;
-    color: var(--accent-hi, #f0c060);
+    font-size: 10px;
+    vertical-align: 4px;
   }
-  .stat-cell.fav .stat-lbl {
-    color: var(--accent-hi, #f0c060);
+  b {
+    grid-area: v;
+    font: 20px/20px var(--font-head);
+    font-weight: normal;
+    color: var(--text);
   }
-  .stat-lbl {
-    color: var(--text-dim);
-    font-size: 11px;
-    letter-spacing: 0.04em;
+  b.penalized {
+    color: var(--neg);
   }
-  .stat-val {
-    color: var(--accent-hi);
-    font-size: 13px;
-    font-weight: 600;
+  b.boosted {
+    color: var(--pos);
   }
-  .stat-val.penalized {
-    color: var(--neg, #ff5252);
-  }
-  .stat-val.boosted {
-    color: var(--pos, #4caf50);
-  }
-  .stat-delta {
-    font-size: 9px;
-    line-height: 1;
-    color: var(--pos, #4caf50);
-  }
-  .stat-delta.neg {
-    color: var(--neg, #ff5252);
+  .cap {
+    grid-area: p;
+    color: var(--text-muted);
   }
 </style>

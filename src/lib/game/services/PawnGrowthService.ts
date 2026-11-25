@@ -10,7 +10,7 @@ import { CORE_STAT_KEYS } from '$lib/game/core/types';
 import { rng } from '$lib/game/core/util/rng';
 import { DAYS_PER_SEASON } from '$lib/game/services/EnvironmentService';
 import { advanceAwakeningMeters, lineageGrowthEvent } from '$lib/game/core/defs/lineages';
-import { applyGainedTrait } from '$lib/game/entities/Pawns';
+import { applyGainedTrait } from '$lib/game/core/rules/body/traitBody';
 
 const STAT_KEYS = CORE_STAT_KEYS;
 

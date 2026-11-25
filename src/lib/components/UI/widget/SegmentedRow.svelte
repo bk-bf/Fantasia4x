@@ -1,4 +1,6 @@
 <script lang="ts" generics="T">
+  import { chrome } from '$lib/pixelArt/chrome';
+
   let {
     label,
     labelTitle,
@@ -15,70 +17,51 @@
 </script>
 
 <div class="row">
-  <span class="lbl" title={labelTitle}>{label}</span>
-  <div class="seg">
+  <em title={labelTitle}>{label}</em>
+  <span class="seg">
     {#each options as o (o.label)}
       <button
-        class="seg-btn"
+        class="segb"
         class:danger={o.danger}
-        class:active={value === o.id}
+        class:on={value === o.id}
         title={o.title}
         onclick={() => onSelect(o.id)}
+        {@attach chrome(value === o.id ? 'cellOn' : 'cell')}><span>{o.label}</span></button
       >
-        {o.label}
-      </button>
     {/each}
-  </div>
+  </span>
 </div>
 
 <style>
   .row {
     display: flex;
-    padding: 2px 8px;
+    justify-content: space-between;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
+    height: 24px;
   }
-
-  .lbl {
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+  em {
+    font-style: normal;
     white-space: nowrap;
-    min-width: 80px;
-    flex-shrink: 0;
   }
-
   .seg {
-    display: flex;
-    margin-left: auto;
-    border: 1px solid var(--border);
+    display: inline-flex;
+    gap: 1px;
   }
-
-  .seg-btn {
-    background: var(--bg-panel);
+  .segb {
+    height: 20px;
+    padding: 0 7px;
+    border: 0;
+    background: none;
     color: var(--text-dim);
-    border: none;
-    border-left: 1px solid var(--border);
-    padding: 2px 8px;
-    font-family: inherit;
-    font-size: 11px;
-    letter-spacing: 0.04em;
+    font: 16px/18px var(--font-pixel);
+    white-space: nowrap;
     cursor: pointer;
   }
-  .seg-btn:first-child {
-    border-left: none;
+  .segb.on {
+    color: var(--ember);
   }
-  .seg-btn:hover {
-    background: var(--bg-hover);
-    color: var(--text);
-  }
-  .seg-btn.active {
-    background: var(--accent);
-    color: var(--bg);
-    font-weight: 600;
-  }
-  .seg-btn.danger.active {
-    background: var(--neg, #c0392b);
-    color: #fff;
+  .segb.danger.on {
+    color: var(--neg);
   }
 </style>

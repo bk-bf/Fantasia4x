@@ -15,9 +15,21 @@ import { growthScale, RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/rules/world
 import { buildingDefById } from '$lib/game/core/defs/buildings.js';
 import { parseHexRgb01 } from '$lib/game/core/util/color.js';
 import { glyph, SHEET } from './tilesets.js';
-import type { RGB } from './tile-types.js';
-import { PAINTED_TILES } from './painted/flag.js';
-import { paintedTile } from './painted/tileset.js';
+import type { RGB, TileData } from './tile-types.js';
+import { GROUND_BLEND, PAINTED_TILES } from './painted/flag.js';
+import {
+  paintedGroundKind,
+  paintedPiece,
+  paintedPieces,
+  paintedScenery,
+  paintedTile,
+  paintedTileset
+} from './painted/tileset.js';
+import { groundTufts } from './painted/tufts.js';
+import { hiddenUnderFluid } from './painted/fluids.js';
+import { shorePlantAt } from './painted/shorePlants.js';
+import { isWet } from '$lib/game/world/shores.js';
+import type { PaintedPieces, PaintedSprite } from './painted/manifest.js';
 
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
 
@@ -283,6 +295,9 @@ function sharedRgb(c: readonly number[]): RGB {
   return rgb;
 }
 const GLOWING_GROVE_SPRITE_SALT = 53;
+const REED_BANK = 'riverbank';
+const REED_SHARE = 0.2;
+const REED_SALT = 78;
 
 function tileHash(x: number, y: number, salt: number): number {
   let h = (x * 374761393 + y * 668265263 + salt * 2246822519) | 0;
@@ -358,7 +373,8 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
       char: ' ',
       foreground: sharedRgb(DIRT_BG),
       background: sharedRgb(DIRT_BG),
-      position: { x: tile.x, y: tile.y }
+      position: { x: tile.x, y: tile.y },
+      ...(PAINTED_TILES ? { painted: paintedTile('subterrain', 'cave', tile.x, tile.y) } : null)
     });
     return;
   }
@@ -368,13 +384,30 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
   let bg: [number, number, number] = sub.bg as [number, number, number];
   const activeRes = resolveActiveResource(tile);
   if (activeRes && !activeRes.resDef.showGroundBelow) char = ' ';
+  const painted = PAINTED_TILES
+    ? paintedTile('subterrain', tile.subType, tile.x, tile.y)
+    : undefined;
   grid.setTile(tile.x, tile.y, {
     char,
     foreground: sharedRgb(fg),
     background: sharedRgb(bg),
     position: { x: tile.x, y: tile.y },
-    ...(PAINTED_TILES ? { painted: paintedTile('subterrain', tile.subType, tile.x, tile.y) } : null)
+    ...(PAINTED_TILES ? { painted } : null),
+    ...(GROUND_BLEND && painted ? blendedGround(tile) : null)
   });
+}
+
+function blendedGround(
+  tile: WorldTile
+): Pick<TileData, 'ground' | 'tufts' | 'river' | 'riverCourse'> {
+  const art = paintedTileset();
+  const tufts = art && groundTufts(art.ground, tile, art.tile);
+  return {
+    ground: paintedGroundKind(tile.subType),
+    ...(tufts ? { tufts } : null),
+    ...(tile.river ? { river: true } : null),
+    ...(tile.riverCourse ? { riverCourse: tile.riverCourse } : null)
+  };
 }
 
 export function applySnowToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boolean[][]): void {
@@ -418,7 +451,8 @@ export function applySnowToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     foreground: { r: SNOW_WHITE[0], g: SNOW_WHITE[1], b: SNOW_WHITE[2] },
     background: { r: bg[0], g: bg[1], b: bg[2] },
     backgroundAlpha: alpha,
-    position: { x: tile.x, y: tile.y }
+    position: { x: tile.x, y: tile.y },
+    ...(tile.type === 'water' && ai > 0 ? { waterIce: ice / 100 } : null)
   });
 }
 
@@ -433,12 +467,76 @@ export function buildSnowOverlay(worldMap: WorldTile[][], hiddenMask?: boolean[]
   return grid;
 }
 
+const ROCK_PIECES = 'rock';
+
+function rockMass(
+  hiddenMask: boolean[][],
+  worldMap: WorldTile[][] | undefined
+): { pieces: PaintedPieces; isMass: (x: number, y: number) => boolean } | undefined {
+  if (!PAINTED_TILES || !worldMap) return undefined;
+  const pieces = paintedPieces(ROCK_PIECES);
+  if (!pieces) return undefined;
+  const isMass = (x: number, y: number): boolean => {
+    const t = worldMap[y]?.[x];
+    return !t || !!hiddenMask[y]?.[x] || heldBy(t, pieces.members) !== undefined;
+  };
+  return { pieces, isMass };
+}
+
+function heldBy(tile: WorldTile, ids: { has(id: string): boolean }): string | undefined {
+  return Object.entries(tile.resources ?? {}).find(
+    ([id, amount]) => amount > 0 && ids.has(id)
+  )?.[0];
+}
+
+function rockPiece(
+  tile: WorldTile,
+  hiddenMask: boolean[][],
+  worldMap: WorldTile[][] | undefined
+): PaintedSprite | undefined {
+  const mass = rockMass(hiddenMask, worldMap);
+  if (!mass) return undefined;
+  const hidden = !!hiddenMask[tile.y]?.[tile.x];
+  if (!hidden && heldBy(tile, mass.pieces.members) === undefined) return undefined;
+  const piece = paintedPiece(mass.pieces, mass.isMass, tile.x, tile.y);
+  const ore = hidden ? undefined : heldBy(tile, mass.pieces.veins);
+  const ramp = ore === undefined ? undefined : mass.pieces.veins.get(ore);
+  if (!ore || !ramp) return piece;
+  const sameVein = (x: number, y: number): boolean => {
+    const t = worldMap?.[y]?.[x];
+    return (
+      !!t &&
+      !hiddenMask[y]?.[x] &&
+      (t.resources?.[ore] ?? 0) > 0 &&
+      heldBy(t, mass.pieces.members) !== undefined
+    );
+  };
+  const near = mass.pieces.neighbours.reduce(
+    (bits, [dx, dy], bit) => (sameVein(tile.x + dx, tile.y + dy) ? bits | (1 << bit) : bits),
+    0
+  );
+  return { ...piece, vein: { ...ramp, near } };
+}
+
+function bankReeds(tile: WorldTile): PaintedSprite | undefined {
+  if (!PAINTED_TILES || tile.subType !== REED_BANK || tile.floor) return undefined;
+  if (tileHash(tile.x, tile.y, REED_SALT) >= REED_SHARE) return undefined;
+  return paintedScenery('reeds', tile.x, tile.y);
+}
+
+function shoreScenery(tile: WorldTile, worldMap?: WorldTile[][]): PaintedSprite | undefined {
+  if (!PAINTED_TILES || !worldMap || !isWet(tile)) return bankReeds(tile);
+  const plant = shorePlantAt(worldMap, tile.x, tile.y);
+  return plant ? paintedScenery(plant, tile.x, tile.y) : undefined;
+}
+
 export function applyResourceToGrid(
   gridShort: GameGrid,
   gridTall: GameGrid,
   tile: WorldTile,
   hiddenMask: boolean[][],
-  season?: Season
+  season?: Season,
+  worldMap?: WorldTile[][]
 ): void {
   const blank = (g: GameGrid) =>
     g.setTile(tile.x, tile.y, {
@@ -451,9 +549,22 @@ export function applyResourceToGrid(
     blank(gridShort);
     blank(gridTall);
   };
-  if (hiddenMask[tile.y]?.[tile.x]) return clear();
+  const paintOnly = (painted: PaintedSprite | undefined, scenery: boolean) => {
+    if (!painted) return clear();
+    blank(gridTall);
+    gridShort.setTile(tile.x, tile.y, {
+      char: ' ',
+      foreground: NO_COLOUR,
+      background: NO_COLOUR,
+      position: { x: tile.x, y: tile.y },
+      painted,
+      ...(scenery ? { scenery } : null)
+    });
+  };
+  if (hiddenMask[tile.y]?.[tile.x]) return paintOnly(rockPiece(tile, hiddenMask, worldMap), false);
   const active = resolveActiveResource(tile);
-  if (!active) return clear();
+  if (!active || (PAINTED_TILES && hiddenUnderFluid(active.resDef.id)))
+    return paintOnly(shoreScenery(tile, worldMap), true);
   const { resDef, scale: stageScale } = active;
   const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
   const variant = season ? resDef.seasonVariants?.[season] : undefined;
@@ -464,7 +575,10 @@ export function applyResourceToGrid(
   const rs = resDef.renderScale;
   const drawScale = (rs ?? 1) * stageScale;
   const scale = drawScale !== 1 ? drawScale : undefined;
-  const painted = PAINTED_TILES ? paintedTile('resource', resDef.id, tile.x, tile.y) : undefined;
+  const piece = rockPiece(tile, hiddenMask, worldMap);
+  const painted = PAINTED_TILES
+    ? (piece ?? paintedTile('resource', resDef.id, tile.x, tile.y))
+    : undefined;
   const tall = rs !== undefined && rs > 1;
   blank(tall ? gridShort : gridTall);
   const detail = baseDetail ? sharedRgb(baseDetail) : undefined;
@@ -504,8 +618,12 @@ export function buildResourceOverlay(
   const mask = hiddenMask ?? computeHiddenMask(worldMap);
   for (const row of worldMap)
     for (const tile of row)
-      if (tile.resources && Object.keys(tile.resources).length > 0)
-        applyResourceToGrid(short, tall, tile, mask, season);
+      if (
+        (tile.resources && Object.keys(tile.resources).length > 0) ||
+        (PAINTED_TILES && mask[tile.y]?.[tile.x]) ||
+        shoreScenery(tile, worldMap)
+      )
+        applyResourceToGrid(short, tall, tile, mask, season, worldMap);
   return { short, tall };
 }
 

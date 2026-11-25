@@ -1,5 +1,6 @@
 import type { GameState, Job, Pawn } from '$lib/game/core/types';
 import { jobService } from '$lib/game/services/JobService';
+import { cultureArchetype } from '$lib/game/core/rules/social/social';
 import { itemService } from '$lib/game/services/ItemService';
 import { resourceObjectDefById } from '$lib/game/core/defs/resourceObjects';
 
@@ -114,6 +115,12 @@ function getNextAvailableJob(pawn: Pawn, gameState: GameState): Job | null {
   return jobs[0] ?? null;
 }
 
+export function pawnCultureLabel(pawn: Pawn, pool: GameState['culturePool'] | undefined): string {
+  if (!pawn.cultureName) return 'unknown';
+  const archetype = cultureArchetype(pawn.cultureId, pool);
+  return archetype ? `${pawn.cultureName} · ${archetype}` : pawn.cultureName;
+}
+
 export function getPawnTaskSummary(pawn: Pawn, gameState: GameState): PawnTaskSummary {
   const currentState = (pawn.currentState ?? 'Idle').toUpperCase();
   let currentTask = describeCurrentTask(pawn);
@@ -226,6 +233,13 @@ export function getNeedDescription(needType: string, needValue: number): string 
       moderate: 'Thirsty',
       high: 'Very thirsty',
       critical: 'Parched'
+    },
+    pain: {
+      satisfied: 'None',
+      content: 'Dull',
+      moderate: 'Sharp',
+      high: 'Severe',
+      critical: 'Agony'
     },
     hygiene: {
       satisfied: 'Clean',

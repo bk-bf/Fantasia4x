@@ -3,7 +3,7 @@ import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { resolveTraitGamble } from '$lib/game/core/defs/lineages';
 import { itemService } from '$lib/game/services/ItemService';
-import { applyConsumable } from '$lib/game/entities/Pawns';
+import { applyConsumable } from '$lib/game/core/rules/body/consumables';
 import type { Pawn } from '$lib/game/core/types';
 
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
@@ -100,7 +100,7 @@ describe('alchemy / magical-creature reagents', () => {
     ).toBe(atZero);
   });
 
-  it('§A raw organ is NEUTERED (no free trait); brewed draught grants via the gamble', async () => {
+  it('§A raw organ is NEUTERED (no free trait); the essence grants via the gamble', async () => {
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
@@ -111,15 +111,7 @@ describe('alchemy / magical-creature reagents', () => {
         toolTier: 3,
         pawns: [{ count: 6, skillLevel: 25 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        buildings: [{ id: 'apothecary' }],
-        items: {
-          alpha_heart: 8,
-          woundwort: 12,
-          gem_dust: 12,
-          mandrake: 6,
-          glassware: 12,
-          spit_meat: 10
-        },
+        items: { alpha_heart: 8, alpha_essence: 3, spit_meat: 10 },
         seedEntities: false
       })
     );
@@ -137,9 +129,6 @@ describe('alchemy / magical-creature reagents', () => {
       `[ALCH raw] raw alpha_heart → traits ${raw0}→${rawTraits.length} (${rawTraits.slice(-2).join(',') || 'none'})`
     );
 
-    s.command({ type: 'craftItem', payload: { itemId: 'alpha_essence', quantity: 3 } } as never);
-    for (let i = 0; i < 25 && (stk(s).alpha_essence ?? 0) < 3; i++) s.tick(400);
-    expect(stk(s).alpha_essence ?? 0, 'alpha_essence brewed at the apothecary').toBeGreaterThan(0);
     const POOL = new Set(['feral-adrenaline', 'pack-fury', 'bestial-might']);
     let gotPoolTrait = false;
     for (let i = 1; i <= 3 && (stk(s).alpha_essence ?? 0) > 0; i++) {
@@ -152,12 +141,12 @@ describe('alchemy / magical-creature reagents', () => {
       if (gained.some((t) => POOL.has(t))) gotPoolTrait = true;
     }
     console.log(
-      `[ALCH brew] alpha_essence drunk by 3 pawns → any pool trait landed: ${gotPoolTrait}`
+      `[ALCH essence] alpha_essence drunk by 3 pawns → any pool trait landed: ${gotPoolTrait}`
     );
     expect(gotPoolTrait, 'a T3 essence granted a pool trait to at least one drinker').toBe(true);
   });
 
-  it('§B loot crafting: great_tusk → ivory, and great_bone → great_bone_maul (no more dead drops)', async () => {
+  it('§B loot crafting: great_tusk → ivory (no more dead drops)', async () => {
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
@@ -168,20 +157,15 @@ describe('alchemy / magical-creature reagents', () => {
         toolTier: 3,
         pawns: [{ count: 5, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        buildings: [{ id: 'bone_carvers_bench' }, { id: 'runecarver_bench' }],
-        items: { great_tusk: 3, great_bone: 3, oak_plank: 4, cordage: 8, spit_meat: 10 },
+        buildings: [{ id: 'bone_carvers_bench' }],
+        items: { great_tusk: 3, oak_plank: 4, cordage: 8, spit_meat: 10 },
         seedEntities: false
       })
     );
     s.command({ type: 'craftItem', payload: { itemId: 'ivory' } } as never);
-    s.command({ type: 'craftItem', payload: { itemId: 'great_bone_maul' } } as never);
-    for (let i = 0; i < 25 && !((stk(s).ivory ?? 0) > 0 && (stk(s).great_bone_maul ?? 0) > 0); i++)
-      s.tick(400);
-    console.log(
-      `[ALCH loot] great_tusk→ivory=${stk(s).ivory ?? 0}; great_bone→great_bone_maul=${stk(s).great_bone_maul ?? 0}`
-    );
+    for (let i = 0; i < 25 && !((stk(s).ivory ?? 0) > 0); i++) s.tick(400);
+    console.log(`[ALCH loot] great_tusk→ivory=${stk(s).ivory ?? 0}`);
     expect(stk(s).ivory ?? 0, 'great_tusk carved into ivory').toBeGreaterThan(0);
-    expect(stk(s).great_bone_maul ?? 0, 'great_bone forged into a maul').toBeGreaterThan(0);
   });
 
   it('§C potion tiers: every effect is a 3-tier ladder with a rising effect + station gate', () => {
@@ -205,7 +189,7 @@ describe('alchemy / magical-creature reagents', () => {
     );
   });
 
-  it('§C: Greater brews at the Copper Still, Grand requires the Runed Still — driven headless', async () => {
+  it('§C: Greater brews at the Copper Still — driven headless', async () => {
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
@@ -216,32 +200,15 @@ describe('alchemy / magical-creature reagents', () => {
         toolTier: 3,
         pawns: [{ count: 5, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        buildings: [{ id: 'alchemy_lab' }, { id: 'apothecary' }, { id: 'arcane_alembic' }],
-        items: {
-          woundwort: 20,
-          hopped_ale: 8,
-          purified_catalyst: 8,
-          mandrake: 8,
-          glassware: 20,
-          spit_meat: 10
-        },
+        buildings: [{ id: 'alchemy_lab' }, { id: 'apothecary' }],
+        items: { woundwort: 20, hopped_ale: 8, mandrake: 8, glassware: 20, spit_meat: 10 },
         seedEntities: false
       })
     );
     s.command({ type: 'craftItem', payload: { itemId: 'greater_potion_of_might' } } as never);
-    s.command({ type: 'craftItem', payload: { itemId: 'grand_potion_of_might' } } as never);
-    for (
-      let i = 0;
-      i < 25 &&
-      !((stk(s).greater_potion_of_might ?? 0) > 0 && (stk(s).grand_potion_of_might ?? 0) > 0);
-      i++
-    )
-      s.tick(400);
-    console.log(
-      `[ALCH tier-brew] greater=${stk(s).greater_potion_of_might ?? 0} grand=${stk(s).grand_potion_of_might ?? 0}`
-    );
+    for (let i = 0; i < 25 && !((stk(s).greater_potion_of_might ?? 0) > 0); i++) s.tick(400);
+    console.log(`[ALCH tier-brew] greater=${stk(s).greater_potion_of_might ?? 0}`);
     expect(stk(s).greater_potion_of_might ?? 0, 'T2 brewed').toBeGreaterThan(0);
-    expect(stk(s).grand_potion_of_might ?? 0, 'T3 brewed at the Runed Still').toBeGreaterThan(0);
   });
 
   it('§D T3: greater potions are gated on a brewed fluid, not distilled_spirit — refuses without it, brews with it', async () => {
@@ -304,7 +271,7 @@ describe('alchemy / magical-creature reagents', () => {
     expect(wineWith, 'grape_wine in stock: the wine-gated greater tier brews').toBeGreaterThan(0);
   });
 
-  it('§C reagent depth: sugarcane → sugar → mash → distilled_spirit, and purified_catalyst — headless', async () => {
+  it('§C reagent depth: sugarcane → sugar → mash → distilled_spirit — headless', async () => {
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
@@ -316,14 +283,7 @@ describe('alchemy / magical-creature reagents', () => {
         pawns: [{ count: 6, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         buildings: [{ id: 'campfire' }, { id: 'alchemy_lab' }, { id: 'apothecary' }],
-        items: {
-          sugarcane: 18,
-          wheat: 12,
-          charcoal: 12,
-          gem_dust: 12,
-          glassware: 8,
-          spit_meat: 10
-        },
+        items: { sugarcane: 18, wheat: 12, charcoal: 12, glassware: 8, spit_meat: 10 },
         seedEntities: false
       })
     );
@@ -333,24 +293,14 @@ describe('alchemy / magical-creature reagents', () => {
     s.command({ type: 'craftItem', payload: { itemId: 'fermented_mash', quantity: 2 } } as never);
     for (let i = 0; i < 20 && (stk(s).fermented_mash ?? 0) < 2; i++) s.tick(400);
     s.command({ type: 'craftItem', payload: { itemId: 'distilled_spirit' } } as never);
-    s.command({ type: 'craftItem', payload: { itemId: 'purified_catalyst' } } as never);
-    for (
-      let i = 0;
-      i < 25 && !((stk(s).distilled_spirit ?? 0) > 0 && (stk(s).purified_catalyst ?? 0) > 0);
-      i++
-    )
-      s.tick(400);
+    for (let i = 0; i < 25 && !((stk(s).distilled_spirit ?? 0) > 0); i++) s.tick(400);
     console.log(
-      `[ALCH reagents] sugarcane→sugar=${sugar} fermented_mash=${stk(s).fermented_mash ?? 0} distilled_spirit=${stk(s).distilled_spirit ?? 0} purified_catalyst=${stk(s).purified_catalyst ?? 0}`
+      `[ALCH reagents] sugarcane→sugar=${sugar} fermented_mash=${stk(s).fermented_mash ?? 0} distilled_spirit=${stk(s).distilled_spirit ?? 0}`
     );
     expect(sugar, 'cane crushed + boiled down into sugar').toBeGreaterThan(0);
     expect(
       stk(s).distilled_spirit ?? 0,
       'grain+sugar fermented then distilled into spirit'
-    ).toBeGreaterThan(0);
-    expect(
-      stk(s).purified_catalyst ?? 0,
-      'gem_dust refined into a purified catalyst at the apothecary'
     ).toBeGreaterThan(0);
   });
 

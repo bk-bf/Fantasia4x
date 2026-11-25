@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   generateCulture,
   generateCulturePool,
-  generateCultureRelations,
-  generateCultureDescription,
-  statBucket
+  generateCultureRelations
 } from '$lib/game/core/gen/culture';
-import { generateColonyPawns } from '$lib/game/entities/Pawns';
+import { generateCultureDescription } from '$lib/game/core/gen/cultureDescription';
+import { statBucket } from '$lib/game/core/rules/social/cultureBuckets';
+import { generateColonyPawns } from '$lib/game/core/gen/colonyPawns';
 import { rng } from '$lib/game/core/util/rng';
 import type { Culture } from '$lib/game/core/types';
 import loreData from '$lib/game/database/social/culture-lore.json';
@@ -87,10 +87,16 @@ describe('Culture overhaul — pool generation', () => {
 
   it('generateCultureDescription picks the dexterity-driven gait phrase (quick vs slow)', () => {
     const quickDesc = generateCultureDescription(makeCulture(16));
-    expect(GAIT_PHRASES.quick.some((p) => quickDesc.includes(p)), quickDesc).toBe(true);
+    expect(
+      GAIT_PHRASES.quick.some((p) => quickDesc.includes(p)),
+      quickDesc
+    ).toBe(true);
 
     const slowDesc = generateCultureDescription(makeCulture(5));
-    expect(GAIT_PHRASES.slow.some((p) => slowDesc.includes(p)), slowDesc).toBe(true);
+    expect(
+      GAIT_PHRASES.slow.some((p) => slowDesc.includes(p)),
+      slowDesc
+    ).toBe(true);
   });
 
   it('generateColonyPawns draws a fully-mixed colony, each pawn tagged to a pool culture', () => {

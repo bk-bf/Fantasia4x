@@ -14,6 +14,7 @@ import { aptitudeOf } from '$lib/game/core/rules/body/aptitudes';
 
 export type StatDef = {
   id: string;
+  name: string;
   category: string;
   primaryStat: string;
   formula: string;
@@ -199,7 +200,10 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   return { formula: s.formula, vars, description: s.description };
 }
 
-function traitMods(statId: string, pawn: Pawn): { name: string; text: string; pos: boolean }[] {
+export function traitMods(
+  statId: string,
+  pawn: Pawn
+): { name: string; text: string; pos: boolean }[] {
   const out: { name: string; text: string; pos: boolean }[] = [];
   for (const t of pawn.traits ?? []) {
     const e = (t.effects ?? {}) as Record<string, unknown>;
@@ -315,7 +319,7 @@ export function computeStatView(statId: string, pawn: Pawn, ctx: StatContext): S
   const d = derivation(s, pawn, ctx);
   return {
     id: statId,
-    name: statId.replace(/_/g, ' '),
+    name: s.name,
     unit: unit(statId),
     value: val(statId, pawn, ctx),
     base: baseDisplay(statId, ctx),

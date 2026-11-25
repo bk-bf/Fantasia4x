@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -11,7 +11,7 @@ import {
   positionHash,
   spriteAt
 } from '$lib/webgl/painted/manifest';
-import { readPaintedFlag } from '$lib/webgl/painted/flag';
+import { GROUND_BLEND_SWITCH, PAINTED_SWITCH, readPaintedFlag } from '$lib/webgl/painted/flag';
 
 const FIXTURE = join(__dirname, 'fixture');
 const raw = JSON.parse(readFileSync(join(FIXTURE, 'manifest.json'), 'utf8'));
@@ -35,10 +35,10 @@ describe('painted manifest parsing', () => {
     expect(() => parseManifest(bad)).toThrow(/outside the atlas/);
   });
 
-  it('refuses a patch whose size is not n by n tiles', () => {
+  it('refuses a patch whose size is not n by n cells', () => {
     const bad = structuredClone(raw);
     bad.sprites.ground_grass.patch = 3;
-    expect(() => parseManifest(bad)).toThrow(/not 3 by 3 tiles/);
+    expect(() => parseManifest(bad)).toThrow(/not 3 by 3 cells/);
   });
 
   it('drops a map entry that names a missing sprite and reports it', () => {
@@ -47,6 +47,74 @@ describe('painted manifest parsing', () => {
     const built = buildTileset(parseManifest(odd));
     expect(built.problems).toEqual(['map.resource.pine_tree names unknown sprite no_such_sprite']);
     expect(built.tileset.lookup.get('resource')!.get('pine_tree')).toHaveLength(1);
+  });
+});
+
+describe('painted manifest drops', () => {
+  const withDrops = () => {
+    const m = structuredClone(raw);
+    m.sprites['cover/0'] = { ...m.sprites.ground_dirt_a };
+    m.sprites['cover/1'] = { ...m.sprites.ground_dirt_b };
+    m.drops = {
+      grass: { grass: 0, deep_grass: 1 },
+      items: {
+        oak_log: { pile: ['tree_pine_a', 'tree_pine_b', 'tree_oak'] },
+        iron_axe: { lean: ['tree_pine_a', 'tree_pine_b'], lie: ['tree_oak', 'tree_oak'] },
+        helm: { ground: 'tree_oak' }
+      },
+      cover: { tree_pine_a: 'cover', tree_oak: 'cover' }
+    };
+    return m;
+  };
+
+  it('resolves each pose to its sprites, with a cover in every grass colour', () => {
+    const built = buildTileset(parseManifest(withDrops()));
+    expect(built.problems).toEqual([]);
+    const drops = built.tileset.drops!;
+    expect([...drops.grass]).toEqual([
+      ['grass', 0],
+      ['deep_grass', 1]
+    ]);
+    const log = drops.items.get('oak_log')!;
+    expect(log.pile).toHaveLength(3);
+    expect(log.pile![0].cover).toHaveLength(2);
+    expect(log.pile![1].cover).toBeUndefined();
+    const axe = drops.items.get('iron_axe')!;
+    expect([axe.lean!.length, axe.lie!.length]).toEqual([2, 2]);
+    expect(drops.items.get('helm')!.ground!.sprite.w).toBe(2);
+  });
+
+  it('leaves the tileset without drops when the manifest has none', () => {
+    expect(tileset.drops).toBeUndefined();
+  });
+
+  it('drops an item that names a missing sprite and reports it', () => {
+    const odd = withDrops();
+    odd.drops.items.helm.ground = 'no_such_sprite';
+    const built = buildTileset(parseManifest(odd));
+    expect(built.problems).toEqual(['drops names unknown sprite no_such_sprite']);
+    expect(built.tileset.drops!.items.has('helm')).toBe(false);
+    expect(built.tileset.drops!.items.has('oak_log')).toBe(true);
+  });
+
+  it('draws a sprite without its cover when a grass colour of the cover is missing', () => {
+    const odd = withDrops();
+    delete odd.sprites['cover/1'];
+    const built = buildTileset(parseManifest(odd));
+    expect(built.problems).toEqual(['drops names unknown sprite cover/1']);
+    expect(built.tileset.drops!.items.get('oak_log')!.pile![0].cover).toBeUndefined();
+  });
+
+  it('refuses an item with no sprite to rest on the ground', () => {
+    const bad = withDrops();
+    bad.drops.items.helm = { lean: ['tree_oak'] };
+    expect(() => parseManifest(bad)).toThrow(/no sprite to rest on the ground/);
+  });
+
+  it('refuses a grass kind whose colour is not an index', () => {
+    const bad = withDrops();
+    bad.drops.grass.grass = 'green';
+    expect(() => parseManifest(bad)).toThrow(/not a ramp index/);
   });
 });
 
@@ -148,12 +216,45 @@ describe('painted quad geometry', () => {
 });
 
 describe('painted flag', () => {
-  it('is on for ?painted=1 or the stored switch, and off otherwise', () => {
+  it('is on unless ?painted=0 or the stored switch turns it off', () => {
+    expect(readPaintedFlag('', null)).toBe(true);
+    expect(readPaintedFlag('?x=2', '1')).toBe(true);
     expect(readPaintedFlag('?painted=1', null)).toBe(true);
-    expect(readPaintedFlag('?x=2&painted=1', null)).toBe(true);
-    expect(readPaintedFlag('', '1')).toBe(true);
     expect(readPaintedFlag('?painted=0', null)).toBe(false);
+    expect(readPaintedFlag('?x=2&painted=0', '1')).toBe(false);
     expect(readPaintedFlag('', '0')).toBe(false);
-    expect(readPaintedFlag('', null)).toBe(false);
+  });
+
+  const flagsIn = async (search: string, stored: Record<string, string> = {}) => {
+    vi.resetModules();
+    vi.stubGlobal('window', {
+      location: { search },
+      localStorage: { getItem: (key: string) => stored[key] ?? null }
+    });
+    const flags = await import('$lib/webgl/painted/flag');
+    vi.unstubAllGlobals();
+    return [flags.PAINTED_TILES, flags.GROUND_BLEND, flags.PAINTED_LIGHT];
+  };
+
+  it('draws the painted map, blended and lit, in a browser with no query and nothing stored', async () => {
+    expect(await flagsIn('')).toEqual([true, true, true]);
+  });
+
+  it('turns the blend and the light off alone, and both with the painted map', async () => {
+    expect(await flagsIn('?blend=0')).toEqual([true, false, true]);
+    expect(await flagsIn('', { [GROUND_BLEND_SWITCH]: '0' })).toEqual([true, false, true]);
+    expect(await flagsIn('?light=old')).toEqual([true, true, false]);
+    expect(await flagsIn('?painted=0')).toEqual([false, false, false]);
+    expect(await flagsIn('', { [PAINTED_SWITCH]: '0' })).toEqual([false, false, false]);
+  });
+
+  it('stays off where there is no window', async () => {
+    vi.resetModules();
+    const flags = await import('$lib/webgl/painted/flag');
+    expect([flags.PAINTED_TILES, flags.GROUND_BLEND, flags.PAINTED_LIGHT]).toEqual([
+      false,
+      false,
+      false
+    ]);
   });
 });

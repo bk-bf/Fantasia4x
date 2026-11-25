@@ -9,9 +9,11 @@ import type { FontAtlas } from '$lib/webgl/types';
 import type { ShaderManager } from '$lib/webgl/shaders';
 import type { CharacterRenderer } from '$lib/webgl/character-renderer';
 import { buildTileset, parseManifest, spriteAt } from '$lib/webgl/painted/manifest';
+import { SHADOW_DEPTH } from '$lib/webgl/painted/shadowCast';
+import { WindClock } from '$lib/webgl/painted/wind';
 
 const GLYPH_FLOATS = 24;
-const ROW_FLOATS = 25;
+const ROW_FLOATS = 31;
 const DEPTH_TEST = 0x0b71;
 
 const atlas = {
@@ -40,7 +42,12 @@ function recordingGl(uploads: Float32Array[] = []) {
     ARRAY_BUFFER: 0x8892,
     TRIANGLES: 4,
     FLOAT: 0x1406,
-    LEQUAL: 0x0203
+    LEQUAL: 0x0203,
+    LESS: 0x0201,
+    ZERO: 0,
+    SRC_COLOR: 0x0300,
+    SRC_ALPHA: 0x0302,
+    ONE_MINUS_SRC_ALPHA: 0x0303
   };
   const calls: unknown[][] = [];
   const gl = new Proxy(constants, {
@@ -60,7 +67,16 @@ function recordingGl(uploads: Float32Array[] = []) {
 function gridRenderer(rowDepth: boolean, uploads?: Float32Array[]) {
   const { gl, calls } = recordingGl(uploads);
   const shaders = {
-    getAttributeLocation: (_p: string, name: string) => (name === 'a_row' ? 9 : 1),
+    getAttributeLocation: (_p: string, name: string) =>
+      name === 'a_row'
+        ? 9
+        : name === 'a_vein'
+          ? 10
+          : name === 'a_veinNear'
+            ? 11
+            : name === 'a_sway'
+              ? 12
+              : 1,
     useProgram: () => true
   } as unknown as ShaderManager;
   const r = new GridRenderer(gl, shaders, {} as CharacterRenderer, atlas, false, rowDepth);
@@ -115,6 +131,23 @@ describe('the row each quad carries for the depth test', () => {
     expect(Math.max(...ys)).toBe(7 * 16);
   });
 
+  it('draws the overlays of a tile after it, on the row the tile stands on', () => {
+    const uploads: Float32Array[] = [];
+    const { r } = gridRenderer(true, uploads);
+    const grid = new GameGrid();
+    const prop = { ...tiles[2], animationOffset: { x: 3, y: -8 } };
+    grid.setTile(4, 6, { ...prop, overlays: [{ ...prop }, { ...prop }] });
+    grid.setTile(8, 6, tiles[2]);
+    r.renderGrid(grid, { ...options, renderAllTiles: true });
+    const data = uploads[uploads.length - 1];
+    const rows = Array.from({ length: data.length / (6 * ROW_FLOATS) }, (_, quad) => [
+      ...data.subarray(quad * 6 * ROW_FLOATS, quad * 6 * ROW_FLOATS + 2),
+      data[quad * 6 * ROW_FLOATS + GLYPH_FLOATS]
+    ]);
+    expect(rows.map(([, , row]) => row)).toEqual([5.5, 5.5, 5.5, 6]);
+    expect(new Set(rows.slice(0, 3).map(([x, y]) => `${x},${y}`)).size).toBe(1);
+  });
+
   it('writes the map row in a cached chunk, so the rows either side of a chunk edge stay in order', () => {
     const uploads: Float32Array[] = [];
     const { r } = gridRenderer(true, uploads);
@@ -125,7 +158,7 @@ describe('the row each quad carries for the depth test', () => {
     expect(rows).toEqual([31, 32]);
   });
 
-  it('points the row attribute at the 25th float only when the depth test is on', () => {
+  it('points the row and vein attributes past the glyph floats only when the depth test is on', () => {
     const on = gridRenderer(true).calls.filter((c) => c[0] === 'vertexAttribPointer');
     const off = gridRenderer(false).calls.filter((c) => c[0] === 'vertexAttribPointer');
     expect(on.find((c) => c[1] === 9)).toEqual([
@@ -134,10 +167,58 @@ describe('the row each quad carries for the depth test', () => {
       1,
       0x1406,
       false,
-      100,
+      124,
       96
     ]);
-    expect(off.every((c) => c[5] === 96 && c[1] !== 9)).toBe(true);
+    expect(on.find((c) => c[1] === 10)).toEqual([
+      'vertexAttribPointer',
+      10,
+      4,
+      0x1406,
+      false,
+      124,
+      100
+    ]);
+    expect(on.find((c) => c[1] === 11)).toEqual([
+      'vertexAttribPointer',
+      11,
+      1,
+      0x1406,
+      false,
+      124,
+      116
+    ]);
+    expect(on.find((c) => c[1] === 12)).toEqual([
+      'vertexAttribPointer',
+      12,
+      1,
+      0x1406,
+      false,
+      124,
+      120
+    ]);
+    expect(off.every((c) => c[5] === 96 && ![9, 10, 11, 12].includes(c[1] as number))).toBe(true);
+  });
+
+  it('writes the vein, its tile and its same-ore neighbours after the row, and -1 where there is none', () => {
+    const uploads: Float32Array[] = [];
+    const { r } = gridRenderer(true, uploads);
+    const grid = new GameGrid();
+    grid.setTile(1, 1, {
+      ...tiles[0],
+      position: { x: 1, y: 1 },
+      painted: { ...pine, vein: { x: 7, y: 9, near: 5 } }
+    });
+    grid.setTile(2, 1, { ...tiles[0], position: { x: 2, y: 1 }, painted: pine });
+    r.renderGrid(grid, options);
+    const data = uploads[uploads.length - 1];
+    const veins = Array.from({ length: data.length / ROW_FLOATS }, (_, v) =>
+      Array.from(
+        data.subarray(v * ROW_FLOATS + GLYPH_FLOATS + 1, v * ROW_FLOATS + GLYPH_FLOATS + 6)
+      ).join(',')
+    );
+    expect(new Set(veins)).toEqual(new Set(['7,9,1,1,5', '-1,-1,2,1,0']));
+    expect(veins.filter((v) => v === '7,9,1,1,5')).toHaveLength(6);
   });
 });
 
@@ -169,6 +250,7 @@ function layeredCore(rowDepth: boolean) {
   Object.assign(core, {
     ...grids,
     rowDepth,
+    wind: new WindClock(),
     painted: null,
     fontTexture: {},
     fontAtlas: atlas,
@@ -224,7 +306,6 @@ describe('the layers the depth test orders', () => {
     ]);
     expect(uniforms.get('u_rowDepth')).toBe(1 / ROW_DEPTH_RANGE);
     expect(uniforms.get('u_alphaCut')).toBe(ALPHA_CUT);
-    expect(uniforms.get('u_alphaCeil')).toBe(0);
     expect(depthOn()).toBe(false);
   });
 
@@ -233,43 +314,35 @@ describe('the layers the depth test orders', () => {
     expect(draws.every((d) => !d.depth && !d.shadows)).toBe(true);
     expect(uniforms.has('u_rowDepth')).toBe(false);
     expect(uniforms.has('u_alphaCut')).toBe(false);
-    expect(uniforms.has('u_alphaCeil')).toBe(false);
+    expect(uniforms.has('u_shadowPass')).toBe(false);
     expect(calls.some((c) => c[0] === 'depthFunc' || c[0] === 'depthMask')).toBe(false);
   });
 });
 
-const fragmentSource = readFileSync(
-  join(__dirname, '../../../lib/webgl/shaders/fragment.glsl'),
-  'utf8'
-);
-const glyphDiscard = fragmentSource.match(/u_glyphOnly > 0\.5\) \{\s*if \((.+)\) discard;/)![1];
-const discards = new Function(
-  'a',
-  'cut',
-  'ceil',
-  `return ${glyphDiscard
-    .replaceAll('sprite.a', 'a')
-    .replaceAll('u_alphaCut', 'cut')
-    .replaceAll('u_alphaCeil', 'ceil')};`
-) as (a: number, cut: number, ceil: number) => boolean;
+const LEQUAL = 0x0203;
+const LESS = 0x0201;
+const MULTIPLY = 'ZERO,SRC_COLOR';
 
 interface Pass {
-  cut: number;
-  ceil: number;
-  writesDepth: boolean;
+  shadow: boolean;
+  depthFunc: number;
+  blend: string;
 }
 
 function passesOf(chunked: boolean, rowPasses: boolean): Pass[] {
   const passes: Pass[] = [];
-  const uniforms = { u_alphaCut: ALPHA_CUT, u_alphaCeil: 0 } as Record<string, number>;
-  let writesDepth = true;
+  const uniforms: Record<string, number> = { u_alphaCut: ALPHA_CUT };
+  let depthFunc = LEQUAL;
+  let blend = 'SRC_ALPHA,ONE_MINUS_SRC_ALPHA';
   const { gl } = recordingGl();
+  const names = new Map(Object.entries(gl).map(([k, v]) => [v, k]));
   const recorded = new Proxy(gl, {
     get: (target, key) => {
-      if (key === 'depthMask') return (on: boolean) => (writesDepth = on);
+      if (key === 'depthFunc') return (f: number) => (depthFunc = f);
+      if (key === 'blendFunc')
+        return (a: number, b: number) => (blend = `${names.get(a)},${names.get(b)}`);
       if (key === 'drawArrays')
-        return () =>
-          passes.push({ cut: uniforms.u_alphaCut, ceil: uniforms.u_alphaCeil, writesDepth });
+        return () => passes.push({ shadow: uniforms.u_shadowPass === 1, depthFunc, blend });
       return (target as unknown as Record<string | symbol, unknown>)[key];
     }
   });
@@ -287,60 +360,62 @@ function passesOf(chunked: boolean, rowPasses: boolean): Pass[] {
     renderAllTiles: true,
     ...(chunked ? { cacheVersion: 1, chunkLayer: 'resource' as const } : {})
   });
-  expect(uniforms).toEqual({ u_alphaCut: ALPHA_CUT, u_alphaCeil: 0 });
-  expect(writesDepth).toBe(true);
+  expect(uniforms.u_shadowPass ?? 0).toBe(0);
+  expect(depthFunc).toBe(LEQUAL);
+  expect(blend).toBe('SRC_ALPHA,ONE_MINUS_SRC_ALPHA');
   return passes;
 }
 
-function drawTexel(passes: Pass[], alpha: number, row: number, stored: { row: number }) {
-  let blended = 0;
+const ROW_SPRITE = 0.5 - 1e-4;
+
+function drawPixel(passes: Pass[], shaded: boolean, stored: { depth: number; darkened: number }) {
   for (const p of passes) {
-    if (discards(alpha, p.cut, p.ceil) || row < stored.row) continue;
-    blended++;
-    if (p.writesDepth) stored.row = row;
+    if (!p.shadow || !shaded) continue;
+    const wins = p.depthFunc === LESS ? SHADOW_DEPTH < stored.depth : SHADOW_DEPTH <= stored.depth;
+    if (!wins) continue;
+    stored.depth = SHADOW_DEPTH;
+    stored.darkened++;
   }
-  return blended;
+  return stored;
 }
 
-const BAKED_SHADOW = 112 / 255;
-
-describe('a baked drop shadow under the depth test', () => {
+describe('a drop shadow under the depth test', () => {
   for (const chunked of [false, true]) {
     const layer = chunked ? 'a cached layer' : 'a layer rebuilt each frame';
-    it(`blends an alpha 112 texel over the ground once and writes no depth, in ${layer}`, () => {
-      const passes = passesOf(chunked, true);
-      const ground = { row: -Infinity };
-      expect(drawTexel(passes, BAKED_SHADOW, 3, ground)).toBe(1);
-      expect(ground.row).toBe(-Infinity);
-      expect(drawTexel(passes, 0, 3, ground)).toBe(0);
+
+    it(`draws the sprites, then their shadows multiplied over what is still ground, in ${layer}`, () => {
+      expect(passesOf(chunked, true)).toEqual([
+        { shadow: false, depthFunc: LEQUAL, blend: 'SRC_ALPHA,ONE_MINUS_SRC_ALPHA' },
+        { shadow: true, depthFunc: LESS, blend: MULTIPLY }
+      ]);
     });
 
-    it(`darkens a pawn a row behind and never hides a pawn drawn after it, in ${layer}`, () => {
+    it(`darkens a ground pixel once however many shadows cover it, in ${layer}`, () => {
       const passes = passesOf(chunked, true);
-      const pawnBehind = { row: 2 };
-      expect(drawTexel(passes, BAKED_SHADOW, 3, pawnBehind)).toBe(1);
-      const shadowFirst = { row: -Infinity };
-      drawTexel(passes, BAKED_SHADOW, 3, shadowFirst);
-      expect(drawTexel(passes, 1, 2, shadowFirst)).toBe(1);
+      const ground = { depth: 1, darkened: 0 };
+      drawPixel(passes, true, ground);
+      drawPixel(passes, true, ground);
+      expect(ground.darkened).toBe(1);
     });
 
-    it(`leaves a sprite in front of the shadow uncovered and keeps opaque texels writing depth, in ${layer}`, () => {
+    it(`never darkens a sprite already drawn, and a sprite drawn later covers the shadow, in ${layer}`, () => {
       const passes = passesOf(chunked, true);
-      expect(drawTexel(passes, BAKED_SHADOW, 3, { row: 4 })).toBe(0);
-      const ground = { row: -Infinity };
-      expect(drawTexel(passes, 1, 3, ground)).toBe(1);
-      expect(ground.row).toBe(3);
+      const sprite = { depth: ROW_SPRITE, darkened: 0 };
+      expect(drawPixel(passes, true, sprite).darkened).toBe(0);
+      const ground = drawPixel(passes, true, { depth: 1, darkened: 0 });
+      expect(ROW_SPRITE <= ground.depth).toBe(true);
     });
   }
 
-  it('draws once with no depth mask change when the layer is not under the depth test', () => {
-    for (const chunked of [false, true]) {
-      const passes = passesOf(chunked, false);
-      expect(passes).toEqual([{ cut: ALPHA_CUT, ceil: 0, writesDepth: true }]);
-    }
+  it('draws once and no shadow when the layer is not under the depth test', () => {
+    for (const chunked of [false, true])
+      expect(passesOf(chunked, false)).toEqual([
+        { shadow: false, depthFunc: LEQUAL, blend: 'SRC_ALPHA,ONE_MINUS_SRC_ALPHA' }
+      ]);
   });
 
-  it('discards nothing with the flag off, where both cut uniforms stay 0', () => {
-    for (const a of [0, BAKED_SHADOW, 1]) expect(discards(a, 0, 0)).toBe(false);
+  it('keeps the shadow depth behind every row a sprite can stand on and in front of the cleared depth', () => {
+    expect(SHADOW_DEPTH).toBeGreaterThan(0.5);
+    expect(SHADOW_DEPTH).toBeLessThan(1);
   });
 });

@@ -1,34 +1,36 @@
 'use strict';
 let SEASON = 'summer';
 
+function grassShade(x, y, seed) {
+  const big = pfbm(x, y, .021, seed, 3), mid = pn(x, y, .1, .1, seed + 5);
+  let k = big > .57 ? 1 : big < .43 ? -1 : 0;
+  const off = Math.floor(hash(x, 0, seed + 7) * 6), yy = wrap(y + off, PER), cy = Math.floor(yy / 6), py = yy - cy * 6, h = hash(x, cy, seed + 9);
+  if (h > .58) { if (py === 0) k += 2; else if (py < 4) k += 1; } else if (h < .2 && py > 2) k -= 1;
+  if (mid > .76) k += 1; else if (mid < .2) k -= 1;
+  return k;
+}
 function grassTex(ramp, seed) {
   const n = ramp.length - 1;
-  return (x, y) => {
-    const big = pfbm(x, y, .021, seed, 3), mid = pn(x, y, .1, .1, seed + 5);
-    let k = n - 3 + (big > .57 ? 1 : big < .43 ? -1 : 0);
-    const off = Math.floor(hash(x, 0, seed + 7) * 6), yy = wrap(y + off, PER), cy = Math.floor(yy / 6), py = yy - cy * 6, h = hash(x, cy, seed + 9);
-    if (h > .58) { if (py === 0) k += 2; else if (py < 4) k += 1; } else if (h < .2 && py > 2) k -= 1;
-    if (mid > .76) k += 1; else if (mid < .2) k -= 1;
-    return ramp[clamp(k, 0, n)];
-  };
+  return Object.assign((x, y) => ramp[clamp(n - 3 + grassShade(x, y, seed), 0, n)], { layer: 'grass', ramp, seed });
+}
+function soilShade(x, y, seed) {
+  const big = pfbm(x, y, .03, seed, 2), m = pn(x, y, .15, .15, seed + 3), h = hash(x, y, seed + 5);
+  let k = (big > .58 ? 1 : big < .4 ? -1 : 0) + (m > .74 ? 1 : m < .22 ? -1 : 0);
+  if (h > .95) k += 1; else if (h < .06) k -= 1;
+  return k;
 }
 function soilTex(ramp, seed) {
   const n = ramp.length - 1;
-  return (x, y) => {
-    const big = pfbm(x, y, .03, seed, 2), m = pn(x, y, .15, .15, seed + 3), h = hash(x, y, seed + 5);
-    let k = n - 3 + (big > .58 ? 1 : big < .4 ? -1 : 0) + (m > .74 ? 1 : m < .22 ? -1 : 0);
-    if (h > .95) k += 1; else if (h < .06) k -= 1;
-    return ramp[clamp(k, 0, n)];
-  };
+  return Object.assign((x, y) => ramp[clamp(n - 3 + soilShade(x, y, seed), 0, n)], { layer: 'soil', ramp, seed });
 }
 const covAt = (x, y) => pfbm(x, y, .02, 3, 3) * .72 + pn(x, y, .17, .17, 5) * .28;
 function cover(soil, grass, amount) {
-  return (x, y) => {
+  return Object.assign((x, y) => {
     const cov = covAt(x, y);
     if (cov < amount) { const c = grass(x, y); return cov > amount - .011 ? dark(c, .7) : c; }
     const c = soil(x, y);
     return covAt(x, y - 3) < amount ? dark(c, .68) : c;
-  };
+  }, { soil, grass, amount });
 }
 const GT = {
   dry: grassTex(P.grassDry, 41), loam: grassTex(P.grassLoam, 43), lush: grassTex(P.grass, 45), sav: grassTex(P.savanna, 47), moss: grassTex(P.moss, 49),
@@ -61,7 +63,7 @@ const GROUND = [
   { id: 'mud', f: GT.mud, dec: [['puddle', 1.2], ['twig', .4]] },
   { id: 'moss', f: cover(GT.mud, GT.swamp, .58), dec: [['tuft', 2.6, P.mossSwamp], ['puddle', .5]] },
   { id: 'bog', f: bogTex, dec: [['lily', 1.6], ['bubble', .8], ['reedlet', 1]] },
-  { id: 'clay', f: plates(P.clay, 10, 63, 1), dec: [['pebble', .6, P.rockWarm]] },
+  { id: 'clay', f: plates(P.clayGround, 10, 63, 1), dec: [['pebble', .6, P.rockWarm]], ragged: 1 },
   { id: 'shallow_water', f: (x, y) => waterCol(x, y, 1) },
   { id: 'water', f: (x, y) => waterCol(x, y, 2) },
   { id: 'rapids', f: (x, y) => waterCol(x, y, 3) },
@@ -71,33 +73,54 @@ const GROUND = [
   { id: 'tilled', f: (x, y) => { const py = y & 7; let k = [0, 1, 3, 4, 4, 3, 2, 1][py]; if (hash(x >> 1, y >> 1, 81) > .8) k -= 1; if (hash(x, y, 83) > .95) k += 1; return P.tilled[clamp(k, 0, 4)]; }, dec: [] },
 ];
 
-function waterCol(x, y, kind) {
+function waterBase(x, y, kind) {
   let t = .12 + pfbm(x, y, .022, 31, 2) * .5;
   if (kind === 1 && pvor(x, y, 7, 37) > .8 && VEDGE > 1.4) t -= .2;
-  const rip = pn(x, y, .085, .27, 33, 40, 0);
+  return t;
+}
+function waterTone(x, y, kind, ph = 0) {
+  let t = waterBase(x, y, kind);
+  const rip = pn(x, y, .085, .27, 33, 40, -ph * .9);
   if (rip > .7) t += .2; else if (rip < .25) t -= .1;
-  if (pn(x, y, .11, 1.1, 39) > .84) t += .16;
+  if (pn(x, y, .11, 1.1, 39, 0, ph * .7) > .84) t += .16;
+  return t;
+}
+const rapidsFoam = (x, y, ph = 0) => pn(x, y, .21, .055, 35, 9, -ph * 1.7) + (pn(x, y, .5, .45, 39, 0, -ph * 2) - .5) * .4;
+function waterCol(x, y, kind, ph = 0) {
+  const t = waterTone(x, y, kind, ph);
   if (kind === 3) {
-    const f = pn(x, y, .21, .055, 35, 9, 0) + (pn(x, y, .5, .45, 39) - .5) * .4;
+    const f = rapidsFoam(x, y, ph);
     if (f > .68) return P.foam[f > .8 ? 2 : 1];
     if (f > .6) return P.shallow[4];
-    t += .15;
+    return rp(P.deep, t + .15, x, y, .45);
   }
   return rp(kind === 1 ? P.shallow : P.deep, t, x, y, .45);
 }
 
+let RH = new Float64Array(0);
 function rockH(x, y) {
+  if (RH.length !== PER * PER) RH = new Float64Array(PER * PER).fill(-1);
+  const i = wrap(y, PER) * PER + wrap(x, PER);
+  if (RH[i] >= 0) return RH[i];
   let r = 0, a = .5, f = .013, n = 0;
   for (let o = 0; o < 4; o++) { const v = 1 - Math.abs(2 * pn(x, y, f, f, 141 + o * 9) - 1); r += a * v * v; n += a; a *= .5; f *= 2.1; }
   pvor(x, y, 34, 151);
   const hh = r / n * .62 + clamp(1 - Math.hypot(VDX, VDY) / 24, 0, 1) * .38;
-  return hh + Math.floor(hh * 7) / 7 * .55;
+  return RH[i] = hh + Math.floor(hh * 7) / 7 * .55;
 }
-const rockTop = (x, y) => {
+const rockTone = (x, y) => {
   const hC = rockH(x, y), dx = rockH(x + 1, y) - rockH(x - 1, y), dy = rockH(x, y + 1) - rockH(x, y - 1);
   let t = .6 + (hC - .75) * .3 + (dx * .55 + dy * .6) * 4.4 - .09 + (hash(wrap(x, PER), wrap(y, PER), 44) - .5) * .07;
   if (Math.abs(pn(x, y, .035, .035, 161) - .5) < .012 && pn(x, y, .01, .01, 163) > .42) t -= .3;
-  return rp(P.rock, t, x, y, .3);
+  return t;
+};
+const rockTop = (x, y) => rp(P.rock, rockTone(x, y), x, y, .3);
+const rockFace = (x, y, fy, fh) => {
+  let t = .4 - fy / fh * .24 + (pn(x, y, .22, .045, 44) - .5) * .5 + (pn(x, y, .07, .02, 48) - .5) * .3;
+  if (Math.abs(pn(x, y, .06, .06, 49) - .5) < .02) t -= .3;
+  if (fy === 0) return P.rock[6];
+  if (fy === 1) t += .2;
+  return rp(P.rock, t * .8, x, y, .3);
 };
 const oreAt = (ramp, seed, x, y, c) => {
   const blob = pfbm(x, y, .028, 61 + seed, 2), id = pvor(x, y, 6, 63 + seed), e = VEDGE, nw = VDX + VDY < 0;
@@ -105,6 +128,11 @@ const oreAt = (ramp, seed, x, y, c) => {
   if (e < .9) return dark(c, .5);
   const k = 1 + (nw ? 1 : 0) + (e < 2 ? (nw ? 1 : -1) : 0) + (hash(x, y, 9) > .93 ? 1 : 0);
   return ramp[clamp(k, 0, 3)];
+};
+const veinAt = (x, y) => {
+  const id = pvor(x, y, 6, 63), e = VEDGE, nw = VDX + VDY < 0, dx = -VDX, dy = -VDY;
+  const k = e < .9 ? -1 : clamp(1 + (nw ? 1 : 0) + (e < 2 ? (nw ? 1 : -1) : 0) + (hash(x, y, 9) > .93 ? 1 : 0), 0, 3);
+  return { blob: pfbm(x + dx, y + dy, .028, 61, 2), id, k, dx, dy };
 };
 
 function pstone(ramp, bw, bh, o) {

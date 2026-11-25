@@ -1,230 +1,52 @@
 <script lang="ts">
-  import type { GameState, Pawn } from '$lib/game/core/types';
-  import { getNeedColor, getNeedDescription } from '$lib/components/util/pawnUtils';
+  import type { Pawn } from '$lib/game/core/types';
   import { getActiveConditionViews } from '$lib/components/util/conditionInfo';
-  import ConditionChips from './ConditionChips.svelte';
+  import SkinBar from '$lib/components/UI/widget/SkinBar.svelte';
+  import ConditionRows from './ConditionRows.svelte';
   import AwakeningMeters from './AwakeningMeters.svelte';
+  import { needMeters } from './needMeters';
 
-  export let pawn: Pawn;
-  export let gameState: GameState;
+  let { pawn }: { pawn: Pawn } = $props();
 
-  $: needs = pawn.needs;
-  $: conditionViews = getActiveConditionViews(pawn);
-  $: hungerPct = Math.round(needs.hunger);
-  $: fatiguePct = Math.round(needs.fatigue);
-  $: thirstPct = Math.round(needs.thirst ?? 0);
-  $: hygienePct = Math.round(needs.hygiene ?? 0);
-  $: wetnessPct = Math.round(needs.wetness ?? 0);
-  $: relaxPct = Math.round(needs.relaxation ?? 100);
-  function getWetColor(pct: number): string {
-    if (pct < 25) return '#7a8a90';
-    if (pct < 50) return '#4fa3d1';
-    if (pct < 90) return '#2980c0';
-    return '#c86030';
-  }
-  function wetDesc(pct: number): string {
-    return pct < 25 ? 'dry' : pct < 50 ? 'damp' : pct < 90 ? 'wet' : 'soaked';
-  }
-  function blockBar(value: number, width = 16): string {
-    const filled = Math.max(0, Math.min(width, Math.round((value / 100) * width)));
-    return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
-  }
-  function getBloodColor(pct: number): string {
-    if (pct >= 70) return 'var(--pos)';
-    if (pct >= 40) return '#c8a030';
-    if (pct >= 20) return '#c86030';
-    return 'var(--neg)';
-  }
-  function getStaminaColor(pct: number): string {
-    if (pct >= 60) return '#38b8c8';
-    if (pct >= 30) return '#c8a030';
-    return '#c86030';
-  }
-  function getRelaxationColor(pct: number): string {
-    if (pct >= 50) return 'var(--pos)';
-    if (pct >= 20) return '#c8a030';
-    return '#c86030';
-  }
-  function relaxationDesc(pct: number): string {
-    return pct < 5 ? 'starved for company' : pct < 12 ? 'restless' : 'content';
-  }
+  const meters = $derived(needMeters(pawn));
+
+  const conditions = $derived(getActiveConditionViews(pawn));
 </script>
 
-<div class="needs-section">
-  <div class="section-hdr">| NEEDS</div>
-
-  <div class="need-row">
-    <span class="lbl">HUNGER</span>
-    <span class="block-bar" style="color: {getNeedColor(hungerPct)}">{blockBar(hungerPct)}</span>
-    <span class="val" style="color: {getNeedColor(hungerPct)}">{Math.round(needs.hunger)}/100</span>
-    <span class="desc">{getNeedDescription('hunger', needs.hunger)}</span>
+{#each meters as m (m.label)}
+  <div class="meter" title="{Math.round(m.value)}/{Math.round(m.max)}">
+    <em>{m.label}</em>
+    <SkinBar value={m.value / m.max} ramp={m.ramp} />
+    <span>{m.word}</span>
   </div>
+{/each}
 
-  <div class="need-row">
-    <span class="lbl">REST</span>
-    <span class="block-bar" style="color: {getNeedColor(fatiguePct)}">{blockBar(fatiguePct)}</span>
-    <span class="val" style="color: {getNeedColor(fatiguePct)}"
-      >{Math.round(needs.fatigue)}/100</span
-    >
-    <span class="desc">{getNeedDescription('fatigue', needs.fatigue)}</span>
-  </div>
+{#if conditions.length > 0}
+  <h5>Conditions</h5>
+  <ConditionRows views={conditions} />
+{/if}
 
-  <div class="need-row">
-    <span class="lbl">THIRST</span>
-    <span class="block-bar" style="color: {getNeedColor(thirstPct)}">{blockBar(thirstPct)}</span>
-    <span class="val" style="color: {getNeedColor(thirstPct)}">{thirstPct}/100</span>
-    <span class="desc">{getNeedDescription('thirst', thirstPct)}</span>
-  </div>
-
-  <div class="need-row">
-    <span class="lbl">HYGIENE</span>
-    <span class="block-bar" style="color: {getNeedColor(hygienePct)}">{blockBar(hygienePct)}</span>
-    <span class="val" style="color: {getNeedColor(hygienePct)}">{hygienePct}/100</span>
-    <span class="desc">{getNeedDescription('hygiene', hygienePct)}</span>
-  </div>
-
-  <div class="need-row">
-    <span class="lbl">WETNESS</span>
-    <span class="block-bar" style="color: {getWetColor(wetnessPct)}">{blockBar(wetnessPct)}</span>
-    <span class="val" style="color: {getWetColor(wetnessPct)}">{wetnessPct}/100</span>
-    <span class="desc">{wetDesc(wetnessPct)}</span>
-  </div>
-
-  <div class="need-row">
-    <span class="lbl">RELAXATION</span>
-    <span class="block-bar" style="color: {getRelaxationColor(relaxPct)}">{blockBar(relaxPct)}</span
-    >
-    <span class="val" style="color: {getRelaxationColor(relaxPct)}">{relaxPct}/100</span>
-    <span class="desc">{relaxationDesc(relaxPct)}</span>
-  </div>
-
-  {#if needs.bloodHunger !== undefined}
-    {@const bhPct = Math.round(needs.bloodHunger)}
-    <div class="need-row">
-      <span class="lbl">BLOODLUST</span>
-      <span class="block-bar" style="color: {getNeedColor(bhPct)}">{blockBar(bhPct)}</span>
-      <span class="val" style="color: {getNeedColor(bhPct)}">{bhPct}/100</span>
-      <span class="desc"
-        >{bhPct < 40
-          ? 'sated'
-          : bhPct < 70
-            ? 'stirring'
-            : bhPct < 100
-              ? 'ravenous'
-              : 'frenzied'}</span
-      >
-    </div>
-  {/if}
-
-  {#if pawn.maxBloodVolume}
-    {@const maxBV = pawn.maxBloodVolume}
-    {@const curBV = pawn.bloodVolume ?? maxBV}
-    {@const bloodPct = Math.round((curBV / maxBV) * 100)}
-    {#if bloodPct < 100}
-      <div class="need-row">
-        <span class="lbl">BLOOD</span>
-        <span class="block-bar" style="color: {getBloodColor(bloodPct)}">{blockBar(bloodPct)}</span>
-        <span class="val" style="color: {getBloodColor(bloodPct)}">{Math.round(curBV)}/{maxBV}</span
-        >
-        <span class="desc"
-          >{bloodPct >= 90
-            ? 'healthy'
-            : bloodPct >= 60
-              ? 'low'
-              : bloodPct >= 30
-                ? 'critical'
-                : 'near death'}</span
-        >
-      </div>
-    {/if}
-  {/if}
-
-  {#if pawn.maxStamina !== undefined}
-    {@const maxST = pawn.maxStamina}
-    {@const curST = pawn.stamina ?? maxST}
-    {@const stPct = Math.round((curST / maxST) * 100)}
-    {#if stPct < 100}
-      <div class="need-row">
-        <span class="lbl">STAMINA</span>
-        <span class="block-bar" style="color: {getStaminaColor(stPct)}">{blockBar(stPct)}</span>
-        <span class="val" style="color: {getStaminaColor(stPct)}">{Math.round(curST)}/{maxST}</span>
-        <span class="desc"
-          >{stPct >= 80
-            ? 'fresh'
-            : stPct >= 50
-              ? 'tired'
-              : stPct >= 20
-                ? 'winded'
-                : 'exhausted'}</span
-        >
-      </div>
-    {/if}
-  {/if}
-
-  <ConditionChips views={conditionViews} />
-
-  <AwakeningMeters {pawn} />
-</div>
+<AwakeningMeters {pawn} />
 
 <style>
-  .section-hdr {
-    padding: 4px 8px;
-    background: var(--bg-panel);
-    color: var(--accent-hi);
-    font-size: 12px;
-    letter-spacing: 0.06em;
-    border-bottom: 1px solid var(--border);
-  }
-  .need-row {
+  .meter {
     display: flex;
     align-items: center;
-    padding: 3px 8px;
-    gap: 8px;
-    min-height: 26px;
+    gap: 7px;
+    height: 18px;
   }
-  .need-row:hover {
-    background: var(--bg-hover);
-  }
-
-  .row {
-    display: flex;
-    padding: 2px 8px;
-    align-items: baseline;
-    gap: 6px;
-  }
-  .row:hover {
-    background: var(--bg-hover);
-  }
-
-  .lbl {
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-size: 12px;
+  em {
+    flex: none;
     width: 70px;
-    flex-shrink: 0;
+    font-style: normal;
   }
-  .val {
-    color: var(--text);
-    font-size: 12px;
-    min-width: 36px;
+  span {
+    flex: none;
+    width: 96px;
     text-align: right;
-    flex-shrink: 0;
+    color: var(--text-dim);
     white-space: nowrap;
-  }
-
-  .desc {
-    color: var(--text-muted);
-    font-size: 12px;
-    font-style: italic;
-    flex: 1;
-    white-space: nowrap;
-  }
-
-  .block-bar {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: -0.02em;
-    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 </style>

@@ -23,7 +23,10 @@ import { simWorkerBridge, USE_SIM_WORKER } from '$lib/game/sim/simWorkerClient';
 import { applySimCommand } from '$lib/game/sim/commands';
 import type { SimCommand } from '$lib/game/sim/simProtocol';
 import type { GameState, FilterableZoneType, DesignationType } from '$lib/game/core/types';
-import { generateColonyPawns, generateWorldKin } from '$lib/game/entities/Pawns';
+import { generateColonyPawns } from '$lib/game/core/gen/colonyPawns';
+import { colouringLine } from '$lib/game/core/gen/cultureDescription';
+import { ensureLooks } from '$lib/game/core/rules/body/looks';
+import { generateWorldKin } from '$lib/game/core/gen/pawnKin';
 import {
   initialGameState,
   ensureCulturePool,
@@ -73,7 +76,16 @@ let gameSpeedValue = 1;
 let simRunning = false;
 let simAccumulatorMs = 0;
 
+function ensureStateLooks(state: GameState): void {
+  ensureLooks(
+    [state.culture, ...(state.culturePool ?? [])].filter(Boolean),
+    [...(state.pawns ?? []), ...(state.worldPawns ?? [])],
+    colouringLine
+  );
+}
+
 function applyMigrations(state: GameState): GameState {
+  ensureStateLooks(state);
   if (typeof state.seed !== 'number') state.seed = freshSeed();
   if (!state.season) state.season = 'spring';
   if (typeof state.seasonDay !== 'number') state.seasonDay = 0;
@@ -377,6 +389,7 @@ export const worldGenRev = writable(0);
 
 function loadStateIntoWorker(state0: GameState) {
   const state: GameState = { ...state0, debugMode: get(debugMode) || undefined };
+  ensureStateLooks(state);
   gameStore.setSilent(state);
   gameStore.notify();
   worldGenRev.update((n) => n + 1);
@@ -391,7 +404,7 @@ function loadStateIntoWorker(state0: GameState) {
   }
 }
 
-let currentMapSize = { w: 500, h: 500 };
+let currentMapSize = { w: 750, h: 750 };
 function setMapSize(w: number, h: number) {
   currentMapSize = { w: Math.max(8, w | 0), h: Math.max(8, h | 0) };
 }
@@ -470,8 +483,7 @@ function startMenuPreview() {
   rng.reseed(MENU_PREVIEW_SEED);
   resetSimTransients();
   const world = generateWorld(MENU_PREVIEW_MAP.w, MENU_PREVIEW_MAP.h, MENU_PREVIEW_SEED, {
-    skipResources: true,
-    tidyWater: false
+    skipResources: true
   });
   customizeMenuPreviewWorld(world);
   resourceGeneratorService.generateResources(world, MENU_PREVIEW_SEED, {

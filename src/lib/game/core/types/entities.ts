@@ -134,6 +134,15 @@ export type PawnOrder =
   | { type: 'forceConsume'; dropId: string; x: number; y: number }
   | { type: 'drink'; x: number; y: number };
 
+export interface PawnLook {
+  skin: string;
+  hair: string;
+  eyes: string;
+  oddEye: string | null;
+  style: string;
+  beard: string;
+}
+
 export interface Pawn {
   id: string;
   debugId?: number;
@@ -161,6 +170,7 @@ export interface Pawn {
     weight: number;
     size: string;
   };
+  look?: PawnLook;
 
   needs: EntityNeeds;
   state: PawnState;

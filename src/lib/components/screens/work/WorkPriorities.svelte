@@ -1,48 +1,27 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
+  import { chrome } from '$lib/pixelArt/chrome';
   import { WORK_CATEGORIES } from '$lib/game/core/defs/work';
-  import { pawnStatService } from '$lib/game/services/PawnStatService';
-  import { jobService } from '$lib/game/services/JobService';
   import { persisted, persist } from '$lib/stores/uiPersist';
-  import type { Pawn, WorkAssignment } from '$lib/game/core/types';
-  import {
-    LABOR_LABELS,
-    LABOR_COLORS,
-    ABBR,
-    STAR_MARK,
-    STAR_COLORS,
-    WORST_MARK,
-    WORST_COLORS,
-    NON_SKILL_TASKS,
-    rankWorkCells,
-    getPawnLaborLevel,
-    stateColor,
-    stateLabel,
-    type CellRank
-  } from '$lib/components/util/workUtils';
+  import type { LaborLevel, Pawn, WorkAssignment } from '$lib/game/core/types';
+  import { getPawnLaborLevel, stateLabel } from '$lib/components/util/workUtils';
   import WorkCellTooltip from './WorkCellTooltip.svelte';
+  import WorkCell from './WorkCell.svelte';
+  import WorkLegend from './WorkLegend.svelte';
+  import WorkHeader from './WorkHeader.svelte';
+  import { subjobLevel, workColumns, workMods, workRanks } from './workGrid';
 
-  interface Props {
-    pawns: Pawn[];
-    workAssignments: Record<string, WorkAssignment>;
-    selectedPawn?: string | null;
-    selectedColumn?: string | null;
-  }
   let {
     pawns,
     workAssignments,
     selectedPawn = $bindable(null),
     selectedColumn = $bindable(null)
-  }: Props = $props();
-
-  function toggleColumn(id: string) {
-    selectedColumn = selectedColumn === id ? null : id;
-  }
-
-  const TOP_CATEGORIES = WORK_CATEGORIES.filter((wc) => !jobService.isCraftSubjob(wc.id));
-
-  const subjobsByCat: Record<string, { id: string; label: string }[]> = {};
-  for (const wc of TOP_CATEGORIES) subjobsByCat[wc.id] = jobService.getSubjobsForCategory(wc.id);
+  }: {
+    pawns: Pawn[];
+    workAssignments: Record<string, WorkAssignment>;
+    selectedPawn?: string | null;
+    selectedColumn?: string | null;
+  } = $props();
 
   let expanded = $state<string[]>(persisted('work.expandedCols', []) ?? []);
   $effect(() => persist('work.expandedCols', expanded));
@@ -52,98 +31,20 @@
       : [...expanded, catId];
   }
 
-  type Col =
-    | { kind: 'cat'; catId: string; name: string; abbr: string; splittable: boolean }
-    | { kind: 'sub'; catId: string; subId: string; label: string; abbr: string };
-
-  let columns = $derived.by<Col[]>(() => {
-    const cols: Col[] = [];
-    for (const wc of TOP_CATEGORIES) {
-      const subs = subjobsByCat[wc.id];
-      cols.push({
-        kind: 'cat',
-        catId: wc.id,
-        name: wc.name,
-        abbr: ABBR[wc.id] ?? wc.id.slice(0, 3).toUpperCase(),
-        splittable: subs.length > 0
-      });
-      if (subs.length > 0 && expanded.includes(wc.id)) {
-        for (const sj of subs)
-          cols.push({
-            kind: 'sub',
-            catId: wc.id,
-            subId: sj.id,
-            label: sj.label,
-            abbr: sj.label.slice(0, 3).toUpperCase()
-          });
-      }
-    }
-    return cols;
-  });
-
-  function getSubjobLevel(
-    pawnId: string,
-    catId: string,
-    subId: string
-  ): { level: 0 | 1 | 2 | 3 | 4; inherited: boolean } {
-    const ls = workAssignments[pawnId]?.laborSettings;
-    if (ls && subId in ls) return { level: ls[subId] as 0 | 1 | 2 | 3 | 4, inherited: false };
-    return { level: getPawnLaborLevel(workAssignments[pawnId], catId), inherited: true };
-  }
-  function cycleSubjob(pawnId: string, catId: string, subId: string, dir: 1 | -1) {
-    const cur = getSubjobLevel(pawnId, catId, subId).level;
-    updatePawnLaborLevel(pawnId, subId, ((cur + dir + 5) % 5) as 0 | 1 | 2 | 3 | 4);
-  }
-
-  function updatePawnLaborLevel(pawnId: string, workId: string, level: 0 | 1 | 2 | 3 | 4) {
-    gameState.command({ type: 'setPawnLaborLevel', payload: { pawnId, workId, level } });
-  }
-
-  function cycleLevel(pawnId: string, workId: string, dir: 1 | -1 = 1) {
-    const cur = getPawnLaborLevel(workAssignments[pawnId], workId);
-    updatePawnLaborLevel(pawnId, workId, ((cur + dir + 5) % 5) as 0 | 1 | 2 | 3 | 4);
-  }
-
-  type WorkMods = { speed: number; yield: number | null; quality: number | null };
-  let modMap = $derived.by(() => {
+  const columns = $derived(workColumns(expanded));
+  const mods = $derived.by(() => {
     void $gameState.turn;
-    const map: Record<string, Record<string, WorkMods>> = {};
-    for (const pawn of pawns) {
-      const row: Record<string, WorkMods> = {};
-      for (const wc of TOP_CATEGORIES) {
-        const subs = subjobsByCat[wc.id];
-        for (const sj of subs)
-          row[sj.id] = pawnStatService.getWorkModifiers(pawn, sj.id, undefined, wc.id);
-        if (subs.length && jobService.isGroupingParent(wc.id)) {
-          const tput = (m: WorkMods) => m.speed * (m.yield ?? 1) * (m.quality ?? 1);
-          row[wc.id] = subs.reduce(
-            (best, sj) => (tput(row[sj.id]) > tput(best) ? row[sj.id] : best),
-            row[subs[0].id]
-          );
-        } else {
-          row[wc.id] = pawnStatService.getWorkModifiers(pawn, wc.id);
-        }
-      }
-      map[pawn.id] = row;
-    }
-    return map;
+    return workMods(pawns);
   });
+  const ranks = $derived(workRanks(pawns, mods));
+  const template = $derived(`150px repeat(${columns.length}, minmax(28px, 1fr)) 150px`);
 
-  let rankMap = $derived.by(() => {
-    const map: Record<string, Record<string, CellRank>> = {};
-    for (const pawn of pawns) {
-      const eff: Record<string, number> = {};
-      for (const wc of TOP_CATEGORIES) {
-        if (wc.id in NON_SKILL_TASKS) continue;
-        const m = modMap[pawn.id]?.[wc.id];
-        eff[wc.id] = m ? m.speed * (m.yield ?? 1) * (m.quality ?? 1) : 0;
-      }
-      const ranked = rankWorkCells(eff);
-      for (const id of Object.keys(NON_SKILL_TASKS)) ranked[id] = { best: -1, worst: -1 };
-      map[pawn.id] = ranked;
-    }
-    return map;
-  });
+  function setLevel(pawnId: string, workId: string, level: number) {
+    gameState.command({
+      type: 'setPawnLaborLevel',
+      payload: { pawnId, workId, level: ((level + 5) % 5) as LaborLevel }
+    });
+  }
 
   let tip = $state<{
     pawnId: string;
@@ -153,153 +54,70 @@
     x: number;
     y: number;
   } | null>(null);
-  function showTip(e: MouseEvent, pawnId: string, workId: string, subId?: string, label?: string) {
-    tip = { pawnId, workId, subId, label, x: e.clientX, y: e.clientY };
-  }
-  function moveTip(e: MouseEvent) {
-    if (tip) tip = { ...tip, x: e.clientX, y: e.clientY };
-  }
-  function hideTip() {
-    tip = null;
-  }
-  let tipPawn = $derived(tip ? (pawns.find((p) => p.id === tip!.pawnId) ?? null) : null);
-  let tipWc = $derived(tip ? (WORK_CATEGORIES.find((w) => w.id === tip!.workId) ?? null) : null);
+  const tipPawn = $derived(tip ? (pawns.find((p) => p.id === tip!.pawnId) ?? null) : null);
+  const tipWc = $derived(tip ? (WORK_CATEGORIES.find((w) => w.id === tip!.workId) ?? null) : null);
+  const show = (e: MouseEvent, pawnId: string, workId: string, subId?: string, label?: string) =>
+    (tip = { pawnId, workId, subId, label, x: e.clientX, y: e.clientY });
+  const move = (e: MouseEvent) => tip && (tip = { ...tip, x: e.clientX, y: e.clientY });
 </script>
 
-<div class="matrix-wrap">
-  <table class="matrix">
-    <thead>
-      <tr>
-        <th class="name-hdr">WORKER</th>
-        {#each columns as col}
-          {#if col.kind === 'cat'}
-            <th
-              class="work-hdr"
-              class:col-sel={selectedColumn === col.catId}
-              class:splittable={col.splittable}
-              title="{col.name} — click to highlight related attributes{col.splittable
-                ? '; right-click to expand subjobs'
-                : ''}"
-              onclick={() => toggleColumn(col.catId)}
-              oncontextmenu={(e) => {
-                e.preventDefault();
-                if (col.splittable) toggleExpand(col.catId);
-              }}
-              >{col.abbr}{#if col.splittable}<span class="caret"
-                  >{expanded.includes(col.catId) ? '▾' : '▸'}</span
-                >{/if}</th
-            >
-          {:else}
-            <th
-              class="work-hdr sub-hdr"
-              title="{col.label} — subjob; ranks within its parent category"
-              onclick={() => toggleColumn(col.catId)}
-              oncontextmenu={(e) => {
-                e.preventDefault();
-                toggleExpand(col.catId);
-              }}>{col.abbr}</th
-            >
-          {/if}
-        {/each}
-        <th class="state-hdr">STATUS</th>
-      </tr>
-    </thead>
-    <tbody>
-      {#each pawns as pawn}
-        <tr
-          class:sel={selectedPawn === pawn.id}
-          onclick={() => (selectedPawn = selectedPawn === pawn.id ? null : pawn.id)}
-        >
-          <td class="name-cell">{pawn.name.toUpperCase()}</td>
-          {#each columns as col}
-            {#if col.kind === 'cat'}
-              {@const lvl = getPawnLaborLevel(workAssignments[pawn.id], col.catId)}
-              {@const rk = rankMap[pawn.id]?.[col.catId]}
-              <td>
-                <button
-                  class="cell-btn"
-                  style="color:{LABOR_COLORS[lvl]}"
-                  onmouseenter={(e) => showTip(e, pawn.id, col.catId)}
-                  onmousemove={moveTip}
-                  onmouseleave={hideTip}
-                  onclick={(e) => {
-                    e.stopPropagation();
-                    cycleLevel(pawn.id, col.catId, 1);
-                  }}
-                  oncontextmenu={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    cycleLevel(pawn.id, col.catId, -1);
-                  }}
-                >
-                  <span class="cell-lbl">{LABOR_LABELS[lvl]}</span>
-                  {#if rk && rk.best >= 0}
-                    <span class="mark" style="color:{STAR_COLORS[rk.best]}">{STAR_MARK}</span>
-                  {:else if rk && rk.worst >= 0}
-                    <span class="mark" style="color:{WORST_COLORS[rk.worst]}">{WORST_MARK}</span>
-                  {/if}
-                </button>
-              </td>
-            {:else}
-              {@const sj = getSubjobLevel(pawn.id, col.catId, col.subId)}
-              <td class="sub-cell">
-                <button
-                  class="cell-btn"
-                  class:inherited={sj.inherited}
-                  style="color:{LABOR_COLORS[sj.level]}"
-                  title="{col.label}: {sj.inherited
-                    ? 'inherits parent'
-                    : 'override'} — click to set, right-click to lower"
-                  onmouseenter={(e) => showTip(e, pawn.id, col.catId, col.subId, col.label)}
-                  onmousemove={moveTip}
-                  onmouseleave={hideTip}
-                  onclick={(e) => {
-                    e.stopPropagation();
-                    cycleSubjob(pawn.id, col.catId, col.subId, 1);
-                  }}
-                  oncontextmenu={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    cycleSubjob(pawn.id, col.catId, col.subId, -1);
-                  }}
-                >
-                  <span class="cell-lbl">{LABOR_LABELS[sj.level]}</span>
-                </button>
-              </td>
-            {/if}
-          {/each}
-          <td class="state-cell" style="color:{stateColor(pawn)}">{stateLabel(pawn)}</td>
-        </tr>
+<div class="wgrid" {@attach chrome('well')}>
+  <WorkHeader {columns} {expanded} {template} bind:selectedColumn ontoggle={toggleExpand} />
+  {#each pawns as pawn (pawn.id)}
+    {@const on = selectedPawn === pawn.id}
+    {@const a = workAssignments[pawn.id]}
+    <div
+      class="wr"
+      class:on
+      style:grid-template-columns={template}
+      role="row"
+      tabindex="-1"
+      onclick={() => (selectedPawn = pawn.id)}
+      onkeydown={(e) => e.key === 'Enter' && (selectedPawn = pawn.id)}
+      {@attach chrome(on ? 'cellOn' : 'cell')}
+    >
+      <span class="who">{pawn.name}</span>
+      {#each columns as col (col.kind === 'cat' ? col.catId : col.subId)}
+        {#if col.kind === 'cat'}
+          {@const lvl = getPawnLaborLevel(a, col.catId)}
+          <WorkCell
+            level={lvl}
+            rank={ranks[pawn.id]?.[col.catId]}
+            onstep={(d) => setLevel(pawn.id, col.catId, lvl + d)}
+            onenter={(e) => show(e, pawn.id, col.catId)}
+            onmove={move}
+            onleave={() => (tip = null)}
+          />
+        {:else}
+          {@const sj = subjobLevel(a, col.catId, col.subId)}
+          <WorkCell
+            sub
+            level={sj.level}
+            inherited={sj.inherited}
+            onstep={(d) => setLevel(pawn.id, col.subId, sj.level + d)}
+            onenter={(e) => show(e, pawn.id, col.catId, col.subId, col.label)}
+            onmove={move}
+            onleave={() => (tip = null)}
+          />
+        {/if}
       {/each}
-      {#if pawns.length === 0}
-        <tr><td colspan={columns.length + 2} class="empty">no colonists</td></tr>
-      {/if}
-    </tbody>
-  </table>
-</div>
-
-<div class="legend">
-  <span class="leg-title">LEVEL:</span>
-  {#each ['—=off', '1=low', '2=nrm', '3=hi', '4=urg'] as leg}
-    <span class="leg">{leg}</span>
+      <span class="st">{stateLabel(pawn).toLowerCase()}</span>
+    </div>
+  {:else}
+    <p class="empty">no one to set to work</p>
   {/each}
-  <span class="leg-sep">·</span>
-  <span class="leg" style="color:{STAR_COLORS[0]}">{STAR_MARK} top jobs</span>
-  <span class="leg" style="color:{WORST_COLORS[0]}">{WORST_MARK} weakest</span>
-  <span class="leg-hint"
-    >· click cell ↑ · right-click ↓ · right-click a ▸ column header to expand subjobs · click row
-    for detail</span
-  >
 </div>
 
-{#if tip && tipPawn && tipWc && modMap[tip.pawnId]?.[tip.subId ?? tip.workId] && rankMap[tip.pawnId]?.[tip.workId]}
+<WorkLegend />
+
+{#if tip && tipPawn && tipWc && mods[tip.pawnId]?.[tip.subId ?? tip.workId] && ranks[tip.pawnId]?.[tip.workId]}
   <WorkCellTooltip
     pawn={tipPawn}
     wc={tipWc}
-    mods={modMap[tip.pawnId][tip.subId ?? tip.workId]}
-    rank={rankMap[tip.pawnId][tip.workId]}
+    mods={mods[tip.pawnId][tip.subId ?? tip.workId]}
+    rank={ranks[tip.pawnId][tip.workId]}
     level={tip.subId
-      ? getSubjobLevel(tip.pawnId, tip.workId, tip.subId).level
+      ? subjobLevel(workAssignments[tip.pawnId], tip.workId, tip.subId).level
       : getPawnLaborLevel(workAssignments[tip.pawnId], tip.workId)}
     name={tip.label}
     x={tip.x}
@@ -308,136 +126,40 @@
 {/if}
 
 <style>
-  .matrix-wrap {
+  .wgrid {
+    flex: none;
+    padding: 2px;
     overflow-x: auto;
-    flex-shrink: 0;
   }
-  .matrix {
-    border-collapse: collapse;
-    width: 100%;
-  }
-  .matrix th,
-  .matrix td {
-    border: 1px solid var(--border);
-    padding: 0;
+  .wr {
+    display: grid;
+    align-items: center;
+    height: 21px;
     text-align: center;
+    cursor: pointer;
   }
-  .name-hdr,
-  .state-hdr {
+  .who {
+    padding-left: 8px;
     text-align: left;
-    padding: 2px 6px;
-    color: var(--text-dim);
-    font-size: 11px;
-    width: 169px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .work-hdr {
-    padding: 2px 3px;
+  .st {
+    padding-right: 8px;
+    text-align: right;
     color: var(--text-dim);
-    font-size: 11px;
-    min-width: 32px;
-    cursor: pointer;
-  }
-  .work-hdr:hover {
-    color: var(--text);
-  }
-  .work-hdr.col-sel {
-    color: var(--accent-hi);
-    background: color-mix(in srgb, var(--accent-hi) 18%, transparent);
-  }
-  .work-hdr.splittable {
-    text-decoration: underline dotted color-mix(in srgb, var(--text-dim) 60%, transparent);
-    text-underline-offset: 2px;
-  }
-  .caret {
-    font-size: 8px;
-    margin-left: 1px;
-    opacity: 0.7;
-  }
-  .work-hdr.sub-hdr {
-    font-size: 10px;
-    color: var(--text-muted, #6a7a8a);
-    background: color-mix(in srgb, var(--accent-hi) 6%, transparent);
-    border-left-style: dashed;
-  }
-  .sub-cell {
-    background: color-mix(in srgb, var(--accent-hi) 5%, transparent);
-    border-left-style: dashed !important;
-  }
-  .cell-btn.inherited {
-    opacity: 0.4;
-  }
-  .name-cell {
-    text-align: left;
-    padding: 2px 6px;
-    font-size: 12px;
-    cursor: pointer;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .state-cell {
-    text-align: left;
-    padding: 2px 4px;
-    font-size: 11px;
-    white-space: nowrap;
-  }
-  tr.sel {
-    background: var(--bg-active, #1a2030);
-  }
-  .matrix tr:hover {
-    background: var(--bg-hover, #151c26);
-    cursor: pointer;
-  }
-  .cell-btn {
-    position: relative;
-    width: 100%;
-    height: 32px;
-    padding: 0;
-    background: transparent;
-    border: none;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .cell-btn:hover {
-    background: var(--bg-hover, #151c26);
-  }
-  .cell-lbl {
-    line-height: 1;
-  }
-  .mark {
-    position: absolute;
-    right: 2px;
-    bottom: 1px;
-    font-size: 9px;
-    line-height: 1;
-    pointer-events: none;
-  }
-  .legend {
-    display: flex;
-    gap: 8px;
-    padding: 3px 8px;
-    border-bottom: 1px solid var(--border);
-    font-size: 11px;
-    color: var(--text-dim);
-    flex-shrink: 0;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .leg-title {
-    color: var(--text-muted, #555);
-  }
-  .leg-hint {
-    margin-left: auto;
-    color: var(--text-muted, #555);
-    font-style: italic;
+  .on .who,
+  .on .st,
+  .on :global(.cell) {
+    color: var(--ember);
   }
   .empty {
-    text-align: center;
-    color: var(--text-muted, #555);
-    padding: 8px;
-    font-style: italic;
+    margin: 6px 8px;
+    color: var(--text-muted);
   }
 </style>

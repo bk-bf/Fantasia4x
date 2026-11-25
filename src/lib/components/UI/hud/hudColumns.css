@@ -1,0 +1,34 @@
+.hud-col {
+  --col-ink: var(--text);
+  --col-dim: var(--text-dim);
+  --col-mute: var(--text-muted);
+  --col-hot: var(--accent-hi);
+  --col-pos: var(--pos);
+  --col-neg: var(--neg);
+  --col-cold: var(--cold);
+  position: relative;
+  isolation: isolate;
+  font: 16px/17px var(--font-pixel);
+  letter-spacing: 0.6px;
+  color: var(--col-ink);
+  background: var(--bg-panel);
+}
+.hud-col.transparent {
+  --col-ink: #f2e8cc;
+  --col-dim: #cdbd96;
+  --col-mute: #a39474;
+  --col-hot: #ffc468;
+  --col-pos: #b0dc80;
+  --col-neg: #ff8a70;
+  --col-cold: #a4d4f2;
+  background: none;
+  text-shadow:
+    1px 0 0 #08060a,
+    -1px 0 0 #08060a,
+    0 1px 0 #08060a,
+    0 -1px 0 #08060a,
+    1px 1px 0 #08060a;
+}
+.hud-col.transparent :is([role='button'], button) {
+  pointer-events: auto;
+}

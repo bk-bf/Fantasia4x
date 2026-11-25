@@ -64,7 +64,7 @@ When a cost shows on the laptop and not on the desktop, record the laptop's own 
 running anything there. Nothing runs on the laptop but the game the owner starts.
 
 1. The owner launches the build with its debug port on the host network:
-   `F4X_PAINTED=1 ./launch.sh --electron --net-host` (the default sandbox hides port 9222).
+   `./launch.sh --electron --net-host` (the default sandbox hides port 9222).
 2. From ubuntuserver, tunnel to it and attach:
 
 ```bash
@@ -114,20 +114,24 @@ Playwright cannot download its own browser on CachyOS; point `CHROME` at the one
 ```bash
 CH=$(ls -d ~/.cache/ms-playwright/chromium-*/chrome-linux64/chrome | tail -1)
 systemd-run --user --collect --unit=f4x-zoom -E PATH="$PATH" -E CHROME="$CH" \
-  -E F4X_QUERY='?painted=1&blend=1' \
   systemd-inhibit --what=idle:sleep --why=zoom-bench \
   node $T/tools/gpu/zoom-out.mjs $T <label> /tmp/f4x-zoom 3
 ```
 
 - Run it under `systemd-run`: a process started over ssh dies with the ssh session.
 - `systemd-inhibit` keeps the session from idling or sleeping mid-run.
-- `F4X_QUERY='?painted=1&blend=1'` is the painted renderer, which `F4X_PAINTED=1 ./launch.sh`
-  opens; leave it out to measure the glyph renderer.
+- With no `F4X_QUERY` the probe measures what `./launch.sh` opens, which `readPaintedFlag` and
+  `readGroundBlendFlag` in the build's `src/lib/webgl/painted/flag.ts` decide: the painted renderer
+  with the ground blend where both default on. `-E F4X_QUERY='?painted=0'` measures the glyph
+  renderer there, and `?blend=0` the painted one without the blend.
+- A build whose `readPaintedFlag` is on only for `?painted=1`, such as `dev`, is glyph with no
+  query. Comparing one against a build that defaults on, give both
+  `-E F4X_QUERY='?painted=1&blend=1'`, which is painted with the blend on either.
 - The absolute bench, every pass on and with the GL draw off:
 
 ```bash
 systemd-run --user --collect --unit=f4x-frame-cost -E PATH="$PATH" -E CHROME="$CH" \
-  -E F4X_QUERY='?painted=1&blend=1' -E F4X_SKIP='none;gl;terrain;effects' \
+  -E F4X_SKIP='none;gl;terrain;effects' \
   systemd-inhibit --what=idle:sleep --why=frame-cost \
   node $T/tools/gpu/frame-cost.mjs $T <label> /tmp/f4x-frame-cost 8
 ```

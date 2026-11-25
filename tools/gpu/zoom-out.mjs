@@ -6,7 +6,7 @@ import { startFrameGaps, stopFrameGaps, summarizeGaps } from './frame-gaps.mjs';
 const [TREE, LABEL, OUT_DIR, ROUNDS = '3'] = process.argv.slice(2);
 const { page, cdp, log, tile, wheel, setPaused, finish } = await openGpuGame({
   tree: TREE, label: LABEL, outDir: OUT_DIR,
-  usage: 'usage: CHROME=<chromium binary> [F4X_QUERY=?painted=1&blend=1] node tools/gpu/zoom-out.mjs <app tree> <label> <out dir> [rounds]'
+  usage: 'usage: CHROME=<chromium binary> [F4X_QUERY=?painted=0] node tools/gpu/zoom-out.mjs <app tree> <label> <out dir> [rounds]'
 });
 const results = [];
 try {

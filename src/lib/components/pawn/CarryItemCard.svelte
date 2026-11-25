@@ -5,6 +5,7 @@
   import ItemStatTooltip from '$lib/components/UI/tooltip/ItemStatTooltip.svelte';
   import SpriteIcon from '$lib/components/UI/widget/SpriteIcon.svelte';
   import { qualityColor, qualityPrefix } from '$lib/game/core/rules/gear/itemQuality';
+  import SkinBar from '$lib/components/UI/widget/SkinBar.svelte';
 
   let {
     def,
@@ -57,6 +58,7 @@
   };
   const hide = () => (tip = null);
 
+  let weight = $derived(Math.round((def.weightKg ?? 0) * (qty ?? 1) * 10) / 10);
   let durPct = $derived(
     durability != null && maxDurability
       ? Math.max(0, Math.min(100, (durability / maxDurability) * 100))
@@ -82,48 +84,49 @@
   );
 </script>
 
-<div class="card" class:pinned>
-  {#if onPin}
-    <button class="corner pin" class:active={pinned} title={pinTitle} onclick={onPin}
-      >{pinned ? '★' : '☆'}</button
-    >
-  {/if}
-  <button class="corner drop" title={dropTitle} onclick={onDrop}>↓</button>
-  {#if onConfigure}
-    <button class="corner cfg" title="What this may be filled with" onclick={onConfigure}>⚙</button>
-  {/if}
-
+<div class="row" class:pinned>
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <span class="name" onmouseenter={show} onmousemove={move} onmouseleave={hide}>
-    {#if def.charSpans}
-      <SpriteIcon charSpans={def.charSpans} tint={qColor ?? def.color ?? null} px={16} />
-    {/if}
-    <span class="name-text" class:famed style={famed ? 'color:var(--accent-hi, #ffd24a)' : ''}
-      >{#if hasPrefix}<span class="rarity" style="color:{qColor}">{prefix}</span
-        >&nbsp;{/if}{baseName}</span
+    <SpriteIcon item={def.id} tint={qColor} px={16} />
+    <span class="name-text" class:famed
+      >{#if hasPrefix}<span style:color={qColor}>{prefix}</span>&nbsp;{/if}{baseName}</span
     >
   </span>
-
-  {#if famed}
-    <div class="famed-id">
-      {#if famedHistory}<div class="famed-hist">{famedHistory}</div>{/if}
-      {#if enchantLabels}<div class="famed-ench">✦ {enchantLabels}</div>{/if}
+  <b>{qty != null ? `×${qty}` : ''}</b>
+  <em>{weight}</em>
+  <span class="acts">
+    {#if onConfigure}
+      <button title="What this may be filled with" onclick={onConfigure}>⚙</button>
+    {/if}
+    {#if onPin}
+      <button class:on={pinned} title={pinTitle} onclick={onPin}>{pinned ? '★' : '☆'}</button>
+    {/if}
+    <button title={dropTitle} onclick={onDrop}>↓</button>
+  </span>
+  {#if famed || durPct != null || (fillPct != null && container)}
+    <div class="extra">
+      {#if famed}
+        {#if famedHistory}<p>{famedHistory}</p>{/if}
+        {#if enchantLabels}<p class="ench">✦ {enchantLabels}</p>{/if}
+      {/if}
+      {#if durPct != null}
+        <SkinBar
+          value={durPct / 100}
+          ramp={durPct < 30 ? 'ember' : 'leaf'}
+          thin
+          title="{durability}/{maxDurability}"
+        />
+      {/if}
+      {#if fillPct != null && container}
+        <SkinBar
+          value={fillPct / 100}
+          ramp="water"
+          thin
+          title="{fillTitle} — {usedL}/{container.capacityL} L"
+        />
+      {/if}
     </div>
   {/if}
-
-  <div class="meta">
-    {#if qty != null}<span class="qty">×{qty}</span>{/if}
-    {#if durPct != null}
-      <div class="dur-bar" title="{durability}/{maxDurability}">
-        <div class="dur-fill" class:low={durPct < 30} style="width:{durPct}%"></div>
-      </div>
-    {/if}
-    {#if fillPct != null && container}
-      <div class="fill-bar" title="{fillTitle} — {usedL}/{container.capacityL} L">
-        <div class="fill-fill" style="width:{fillPct}%"></div>
-      </div>
-    {/if}
-  </div>
 </div>
 
 {#if tip}
@@ -131,122 +134,67 @@
 {/if}
 
 <style>
-  .card {
-    position: relative;
-    border: 1px solid var(--border);
-    background: var(--bg-panel);
-    padding: 4px 6px 5px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-height: 42px;
-    overflow: hidden;
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 40px 44px 46px;
+    gap: 6px;
+    align-items: center;
+    min-height: 18px;
   }
-  .card.pinned {
-    border-color: var(--accent-hi, #ffd24a);
-  }
-
   .name {
     display: flex;
     align-items: center;
-    gap: 4px;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
-    color: var(--text, #ccc);
-    text-transform: uppercase;
-    line-height: 1.2;
-    padding-right: 26px;
+    gap: 5px;
+    min-width: 0;
     cursor: help;
   }
-  .name:hover {
-    color: var(--accent, #0f0);
+  .name-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .card.pinned .name {
-    color: var(--accent-hi, #ffd24a);
+  .famed,
+  .pinned .name-text {
+    color: var(--accent-hi);
   }
-  .name-text.famed {
-    font-weight: bold;
-    letter-spacing: 0.02em;
+  b,
+  em {
+    font-weight: normal;
+    font-style: normal;
+    text-align: right;
   }
-
-  .famed-id {
-    font-family: var(--font-mono, monospace);
-    font-size: 0.62rem;
-    line-height: 1.25;
-    color: var(--text-dim, #888);
+  em {
+    color: var(--text-dim);
   }
-  .famed-hist {
-    font-style: italic;
-  }
-  .famed-ench {
-    color: var(--accent-hi, #ffd24a);
-  }
-
-  .meta {
+  .acts {
     display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: auto;
+    justify-content: flex-end;
+    gap: 2px;
   }
-  .qty {
-    font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
-    color: var(--accent, #0f0);
-    font-weight: bold;
-  }
-  .dur-bar {
-    flex: 1;
-    height: 3px;
-    background: var(--bg-active, #1a1f28);
-  }
-  .dur-fill {
-    height: 100%;
-    background: var(--pos, #4caf50);
-  }
-  .dur-fill.low {
-    background: var(--neg, #e05a5a);
-  }
-  .fill-bar {
-    flex: 1;
-    height: 3px;
-    background: var(--bg-active, #1a1f28);
-  }
-  .fill-fill {
-    height: 100%;
-    background: #4fc3f7;
-  }
-
-  .corner {
-    position: absolute;
-    top: 2px;
-    border: none;
-    background: transparent;
+  .acts button {
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--text-muted);
     cursor: pointer;
-    font-family: inherit;
-    font-size: 0.7rem;
-    line-height: 1;
-    padding: 1px 2px;
-    color: var(--text-dim, #666);
   }
-  .pin {
-    right: 16px;
+  .acts button:hover,
+  .acts button.on {
+    color: var(--accent-hi);
   }
-  .pin:hover {
-    color: var(--text, #ccc);
+  .extra {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-left: 21px;
   }
-  .pin.active {
-    color: var(--accent-hi, #ffd24a);
+  .extra p {
+    margin: 0;
+    color: var(--text-dim);
   }
-  .drop {
-    right: 2px;
-  }
-  .drop:hover {
-    color: var(--neg, #e05a5a);
-  }
-  .cfg {
-    right: 30px;
-  }
-  .cfg:hover {
-    color: var(--accent-hi, #ffd24a);
+  .extra .ench {
+    color: var(--accent-hi);
   }
 </style>

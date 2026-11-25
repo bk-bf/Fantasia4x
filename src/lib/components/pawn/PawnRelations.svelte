@@ -16,7 +16,8 @@
     relKey
   } from '$lib/game/core/rules/social/social';
   import { dayIndexForTurn } from '$lib/game/services/EnvironmentService';
-  import StatBar from '../UI/widget/StatBar.svelte';
+  import SkinBar from '../UI/widget/SkinBar.svelte';
+  import Well from '../UI/widget/Well.svelte';
   import RelationBreakdown from './RelationBreakdown.svelte';
 
   export let pawn: Pawn;
@@ -42,12 +43,12 @@
     ex: 'Parted ways'
   };
   const STAGE_COLOR: Record<string, string> = {
-    enemies: '#cc3322',
-    rivals: '#ee8844',
-    strangers: '#888888',
-    acquaintances: '#a0b060',
-    friends: '#68a030',
-    best_friends: '#44cc66'
+    enemies: 'var(--neg)',
+    rivals: 'var(--ember)',
+    strangers: 'var(--text-muted)',
+    acquaintances: 'var(--text)',
+    friends: 'var(--pos)',
+    best_friends: 'var(--pos)'
   };
 
   $: living = new Map((gameState.pawns ?? []).map((p) => [p.id, p]));
@@ -77,7 +78,7 @@
       stale: away ? isKinStale(sinceDays) : false,
       seen: sinceDays,
       stage: rel ? STAGE_LABEL[rel.stage] : null,
-      stageColor: rel ? (STAGE_COLOR[rel.stage] ?? '#888') : '#888'
+      stageColor: rel ? (STAGE_COLOR[rel.stage] ?? 'var(--text-muted)') : 'var(--text-muted)'
     };
   });
 
@@ -91,204 +92,174 @@
     .sort((a, b) => Math.abs(b.r.score) - Math.abs(a.r.score));
 </script>
 
-<div class="relations">
-  <div class="section">
-    <div class="hdr">FAMILY</div>
-    {#if kinRows.length > 0}
-      {#each kinRows as row}
-        <div class="kin-row" class:stale={row.stale}>
-          <span class="kin-kind">{row.kind}</span>
-          {#if row.target}
-            <button class="kin-name link" on:click={() => row.target && onSelect(row.target)}
-              >{row.name}</button
-            >
-          {:else}
-            <span class="kin-name gone">{row.name}</span>
-          {/if}
-          {#if row.stage}
-            <span class="kin-stage" style:color={row.stageColor}>{row.stage}</span>
-          {/if}
-          {#if row.away}
-            <span class="kin-where">
-              away in {row.home}{#if row.stale}
-                · <span class="as-known"
-                  >{row.seen == null ? 'as you last knew' : 'long unseen'}</span
-                >{:else}
-                · seen recently{/if}
-            </span>
-          {/if}
-        </div>
-      {/each}
+<div class="rel">
+  <Well title="Family" scroll>
+    {#each kinRows as row}
+      <div class="fam" class:stale={row.stale} class:dead={!row.target && !row.away}>
+        <em>{row.kind}</em>
+        {#if row.target}
+          <button class="link" onclick={() => row.target && onSelect(row.target)}>{row.name}</button
+          >
+        {:else}
+          <b>{row.name}</b>
+        {/if}
+        {#if row.stage}<span style:color={row.stageColor}>{row.stage}</span>{/if}
+        {#if row.away}
+          <p>
+            away in {row.home}{#if row.stale}
+              · {row.seen == null ? 'as you last knew' : 'long unseen'}{:else}
+              · seen recently{/if}
+          </p>
+        {/if}
+      </div>
     {:else}
-      <div class="empty">no known kin</div>
-    {/if}
-  </div>
+      <p class="none">No known kin.</p>
+    {/each}
+  </Well>
 
-  <div class="section">
-    <div class="hdr">RELATIONSHIPS</div>
+  <Well title="Bonds" scroll>
     {#if rels.length > 0}
-      {#each rels as { r, other } (r.pawnA + r.pawnB)}
-        {@const key = relKey(r.pawnA, r.pawnB)}
-        {@const isOpen = expanded.has(key)}
-
-        <div
-          class="rel-row clickable"
-          class:open={isOpen}
-          role="button"
-          tabindex="0"
-          title="Click to show what has passed between them"
-          on:click={() => toggle(key)}
-          on:keydown={(e) =>
-            (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), toggle(key))}
-        >
-          <div class="rel-head">
-            <span class="disclose" class:open={isOpen}>▸</span>
-            <button class="rel-name link" on:click|stopPropagation={() => onSelect(other)}
-              >{other.name}</button
+      <div class="bonds">
+        {#each rels as { r, other } (r.pawnA + r.pawnB)}
+          {@const key = relKey(r.pawnA, r.pawnB)}
+          {@const isOpen = expanded.has(key)}
+          <div class="bond" class:on={isOpen}>
+            <div
+              class="bh"
+              role="button"
+              tabindex="0"
+              title="Click to show what has passed between them"
+              onclick={() => toggle(key)}
+              onkeydown={(e) =>
+                (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), toggle(key))}
             >
-            <span class="stage" style:color={STAGE_COLOR[r.stage] ?? '#888'}
-              >{STAGE_LABEL[r.stage]}</span
-            >
-            {#if r.romance}
-              <span class="romance">♥ {ROMANCE_LABEL[r.romance.stage]}</span>
-            {/if}
-          </div>
-          <StatBar
-            label=""
-            value={r.score + 100}
-            max={200}
-            color={STAGE_COLOR[r.stage] ?? '#888888'}
-            valueText={`${r.score > 0 ? '+' : ''}${Math.round(r.score)}`}
-            width={12}
-          />
-          {#if r.tags.length > 0}
-            <div class="tags">
-              {#each r.tags as tag}
-                <span class="tag">{TAG_LABEL[tag] ?? ''}</span>
-              {/each}
+              <i>{isOpen ? '▾' : '▸'}</i>
+              <button
+                class="link"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  onSelect(other);
+                }}>{other.name}</button
+              >
+              <span style:color={STAGE_COLOR[r.stage] ?? 'var(--text-muted)'}
+                >{STAGE_LABEL[r.stage]}</span
+              >
+              {#if r.romance}<span class="rom">♥ {ROMANCE_LABEL[r.romance.stage]}</span>{/if}
             </div>
-          {/if}
-          {#if isOpen}
-            <RelationBreakdown rel={r} />
-          {/if}
-        </div>
-      {/each}
+            <div class="meter">
+              <SkinBar value={(r.score + 100) / 200} ramp={r.score < 0 ? 'ember' : 'leaf'} />
+              <span class:neg={r.score < 0} class:pos={r.score > 0}
+                >{r.score > 0 ? '+' : ''}{Math.round(r.score)}</span
+              >
+            </div>
+            {#if r.tags.length > 0}
+              <div class="tags">
+                {#each r.tags as tag}<span class="pill">{TAG_LABEL[tag] ?? ''}</span>{/each}
+              </div>
+            {/if}
+            {#if isOpen}<RelationBreakdown rel={r} />{/if}
+          </div>
+        {/each}
+      </div>
     {:else}
-      <div class="empty">no bonds formed yet</div>
+      <p class="none">No bonds formed yet.</p>
     {/if}
-  </div>
+  </Well>
 </div>
 
 <style>
-  .relations {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    font-family: var(--font-mono);
-    font-size: 12px;
+  .rel {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-template-rows: 248px;
+    gap: 6px;
   }
-  .section {
-    border: 1px solid var(--border);
-    padding: 8px;
-  }
-  .hdr {
-    color: var(--accent-hi);
-    font-weight: bold;
+  .fam {
     margin-bottom: 6px;
   }
-  .kin-row {
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
-    padding: 1px 0;
-    flex-wrap: wrap;
+  .fam em {
+    display: block;
+    font-style: normal;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
   }
-  .kin-row.stale {
-    opacity: 0.55;
+  .fam b {
+    font-weight: normal;
+    margin-right: 8px;
   }
-  .kin-kind {
-    color: var(--text-dim, #888);
-    min-width: 64px;
+  .fam.dead b,
+  .fam.stale b,
+  .fam.stale p {
+    color: var(--text-muted);
   }
-  .kin-stage {
-    font-size: 11px;
-  }
-  .kin-where {
-    font-size: 11px;
-    color: var(--text-dim, #888);
-    font-style: italic;
-  }
-  .as-known {
-    color: #b08040;
+  .fam p,
+  .none {
+    margin: 0;
+    color: var(--text-dim);
   }
   .link {
-    background: none;
-    border: none;
     padding: 0;
+    margin-right: 8px;
+    border: 0;
+    background: none;
     font: inherit;
     color: var(--accent-hi);
-    cursor: pointer;
-    text-align: left;
-  }
-  .link:hover {
-    text-decoration: underline;
-  }
-  .gone {
-    color: var(--text-dim, #777);
-    font-style: italic;
-  }
-  .rel-row {
-    padding: 4px 6px;
-    border-bottom: 1px solid var(--border);
-    border-radius: 3px;
-  }
-  .rel-row.clickable {
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
     cursor: pointer;
   }
-  .rel-row.clickable:hover {
-    background: rgba(255, 255, 255, 0.04);
+  .bonds {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 18px;
   }
-  .rel-row.open {
-    background: rgba(255, 255, 255, 0.03);
+  .bond.on {
+    grid-row: span 3;
   }
-  .rel-row:last-child {
-    border-bottom: none;
-  }
-  .rel-head {
+  .bh {
     display: flex;
     gap: 8px;
-    align-items: baseline;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: pointer;
   }
-  .disclose {
-    color: var(--text-dim, #888);
-    font-size: 10px;
-    line-height: 1;
-    transition: transform 0.1s ease;
-    display: inline-block;
+  .bh .link {
+    margin: 0;
   }
-  .disclose.open {
-    transform: rotate(90deg);
-    color: var(--accent-hi);
+  .bh i {
+    width: 9px;
+    font-style: normal;
+    color: var(--text-muted);
   }
-  .stage {
-    font-size: 11px;
+  .rom {
+    margin-left: auto;
+    color: var(--neg);
   }
-  .romance {
-    color: #ee6699;
-    font-size: 11px;
+  .meter {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 18px;
+  }
+  .meter span {
+    width: 40px;
+    text-align: right;
+  }
+  .pos {
+    color: var(--pos);
+  }
+  .neg {
+    color: var(--neg);
   }
   .tags {
     display: flex;
-    gap: 6px;
-    margin-top: 1px;
+    flex-wrap: wrap;
+    gap: 3px;
   }
-  .tag {
-    font-size: 10px;
-    font-style: italic;
-    color: var(--text-dim, #999);
-  }
-  .empty {
-    color: var(--text-dim, #777);
-    font-style: italic;
+  .pill {
+    padding: 0 5px;
+    box-shadow: inset 0 0 0 1px var(--text-muted);
   }
 </style>

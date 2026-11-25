@@ -1,20 +1,21 @@
 import type { GameGrid } from './game-grid.js';
-import type { TileData, Viewport } from './tile-types.js';
+import { withOverlays, type TileData, type Viewport } from './tile-types.js';
 import type { CharacterRenderer } from './character-renderer.js';
 import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
 import { checkWebGLError } from './utils.js';
-import { paintedQuad } from './painted/manifest.js';
+import { tileQuad } from './drawnSprites.js';
+import { tuftTiles } from './painted/tufts.js';
 
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
 const ZERO_LIGHT: [number, number, number] = [0, 0, 0];
 const NO_OUTLINE = [0, 0, 0];
 const PAINTED_UV_SHIFT = 2;
-const paintedCorners = [0, 0, 0, 0];
+const corners = [0, 0, 0, 0];
 const GLYPH_VERTEX_FLOATS = 24;
-const ROW_VERTEX_FLOATS = 25;
-export const ALPHA_CUT = 0.5;
-export const SHADOW_FLOOR = 0.5 / 255;
+const ROW_VERTEX_FLOATS = 31;
+const NO_VEIN = { x: -1, y: -1, near: 0 };
+export { ALPHA_CUT } from './drawnSprites.js';
 
 export interface GridRenderOptions {
   tileWidth: number;
@@ -78,6 +79,8 @@ export class GridRenderer {
   private snowChunks: Map<string, TerrainChunk> = new Map();
   private warmState = new Map<Map<string, TerrainChunk>, WarmState>();
   chunksRebuiltLastRender = 0;
+  skipBlendedGround = false;
+  skipWaterIce = false;
   private chunkDirty = new Map<string, number>();
   private snowChunkDirty = new Map<string, number>();
   private chunkDirtyCounter = 0;
@@ -140,9 +143,9 @@ export class GridRenderer {
       height: options.viewportHeight
     };
 
-    const visibleTiles = options.renderAllTiles
-      ? grid.getAllTiles()
-      : grid.getVisibleTiles(viewport);
+    const visibleTiles = withOverlays(
+      options.renderAllTiles ? grid.getAllTiles() : grid.getVisibleTiles(viewport)
+    );
 
     if (visibleTiles.length > 0) {
       const vertexData = this.generateBatchVertexData(visibleTiles, options);
@@ -220,7 +223,7 @@ export class GridRenderer {
       }
     }
 
-    if (options.rowPasses) this.drawShadowTexels(() => this.redrawChunks());
+    if (options.rowPasses) this.drawShadows(() => this.redrawChunks());
     this.warmOneChunk(grid, options, cacheVersion, lightVersion, chunks, dirtyMap);
     this.currentVertexCount = drawnVerts;
     return drawnVerts / 6;
@@ -274,7 +277,13 @@ export class GridRenderer {
     const CS = GridRenderer.CHUNK_SIZE;
     const key = `${cx}:${cy}`;
     let chunk = chunks.get(key);
-    const tiles = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
+    const region = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
+    const tiles =
+      this.skipBlendedGround && chunks === this.terrainChunks
+        ? region.flatMap((t) => (t.ground ? tuftTiles(t) : [t]))
+        : this.skipWaterIce && chunks === this.snowChunks
+          ? region.filter((t) => t.waterIce === undefined)
+          : region;
     if (!chunk) {
       chunk = {
         vao: null,
@@ -357,15 +366,15 @@ export class GridRenderer {
     gl.bindVertexArray(null);
   }
 
-  private drawShadowTexels(draw: () => void): void {
+  private drawShadows(draw: () => void): void {
     const gl = this.gl;
-    gl.depthMask(false);
-    this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', SHADOW_FLOOR);
-    this.shaderManager.setUniform('tileRenderer', 'u_alphaCeil', ALPHA_CUT);
+    gl.depthFunc(gl.LESS);
+    gl.blendFunc(gl.ZERO, gl.SRC_COLOR);
+    this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 1);
     draw();
-    this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', ALPHA_CUT);
-    this.shaderManager.setUniform('tileRenderer', 'u_alphaCeil', 0);
-    gl.depthMask(true);
+    this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 0);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthFunc(gl.LEQUAL);
   }
 
   private uploadAndDraw(vertexData: Float32Array, rowPasses = false): void {
@@ -389,7 +398,7 @@ export class GridRenderer {
 
     const vertexCount = vertexData.length / this.vertexFloats;
     gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
-    if (rowPasses) this.drawShadowTexels(() => gl.drawArrays(gl.TRIANGLES, 0, vertexCount));
+    if (rowPasses) this.drawShadows(() => gl.drawArrays(gl.TRIANGLES, 0, vertexCount));
 
     gl.bindVertexArray(null);
 
@@ -419,22 +428,10 @@ export class GridRenderer {
         }
       }
 
-      const screenX = tile.position.x * options.tileWidth;
-      const screenY = tile.position.y * options.tileHeight;
-
-      const offsetX = tile.animationOffset?.x || 0;
       const offsetY = tile.animationOffset?.y || 0;
-
-      const scale = tile.scale && tile.scale > 0 ? tile.scale : 1;
-      const tileW = options.tileWidth;
       const tileH = options.tileHeight;
-      const drawW = tileW * scale;
-      const drawH = tileH * scale;
-      let x1 = screenX + offsetX - (drawW - tileW) / 2;
-      let y1 =
-        scale >= 1 ? screenY + offsetY - (drawH - tileH) : screenY + offsetY + (tileH - drawH) / 2;
-      let x2 = x1 + drawW;
-      let y2 = y1 + drawH;
+      tileQuad(tile, options.tileWidth, tileH, corners);
+      const [x1, y1, x2, y2] = corners;
 
       let u1 = charInfo ? charInfo.x / this.fontAtlas.atlasWidth : 0;
       let v1 = charInfo ? charInfo.y / this.fontAtlas.atlasHeight : 0;
@@ -464,21 +461,6 @@ export class GridRenderer {
 
       const painted = tile.painted;
       if (painted) {
-        paintedQuad(
-          painted,
-          tile.position.x,
-          tile.position.y,
-          tileW,
-          offsetX,
-          offsetY,
-          scale,
-          tile.rotation === 90 || tile.rotation === 270,
-          paintedCorners
-        );
-        x1 = paintedCorners[0];
-        y1 = paintedCorners[1];
-        x2 = paintedCorners[2];
-        y2 = paintedCorners[3];
         u1 = painted.u1;
         v1 = painted.v1;
         u2 = painted.u2;
@@ -700,11 +682,19 @@ export class GridRenderer {
       if (vertexFloats === GLYPH_VERTEX_FLOATS) out.set(charVertices, o);
       else {
         const row = tile.position.y + offsetY / tileH;
+        const vein = painted?.vein ?? NO_VEIN;
+        const sway = tile.rotation ? 0 : (painted?.sway ?? 0);
         for (let v = 0; v < 6; v++) {
           const at = o + v * ROW_VERTEX_FLOATS;
           for (let f = 0; f < GLYPH_VERTEX_FLOATS; f++)
             out[at + f] = charVertices[v * GLYPH_VERTEX_FLOATS + f];
           out[at + GLYPH_VERTEX_FLOATS] = row;
+          out[at + GLYPH_VERTEX_FLOATS + 1] = vein.x;
+          out[at + GLYPH_VERTEX_FLOATS + 2] = vein.y;
+          out[at + GLYPH_VERTEX_FLOATS + 3] = tile.position.x;
+          out[at + GLYPH_VERTEX_FLOATS + 4] = tile.position.y;
+          out[at + GLYPH_VERTEX_FLOATS + 5] = vein.near;
+          out[at + GLYPH_VERTEX_FLOATS + 6] = sway;
         }
       }
       o += FLOATS_PER_TILE;
@@ -741,7 +731,13 @@ export class GridRenderer {
       ['a_uvBounds', 4, 17],
       ['a_light', 3, 21]
     ];
-    if (this.vertexFloats === ROW_VERTEX_FLOATS) attribs.push(['a_row', 1, GLYPH_VERTEX_FLOATS]);
+    if (this.vertexFloats === ROW_VERTEX_FLOATS)
+      attribs.push(
+        ['a_row', 1, GLYPH_VERTEX_FLOATS],
+        ['a_vein', 4, GLYPH_VERTEX_FLOATS + 1],
+        ['a_veinNear', 1, GLYPH_VERTEX_FLOATS + 5],
+        ['a_sway', 1, GLYPH_VERTEX_FLOATS + 6]
+      );
     for (const [name, size, offset] of attribs) {
       const loc = this.shaderManager.getAttributeLocation('tileRenderer', name);
       if (loc >= 0) {

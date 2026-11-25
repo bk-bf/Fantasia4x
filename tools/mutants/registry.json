@@ -301,6 +301,20 @@
     "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
   },
   {
+    "id": "heal-every-tick",
+    "file": "src/lib/game/systems/PawnStateMachine.ts",
+    "find": "        !inMelee &&\n        state.turn % HEAL_INTERVAL_TICKS === thinkPhase(afterConditions.id) % HEAL_INTERVAL_TICKS\n",
+    "replace": "        !inMelee\n",
+    "tests": ["src/tests/game/systems/pawnTickGates.test.ts"]
+  },
+  {
+    "id": "heal-batch-one-tick-of-heal",
+    "file": "src/lib/game/systems/PawnStateMachine.ts",
+    "find": "const baseHeal = HEALING_CONFIG.baseHealPerTick * healRate * mult * ticks;",
+    "replace": "const baseHeal = HEALING_CONFIG.baseHealPerTick * healRate * mult;",
+    "tests": ["src/tests/game/systems/pawnTickGates.test.ts"]
+  },
+  {
     "id": "wounds-heal-ignores-splint",
     "file": "src/lib/game/core/defs/wounds.ts",
     "find": "const splintBoost = wd?.structural && boneHealFor ? boneHealFor(part.id) : 1;",
@@ -359,9 +373,16 @@
   {
     "id": "terrain-subterrain-no-parent-fallback",
     "file": "src/lib/game/core/defs/terrains.ts",
-    "find": "const range = def.biomes?.[biomeName] ?? (parent ? def.biomes?.[parent] : undefined);",
-    "replace": "const range = def.biomes?.[biomeName];",
+    "find": "ranges?.[biomeName] ?? (parent ? ranges?.[parent] : undefined);",
+    "replace": "ranges?.[biomeName];",
     "tests": ["src/tests/game/core/soilFertility.test.ts"]
+  },
+  {
+    "id": "terrain-subterrain-pools-ungated",
+    "file": "src/lib/game/core/defs/terrains.ts",
+    "find": "    if (within(pool, pools)) return id;\n",
+    "replace": "    return id;\n",
+    "tests": ["src/tests/game/world/bogPools.test.ts"]
   },
   {
     "id": "terrain-spawnable-allows-water",
@@ -905,7 +926,7 @@
   {
     "id": "lighting-unlit-fire-glows",
     "file": "src/lib/game/services/LightingService.ts",
-    "find": "  if (needsFuel && b.lit !== true) return null;\n",
+    "find": "  if (fireIsOut(def.maxFuel, b)) return null;\n",
     "replace": "",
     "tests": ["src/tests/game/services/buildingLight.test.ts"]
   },
@@ -2409,7 +2430,7 @@
   },
   {
     "id": "culture-medium-cut-200",
-    "file": "src/lib/game/core/gen/culture.ts",
+    "file": "src/lib/game/core/rules/body/size.ts",
     "find": "if (cm < 190) return 'medium';",
     "replace": "if (cm < 200) return 'medium';",
     "tests": ["src/tests/game/core/sizeFromHeight.test.ts"]
@@ -2515,8 +2536,8 @@
   {
     "id": "psm-heals-in-melee",
     "file": "src/lib/game/systems/PawnStateMachine.ts",
-    "find": "      if (!inMelee) {\n        const healed",
-    "replace": "      if (true) {\n        const healed",
+    "find": "        !inMelee &&\n        state.turn % HEAL_INTERVAL_TICKS",
+    "replace": "        state.turn % HEAL_INTERVAL_TICKS",
     "tests": ["src/tests/game/systems/pawnTickGates.test.ts"]
   },
   {
@@ -2641,7 +2662,7 @@
   {
     "id": "conditions-floaters-repeat-unchanged-stage",
     "file": "src/lib/game/core/rules/body/conditions.ts",
-    "find": "if (!stage || prevStages?.get(c.id) === stage.label) continue;",
+    "find": "if (!stage || was === stage.label) continue;",
     "replace": "if (!stage) continue;",
     "tests": ["src/tests/game/core/conditionDrivers.test.ts"]
   },

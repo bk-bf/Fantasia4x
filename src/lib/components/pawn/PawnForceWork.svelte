@@ -8,13 +8,12 @@
   const MODES = [
     {
       id: false,
-      label: 'OFF',
-      title:
-        'Normal — the pawn breaks off to eat, drink and rest when needs get pressing (default)'
+      label: 'Off',
+      title: 'Normal — the pawn breaks off to eat, drink and rest when needs get pressing (default)'
     },
     {
       id: true,
-      label: 'FORCE',
+      label: 'Force',
       title:
         'Neglect ALL needs and keep working — no eating, drinking or resting. Can collapse or starve the pawn; for emergencies only.',
       danger: true
@@ -32,4 +31,4 @@
   }
 </script>
 
-<SegmentedRow label="FORCE WORK" options={MODES} value={forced} onSelect={setForceWork} />
+<SegmentedRow label="Force work" options={MODES} value={forced} onSelect={setForceWork} />
