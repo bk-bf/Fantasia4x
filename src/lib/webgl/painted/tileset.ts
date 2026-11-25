@@ -10,7 +10,14 @@ import {
   type PaintedVariant
 } from './manifest.js';
 
-import { pawnLook, type PawnLookOf, type PawnLookPool } from './pawnLook.js';
+import {
+  assembledLook,
+  pawnFacing,
+  pawnLook,
+  type PawnLookOf,
+  type PawnLookPool,
+  type PawnMotion
+} from './pawnLook.js';
 
 export { PAINTED_TILES } from './flag.js';
 
@@ -76,9 +83,11 @@ export function paintedEntity(
 }
 
 export function paintedPawn(
-  pawn: PawnLookOf,
+  pawn: PawnLookOf & PawnMotion,
   pool: PawnLookPool
 ): PaintedVariant['entity'] | Record<string, never> {
+  const own = active && assembledLook(pawn, pawnFacing(pawn));
+  if (own) return own.entity;
   const look = active && pawnLook(active.map, pawn, pool);
   return (look && active?.sprites.get(look)?.entity) || NO_PAINT;
 }

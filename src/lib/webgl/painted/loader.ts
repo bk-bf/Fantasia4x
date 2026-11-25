@@ -11,6 +11,14 @@ import {
 import { setPaintedTileset } from './tileset.js';
 import { pawnLook, type PawnLookOf, type PawnLookPool } from './pawnLook.js';
 import { atlasTexels, type AtlasTexels } from '../drawnSprites.js';
+import {
+  PAWN_BAND_H,
+  bindPawnTexels,
+  readPawnBand,
+  resendPawnBand,
+  setPawnBand,
+  takePawnUploads
+} from './pawnBand.js';
 import { swayTable } from './wind.js';
 
 export const PAINTED_BASE_URL = '/tilesets/painted/';
@@ -37,6 +45,7 @@ export interface LoadedPaintedTileset {
   ground: LoadedGroundField | null;
   texels: () => AtlasTexels | null;
   cell: (x: number, y: number, w: number, h: number) => Uint8ClampedArray | null;
+  uploadPawns?: () => void;
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -52,7 +61,7 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-function readTexels(image: HTMLImageElement): () => AtlasTexels | null {
+function readTexels(image: HTMLImageElement, height: number): () => AtlasTexels | null {
   let texels: AtlasTexels | null | undefined;
   return () => {
     if (texels !== undefined) return texels;
@@ -62,13 +71,18 @@ function readTexels(image: HTMLImageElement): () => AtlasTexels | null {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx?.drawImage(image, 0, 0);
     const data = ctx?.getImageData(0, 0, canvas.width, canvas.height).data;
-    texels = data ? atlasTexels(data, canvas.width, canvas.height) : null;
+    const drawn = data ? atlasTexels(data, canvas.width, canvas.height) : null;
+    const kinds = drawn && new Uint8Array(drawn.w * height);
+    kinds?.set(drawn!.kinds);
+    texels = drawn && kinds ? { w: drawn.w, h: height, kinds } : null;
+    if (texels) bindPawnTexels(texels);
     return texels;
   };
 }
 
 function readCell(image: HTMLImageElement) {
   return (x: number, y: number, w: number, h: number): Uint8ClampedArray | null => {
+    if (y >= image.naturalHeight) return readPawnBand(x, y, w, h);
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
@@ -94,7 +108,11 @@ async function fetchSway(url: string): Promise<unknown> {
   }
 }
 
-function uploadAtlas(gl: WebGL2RenderingContext, image: TexImageSource): WebGLTexture {
+function uploadAtlas(
+  gl: WebGL2RenderingContext,
+  image: HTMLImageElement | ImageBitmap,
+  height?: number
+): WebGLTexture {
   const texture = gl.createTexture();
   if (!texture) throw new Error('could not create the painted atlas texture');
   gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -104,9 +122,31 @@ function uploadAtlas(gl: WebGL2RenderingContext, image: TexImageSource): WebGLTe
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  if (height === undefined)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  else {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, image.width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  }
   gl.bindTexture(gl.TEXTURE_2D, null);
   return texture;
+}
+
+function pawnUploader(gl: WebGL2RenderingContext, texture: WebGLTexture, light: WebGLTexture | null) {
+  return () => {
+    const uploads = takePawnUploads();
+    if (uploads.length === 0) return;
+    for (const [target, of] of [
+      [texture, 'px'],
+      [light, 'light']
+    ] as const) {
+      if (!target) continue;
+      gl.bindTexture(gl.TEXTURE_2D, target);
+      for (const { x, y, sprite } of uploads)
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, sprite.w, sprite.h, gl.RGBA, gl.UNSIGNED_BYTE, sprite[of]);
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  };
 }
 
 function unlitTexture(gl: WebGL2RenderingContext): WebGLTexture {
@@ -132,6 +172,7 @@ function unlitTexture(gl: WebGL2RenderingContext): WebGLTexture {
 
 interface PaintedSource {
   manifest: PaintedManifest;
+  atlasTop: number;
   tileset: PaintedTileset;
   image: HTMLImageElement;
   light: HTMLImageElement | null;
@@ -203,10 +244,10 @@ async function readGroundField(baseUrl: string, ground: PaintedGround | undefine
   }
 }
 
-async function readLight(baseUrl: string, manifest: PaintedManifest) {
+async function readLight(baseUrl: string, manifest: PaintedManifest, atlasTop: number) {
   try {
     const image = await loadImage(`${baseUrl}${LIGHT_IMAGE}`);
-    if (image.naturalWidth !== manifest.atlas.w || image.naturalHeight !== manifest.atlas.h)
+    if (image.naturalWidth !== manifest.atlas.w || image.naturalHeight !== atlasTop)
       throw new Error(`${LIGHT_IMAGE} is not the size of the atlas`);
     return image;
   } catch (err) {
@@ -229,18 +270,20 @@ async function readSource(baseUrl: string): Promise<PaintedSource | null> {
       throw new Error(
         `atlas.png is ${image.naturalWidth}x${image.naturalHeight}, the manifest says ${manifest.atlas.w}x${manifest.atlas.h}`
       );
+    const atlasTop = manifest.atlas.h;
+    manifest.atlas.h += PAWN_BAND_H;
     const wind = swayTable(sway, Object.keys(manifest.sprites));
     const { tileset, problems } = buildTileset(manifest, wind);
     if (problems.length > 0) console.warn(`[painted tiles] ${problems.join('; ')}`);
     const [top, light, water, ground] = await Promise.all([
       readTop(baseUrl, pieceTop(tileset)),
-      readLight(baseUrl, manifest),
+      readLight(baseUrl, manifest, atlasTop),
       readWater(baseUrl, manifest.water),
       readGroundField(baseUrl, tileset.ground)
     ]);
     if (!top) for (const [set, p] of tileset.pieces) if (p.top) tileset.pieces.delete(set);
     if (!ground) delete tileset.ground;
-    return { manifest, tileset, image, light, top, water, ground };
+    return { manifest, atlasTop, tileset, image, light, top, water, ground };
   } catch (err) {
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);
     return null;
@@ -256,7 +299,8 @@ export async function loadPaintedTileset(
   setPaintedTileset(null);
   if (!loaded) return null;
   try {
-    const texture = uploadAtlas(gl, loaded.image);
+    const height = loaded.manifest.atlas.h;
+    const texture = uploadAtlas(gl, loaded.image, height);
     const top = loaded.top
       ? {
           texture: uploadAtlas(gl, loaded.top.image),
@@ -265,21 +309,29 @@ export async function loadPaintedTileset(
           ramp: loaded.top.piece.ramp
         }
       : null;
-    const light = loaded.light ? uploadAtlas(gl, loaded.light) : unlitTexture(gl);
+    const light = loaded.light ? uploadAtlas(gl, loaded.light, height) : null;
     const water = loaded.water ? uploadAtlas(gl, loaded.water) : null;
     const ground = loaded.ground
       ? { field: uploadAtlas(gl, loaded.ground.field), far: uploadAtlas(gl, loaded.ground.far) }
       : null;
     setPaintedTileset(loaded.tileset);
+    setPawnBand({
+      tile: loaded.manifest.tile,
+      w: loaded.manifest.atlas.w,
+      top: loaded.atlasTop,
+      h: height
+    });
+    resendPawnBand();
     return {
       tileset: loaded.tileset,
       texture,
-      light,
+      light: light ?? unlitTexture(gl),
       top,
       water,
       ground,
-      texels: readTexels(loaded.image),
-      cell: readCell(loaded.image)
+      texels: readTexels(loaded.image, height),
+      cell: readCell(loaded.image),
+      uploadPawns: pawnUploader(gl, texture, light)
     };
   } catch (err) {
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);

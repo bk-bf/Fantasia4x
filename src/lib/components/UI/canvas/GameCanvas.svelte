@@ -53,6 +53,7 @@
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
   import { PAINTED_TILES, paintedEntity, paintedPawn } from '$lib/webgl/painted/tileset.js';
+  import { assemblePawns } from '$lib/webgl/painted/pawnBand.js';
   import { PAINTED_LIGHT } from '$lib/webgl/painted/flag.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { pathfinderService } from '$lib/game/services/PathfinderService.js';
@@ -2067,6 +2068,7 @@
 
   let _worldGenSeen = false;
   const unsubWorldGen = worldGenRev.subscribe(() => {
+    void assemblePawns(get(gameState)?.pawns ?? []);
     if (!_worldGenSeen) {
       _worldGenSeen = true;
       return;

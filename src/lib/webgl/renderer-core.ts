@@ -801,6 +801,7 @@ export class WebGLRendererCore {
 
   private bindPaintedAtlas(gl: WebGL2RenderingContext, painted: LoadedPaintedTileset): void {
     if (!this.shaderManager) return;
+    painted.uploadPawns?.();
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, painted.texture);
     gl.activeTexture(gl.TEXTURE0);
