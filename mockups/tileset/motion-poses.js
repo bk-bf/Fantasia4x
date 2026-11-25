@@ -126,7 +126,7 @@ const PAWN_ANIMS = {
   lugStand: { label: 'Standing with a low load', group: 'Carrying', dur: 2.2, n: 4, pose(u, c) { return carried('low', u, c, 0); } },
   bearStand: { label: 'Standing with game', group: 'Carrying', dur: 2.2, n: 4, pose(u, c) { return carried('game', u, c, 0); } },
   lift: { label: 'Picking up', group: 'Work', dur: 1.1, n: 7, once: 1, pose(u, c) {
-    const k = stooped(c), crouch = { by: 5 * k, lean: 4 * k, hr: [8, 8], hl: [9, 8], hd: [k, 1.5 * k], fl: [-3, 0], fr: [3, 0], reach: 1 }, end = carried(c.hold, 0, { ...c, face: 's' }, 0);
+    const k = stooped(c), crouch = { by: 5 * k, lean: 4 * k, hr: [8, 8], hl: [9, 8], hd: [k, k], fl: [-3, 0], fr: [3, 0], reach: 1 }, end = carried(c.hold, 0, { ...c, face: 's' }, 0);
     return lifted(u, { face: 's', item: null, carry: c.hold, hr: HANG, hl: HANG, by: 0, lean: 0, hd: [0, 0], fl: [0, 0], fr: [0, 0], cu: 0, down: 1, reach: 0 }, crouch, end);
   } },
   drop: { label: 'Setting down', group: 'Work', dur: 1.1, n: 7, once: 1, pose(u, c) { return PAWN_ANIMS.lift.pose(1 - u, c); } },

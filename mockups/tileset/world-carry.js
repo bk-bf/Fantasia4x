@@ -7,9 +7,9 @@ const HAUL = (() => {
   const BULK_OF_ITEM = {};
   const HOLDS = ['hip', 'chest', 'low', 'shoulder', 'game', 'drape'];
   const HEAVY_HOLD = { logs: 'shoulder', planks: 'shoulder', body: 'drape', meat: 'game' };
-  const HOLD_OF_BULK = { light: () => 'hip', bulky: () => 'chest', heavy: storage => HEAVY_HOLD[storage] || 'low' }, IN_HAND = ['hip', 'chest', 'low'], FITS = { wide: 16, tall: 13 };
+  const HOLD_OF_BULK = { light: () => 'hip', bulky: () => 'chest', heavy: storage => HEAVY_HOLD[storage] || 'low' }, IN_HAND = ['hip', 'chest', 'low'], FITS = { wide: 16, tall: 13 }, SHOULDERED_MOST = { kg: 45, hangs: 19 };
   const LIMP = { pile: ['meat', 'hides'], long: [], worn: [] };
-  const SAG = { hip: 0, chest: 2, low: 2, shoulder: 0, game: 4, drape: 0 };
+  const SAG = { hip: 0, chest: 2, low: 2, shoulder: 0, game: 4, drape: 0, draped: 10 };
   const ON_SHOULDER = ['shoulder', 'game', 'drape'];
   const FUSED = ['shoulder'];
   const END_SOURCES = [['map-carry-toward', 'map-carry-away'], ['map-carry-end', 'map-carry-end']];
@@ -40,7 +40,7 @@ const HAUL = (() => {
     const has = v => DBX.byId.has('item/' + o.id + '/' + v);
     const [toward, away] = END_SOURCES.find(pair => has(pair[0])) || [];
     if (k.long) return { side: 'map-lie', upright: 'map-lean', headUp: PROPS.headUp(k.long, o.id) };
-    if (o.sub === 'Carcass') return { side: '0', toward, away };
+    if (o.sub === 'Carcass') return { side: has('map-carry-draped') ? 'map-carry-draped' : '0', toward, away, draped: has('map-carry-draped') };
     if (k.pile && PROPS.TURNED.includes(k.pile)) return { side: 'map-carry-end', toward: 'map-carry', away: 'map-carry', turned: true };
     if (k.pile) return { side: PROPS.CARRIED.includes(k.pile) ? 'map-carry' : 'map-pile-1', toward, away };
     return { side: WORN_SOURCES.find(has), toward, away };
@@ -51,8 +51,9 @@ const HAUL = (() => {
   }
   function of(o) {
     const k = RULES.classify(o), bulk = bulkOf(o), family = familyOf(k), storage = storageOf(k);
-    const source = sourceOf(o, k);
-    return { id: o.id, name: o.name, bulk, hold: o.sub === 'Carcass' ? 'game' : HOLD_OF_BULK[bulk](storage), storage, family, source, limp: LIMP[family].includes(storage), stance: stanceOf(o, k) };
+    const source = sourceOf(o, k), hold = HOLD_OF_BULK[bulk](storage), slung = hold === 'game' && source.draped ? DBX.built(DBX.byId.get('item/' + o.id + '/map-carry-draped')) : null;
+    const tooLarge = hold === 'game' && ((o.raw.weightKg || 0) > SHOULDERED_MOST.kg || (slung && slung.hangs > SHOULDERED_MOST.hangs));
+    return { id: o.id, name: o.name, bulk, hold, tooLarge, storage, family, source, limp: LIMP[family].includes(storage), stance: stanceOf(o, k) };
   }
 
   const CROPS = new Map();
@@ -65,6 +66,7 @@ const HAUL = (() => {
     const s = new Spr(x1 - x0 + 1, y1 - y0 + 1, 0, 0);
     for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) { const i = (y0 + y) * src.w + x0 + x; s.c[y * s.w + x] = src.c[i]; s.e[y * s.w + x] = src.e[i]; }
     if (src.hold) s.hold = [src.hold[0] - x0, src.hold[1] - y0];
+    if (src.grasp) s.grasp = [src.grasp[0] - x0, src.grasp[1] - y0];
     CROPS.set(key, s);
     return s;
   }
@@ -124,7 +126,10 @@ const HAUL = (() => {
       Object.assign(out, { key: out.key + (headDown ? '/upside' : '') + '/' + rows, upside: headDown, rows, grip: shaftAt(spr, held, headDown) });
     }
     if (FUSED.includes(hold) && face === 's') out.fused = true;
+    if (src.draped && hold === 'game') out.draped = true;
     if (hold === 'game' && face === 's' && !spr.hold) Object.assign(out, slung(spr));
+    if (spr.grasp) out.hand = spr.grasp;
+    if (src.draped && face === 's' && hold === 'game') out.sag = SAG.draped;
     if (hold === 'hip' && face === 's' && load.family === 'long' && !spr.hold) { const x = Math.round(spr.w * (POLES.includes(load.storage) ? HANDLE.pole : HANDLE.haft)); out.grip = hiltAt(spr, x); }
     return out;
   }

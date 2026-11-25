@@ -21,7 +21,7 @@
   const CARCASS_FOLK = { goblin: 'goblin', orc_reaver: 'orc', gnoll_marauder: 'gnoll', kobold_skulker: 'kobold', pawn: 'human' };
   function carcassForms(o) {
     const creature = o.id.replace(/_carcass$/, ''), beast = CARCASS_RIG[creature], race = CARCASS_FOLK[creature];
-    if (beast) return [['map-carry-toward', () => quadSlung(beast, false)], ['map-carry-away', () => quadSlung(beast, true)]];
+    if (beast) return [['map-carry-draped', () => quadDraped(beast)], ['map-carry-toward', () => quadDraped(beast, 'front')], ['map-carry-away', () => quadDraped(beast, 'hind')]];
     if (race) return [['map-carry-toward', () => rigPawnSlung({ race }, 'f')], ['map-carry-away', () => rigPawnSlung({ race }, 'b')]];
     return [['map-carry-end', () => { const icon = X.bake(X.byId.get('item/' + o.id + '/0')); return PROPS.carriedEnd('meat', { a: PROPS.rampOf(toneOf(icon)) }, icon.h); }]];
   }

@@ -30,7 +30,8 @@ const MOTION_LOAD = (() => {
   function init(objects) {
     for (const o of objects) if (o.cat === 'item' && DBX.of('item', o.id).length) LOADS.set(o.id, HAUL.of(o));
   }
-  const all = () => [...LOADS.values()];
+  const all = () => [...LOADS.values()].filter(l => !l.tooLarge);
+  const tooLarge = () => [...LOADS.values()].filter(l => l.tooLarge);
   function byStorage(pick) {
     const groups = new Map();
     for (const l of all().filter(pick)) { if (!groups.has(l.storage)) groups.set(l.storage, []); groups.get(l.storage).push(l); }
@@ -44,5 +45,5 @@ const MOTION_LOAD = (() => {
     return [...new Set(out)];
   }
   const tally = () => HAUL.tally(all());
-  return { put, init, get: id => LOADS.get(id), picker, dozen, tally, NOTES };
+  return { put, init, get: id => LOADS.get(id), picker, dozen, tally, tooLarge, NOTES };
 })();

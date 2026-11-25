@@ -149,6 +149,28 @@ function quadSlung(kind, back) {
   s.hold = [QG.CX, QG.GY - dangle + 1];
   return s;
 }
+const DRAPED = { legs: 3, held: 5, across: 12, hangs: 8 };
+function quadLimp(kind) {
+  const o = BEASTS[kind].o, whole = rigQuad(kind, { by: o.leg - DRAPED.legs, head: [3, Math.min(o.Hb * 1.7, DRAPED.hangs)], blink: 1, ear: -1, tail: { a: 40 } });
+  let x0 = whole.w, y0 = whole.h, x1 = -1, y1 = -1;
+  for (let y = 0; y < whole.h; y++) for (let x = 0; x < whole.w; x++) if (whole.c[y * whole.w + x]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const s = new Spr(x1 - x0 + 1, y1 - y0 + 1, 0, 0);
+  for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) { s.c[y * s.w + x] = whole.c[(y0 + y) * whole.w + x0 + x]; s.e[y * s.w + x] = whole.e[(y0 + y) * whole.w + x0 + x]; }
+  return s;
+}
+function quadDraped(kind, half) {
+  const limp = quadLimp(kind), mid = limp.w >> 1;
+  const under = x => { let y = limp.h - 1; while (y > 0 && !limp.c[y * limp.w + x]) y--; return y; }, over = x => { let y = 0; while (y < limp.h - 1 && !limp.c[y * limp.w + x]) y++; return y; };
+  const paw = Math.min(limp.w - 1, mid + DRAPED.held), spine = (over(mid) + under(mid)) >> 1;
+  if (!half) { limp.hold = [mid, under(mid)]; limp.grasp = [paw, under(paw)]; limp.hangs = (limp.w - DRAPED.across) / 2; return limp; }
+  const front = half === 'front', long = front ? limp.w - mid : mid, s = new Spr(limp.h, long, 0, 0), across = y => front ? y : limp.h - 1 - y;
+  for (let d = 0; d < long; d++) for (let y = 0; y < limp.h; y++) {
+    const q = y * limp.w + (front ? mid + d : mid - 1 - d), at = d * s.w + across(y);
+    s.c[at] = limp.c[q]; s.e[at] = limp.e[q];
+  }
+  s.hold = [across(spine), DRAPED.across >> 1]; s.grasp = [across(under(paw)), DRAPED.across];
+  return s;
+}
 function rigQuadFB(kind, p, back) {
   p = p || {};
   const o = BEASTS[kind].o, X = FBX[kind] || {}, s = new Spr(QG.W, QG.H, QG.CX, QG.GY), gy = QG.GY, cx = QG.CX, L = o.L, Hb = o.Hb, fur = o.fur, n = fur.length - 1, bo = furOpt(o), hr = o.head;
