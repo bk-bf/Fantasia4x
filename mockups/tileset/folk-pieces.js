@@ -78,9 +78,6 @@ const FOLK_PIECES = (() => {
   for (const k of Object.keys(BEARDS)) if (k !== 'none') add('Beard', 'beard_' + k, cap(k), inColours(beardSprite(k)), {
     odds: pct(BEARDS[k], sum(BEARDS)) + ' of men', seen: seen(x => x.look.beard === k), detail: colourNote,
   });
-  for (const k of Object.keys(TRAIT_BEARDS)) add('Beard', 'beard_' + k, cap(k), inColours(beardSprite(k)), {
-    odds: 'every folk with ' + traitName(TRAIT_BEARDS[k]) + ', women too', seen: seen(x => x.look.beard === k), who: carriers(TRAIT_BEARDS[k]), detail: colourNote,
-  });
   const markBases = [{}, { look: { style: 'bald' } }, { face: 's' }, { face: 's', look: { style: 'bald' } }];
   const markPiece = (fields, traits) => () => {
     for (const b of markBases) {
@@ -89,7 +86,7 @@ const FOLK_PIECES = (() => {
     }
     return FOLK_PARTS.look(lookOf(fields, traits), 'f');
   };
-  const folded = new Set([...STYLES.map(st => st.trait), ...Object.values(TRAIT_BEARDS)].filter(Boolean));
+  const folded = new Set(STYLES.map(st => st.trait).filter(Boolean));
   for (const m of MARKS) for (const t of m.traits) if (FOLK_CAST.traitRarity[t] && !folded.has(t)) add('Mark', 'mark_' + t.replace(/-/g, '_'), traitName(t), markPiece({}, [t]), {
     odds: FOLK_CAST.traitRarity[t], seen: seen(x => x.p.traits.includes(t)), who: carriers(t),
     detail: `drawn as ${m.id.replace(/[A-Z]/g, ch => ' ' + ch.toLowerCase())} at strength ${RANK[FOLK_CAST.traitRarity[t]] || 1} of 5`,

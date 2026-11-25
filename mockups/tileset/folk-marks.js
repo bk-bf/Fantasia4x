@@ -10,6 +10,7 @@ function paintLook(s, look, skin, hair, face, pose) {
   paintBeard(head, g, look, hair, skin);
   paintEyewear(head, g, look, skin);
   paintHead(head, g, look, skin, hair);
+  paintDown(body, g, look, skin, hair);
   paintLimbs(pen, g, look, skin, s);
   paintBack(body, g, look, skin, hair);
 }
@@ -193,6 +194,21 @@ function reink(pen, x0, y0, x1, y1) {
   const add = [];
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!pen.get(x, y) && near(x, y, solid)) add.push([x, y]);
   for (const [x, y] of add) pen.put(x, y, P.ink);
+}
+
+function paintDown(pen, g, look, skin, hair) {
+  const { cx, hw, sTop, tl, face } = g, hn = hair.length - 1, skinSet = new Set(skin);
+  if (!look.marks.down || face === 'b') return;
+  let top = sTop;
+  while (top < sTop + 4 && !skinSet.has(pen.get(cx - hw + 1, top))) top++;
+  const rows = Math.min(hw - 1, 5, tl - 4), fluff = (x, y, k) => hair[clamp(hn - (k === rows - 1 ? 2 : hash(x, y, 61) > .6 ? 1 : 0), 0, hn)];
+  for (let k = 0; k < rows; k++) {
+    const y = top + 1 + k;
+    if (face === 'f') { for (let x = cx - hw + 1 + k; x < cx + hw - 1 - k; x++) if (skinSet.has(pen.get(x, y))) pen.put(x, y, fluff(x, y, k)); continue; }
+    let front = cx + hw + 3;
+    while (front > cx - hw && !skinSet.has(pen.get(front, y))) front--;
+    if (front > cx - hw) for (let i = k < 2 ? -1 : 0; i < Math.max(1, 3 - k); i++) pen.put(front - i, y, fluff(front - i, y, k));
+  }
 }
 
 function paintLimbs(pen, g, look, skin, s) {

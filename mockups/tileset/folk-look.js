@@ -46,7 +46,6 @@ const STYLES = [
   { id: 'plumed', sexes: {}, o: { bald: 1 }, trait: 'feathered' },
 ];
 const BEARDS = { none: 5, full: 3, moustache: 2, goatee: 2, stubble: 3, braided: 1 };
-const TRAIT_BEARDS = { downy: 'downy-coat' };
 
 const RANK = { negative: 1, common: 1, uncommon: 2, rare: 3, epic: 4, mythic: 5, legendary: 5 };
 
@@ -101,7 +100,8 @@ const MARKS = [
   { id: 'spiderEyes', traits: ['spider-eyes-lesser', 'spider-eyes', 'spider-eyes-greater'] },
   { id: 'claws', traits: ['budding-claws', 'rending-claws', 'burrowing-claws', 'dragon-claws', 'crushing-claws', 'raking-talons', 'hooked-talons', 'raptor-talons', 'ripping-talons'] },
   { id: 'scales', traits: ['pebbled-skin', 'scaled-hide', 'granite-hide', 'dragon-scales'] },
-  { id: 'feathers', traits: ['feathered', 'downy-coat'] },
+  { id: 'feathers', traits: ['feathered'] },
+  { id: 'down', traits: ['downy-coat'] },
   { id: 'fur', traits: ['thick-fur', 'winter-mane'] },
   { id: 'chitin', traits: ['chitin-plates', 'chitin-plating', 'ironshell', 'shell-ironshell'] },
   { id: 'ironSkin', traits: ['iron-skin'] },
@@ -164,9 +164,8 @@ function pawnLookOf(p, pref, rarity) {
   let beard = p.sex === 'male' ? weighted(r, BEARDS) : 'none';
   const { marks, from } = lookMarks(p.traits, rarity);
   if (p.blind) { marks.blind = 1; delete marks.oneEye; }
-  const plumed = STYLES.find(s => s.trait && p.traits.includes(s.trait)), downy = Object.keys(TRAIT_BEARDS).find(k => p.traits.includes(TRAIT_BEARDS[k]));
+  const plumed = STYLES.find(s => s.trait && p.traits.includes(s.trait));
   if (plumed) style = plumed.id;
-  if (downy) beard = downy;
   return {
     id: p.id, sex: p.sex, body: bodyOf(p), skin, hair, eyes, oddEye: odd !== eyes ? odd : null, style, beard, marks, from,
   };

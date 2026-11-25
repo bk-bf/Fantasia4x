@@ -46,8 +46,8 @@
 
   function lookOf(s) {
     const pawn = { id: s.id, sex: s.sex, age: s.age, height: s.height, weight: typical(s.height) * s.build / 100, traits: s.traits, blind: s.blind };
-    const base = pawnLookOf(pawn, s.pref, rarity), forced = STYLES.find(x => x.trait && s.traits.includes(x.trait)), downy = Object.keys(TRAIT_BEARDS).find(k => s.traits.includes(TRAIT_BEARDS[k]));
-    return { ...base, skin: s.skin, hair: s.hair, eyes: s.eyes, oddEye: s.oddEye === 'none' || s.oddEye === s.eyes ? null : s.oddEye, style: forced ? forced.id : s.style, beard: downy || s.beard };
+    const base = pawnLookOf(pawn, s.pref, rarity), forced = STYLES.find(x => x.trait && s.traits.includes(x.trait));
+    return { ...base, skin: s.skin, hair: s.hair, eyes: s.eyes, oddEye: s.oddEye === 'none' || s.oddEye === s.eyes ? null : s.oddEye, style: forced ? forced.id : s.style, beard: s.beard };
   }
 
   function fit(s) {
@@ -149,7 +149,7 @@
     out.push([`${cap(look.style)} hair, ${look.style === 'bald' ? 'bare skull' : look.hair}`, style.trait ? 'style_' + style.id : `style_${style.id}_${st.sex}`]);
     if (look.beard !== 'none') out.push([`${cap(look.beard)} beard, ${look.hair}`, 'beard_' + look.beard]);
     out.push([cap(EYES[look.eyes].word) + (look.oddEye ? ' and ' + EYES[look.oddEye].word : ''), 'eyes_' + look.eyes]);
-    for (const t of Object.values(look.from)) if (!STYLES.some(s => s.trait === t) && !Object.values(TRAIT_BEARDS).includes(t)) out.push([traitName(t) + ', ' + rarity[t], 'mark_' + t.replace(/-/g, '_')]);
+    for (const t of Object.values(look.from)) if (!STYLES.some(s => s.trait === t)) out.push([traitName(t) + ', ' + rarity[t], 'mark_' + t.replace(/-/g, '_')]);
     if (st.blind) out.push(['Both eyes lost', 'mark_blind']);
     return out;
   }

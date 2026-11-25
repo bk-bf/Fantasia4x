@@ -171,26 +171,8 @@ function paintHair(pen, g, look, hair, skin) {
   }
 }
 
-const DOWN = {
-  f: [[-5, -3, 2, 4], [-5, 4], [-6, 5], [-5, 4]],
-  s: [[-5, -1], [-5, 4], [-6, 5], [-5, 3]],
-  b: [[-5, 4], [-5, 4], [-6, 5], [-5, 4]],
-};
-function paintDown(pen, g, hair) {
-  const { X, er, hTop, hh, face } = g, hn = hair.length - 1, chin = hTop + hh - 1, rows = DOWN[face];
-  rows.forEach((spans, j) => {
-    for (let k = 0; k < spans.length; k += 2) for (let x = X + spans[k]; x <= X + spans[k + 1]; x++) {
-      const lit = j === 0 || (j === 1 && x < X), deep = j === rows.length - 1 || x === X + spans[spans.length - 1];
-      pen.put(x, chin - 1 + j, hair[clamp(hn - (lit ? 0 : 1) - (deep ? 1 : 0) + (hash(x, j, 61) > .78 ? 1 : 0), 0, hn)]);
-    }
-  });
-  if (face !== 'f') return;
-  for (const x of [X - 5, X + 4]) for (let y = er + 1; y < chin - 1; y++) pen.put(x, y, hair[hn - (x > X ? 1 : 0)]);
-}
-
 function paintBeard(pen, g, look, hair, skin) {
   const { X, er, F, hTop, hh, face } = g, hn = hair.length - 1, mid = hair[Math.max(0, hn - 1)], low = hair[Math.max(0, hn - 2)], sn = skin.length - 1;
-  if (look.beard === 'downy') paintDown(pen, g, hair);
   if (face === 'b' || look.beard === 'none') return;
   const skinSet = new Set(skin), side = face === 's', lip = er + 2, goatee = look.beard === 'goatee';
   if (look.beard === 'moustache' || goatee) {
