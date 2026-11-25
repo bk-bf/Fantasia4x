@@ -10,7 +10,7 @@ in vec3 v_outline;
 in highp vec4 v_uvBounds;  // (uMin, vMin, uMax, vMax) of this glyph in the atlas
 in vec3 v_light;     // Interpolated ADDITIVE point-light contribution (0 = none)
 in highp vec2 v_world;
-flat in vec4 v_vein;
+flat in highp vec4 v_vein;
 flat in float v_veinNear;
 flat in highp float v_row;
 flat in highp float v_lean;
@@ -47,7 +47,7 @@ uniform float u_brightness;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 uniform highp sampler2D u_rockTexture;
-uniform vec2 u_rockRamp;
+uniform highp vec2 u_rockRamp;
 uniform float u_rockLift;
 uniform highp sampler2D u_veinTexture;
 uniform highp float u_atlasScale;
