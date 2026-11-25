@@ -1,10 +1,11 @@
 'use strict';
 const TURN = Math.PI * 2;
-const STILL = { i: 0, n: 1, u: 0, br: 0, blink: false, glance: 0, still: true, wave: () => 0 };
+const STILL = { i: 0, n: 1, u: 0, turn: 0, br: 0, blink: false, glance: 0, still: true, wave: () => 0, swell: () => 0 };
 function idlePose(look, time) {
   if (!time) return STILL;
-  const n = time.n, i = (time.i + seedOf(look.id + ':phase')) % n, u = i / n;
-  return { i, n, u, br: u >= .45 && u < .8 ? 1 : 0, blink: i === n - 2, glance: i === 3 || i === 4 ? (seedOf(look.id + ':glance') & 1 ? 1 : -1) : 0, still: false, wave: shift => Math.sin((u + (shift || 0)) * TURN) };
+  const n = time.n, phase = seedOf(look.id + ':phase'), at = time.span ? (time.age + phase) % time.span : (time.i + phase) % n, i = at % n, u = i / n;
+  const swell = time.span ? shift => Math.sin((at / time.span * 2 + (shift || 0)) * TURN) : shift => Math.sin((u + (shift || 0)) * TURN);
+  return { i, n, u, turn: Math.floor(at / n), swell, br: u >= .45 && u < .8 ? 1 : 0, blink: i === n - 2, glance: i === 3 || i === 4 ? (seedOf(look.id + ':glance') & 1 ? 1 : -1) : 0, still: false, wave: shift => Math.sin((u + (shift || 0)) * TURN) };
 }
 
 function lookGeometry(look, face, pose, pts) {
@@ -31,7 +32,7 @@ function canvasPen(s, behind, shift, place) {
   return pen;
 }
 
-const ROSE = [196, 84, 84];
+const ROSE = [196, 84, 84], WINK_TURNS = 6;
 const toward = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 function paintWomanFace(pen, g, look, skin) {
   const { X, er, F, hd, hTop, hh, face } = g, sn = skin.length - 1, tone = k => skin[clamp(sn - k, 0, sn)];
@@ -72,7 +73,7 @@ function paintEyes(pen, g, look, skin) {
     for (let y = er - 3; y < er; y++) for (let x = (face === 's' ? F - 5 : X - 4); x < (face === 's' ? F : X + 4); x++) if (pen.get(x, y) && pen.get(x, y) !== P.ink) pen.put(x, y, bare);
     if (m.spiderEyes >= 3) recolour((a, b2) => { pen.put(a, er, P.ink); pen.put(b2, er, P.ink); pen.put(a, er - 1, P.ink); pen.put(b2, er - 1, P.ink); pen.put(a, er - 1, P.furWhite[4]); });
     beads.slice(0, n).forEach(([x, y], k) => {
-      const shut = !pose.still && pose.i === (k * 2 + 1) % pose.n;
+      const wink = seedOf(look.id + ':bead' + k), shut = !pose.still && pose.i === wink % pose.n && pose.turn === (wink >> 4) % WINK_TURNS;
       pen.put(x, y, shut ? skin[Math.max(0, sn - 3)] : m.spiderEyes >= 4 ? P.red[1] : P.ink, shut ? 0 : 90);
     });
   }
@@ -171,13 +172,23 @@ function paintHair(pen, g, look, hair, skin) {
 }
 
 function paintBeard(pen, g, look, hair, skin) {
-  const { X, er, F, hTop, hh, face } = g, dark = hair[Math.max(0, hair.length - 3)], sn = skin.length - 1;
+  const { X, er, F, hTop, hh, face } = g, hn = hair.length - 1, mid = hair[Math.max(0, hn - 1)], low = hair[Math.max(0, hn - 2)], sn = skin.length - 1;
   if (face === 'b' || look.beard === 'none') return;
-  const skinSet = new Set(skin);
-  const span = face === 's' ? [F - 4, F] : [X - 3, X + 2];
-  if (look.beard === 'moustache' || look.beard === 'goatee') for (let x = span[0]; x < span[1]; x++) pen.put(x, er + 2, dark);
-  if (look.beard === 'goatee') for (let y = er + 4; y < er + 6; y++) for (let x = (face === 's' ? F - 3 : X - 2); x < (face === 's' ? F - 1 : X + 1); x++) pen.put(x, y, dark);
-  if (look.beard === 'stubble') for (let y = er + 2; y < hTop + hh; y++) for (let x = X - g.hd; x < X + g.hd + 1; x++) if (skinSet.has(pen.get(x, y)) && ((x + y) & 1)) pen.put(x, y, skin[Math.max(0, sn - 3)]);
+  const skinSet = new Set(skin), side = face === 's', lip = er + 2, goatee = look.beard === 'goatee';
+  if (look.beard === 'moustache' || goatee) {
+    for (const x of side ? [F - 3, F - 2, F - 1] : [X - 2, X - 1, X, X + 1]) pen.put(x, lip, mid);
+    for (const x of side ? [F - 3] : goatee ? [X - 2, X + 1] : [X - 3, X + 2]) pen.put(x, lip + 1, low);
+  }
+  if (goatee) {
+    for (const x of side ? [F - 3, F - 2] : [X - 2, X - 1, X, X + 1]) pen.put(x, lip + 2, mid);
+    for (const x of side ? [F - 3] : [X - 1, X]) pen.put(x, lip + 3, low);
+  }
+  if (look.beard === 'stubble') {
+    const shade = new Map(), inside = (x, y) => [[1, 0], [-1, 0], [0, 1]].every(([dx, dy]) => pen.get(x + dx, y + dy));
+    const jaw = [];
+    for (let y = lip; y < hTop + hh; y++) for (let x = X - g.hd; x < X + g.hd + 1; x++) if (skinSet.has(pen.get(x, y)) && inside(x, y) && (y > lip || (side ? x >= F - 3 : x >= X - 2 && x <= X + 1))) jaw.push([x, y]);
+    for (const [x, y] of jaw) { const c = pen.get(x, y); if (!shade.has(c)) shade.set(c, toward(c, low, .22)); pen.put(x, y, shade.get(c)); }
+  }
   if (look.beard === 'downy') {
     const chin = hTop + hh - 1, x0 = face === 's' ? X - g.hd : X - g.hd - 1, x1 = face === 's' ? F : X + g.hd;
     const fluff = (x, y) => hair[hash(x, y, 61) > .55 ? hair.length - 1 : hair.length - 2], deep = hair[Math.max(0, hair.length - 4)];

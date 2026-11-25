@@ -294,7 +294,9 @@ const FOLK_PARTS = (() => {
   const stretch = (text, n, head, tail) => Array.from({ length: n }, (_, i) => text[spread(i, n, text.length, head, tail)]).join('');
   const wider = (rows, n, head, tail) => rows.map(row => stretch(row, n, head, tail));
   const taller = (rows, n, head, tail) => Array.from({ length: n }, (_, j) => rows[spread(j, n, rows.length, head, tail)]);
-  const armRows = d => d.tl - 2 - d.neck + Math.round(2 * d.legs / REF.legs);
+  const shoulderRows = d => Math.max(2, Math.min(d.tl - d.neck - 4, Math.round((d.hw + d.aw) / 4)));
+  const armRows = d => d.tl - d.neck - shoulderRows(d) + Math.round(2 * d.legs / REF.legs);
+  const slope = (k, n) => Math.round(Math.pow((n - k) / n, 1.6) * n * 1.2);
   const centred = (text, width) => { const left = (width - text.length) >> 1; return ' '.repeat(left) + text + ' '.repeat(width - text.length - left); };
   const bellyRows = (n, d) => [Math.round(n * (d.belly > 1 ? .4 : .55)), n - 2];
   function girdled(row, arm, belly) {
@@ -320,8 +322,9 @@ const FOLK_PARTS = (() => {
   }
   function torsoOf(rows, arm, d) {
     const wide = row => stretch(row.slice(0, arm), d.aw, 1, 1) + stretch(row.slice(arm, -arm), 2 * d.hw, 3, 3) + stretch(row.slice(-arm), d.aw, 1, 1);
-    const neck = centred(stretch(rows[0].trim(), Math.min(d.hw >= 8 ? 6 : 4, 2 * d.hw - 2), 1, 1), 2 * (d.hw + d.aw));
-    return [...Array(d.neck).fill(neck), ...shaped(taller(rows.slice(1).map(wide), d.tl + d.br - d.neck, 2, 3), d, true, d.aw)];
+    const total = 2 * (d.hw + d.aw), n = shoulderRows(d), neck = centred(stretch(rows[0].trim(), Math.min(d.hw >= 8 ? 6 : 4, 2 * d.hw - 2), 1, 1), total);
+    const shoulders = Array.from({ length: n }, (_, k) => centred(stretch(rows[k ? 2 : 1].trim(), total - 2 * slope(k, n), 2, 3), total));
+    return [...Array(d.neck).fill(neck), ...shoulders, ...shaped(taller(rows.slice(3).map(wide), d.tl + d.br - d.neck - n, 1, 3), d, true, d.aw)];
   }
   function torsoSide(rows, d) {
     const wide = wider(rows, rows[0].length + d.hw - REF.hw, 3, 3);
@@ -342,7 +345,7 @@ const FOLK_PARTS = (() => {
       const leg = taller(wider(LEG, lw, 1, 1), d.legs, 2, 2), arm = taller(wider(ARM[sex], d.aw, 1, 1), armRows(d), 3, 4);
       out.push({ name: 'Leg', x: -lw, y: legTop, rows: leg, cut: lost('oneLeg', false) ? stump : 0 }, { name: 'Leg, mirrored', x: 0, y: legTop, rows: flipped(leg), cut: lost('oneLeg', true) ? stump : 0 });
       out.push({ name: 'Torso', x: -half, y: sTop, rows: torsoOf(TORSO[sex][face], arm0, d) });
-      out.push({ name: 'Arm', x: -half, y: sTop + 2 + d.neck, rows: arm, cut: lost('oneArm', false) ? 3 : 0 }, { name: 'Arm, mirrored', x: d.hw, y: sTop + 2 + d.neck, rows: flipped(arm), cut: lost('oneArm', true) ? 3 : 0 });
+      out.push({ name: 'Arm', x: -half, y: sTop + d.neck + shoulderRows(d), rows: arm, cut: lost('oneArm', false) ? 3 : 0 }, { name: 'Arm, mirrored', x: d.hw, y: sTop + d.neck + shoulderRows(d), rows: flipped(arm), cut: lost('oneArm', true) ? 3 : 0 });
       out.push({ name: 'Head', x: -6, y: hTop, rows: head });
     }
     const hx = face === 's' ? -5 : -6;
@@ -350,7 +353,7 @@ const FOLK_PARTS = (() => {
     else if (cut) out.push({ name: 'Hair', x: hx, y: hTop - 1, rows: cut });
     if (beard) out.push({ name: 'Beard', x: beard.x, y: hTop + beard.y, rows: beard.rows });
     if (crown) out.push({ name: 'Crown', x: crown.x, y: hTop + crown.y, rows: crown.rows });
-    if (face === 's') out.push({ name: 'Arm', x: sex === 'woman' ? -2 : -3, y: sTop + 1 + d.neck, rows: taller(ARM_SIDE[sex], armRows(d), 2, 2) });
+    if (face === 's') out.push({ name: 'Arm', x: sex === 'woman' ? -2 : -3, y: sTop + d.neck + shoulderRows(d) - 1, rows: taller(ARM_SIDE[sex], armRows(d), 2, 2) });
     return out.filter(layer => layer.rows.length);
   }
 
@@ -424,7 +427,7 @@ const FOLK_PARTS = (() => {
     const aw = Math.max(1, Math.min(b.aw, Math.round(ARM[sex][0].length * Math.max(3, Math.round(REF.hw * frame)) / REF.hw)));
     const neck = b.tl >= 23 ? 3 : b.tl >= 17 ? 2 : 1, belly = b.girth >= 1.36 ? 2 : b.girth >= 1.1 ? 1 : b.girth < .9 ? -1 : 0;
     const d = { hw, aw, neck, belly, tl: b.tl, legs: b.legs, br: pose.br, sway: Math.round(pose.wave() * 1.2), oneArm: rig.o.oneArm, oneLeg: rig.o.oneLeg, beard: rig.o.beard };
-    const X = RG.CX, legTop = RG.BASE + 1 - d.legs, sTop = legTop - d.tl - d.br, hTop = sTop - HEAD_ROWS, er = hTop + (HEAD_ROWS >> 1), half = d.hw + d.aw, hy = sTop + d.neck + armRows(d);
+    const X = RG.CX, legTop = RG.BASE + 1 - d.legs, sTop = legTop - d.tl - d.br, hTop = sTop - HEAD_ROWS, er = hTop + (HEAD_ROWS >> 1), half = d.hw + d.aw, hy = sTop + d.neck + shoulderRows(d) + armRows(d) - 2;
     const s = new Spr(RG.W, RG.H, RG.CX, RG.BASE);
     for (const layer of layers(sex, face, lk.style, d)) put(s, layer, c);
     eyes(s, face, pose, c, X, er);

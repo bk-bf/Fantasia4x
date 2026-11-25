@@ -21,7 +21,7 @@
     ['eyes', 'Eyes', () => Object.keys(EYES), k => cap(EYES[k].word)],
     ['oddEye', 'Second eye', () => ['none', ...Object.keys(EYES)], k => k === 'none' ? 'None' : cap(EYES[k].word)],
   ];
-  const locked = new Set();
+  const locked = new Set(), LOOP = 12, SPAN = 72;
   let st = null, seed = Date.now() % 100000, beat = 0, views = [];
 
   function rollTraits(r) {
@@ -178,10 +178,10 @@
 
   setInterval(() => {
     if (F4X.ui.state.alive !== '1') return;
-    const i = ++beat % 12;
+    const age = ++beat % SPAN;
     for (const v of views) {
-      v.frames[i] ||= sprImage(FOLK_PARTS.look(v.look, v.face, { i, n: 12 }), CROP);
-      v.ctx.putImageData(v.frames[i], 0, 0);
+      v.frames[age] ||= sprImage(FOLK_PARTS.look(v.look, v.face, { i: age % LOOP, n: LOOP, age, span: SPAN }), CROP);
+      v.ctx.putImageData(v.frames[age], 0, 0);
     }
   }, 1000 / 6);
 })();

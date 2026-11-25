@@ -41,7 +41,7 @@ function paintSkin(pen, g, look, skin, hair) {
     const p = (x + ((y >> 1) & 1) * 2) & 3;
     if (p === 0) pen.put(x, y, skin[Math.max(0, i - 1)]);
     else if (p === 2 && !(y & 1)) pen.put(x, y, skin[Math.min(sn, i + 1)]);
-    if (sc >= 4 && y >= tTop && y < tTop + 7 && hash(x, y, 13) > .9) pen.put(x, y, toward(skin[sn], P.gold[3], .3 + .25 * pose.wave(hash(x, y, 14))), 50);
+    if (sc >= 4 && y >= tTop && y < tTop + 7 && hash(x, y, 13) > .9) pen.put(x, y, toward(skin[sn], P.gold[3], .3 + .25 * pose.swell(hash(x, y, 14))), 50);
   });
   if (m.chitin) each((x, y, i) => {
     const limb = Math.abs(x - g.cx + .5) > g.hw, seam = (((y - tTop + (limb ? 2 : 0)) % PLATE) + PLATE) % PLATE;
@@ -55,9 +55,9 @@ function paintSkin(pen, g, look, skin, hair) {
   }
   if (m.feathers >= 3) each((x, y) => { if (!faceCore(x, y) && hash(x, y, 5) > .5) pen.put(x, y, P.furWhite[hash(x, y, 9) > .5 ? 4 : 3]); });
   if (m.fur) each((x, y) => { if (!faceCore(x, y) || hash(x, y, 3) > .75) pen.put(x, y, hair[clamp(hair.length - 2 - (hash(x, y, 4) > .5 ? 1 : 0), 0, hair.length - 1)]); });
-  if (m.slick) each((x, y) => { if (hash(x, y, 7) > (m.slick >= 3 ? .8 : .9) || (sheen(x, y * 2, 4, 48) && !faceCore(x, y))) pen.put(x, y, skin[sn], 40); });
+  if (m.slick) each((x, y) => { if (hash(x, y, 7) > (m.slick >= 3 ? .8 : .9) || (pose.turn === SHEEN_TURN && sheen(x, y * 2, 4, 48) && !faceCore(x, y))) pen.put(x, y, skin[sn], 40); });
   if (m.leafSkin) {
-    const sunline = pose.still ? -9 : g.base - Math.round(pose.u * (g.base - hTop + 6));
+    const sunline = pose.still || pose.turn !== SUN_TURN ? -9 : g.base - Math.round(pose.u * (g.base - hTop + 6));
     each((x, y, i) => {
       const lit = Math.abs(y - sunline) <= 1;
       if (((x + y) % 5 === 0) && !faceCore(x, y)) pen.put(x, y, lit ? toward(skin[sn], P.hay[4], .5) : skin[Math.min(sn, i + 1)]);
@@ -71,7 +71,7 @@ function paintSkin(pen, g, look, skin, hair) {
   }
   if (m.emberSkin >= 3) each((x, y, i) => {
     if (faceCore(x, y) || hash((x + y) >> 1, Math.floor((x - y) / 3), 23) < .8 || (x + 2 * y) % 3) return;
-    const glow = .5 + .5 * pose.wave(y * .03);
+    const glow = .5 + .5 * pose.swell(y * .03);
     pen.put(x, y, toward(skin[Math.max(0, i - 1)], P.ember[4], .2 + .5 * glow), Math.round(90 * glow));
   });
 }
@@ -92,7 +92,7 @@ function paintFaceMarks(pen, g, look, skin) {
 
 function paintHead(pen, g, look, skin, hair) {
   const m = look.marks, { X, er, F, hd, hTop, hh, face, pose } = g, side = face === 's', bone = P.bone;
-  if (m.emberSkin >= 3 && !pose.still && pose.u >= .5 && pose.u < .75) {
+  if (m.emberSkin >= 3 && !pose.still && pose.turn === FLAME_TURN && pose.u >= .5 && pose.u < .75) {
     const lick = pose.u < .58 || pose.u >= .67 ? 1 : 2, fx = X - 2 + (seedOf(look.id + ':flame') % 4);
     for (let k = 0; k < lick; k++) pen.under(fx + (k ? 1 : 0), hTop - 2 - k, k === lick - 1 ? P.ember[5] : P.ember[4], 200);
     pen.under(fx + 1, hTop - 2, P.ember[3], 160);
@@ -142,34 +142,33 @@ function paintHead(pen, g, look, skin, hair) {
   if (m.tusks >= 4) for (const sd of side ? [1] : [-1, 1]) for (let k = 0; k < 3; k++) pen.put((side ? F - 1 : X + sd * 3 - (sd > 0 ? 1 : 0)) + (side ? k >> 1 : 0), er + 2 - k, bone[5 - (k >> 1)]);
   if (m.gills) for (const sd of side ? [-1] : [-1, 1]) {
     const gx = side ? X - 2 : X + sd * (hd - 1) - (sd > 0 ? 1 : 0);
-    const flare = pose.wave() > .4 ? 1 : 0;
-    for (let k = 0; k < 3; k++) if (k !== 1 || !flare) pen.put(gx, g.er + 1 + k, skin[0]);
-    if (/frill/.test(look.from.gills)) for (let j = 0; j < 5; j++) for (let k = 1; k < 4 + flare - Math.abs(j - 2); k++) pen.under(gx + (side ? -k : sd * k), g.er + j, j & 1 ? P.red[3] : P.red[2]);
+    for (let k = 0; k < 3; k++) pen.put(gx, g.er + 1 + k, skin[0]);
+    if (/frill/.test(look.from.gills)) for (let j = 0; j < 5; j++) for (let k = 1; k < 4 - Math.abs(j - 2); k++) pen.under(gx + (side ? -k : sd * k), g.er + j, j & 1 ? P.red[3] : P.red[2]);
   }
 }
 
-const PLATE = 4;
+const PLATE = 4, SUN_TURN = 0, SHEEN_TURN = 2, FLAME_TURN = 3, DRIP_EVERY = 3;
 const HEART = [[0, 0, 5, .95], [-1, 0, 4, .75], [1, 0, 4, .75], [0, -1, 4, .75], [0, 1, 4, .75], [-1, -1, 3, .4], [1, -1, 3, .4], [-1, 1, 3, .4], [1, 1, 3, .4], [0, 2, 3, .3]];
 const VENOM = { weak: [150, 196, 96], strong: [96, 184, 64], deathly: [148, 84, 176] };
 const FANGS = {
-  'feeding-fangs': { at: [-1, 0], len: 2 },
-  'jagged-teeth': { saw: 4 },
-  'goring-fangs': { at: [-3, 2], len: 2, up: true },
-  'sabre-fangs': { at: [-2, 1], len: 4 },
-  'mild-venom': { at: [-1, 0], len: 1, venom: VENOM.weak },
-  'venomous': { at: [-2, 1], len: 2, venom: VENOM.strong, drip: 1 },
-  'deathly-venom': { at: [-2, 1], len: 3, venom: VENOM.deathly, drip: 2, stain: true },
+  'feeding-fangs': { at: 2, len: 2 },
+  'jagged-teeth': { saw: true },
+  'goring-fangs': { at: 3, len: 2, up: true },
+  'sabre-fangs': { at: 2, len: 4 },
+  'mild-venom': { at: 2, len: 1, venom: VENOM.weak },
+  'venomous': { at: 2, len: 2, venom: VENOM.strong, drip: 1 },
+  'deathly-venom': { at: 2, len: 3, venom: VENOM.deathly, drip: 2, stain: true },
 };
 function paintFangs(pen, g, fang) {
   const { X, er, F, face, pose } = g, side = face === 's', tooth = P.bone[5], dull = P.bone[3], mouth = er + 3;
-  if (fang.saw) { for (let k = 0; k < (side ? 3 : fang.saw); k++) { const x = side ? F - 3 + k : X - 2 + k; pen.put(x, mouth + (k & 1), tooth); pen.put(x, mouth + 1 - (k & 1), dull); } return; }
-  const cols = side ? [F - (fang.at[0] === -1 ? 1 : 2)] : fang.at.map(dx => X + dx);
+  if (fang.saw) { for (let k = 0; k < (side ? 3 : 4); k++) pen.put(side ? F - 3 + k : X - 2 + k, mouth, k & 1 ? dull : tooth); return; }
+  const cols = side ? [fang.up ? F - 1 : F - 2] : [X - fang.at, X + fang.at - 1];
   cols.forEach((x, n) => {
-    for (let k = 0; k < fang.len; k++) pen.put(x, fang.up ? mouth - k : mouth + 1 + k, k === fang.len - 1 && fang.len > 1 && !fang.venom ? P.bone[4] : tooth);
+    for (let k = 0; k < fang.len; k++) pen.put(x, fang.up ? mouth - k : mouth + k, k === fang.len - 1 && fang.len > 2 ? P.bone[4] : tooth);
     if (!fang.venom) return;
-    const tip = mouth + 1 + fang.len;
+    const tip = mouth + fang.len;
     pen.put(x, tip, fang.venom, 60);
-    if (fang.drip > n && !pose.still) { const fall = Math.floor(((pose.u + n * .5) % 1) * 6); if (fall > 0 && fall < 5) pen.put(x, tip + fall, fang.venom, 90); }
+    if (fang.drip > n && !pose.still && pose.turn % DRIP_EVERY === 0) { const fall = Math.floor(((pose.u + n * .5) % 1) * 6); if (fall > 0 && fall < 5) pen.put(x, tip + fall, fang.venom, 90); }
     if (fang.stain && !side) pen.put(x + (n ? 1 : -1), mouth, toward(fang.venom, [40, 20, 50], .5));
   });
 }
