@@ -64,19 +64,21 @@ function paintEyes(pen, g, look, skin) {
   else if (m.murkEyes) { const flip = (pose.i >> 1) & 1; recolour((a, b2) => { pen.put(a, er, P.frost[flip ? 5 : 4], 120); pen.put(b2, er, P.frost[flip ? 4 : 5], 120); }); }
   if (look.oddEye && face === 'f' && open) pen.put(X + 1, er, EYES[look.oddEye].col);
   if (look.sex === 'female' && !g.placed && open && !m.spiderEyes && !m.blind) for (const x of eyes.flat()) { const c = pen.get(x, er); if (c !== P.cloth[5] && c !== P.cloth[4]) pen.put(x, er - 1, c); }
-  if (m.spiderEyes) {
-    const bare = skin[Math.max(0, sn - 1)];
-    const beads = face === 's'
-      ? [[F - 2, er - 2], [F - 4, er - 2], [F - 1, er + 1], [F - 3, er - 3]]
-      : [[X - 2, er - 2], [X + 1, er - 2], [X - 4, er - 1], [X + 3, er - 1], [X - 1, er - 3], [X, er - 3]];
-    const n = face === 's' ? m.spiderEyes : m.spiderEyes >= 4 ? 6 : m.spiderEyes >= 3 ? 4 : 2;
-    for (let y = er - 3; y < er; y++) for (let x = (face === 's' ? F - 5 : X - 4); x < (face === 's' ? F : X + 4); x++) if (pen.get(x, y) && pen.get(x, y) !== P.ink) pen.put(x, y, bare);
-    if (m.spiderEyes >= 3) recolour((a, b2) => { pen.put(a, er, P.ink); pen.put(b2, er, P.ink); pen.put(a, er - 1, P.ink); pen.put(b2, er - 1, P.ink); pen.put(a, er - 1, P.furWhite[4]); });
-    beads.slice(0, n).forEach(([x, y], k) => {
-      const wink = seedOf(look.id + ':bead' + k), shut = !pose.still && pose.i === wink % pose.n && pose.turn === (wink >> 4) % WINK_TURNS;
-      pen.put(x, y, shut ? skin[Math.max(0, sn - 3)] : m.spiderEyes >= 4 ? P.red[1] : P.ink, shut ? 0 : 90);
-    });
-  }
+}
+
+function paintExtraEyes(pen, g, look, skin) {
+  const m = look.marks, { X, er, F, face, pose } = g, sn = skin.length - 1;
+  if (face === 'b' || !m.spiderEyes) return;
+  const side = face === 's', bare = skin[Math.max(0, sn - 1)], lid = skin[Math.max(0, sn - 3)], bead = m.spiderEyes >= 4 ? P.red[1] : P.ink;
+  const bared = (x, y) => { if (pen.get(x, y)) pen.put(x, y, bare); };
+  const shut = k => { const wink = seedOf(look.id + ':bead' + k); return !pose.still && pose.i === wink % pose.n && pose.turn === (wink >> 4) % WINK_TURNS; };
+  const third = side ? [F - 2, F - 1] : [X - 1, X], iris = m.spiderEyes >= 4 ? bead : EYES[look.eyes].col;
+  for (const x of third) bared(x, er - 3);
+  for (let x = third[0] - 1; x <= third[1] + (side ? 0 : 1); x++) bared(x, er - 2);
+  if (shut(0)) for (const x of third) pen.put(x, er - 2, lid);
+  else { pen.put(third[0], er - 2, P.cloth[5]); pen.put(third[1], er - 2, iris, 90); }
+  const beads = side ? [[F - 4, er - 2], [F - 5, er - 1]] : [[X - 3, er - 2], [X + 2, er - 2], [X - 4, er - 1], [X + 3, er - 1]];
+  beads.slice(0, (m.spiderEyes - 2) * (side ? 1 : 2)).forEach(([x, y], k) => { bared(x, y - 1); pen.put(x, y, shut(k + 1) ? lid : bead, shut(k + 1) ? 0 : 90); });
 }
 
 const brightness = c => c[0] * .3 + c[1] * .6 + c[2] * .1;

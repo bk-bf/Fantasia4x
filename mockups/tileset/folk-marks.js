@@ -8,6 +8,7 @@ function paintLook(s, look, skin, hair, face, pose) {
   paintEyes(head, g, look, skin);
   paintHair(head, g, look, hair, skin);
   paintBeard(head, g, look, hair, skin);
+  paintExtraEyes(head, g, look, skin);
   paintEyewear(head, g, look, skin);
   paintHead(head, g, look, skin, hair);
   paintDown(body, g, look, skin, hair);
