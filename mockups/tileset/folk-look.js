@@ -145,7 +145,7 @@ function bodyOf(p) {
   const frame = p.sex === 'female' ? { shoulders: .86, arms: .8 } : { shoulders: 1, arms: 1 };
   const hw = clamp(Math.round(6 * k * girth * frame.shoulders), 3, 12);
   const aw = clamp(Math.round(3 * Math.sqrt(k) * Math.pow(girth, .8) * frame.arms), 2, 5);
-  return { legs, tl, hw, aw, hh, hd, build };
+  return { legs, tl, hw, aw, hh, hd, build, girth };
 }
 
 function greying(r, age, hair) {
@@ -175,15 +175,16 @@ const HAIR_GREY = { grey: P.furGrey };
 const hairRamp = h => (HAIRS[h] || { ramp: HAIR_GREY[h] }).ramp;
 
 const DRAGON = [P.green, P.red, P.blue, P.copper, P.purple];
-function skinOf(look) {
+function skinTint(look) {
   const m = look.marks;
-  if (m.ironSkin) return P.iron.slice(1, 6);
-  if (m.scales >= 4) return DRAGON[seedOf(look.id) % DRAGON.length].slice(0, 5);
-  if (m.chitin >= 4) return P.chitin;
-  if (m.emberSkin >= 3) return P.ember.slice(1, 6);
-  if (m.leafSkin) return P.oak.slice(1, 6);
-  return SKINS[look.skin].ramp;
+  if (m.scales >= 4) return { to: DRAGON[seedOf(look.id) % DRAGON.length], share: .6 };
+  if (m.chitin >= 4) return { to: P.chitin, share: .45 };
+  if (m.ironSkin) return { to: P.iron.slice(2), share: .4 };
+  if (m.leafSkin) return { to: P.oak.slice(2), share: .32 };
+  return null;
 }
+const tinted = (ramp, tint) => tint ? ramp.map((c, i) => toward(c, tint.to[Math.round(i * (tint.to.length - 1) / (ramp.length - 1))], tint.share)) : ramp;
+const skinOf = look => tinted(SKINS[look.skin].ramp, skinTint(look));
 
 function lookRig(look) {
   const race = 'look:' + look.id, m = look.marks;

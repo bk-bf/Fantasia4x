@@ -43,6 +43,9 @@ const FOLK_PIECES = (() => {
       odds: `175 cm, ${Math.round(typical(175) * share)} kg`, seen: seen(x => x.p.sex === sex && buildWord(x.look.body.build) === buildWord(share)),
       detail: `bare, in every skin tone: ${listing(skinKeys.map(k => SKINS[k].word))}; a culture leans its tone`,
     });
+  for (const k of skinKeys) add('Skin tone', 'skin_' + k, cap(SKINS[k].word), () => FOLK_PARTS.look(lookOf({ look: { skin: k } }), 'f'), {
+    odds: 'leaned per culture', seen: seen(x => x.look.skin === k), detail: SKINS[k].word + ', shown on a bare man of average build',
+  });
   [.6, .75, .9, 1, 1.15, 1.35, 1.6].forEach((share, i) => {
     const kg = Math.round(typical(175) * share), word = buildWord(share), upTo = PHYSIQUES.find(([u]) => share < u)[0];
     add('Build', `build_${kg}kg`, `${kg} kg, ${word}`, () => FOLK_PARTS.look(lookOf({ weight: kg }), 'f'), {
