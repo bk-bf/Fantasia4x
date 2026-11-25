@@ -126,6 +126,11 @@ const PROPS = (() => {
     s.rect(cx - 2, base - 17, 5, 4, at(P.clay, 3)); s.rect(cx - 2, base - 17, 1, 4, hi(P.clay)); s.rect(cx - 3, base - 18, 7, 1, hi(P.clay, 1)); s.rect(cx - 1, base - 18, 3, 1, at(liquid, 3));
     s.rect(cx + 4, base - 15, 3, 1, at(P.clay, 2)); s.rect(cx + 6, base - 14, 1, 4, at(P.clay, 2));
   }
+  function flask(s, cx, base, liquid) {
+    s.ball(cx, base - 3, 3.8, 3.6, 0, P.clay, { d: .3 });
+    s.rect(cx - 1, base - 8, 3, 2, at(P.clay, 3)); s.rect(cx - 1, base - 8, 1, 2, hi(P.clay)); s.rect(cx - 2, base - 9, 5, 1, hi(P.clay, 1)); s.set(cx, base - 9, at(liquid, 3));
+    s.rect(cx + 3, base - 7, 1, 2, at(P.clay, 2));
+  }
   function fluids(s, cx, st, r) {
     if (st === 0) return jug(s, cx, B, r.a);
     if (st === 2) { barrel(s, cx - 8, B - 5); barrel(s, cx + 6, B, r.a); return; }
@@ -431,9 +436,17 @@ const PROPS = (() => {
   const CARRIED = {
     logs: (s, r) => shouldered(s, r.a, r.b),
     planks: (s, r, seed) => s.slab(CX - SHOULDERED.half, B - 3, SHOULDERED.half * 2 + 1, 2, 2, M.wood(r.a, { pw: 4, seed, b: 3 }), M.flat(r.a, 2, seed + 1, .04)),
-    rubble: (s, r, seed) => basket(s, CX, B, 8, 9, r.a, seed),
-    heap: (s, r, seed) => basket(s, CX, B, 8, 9, r.a, seed),
-    bars: (s, r) => bar(s, CX - 6, B - 4, r.a)
+    rubble: (s, r, seed) => basket(s, CX, B, 6, 6, r.a, seed),
+    heap: (s, r, seed) => basket(s, CX, B, 6, 6, r.a, seed),
+    baskets: (s, r, seed) => basket(s, CX, B, 6, 6, r.a, seed),
+    bars: (s, r) => bar(s, CX - 6, B - 4, r.a),
+    sacks: (s, r) => { sack(s, CX, B - 5, 4.6, 0, r.a); trim(s); },
+    fluids: (s, r) => flask(s, CX, B, r.a),
+    blocks: (s, r) => s.slab(CX - 6, B - 9, 12, 3, 7, M.flat(r.a, 4, 3), M.flat(r.a, 3, 5)),
+    hides: (s, r, seed) => pelt(s, CX, B - 3, 7, r.a, seed, r.smooth, true),
+    bundles: (s, r, seed) => sheaf(s, CX - 7, B - 6, 14, r.a, seed),
+    cloth: (s, r, seed) => bolt(s, CX - 7, B - 5, 14, r.a, seed),
+    meat: (s, r) => haunch(s, CX - 1, B - 5, .62, false, r.a, 0)
   };
   const SHOULDER_FORMS = ['logs', 'planks'], TURNED_FORMS = ['bars'];
   const END_REST = { logs: 0, planks: 0 };

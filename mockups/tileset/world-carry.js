@@ -7,7 +7,7 @@ const HAUL = (() => {
   const BULK_OF_ITEM = {};
   const HOLDS = ['hip', 'chest', 'low', 'shoulder', 'game', 'drape'];
   const HEAVY_HOLD = { logs: 'shoulder', planks: 'shoulder', body: 'drape', meat: 'game' };
-  const HOLD_OF_BULK = { light: () => 'hip', bulky: () => 'chest', heavy: storage => HEAVY_HOLD[storage] || 'low' };
+  const HOLD_OF_BULK = { light: () => 'hip', bulky: () => 'chest', heavy: storage => HEAVY_HOLD[storage] || 'low' }, IN_HAND = ['hip', 'chest', 'low'], FITS = { wide: 16, tall: 13 };
   const LIMP = { pile: ['meat', 'hides'], long: [], worn: [] };
   const SAG = { hip: 0, chest: 2, low: 2, shoulder: 0, game: 4, drape: 0 };
   const ON_SHOULDER = ['shoulder', 'game', 'drape'];
@@ -16,7 +16,7 @@ const HAUL = (() => {
   const WORN_SOURCES = ['map-carry', 'map-ground', 'map-pile-1', 'map', '0'];
   const SEEN_ROWS = { least: 4, most: 20, behind: 2 }, BELLY = { filled: .45, front: [.55, .82], held: 2 };
   const STANCES = { one: { carry: 'tuck', draw: 'ready', ready: 'guard', stow: 'stow' }, two: { carry: 'tuck', draw: 'readyTwo', ready: 'guardTwo', stow: 'stowTwo' }, bow: { carry: 'tuck', draw: 'readyBow', ready: 'guardBow', stow: 'stowBow' } };
-  const POLES = ['spear', 'staff'], HANDLE = { pole: .45, haft: .16 }, HIP_MOST = 16;
+  const POLES = ['spear', 'staff'], HANDLE = { pole: .45, haft: .16 };
   const NAMES = {
     helm: 'helmets', jewel: 'jewellery', gem: 'gems', greaves: 'leg armour', sword: 'swords', axe: 'axes', bracers: 'arm guards', boots: 'boots', gloves: 'gloves', spear: 'spears', ammo: 'arrows and shot',
     staff: 'staves', vessel: 'pots and crucibles', bow: 'bows', mace: 'maces', hammer: 'hammers', herb: 'herbs', dagger: 'knives', bone: 'bone and horn', remedy: 'remedies', stock: 'bar stock', preserve: 'preserves',
@@ -51,8 +51,8 @@ const HAUL = (() => {
   }
   function of(o) {
     const k = RULES.classify(o), bulk = bulkOf(o), family = familyOf(k), storage = storageOf(k);
-    const source = sourceOf(o, k), inOneHand = HOLD_OF_BULK[bulk](storage), tall = inOneHand === 'hip' && family !== 'long' && source.side && DBX.byId.has('item/' + o.id + '/' + source.side) && cropped(o.id, source.side).h > HIP_MOST;
-    return { id: o.id, name: o.name, bulk, hold: tall ? 'chest' : inOneHand, storage, family, source, limp: LIMP[family].includes(storage), stance: stanceOf(o, k) };
+    const source = sourceOf(o, k);
+    return { id: o.id, name: o.name, bulk, hold: o.sub === 'Carcass' ? 'game' : HOLD_OF_BULK[bulk](storage), storage, family, source, limp: LIMP[family].includes(storage), stance: stanceOf(o, k) };
   }
 
   const CROPS = new Map();
@@ -86,6 +86,17 @@ const HAUL = (() => {
     for (let y = 0; y < spr.h; y++) if (spr.c[y * spr.w + x]) ys.push(y);
     return [x, ys.length ? ys[ys.length >> 1] : spr.h >> 1];
   }
+  const FITTED = new Map();
+  function fittedTo(key, spr) {
+    const k = Math.min(FITS.wide / spr.w, FITS.tall / spr.h);
+    if (k >= 1) return spr;
+    if (FITTED.has(key)) return FITTED.get(key);
+    const w = Math.max(3, Math.round(spr.w * k)), h = Math.max(3, Math.round(spr.h * k)), s = new Spr(w, h, 0, 0);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const q = Math.min(spr.h - 1, Math.floor((y + .5) * spr.h / h)) * spr.w + Math.min(spr.w - 1, Math.floor((x + .5) * spr.w / w)); s.c[y * w + x] = spr.c[q]; s.e[y * w + x] = spr.e[q]; }
+    if (spr.hold) s.hold = [Math.round(spr.hold[0] * w / spr.w), Math.round(spr.hold[1] * h / spr.h)];
+    FITTED.set(key, s);
+    return s;
+  }
   const IN_BOTH_ARMS = ['chest', 'low'], HELD_ACROSS = ['hides', 'bundles', 'cloth', 'bone'], ENDS_ON = new Map();
   function endOn(key, spr) {
     if (ENDS_ON.has(key)) return ENDS_ON.get(key);
@@ -105,7 +116,7 @@ const HAUL = (() => {
     const src = load.source;
     if (resting) { const along = (hold === 'shoulder' || src.turned) && face !== 's' && (face === 'f' ? src.toward : src.away), lying = along || src.lying || src.side, spr = cropped(load.id, lying); return { key: load.id + '/' + lying + '/rest', sprite: 'item/' + load.id + '/' + lying, spr, grip: [face === 's' ? REST.edge : spr.w >> 1, along && face === 'f' && !src.turned ? 0 : spr.h - 1], hand: hiltAt(spr, 1), sag: 0 }; }
     const upright = hold === 'hip' && face !== 's' && src.upright, ended = (ON_SHOULDER.includes(hold) || src.turned) && face !== 's' && (face === 'f' ? src.toward : src.away);
-    const variant = upright || ended || src.side, whole = cropped(load.id, variant), headDown = (face === 'f') === !!src.headUp;
+    const variant = upright || ended || src.side, sized = IN_HAND.includes(hold) && load.family !== 'long', whole = sized ? fittedTo(load.id + '/' + variant, cropped(load.id, variant)) : cropped(load.id, variant), headDown = (face === 'f') === !!src.headUp;
     const across = face === 's' && IN_BOTH_ARMS.includes(hold) && HELD_ACROSS.includes(load.storage) && whole.w > whole.h, spr = across ? endOn(load.id + '/' + variant, whole) : whole;
     const out = { key: load.id + '/' + variant + (across ? '/end' : ''), sprite: 'item/' + load.id + '/' + variant, spr, grip: spr.hold || GRIPS[hold](spr), sag: load.limp && !ended ? SAG[hold] : 0 };
     if (upright) {

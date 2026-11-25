@@ -138,7 +138,7 @@ const HELD = {
 };
 const REST = { toes: 4, along: 3, edge: 2, raised: .7 };
 const RIG_KEEP = { layers: false };
-const SPACE = { flat: .15, pole: [1, -.15, -.8], least: .12, cam: { s: [.35, 6, 6], f: [-.2, 3, 6], b: [-.2, 3, 6] }, ahead: 1, before: 4.5, carried: 3, jut: 1.5, held: .02, shield: .2 };
+const SPACE = { flat: .15, pole: [.6, -.6, -.5], least: .12, cam: { s: [.35, 6, 6], f: [-.2, 3, 6], b: [-.2, 3, 6] }, ahead: 1, before: 4.5, carried: 3, jut: 1.5, held: .02, shield: .2 };
 const add3 = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], mul3 = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
 const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], len3 = a => Math.hypot(a[0], a[1], a[2]), unit3 = a => mul3(a, 1 / (len3(a) || 1));
 const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -176,7 +176,7 @@ function staveOf(aim, cant) {
   return add3(mul3(u, Math.cos(c)), mul3(cross3(aim, u), Math.sin(c)));
 }
 const TOOL_REACH = { axe: 24, pick: 23, hoe: 23, hammer: 17, sword: 21, spear: 34, club: 20, torch: 12, staff: 30, ladle: 11, cup: 3, bread: 2 };
-const TWO_HANDED = { axe: [0, -3], pick: [0, -3], hoe: [-8, 4], spear: [-10, 4], staff: [-10, 4] }, TOOL_HEAD = { axe: 7, pick: 8, hoe: 6, hammer: 4, club: 4, staff: 3 };
+const TWO_HANDED = { axe: [0, -3], pick: [0, -3], hoe: [-8, -2], spear: [-10, 4], staff: [-10, 4] }, TOOL_HEAD = { axe: 7, pick: 8, hoe: 6, hammer: 4, club: 4, staff: 3 };
 const TOOL_AIM = { sword: [0, .9, -.44], club: [0, .9, -.44], hammer: [0, .9, -.44], axe: [0, .9, -.44], pick: [0, .9, -.44], spear: [0, 1, .04], staff: [0, 1, .04], hoe: [0, 1, .04], torch: [0, .35, .94], ladle: [0, .3, -.95], cup: [0, 0, 1], bread: [0, 1, 0] };
 const STRUCK = { reach: 1.5 };
 const TWO_HANDS = { apart: 3 };

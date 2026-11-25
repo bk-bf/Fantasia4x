@@ -14,7 +14,7 @@ function load(read, layered) {
   const motion = read('motion.html').match(/data-then="([^"]+)"/)[1].split(' ').filter(f => !/^motion\.js$|motion-folk|motion-sheet|motion-stage|motion-fell|motion-timeline/.test(f) && !registry.includes(f));
   const source = [...registry, ...motion].map(read).join('\n;');
   const data = JSON.parse(read('catalog-data.json'));
-  return new Function('DATA', source + '\nDBX.fromData(DATA); MOTION_LOAD.init(DATA);' + (layered ? 'RIG_KEEP.layers = true;' : '') + '\nreturn { PAWN_ANIMS, FB_POSES, fbPose, posed, PAWNS, FOLK, TOOLS, SEEN, rigPawn, fitted, HAUL, MOTION_LOAD, HOLDS, P, mkActor' + (layered ? ', shade' : '') + ' };')(data.objects);
+  return new Function('DATA', source + '\nDBX.fromData(DATA); MOTION_LOAD.init(DATA);' + (layered ? 'RIG_KEEP.layers = true;' : '') + '\nreturn { PAWN_ANIMS, FB_POSES, fbPose, posed, PAWNS, FOLK, TOOLS, SEEN, BOW, rigPawn, fitted, HAUL, MOTION_LOAD, HOLDS, P, mkActor' + (layered ? ', shade' : '') + ' };')(data.objects);
 }
 const NOW = load(fromDisk, true), THEN = imageRef ? load(fromGit(imageRef), false) : null;
 
@@ -28,7 +28,7 @@ const BODY = ['torso', 'head', 'legs', 'far leg', 'near leg', 'cape', 'pad'];
 const FACES = ['s', 'f', 'b'], NAMES = { s: 'sideways', f: 'toward', b: 'away' };
 const FINGERTIPS = 2, EDGE = 2, STEP = .5;
 
-const FINE_KEYS = ['ahead', 'stow', 'cu', 'reach', 'bow'];
+const FINE_KEYS = ['ahead', 'stow', 'cu', 'reach', 'bow', 'pull', 'grip'];
 const quant = (p, a) => JSON.stringify(p, (k, v) => typeof v === 'number' ? (k === 'tool' || k === 'snout' || k === 'a' ? Math.round(v / a) * a : k === 'ph' ? Math.round(v * 4) / 4 : FINE_KEYS.includes(k) ? Math.round(v * 10) / 10 : Math.round(v * 2) / 2) : v);
 const PLAYED_WITH = { chop: 'axe', mine: 'pick', hoe: 'hoe', hammer: 'hammer', shoot: 'bow', guardBow: 'bow', readyBow: 'bow', stowBow: 'bow', thrust: 'spear', guardTwo: 'spear', readyTwo: 'spear', stowTwo: 'spear', guard: 'sword', ready: 'sword', stow: 'sword', attack: 'sword', block: 'sword' };
 function frame(G, kind, over, anim, face, u, loadId) {
@@ -41,7 +41,7 @@ function frame(G, kind, over, anim, face, u, loadId) {
   const layer = pose.carry && load ? G.HAUL.layer(load, pose.carry, c.face, pose.down > .5) : null;
   if (layer) pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0];
   const rigged = G.rigPawn(A.o, JSON.parse(quant(pose, TURN)));
-  return { spr: layer && rigged.mask ? G.MOTION_LOAD.put(rigged, layer) : rigged, rigged, pose, fused: !!(layer && layer.fused) };
+  return { spr: layer && rigged.mask ? G.MOTION_LOAD.put(rigged, layer) : rigged, rigged, pose, fused: !!(layer && layer.fused), level: !!(layer && layer.rows), long: !!(load && load.family === 'long') };
 }
 
 const alike = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
@@ -50,7 +50,7 @@ const isBody = l => BODY.includes(l.name), isArm = l => !!l.limb, isTool = l => 
 const sameInk = c => c[0] === NOW.P.ink[0] && c[1] === NOW.P.ink[1] && c[2] === NOW.P.ink[2];
 
 const HELD = l => (isTool(l) || isLoad(l)), SHIELD = l => l.name === 'shield';
-const SPACE_TOL = { length: .05, grip: 1.2, skin: 1.2, ground: .6 }, CARRYING = { wide: 16, tall: 13, belowHip: 2 };
+const SPACE_TOL = { length: .05, grip: 1.2, skin: 1.2, ground: .6 }, CARRYING = { wide: 18, tall: 15, belowHip: 2, aboveGround: 3 };
 const REACH = 2, JUMP = { held: 8, struck: 16 }, HIDDEN = .6, FACE = { up: 6, half: 3, side: 6 };
 const pixelsOf = l => { const out = []; for (let i = 0; i < l.spr.c.length; i++) if (l.spr.c[i]) out.push(i); return out; };
 const boxOf = (px, w) => { let x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1; for (const i of px) { const x = i % w, y = (i / w) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return px.length ? [x0, y0, x1, y1] : null; };
@@ -79,7 +79,7 @@ function audit(now, shown, face) {
     let wrong = 0;
     for (let i = 0; i < n; i++) {
       if (!at(hand, i) || !shown[i] || sameInk(shown[i])) continue;
-      const thing = stack.find(l => (hand.grips === 'tool' ? l.name === 'tool' : isLoad(l)) && at(l, i));
+      const thing = stack.find(l => (hand.grips === 'tool' ? l.name === 'tool' && (!hand.piece || l.piece === hand.piece) : isLoad(l)) && at(l, i));
       if (!thing) continue;
       const got = drawn(i), handOnTop = got === hand, thingOnTop = got === thing;
       if (hand.palm === 'under' ? handOnTop : thingOnTop) wrong++;
@@ -133,13 +133,13 @@ function audit(now, shown, face) {
     for (const key of ['R', 'L']) if (sp.shoulderZ + sp.arms[key].H[2] < -SPACE_TOL.ground) counts.m++;
   }
   if (sp) {
-    const ahead = sp.tool && sp.arms && sp.arms.aim ? Math.max(0, ...[-sp.butt, 0, sp.reach].map(t => (face === 'b' ? -1 : 1) * ((sp.tool === 'bow' ? sp.arms.L.H : sp.arms.R.H)[1] + sp.arms.aim[1] * t))) : 0, allowed = sp.groundRow + 1 + (face === 's' ? 0 : Math.ceil(NOW.SEEN.depth * ahead));
+    const ahead = sp.tool && sp.arms && sp.arms.aim ? Math.max(0, ...(sp.tool === 'bow' ? [-NOW.BOW.half, NOW.BOW.half].map(t => sp.arms.L.H[1] + t) : [-sp.butt, 0, sp.reach].map(t => sp.arms.R.H[1] + sp.arms.aim[1] * t)).map(v => (face === 'b' ? -1 : 1) * v)) : 0, allowed = sp.groundRow + 1 + (face === 's' ? 0 : Math.ceil(NOW.SEEN.depth * ahead));
     for (const l of stack.filter(l => isTool(l) || SHIELD(l))) { const b = boxOf(pixelsOf(l), w); if (b && b[3] > allowed) counts.m++; }
     const carriedLoad = stack.find(isLoad);
     if (carriedLoad && !(now.pose.down > .5)) {
       const b = boxOf(pixelsOf(carriedLoad), w);
-      if (b && b[3] > sp.groundRow) counts.m++;
-      if (b && ['hip', 'chest', 'low'].includes(now.pose.carry) && (now.pose.cu === undefined || now.pose.cu >= 1) && (b[2] - b[0] + 1 > CARRYING.wide || b[3] - b[1] + 1 > CARRYING.tall || b[3] > sp.hipRow + CARRYING.belowHip)) counts.n++;
+      if (b && b[3] > sp.groundRow && !(now.level && face !== 's')) counts.m++;
+      if (b && ['hip', 'chest', 'low'].includes(now.pose.carry) && (now.pose.cu === undefined || now.pose.cu >= 1) && !now.long && (b[2] - b[0] + 1 > CARRYING.wide || b[3] - b[1] + 1 > CARRYING.tall || b[3] > (now.pose.carry === 'hip' ? sp.groundRow - CARRYING.aboveGround : sp.hipRow + CARRYING.belowHip))) counts.n++;
     }
   }
   const toolPx = stack.filter(isTool).flatMap(pixelsOf), seen = toolPx.filter(i => { const got = drawn(i); return got && isTool(got); }).length;

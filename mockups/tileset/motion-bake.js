@@ -54,7 +54,7 @@ function cachedFrame(plain, make) {
   if (!s) { if (FRAMES.size > 9000) FRAMES.clear(); s = make(); if (!s.pts) s.pts = plainPts(s); packSpr(s); FRAMES.set(key, s); }
   return s;
 }
-const FINE_KEYS = ['ahead', 'stow', 'cu', 'reach', 'bow'];
+const FINE_KEYS = ['ahead', 'stow', 'cu', 'reach', 'bow', 'pull', 'grip'];
 const quant = (p, a) => JSON.stringify(p, (k, v) => typeof v === 'number' ? (k === 'tool' || k === 'snout' || k === 'a' ? Math.round(v / a) * a : k === 'ph' ? Math.round(v * 4) / 4 : FINE_KEYS.includes(k) ? Math.round(v * 10) / 10 : Math.round(v * 2) / 2) : v);
 
 function procOp(A, st, def, u) {
