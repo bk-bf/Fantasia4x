@@ -31,25 +31,25 @@ function snapshot(seed: number) {
 const EXPECTED: Record<number, ReturnType<typeof snapshot>> = {
   1: {
     ids: ['vororn', 'nyxith', 'drakan', 'tharnian', 'fluxex', 'hexung'],
-    pool: '7cc12ae87d34b58e',
+    pool: '16f1e60fefc55c32',
     relations: '1ca66de827735b33',
     traits: 'a6a5fe003b22685a'
   },
   431: {
     ids: ['drakast', 'vexith', 'astraara', 'lumorn', 'zephek', 'zephung'],
-    pool: '36e150e6df223af8',
+    pool: '71746e986c3499f2',
     relations: '3a56aa5c2d80a236',
     traits: 'f48d8fe614916895'
   },
   20260617: {
     ids: ['nyxian', 'morys', 'tharnek', 'nyxur', 'tharnoth', 'fluxoth'],
-    pool: '471a0b12ffec541a',
+    pool: '90e988331d44e328',
     relations: 'eefa960372274eb3',
     traits: '68d9df0df976c0b0'
   },
   987654321: {
     ids: ['quineth', 'moreon', 'drakur', 'hexast', 'skornara', 'tharnek'],
-    pool: '36230b13df3c9a62',
+    pool: 'ff9bbed0bace8b56',
     relations: '9fd7b187e65df361',
     traits: '2739486096e08bf7'
   }

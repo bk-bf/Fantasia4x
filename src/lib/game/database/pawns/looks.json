@@ -1,0 +1,29 @@
+{
+    "skin": { "keys": ["pale", "fair", "tan", "dark", "ashen", "green", "olive"], "lean": [2, 10] },
+    "hair": { "keys": ["brown", "fair", "black", "red", "copper", "white"], "lean": [2, 8] },
+    "eyes": {
+        "keys": ["dark", "brown", "hazel", "amber", "blue", "ice", "green", "grey", "violet", "red"],
+        "lean": [2, 6]
+    },
+    "oddEye": 0.04,
+    "greying": [
+        { "from": 58, "chance": 0.8, "white": 0.5 },
+        { "from": 46, "chance": 0.4, "white": 0 },
+        { "from": 38, "chance": 0.1, "white": 0 }
+    ],
+    "styles": {
+        "short"   : { "male": 4, "female": 2 },
+        "crop"    : { "male": 3, "female": 1 },
+        "long"    : { "male": 1, "female": 4 },
+        "bun"     : { "female": 3 },
+        "ponytail": { "male": 2, "female": 3 },
+        "braids"  : { "male": 1, "female": 3 },
+        "topknot" : { "male": 2, "female": 1 },
+        "curls"   : { "male": 2, "female": 2 },
+        "pigtails": { "female": 2 },
+        "fringe"  : { "male": 1, "female": 2 },
+        "mohawk"  : { "male": 1, "female": 1 },
+        "bald"    : { "male": 2, "female": 0.4 }
+    },
+    "beards": { "none": 5, "full": 3, "moustache": 2, "goatee": 2, "stubble": 3, "braided": 1 }
+}

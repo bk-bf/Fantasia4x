@@ -1,4 +1,4 @@
-import type { Culture, Trait } from '../types';
+import type { ColourPreference, Culture, Trait } from '../types';
 import { CULTURE_LORE } from '../defs/cultureLore';
 import { isMundaneRarity } from '../defs/traits';
 import {
@@ -71,7 +71,35 @@ export function generateCultureDescription(culture: Culture): string {
     s4 = `${lead} ${quirk}.`;
   }
 
-  return [s1, s2, s3, s4].filter(Boolean).join(' ');
+  const s5 = culture.colouring ? colouringLine(culture.colouring) : '';
+
+  return [s1, s2, s3, s4, s5].filter(Boolean).join(' ');
+}
+
+function topShare(weights: Record<string, number>): { key: string; share: number } {
+  const keys = Object.keys(weights);
+  const total = keys.reduce((a, k) => a + weights[k], 0);
+  const key = keys.reduce((a, k) => (weights[k] > weights[a] ? k : a), keys[0]);
+  return { key, share: weights[key] / total };
+}
+
+const wordList = (words: string[]) =>
+  words.length > 1 ? `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}` : words[0];
+
+export function colouringLine(pref: ColourPreference): string {
+  const C = CULTURE_LORE.phrases.colouring;
+  const all = (['skin', 'hair', 'eyes'] as const)
+    .map((part) => {
+      const top = topShare(pref[part]);
+      return { share: top.share, word: C[part][top.key] };
+    })
+    .sort((a, b) => b.share - a.share);
+  const strong = wordList(all.filter((x) => x.share >= C.strong).map((x) => x.word));
+  const loose = wordList(
+    all.filter((x) => x.share >= C.loose && x.share < C.strong).map((x) => x.word)
+  );
+  const line = strong && loose ? C.lines.both : strong ? C.lines.strong : loose ? C.lines.loose : C.lines.none;
+  return line.replace('{strong}', strong ?? '').replace('{loose}', loose ?? '');
 }
 
 function strongestWorkCategory(traits: Trait[]): string | null {

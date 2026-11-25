@@ -10,6 +10,7 @@ import { capitalize } from '../util/text';
 import { generateCultureDescription } from './cultureDescription';
 import { generateCultureName, slugify } from './cultureNames';
 import { generateCultureTraitSets } from './cultureTraits';
+import { rollColouring } from '../rules/body/looks';
 
 export function generateCulture(archetype: Archetype = rng.pick(CULTURE_LORE.archetypes)): Culture {
   const statRanges = generateStatRanges(archetype);
@@ -33,6 +34,7 @@ export function generateCulture(archetype: Archetype = rng.pick(CULTURE_LORE.arc
     population: 0
   };
   culture.name = capitalize(culture.id.split('-')[0]);
+  culture.colouring = rollColouring(culture.id);
   culture.lore.description = generateCultureDescription(culture);
   return culture;
 }

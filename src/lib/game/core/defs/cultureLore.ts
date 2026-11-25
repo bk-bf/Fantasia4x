@@ -26,5 +26,13 @@ export const CULTURE_LORE = loreData as unknown as {
     charisma: { high: string[]; low: string[] };
     vocation: Record<string, string[]>;
     quirkLeads: string[];
+    colouring: {
+      skin: Record<string, string>;
+      hair: Record<string, string>;
+      eyes: Record<string, string>;
+      strong: number;
+      loose: number;
+      lines: { both: string; strong: string; loose: string; none: string };
+    };
   };
 };

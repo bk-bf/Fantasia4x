@@ -10,9 +10,9 @@ const digest = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 16);
 
 const PINNED_BUILDS = [
-  { seed: 1, name: 'Roderick Ironback', digest: '0f628ffbcbb0f8c0' },
-  { seed: 7, name: 'Liora Goldleaf', digest: 'c1c80f116bb45f7e' },
-  { seed: 431, name: 'Xara Jewelcrest', digest: 'd0ba59d0c6b722c7' }
+  { seed: 1, name: 'Roderick Ironback', digest: 'f3c49ee0eb17a007' },
+  { seed: 7, name: 'Liora Goldleaf', digest: '1721e44cd3cca8bb' },
+  { seed: 431, name: 'Xara Jewelcrest', digest: 'b6cb209de9f7350f' }
 ];
 
 describe('pawn generation with a fixed seed', () => {
@@ -33,9 +33,9 @@ describe('pawn generation with a fixed seed', () => {
     const pool = generateCulturePool(6);
     const founders = generateColonyPawns(pool, 6);
     const kin = generateWorldKin(founders, pool, []);
-    expect(digest(founders)).toBe('6b9bd90abe5d3ca7');
+    expect(digest(founders)).toBe('4227d1bcdbfe4268');
     expect(kin).toHaveLength(25);
-    expect(digest(kin)).toBe('ba98284c6ce4c315');
+    expect(digest(kin)).toBe('5dee5fd619c8e9b2');
     expect(digest(founders.map((f) => f.kin))).toBe('84f4bf72c2363f04');
   });
 });

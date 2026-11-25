@@ -13,6 +13,7 @@ import { seedAwakeningPaths } from '../defs/lineages';
 import { seedWorkLevels, rollWorkStyle } from '../rules/body/workExperience';
 import { rng } from '../util/rng';
 import { rollAptitudes } from '../rules/body/aptitudes';
+import { rollColouring, rollPawnLook } from '../rules/body/looks';
 import { calcMaxBloodVolume, calcMaxStamina } from '../rules/body/vitals';
 import {
   applyTraitBodyMods,
@@ -105,6 +106,7 @@ export function buildPawnFromCulture(culture: Culture, index: number, origin?: P
     limbs: createBodyPlanLimbs(DEFAULT_PLAN, 1)
   };
 
+  pawn.look = rollPawnLook(pawn, culture.colouring ?? rollColouring(culture.id));
   applyTraitGrafts(pawn);
   applyTraitBodyMods(pawn);
   applyTraitWounds(pawn);

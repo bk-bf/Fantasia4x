@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateCulture } from '$lib/game/core/gen/culture';
 import { contentWords, pickDistinctPhrases } from '$lib/game/core/gen/freshPhrases';
+import { colouringLine } from '$lib/game/core/gen/cultureDescription';
 import { rng } from '$lib/game/core/util/rng';
 import loreData from '$lib/game/database/social/culture-lore.json';
 import type { Culture } from '$lib/game/core/types';
@@ -30,7 +31,8 @@ function phraseText(culture: Culture): string {
     ' by nature, ',
     'they hold',
     'They are',
-    ', and make their home among'
+    ', and make their home among',
+    ...(culture.colouring ? [colouringLine(culture.colouring)] : [])
   ];
   return fixed.reduce((text, piece) => text.replace(escaped(piece), ' '), lore.description);
 }

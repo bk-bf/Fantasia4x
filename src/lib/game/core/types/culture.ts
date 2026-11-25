@@ -161,6 +161,12 @@ export interface CultureRelation {
   disposition: 'allied' | 'friendly' | 'neutral' | 'wary' | 'hostile';
 }
 
+export interface ColourPreference {
+  skin: Record<string, number>;
+  hair: Record<string, number>;
+  eyes: Record<string, number>;
+}
+
 export interface Culture {
   id: string;
   name: string;
@@ -177,6 +183,8 @@ export interface Culture {
 
   guaranteedTraits: Trait[];
   culturalTraitPool: Trait[];
+
+  colouring?: ColourPreference;
 
   lore: CultureLore;
 
