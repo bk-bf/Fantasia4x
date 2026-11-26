@@ -136,7 +136,7 @@ const HELD = {
   drape: { s: { at: .25, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: .25, palm: 'around' } },
   rest: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'under' }, b: { at: -6, palm: 'under' } },
 };
-const REST = { toes: 4, along: 3, edge: 2, raised: .7 };
+const REST = { toes: 4, along: 5, edge: 2, raised: .7 };
 const RIG_KEEP = { layers: false };
 const SPACE = { flat: .15, pole: [.6, -.6, -.5], least: .12, cam: { s: [.35, 6, 6], f: [-.2, 3, 6], b: [-.2, 3, 6] }, ahead: 1, before: 4.5, carried: 4.5, jut: 1.5, held: .02, shield: .2 };
 const add3 = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], mul3 = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
@@ -176,7 +176,7 @@ function staveOf(aim, cant) {
   return add3(mul3(u, Math.cos(c)), mul3(cross3(aim, u), Math.sin(c)));
 }
 const TOOL_REACH = { axe: 24, pick: 23, hoe: 23, hammer: 17, sword: 21, spear: 34, club: 20, torch: 12, staff: 30, ladle: 11, cup: 3, bread: 2 };
-const TWO_HANDED = { axe: [0, -3], pick: [0, -3], hoe: [-8, -2], spear: [-10, 4], staff: [-10, 4] }, TOOL_HEAD = { axe: 7, pick: 8, hoe: 6, hammer: 4, club: 4, staff: 3 };
+const TWO_HANDED = { axe: [0, -3], pick: [0, -3], hoe: [-8, -2], spear: [5, -13], staff: [5, -13] }, TOOL_HEAD = { axe: 7, pick: 8, hoe: 6, hammer: 4, club: 4, staff: 3 };
 const TOOL_AIM = { sword: [0, .9, -.44], club: [0, .9, -.44], hammer: [0, .9, -.44], axe: [0, .9, -.44], pick: [0, .9, -.44], spear: [0, 1, .04], staff: [0, 1, .04], hoe: [0, 1, .04], torch: [0, .35, .94], ladle: [0, .3, -.95], cup: [0, 0, 1], bread: [0, 1, 0] };
 const STRUCK = { reach: 1.5 };
 const TWO_HANDS = { apart: 3 };
@@ -210,13 +210,17 @@ function bowSeen(S, gx, gy, o) {
   const { half, sag, nock } = BOW, pull = o.pull || 0, mix3 = (t, off) => o.u.map((c, i) => c * t + o.v[i] * off);
   const at = (t, off) => { const p = seenAt(mix3(t, off)); return [rnd(gx + p[0]), rnd(gy + p[1])]; };
   const upright = Math.abs(seenAt(o.u)[1]) >= Math.abs(seenAt(o.u)[0]), thick = upright ? [1, 0] : [0, 1];
-  if (o.only !== 'stave') for (let t = -half; t <= half; t += .5) { const [x, y] = at(t, -sag - pull * (1 - Math.abs(t) / half)); S.set(x, y, P.cloth[4]); }
-  if (o.arrow && o.only !== 'stave') for (let d = -sag - pull; d <= nock; d += .5) { const [x, y] = at(0, d); S.set(x, y, d > nock - 2.5 ? P.iron[6] : d < -sag - pull + 1.5 ? P.cloth[5] : P.wood[5]); }
-  if (o.only !== 'string') for (let t = -half; t <= half; t += .5) {
+  if (!o.only || o.only === 'string') for (let t = -half; t <= half; t += .5) { const [x, y] = at(t, -sag - pull * (1 - Math.abs(t) / half)); S.set(x, y, P.cloth[4]); }
+  if (o.arrow && (!o.only || o.only === 'arrow')) for (let d = -sag - pull; d <= nock; d += .5) { const [x, y] = at(0, d); S.set(x, y, d > nock - 2.5 ? P.iron[6] : d < -sag - pull + 1.5 ? P.cloth[5] : P.wood[5]); }
+  if (!o.only || o.only === 'stave') for (let t = -half; t <= half; t += .5) {
     const [x, y] = at(t, -sag * t * t / (half * half)), held = Math.abs(t) <= 1.5;
     S.set(x, y, held ? P.leather[3] : P.wood[4]); S.set(x + thick[0], y + thick[1], held ? P.leather[1] : P.wood[2]);
   }
   return at(0, nock);
+}
+function arrowSeen(S, gx, gy, v, out) {
+  const long = BOW.sag + BOW.nock;
+  for (let d = 0; d <= out; d += .5) { const q = seenAt(v.map(c => c * d)); S.set(rnd(gx + q[0]), rnd(gy + q[1]), d > long - 2.5 ? P.iron[6] : d < 1.5 ? P.cloth[5] : P.wood[5]); }
 }
 function turn(spr) {
   const s = new Spr(spr.h, spr.w, spr.h - 1 - spr.ay, spr.ax);

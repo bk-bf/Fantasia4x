@@ -221,7 +221,7 @@ function rigPawn(o, p) {
   const solved = (key, target) => armSolved(joints[key], target, L1, L2, key === 'R' ? 1 : -1);
   const camOf = q => SPACE.cam[face][0] + (view.depth(q) - SPACE.cam[face][1]) / SPACE.cam[face][2], mid3 = (a, b) => mul3(add3(a, b), .5);
   const limbOf = (arm, art) => { const path = [art, shownAt(arm.E), shownAt(arm.H)]; path.rigid = true; return { path, hand: shownAt(arm.H).map(rnd), cams: { upper: camOf(mid3(arm.S, arm.E)), fore: camOf(mid3(arm.E, arm.H)), hand: camOf(arm.H) } }; };
-  const bowing = kind === 'bow' && !p.carry, wielded = !p.carry && !!TOOLS[kind] && !bowing;
+  const bowing = kind === 'bow' && !p.carry, wielded = !p.carry && !!TOOLS[kind] && !bowing, nocked = bowing && p.bow >= 1 && p.arrow > .5, fetched = bowing && !nocked && p.out > 0 ? Math.min(BOW.sag + BOW.nock, p.out) : 0;
   const aimOf = () => unit3(p.aim || (p.tool === undefined ? TOOL_AIM[kind] || [0, .3, .95] : side ? [0, Math.sin(p.tool * D2R), Math.cos(p.tool * D2R)] : [(back ? 1 : -1) * Math.sin(p.tool * D2R), 0, Math.cos(p.tool * D2R)]));
   const armed = (tR, tL) => {
     let R = solved('R', tR), L = solved('L', tL), aim = null, second = null, from = null;
@@ -248,9 +248,9 @@ function rigPawn(o, p) {
       }
       from = L.H;
     }
-    return { R, L, aim, second, from };
+    return { R, L, aim, second, from, shaft: bowing ? unit3(p.shaft || aim) : null };
   };
-  const slung = !!p.carry || !!p.both || bowing, gripAt = p.grip === undefined ? (p.both && TWO_HANDED[kind] ? TWO_HANDED[kind][0] : 0) : p.grip;
+  const slung = !!p.carry || !!p.both || !!p.slung || bowing, gripAt = p.grip === undefined ? (p.both && TWO_HANDED[kind] ? TWO_HANDED[kind][0] : 0) : p.grip;
 
   if (side) {
     const far = [sx0, sy], near = [sx0 - 1, sy], D = SIDE_DEPTH, head = [HX + 1 - f.hd, HX + 2 + f.hd], fused = p.carry === 'shoulder';
@@ -278,8 +278,8 @@ function rigPawn(o, p) {
     const held3 = fused ? null : armed(p.R && !p.carry ? add3(joints.R, p.R) : spaceOf(hr ? [near[0] + hr[0], near[1] + hr[1]] : [near[0], near[1] + TOT], 1), p.L && !p.carry ? add3(joints.L, p.L) : spaceOf(htl ? [far[0] + htl[0], far[1] + htl[1]] : [far[0], far[1] + TOT], -1));
     const farLimb = fused ? null : limbOf(held3.L, far), nearLimb = fused ? null : limbOf(held3.R, near);
     const farPath = fused ? reach(far[0], far[1], htl, 1) : farLimb.path, fh = fused ? handOf(farPath) : farLimb.hand, farCams = p.carry ? { upper: D.far, fore: D.far, hand: D.far } : farLimb.cams;
-    armParts('far arm', farPath, farPath, false, true, farCams, o.oneArm, bowing ? { grips: 'tool', palm: 'around', piece: 'stave' } : held3 && held3.second && wielded ? { grips: 'tool', palm: 'around' } : null);
-    if (bowing) { const at = shownAt(held3.L.H).map(rnd), bow = { u: view.seen(staveOf(held3.aim, p.cant)), v: view.seen(held3.aim), pull: p.pull || 0, arrow: p.arrow > .5 }; part('tool', farCams.hand - SPACE.held, t => { pts.tip = bowSeen(t, at[0], at[1], { ...bow, only: 'stave' }); }, { anchor: fh, piece: 'stave' }); part('tool', (p.bow >= 1 ? Math.min(farCams.hand, nearLimb.cams.hand) : farCams.hand) - SPACE.held, t => bowSeen(t, at[0], at[1], { ...bow, only: 'string' }), { anchor: fh, piece: 'string' }); }
+    armParts('far arm', farPath, farPath, false, true, farCams, o.oneArm, bowing ? { grips: 'tool', palm: 'around', piece: 'stave' } : held3 && held3.second && wielded ? { grips: 'tool', palm: 'around', piece: 'second' } : null);
+    if (bowing) { const at = shownAt(held3.L.H).map(rnd), bow = { u: view.seen(staveOf(held3.aim, p.cant)), v: view.seen(held3.aim), pull: p.pull || 0, arrow: nocked }; part('tool', farCams.hand - SPACE.held, t => { pts.tip = bowSeen(t, at[0], at[1], { ...bow, only: 'stave' }); }, { anchor: fh, piece: 'stave' }); part('tool', (p.bow >= 1 ? Math.min(farCams.hand, nearLimb.cams.hand) : farCams.hand) - SPACE.held, t => bowSeen(t, at[0], at[1], { ...bow, only: 'string' }), { anchor: fh, piece: 'string' }); if (nocked) part('tool', Math.min(farCams.hand, nearLimb.cams.hand) - SPACE.held, t => bowSeen(t, at[0], at[1], { ...bow, only: 'arrow' }), { anchor: fh, piece: 'arrow' }); if (fetched) { const by = shownAt(held3.R.H).map(rnd); part('tool', nearLimb.cams.hand - SPACE.held, t => arrowSeen(t, by[0], by[1], view.seen(held3.shaft), fetched), { anchor: by, piece: 'arrow' }); } }
     if (o.shield) { const on = slung ? [sx0 - (SW >> 1) - 1, tTop + 7] : [fh[0] + 1, fh[1]]; part('shield', slung ? D.shield : farCams.hand - SPACE.held, () => shieldDrawn(on[0], on[1], 'edge'), { anchor: on, shows: 'edge', slung }); }
     if (o.cape) part('cape', D.cape, () => { for (let j = 0; j < capeLen; j++) { const k = j / capeLen, x = sx0 - (SW >> 1) - 2 - rnd(cs * k * k) - (j > 6 ? 1 : 0); s.rect(x, tTop + 1 + j, 3 + (j > 6 ? 1 : 0), 1, o.cape[j % 5 === 4 ? 1 : 2]); s.set(x, tTop + 1 + j, o.cape[3]); } }, { anchor: [sx0, tTop] });
     if (f.tail) part('tail', D.tail, () => { for (let k = 0; k < 9; k++) s.rect(cx - (SW >> 1) - 2 - k, legTop + 1 + rnd(Math.sin(k * .5 + (p.tail || 0)) * 2) + (k >> 2), 1, k < 5 ? 3 : 2, skin[k < 5 ? sn - 2 : sn - 3]); }, { anchor: [cx, legTop] });
@@ -288,8 +288,17 @@ function rigPawn(o, p) {
     part('head', D.head, t => rigHead(t, f, o, HX + 1, hTop, 's', p), { anchor: [HX + 1, hTop + f.hh] });
     part('pad', D.pad, () => pad(sx0 - 3, true), { anchor: near });
     const nearPath = fused ? reach(near[0], near[1], hr, bent) : nearLimb.path, nh = fused ? handOf(nearPath) : nearLimb.hand, nearCams = p.carry ? { upper: D.near, fore: D.near, hand: D.near } : nearLimb.cams;
-    if (wielded) { const seen = toolSeen(view, held3.aim), at = shownAt(held3.from).map(rnd); part('tool', Math.min(nearCams.hand, held3.second ? farCams.hand : 9) - SPACE.held, t => { pts.tip = toolAt(t, kind, at[0], at[1], seen.ang, { fore: seen.fore }); }, { anchor: nh, inks: 'shield' }); if (kind === 'torch' || kind === 'staff') pts.glow = pts.tip; }
-    const gripped = p.carry ? { grips: 'load', palm: held.palm } : wielded ? { grips: 'tool', palm: 'around' } : bowing && p.bow >= 1 ? { grips: 'tool', palm: 'around', piece: 'string' } : null;
+    if (wielded) {
+      const seen = toolSeen(view, held3.aim), at = shownAt(held3.from).map(rnd), whole = t => { pts.tip = toolAt(t, kind, at[0], at[1], seen.ang, { fore: seen.fore }); };
+      if (held3.second) {
+        const a = shownAt(held3.R.H), b = shownAt(held3.L.H), mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], along = [b[0] - a[0], b[1] - a[1]];
+        const kept = (t, side) => { whole(t); for (let q = 0; q < t.c.length; q++) if (t.c[q] && ((q % t.w - mid[0]) * along[0] + (((q / t.w) | 0) - mid[1]) * along[1]) * side > 0) { t.c[q] = null; t.e[q] = 0; } };
+        part('tool', nearCams.hand - SPACE.held, t => kept(t, 1), { anchor: nh, inks: 'shield', piece: 'main' });
+        part('tool', farCams.hand - SPACE.held, t => kept(t, -1), { anchor: fh, inks: 'shield', piece: 'second' });
+      } else part('tool', nearCams.hand - SPACE.held, whole, { anchor: nh, inks: 'shield' });
+      if (kind === 'torch' || kind === 'staff') pts.glow = pts.tip;
+    }
+    const gripped = p.carry ? { grips: 'load', palm: held.palm } : wielded ? { grips: 'tool', palm: 'around', ...(held3.second ? { piece: 'main' } : null) } : bowing && p.bow >= 1 ? { grips: 'tool', palm: 'around', piece: 'string' } : fetched ? { grips: 'tool', palm: 'around', piece: 'arrow' } : null;
     armParts('near arm', nearPath, nearPath, true, false, nearCams, false, gripped);
     if (held3) space.arms = { R: held3.R, L: held3.L, aim: held3.aim, second: held3.second, from: held3.from };
     hand = [nh[0], nh[1] + 1];
@@ -342,13 +351,13 @@ function rigPawn(o, p) {
     if (put && !resting && p.carry === 'shoulder') { const b = boxAt(put); if (b.top <= chinRow && b.left <= head[1] && b.right >= head[0]) put = [back ? head[1] + 1 + load[2] : head[0] - load[0] + load[2], put[1]]; }
     const seen = i => paths[i];
     const carrying = p.carry ? (p.carry === 'hip' ? [toolSide] : ON_ONE_SHOULDER.includes(p.carry) && !heaved ? [laden] : [0, 1]) : [];
-    const gripping = bowing ? (p.bow >= 1 ? [0, 1] : [other]) : !wielded ? [] : held3.second ? [0, 1] : [toolSide];
+    const gripping = bowing ? (p.bow >= 1 || fetched ? [0, 1] : [other]) : !wielded ? [] : held3.second ? [0, 1] : [toolSide];
     const palmOf = i => p.carry ? palms || held.palm : 'around';
     const lifted = i => carrying.includes(i) && !(back && held.at > D.torso) && !(resting && reached < 1);
     const shieldArm = o.shield && !slung ? other : -1;
     const handCam = i => lifted(i) ? held.at + (palmOf(i) === 'under' ? -D.step : D.step) : D.hand;
     const over = i => lifted(i) && palmOf(i) === 'around';
-    for (const i of [0, 1]) armParts(i ? 'right arm' : 'left arm', paths[i], seen(i), !i, false, p.carry ? { upper: over(i) ? Math.max(D.upper, held.at + D.step / 4) : D.upper, fore: over(i) ? Math.max(D.fore, held.at + D.step / 2) : D.fore, hand: handCam(i) } : limbs[i].cams, i === other && o.oneArm, lifted(i) ? { grips: 'load', palm: palmOf(i) } : gripping.includes(i) ? { grips: 'tool', palm: palmOf(i), ...(bowing ? { piece: i === other ? 'stave' : 'string' } : null) } : null);
+    for (const i of [0, 1]) armParts(i ? 'right arm' : 'left arm', paths[i], seen(i), !i, false, p.carry ? { upper: over(i) ? Math.max(D.upper, held.at + D.step / 4) : D.upper, fore: over(i) ? Math.max(D.fore, held.at + D.step / 2) : D.fore, hand: handCam(i) } : limbs[i].cams, i === other && o.oneArm, lifted(i) ? { grips: 'load', palm: palmOf(i) } : gripping.includes(i) ? { grips: 'tool', palm: palmOf(i), ...(bowing ? { piece: i === other ? 'stave' : fetched ? 'arrow' : 'string' } : null) } : null);
     if (!targets[0] && !p.carry) layers.find(l => l.name === 'left arm upper').spr.set(xL - (aw >> 1), sy, null);
     if (o.shield) { const on = slung ? [mid, tTop + 7] : [handsAt[other][0], handsAt[other][1]], shows = slung === back ? 'front' : 'inside'; part('shield', slung ? D.slung : limbs[other].cams.hand + (back ? -SPACE.shield : SPACE.shield), () => shieldDrawn(on[0], on[1], shows), { anchor: on, shows, slung }); }
     const low = Math.max(hL[1], hR[1]);
@@ -360,9 +369,11 @@ function rigPawn(o, p) {
       part('tool', Math.min(limbs[toolSide].cams.hand, held3.second ? limbs[other].cams.hand : 9) - SPACE.held, t => { pts.tip = toolAt(t, kind, at[0], at[1], seen.ang, { fore: seen.fore }); }, { anchor: th, inks: 'shield' });
       if (kind === 'torch' || kind === 'staff') pts.glow = pts.tip;
     } else if (bowing) {
-      const at = handsAt[other], bow = { u: view.seen(staveOf(held3.aim, p.cant)), v: view.seen(held3.aim), pull: p.pull || 0, arrow: p.arrow > .5 };
+      const at = handsAt[other], bow = { u: view.seen(staveOf(held3.aim, p.cant)), v: view.seen(held3.aim), pull: p.pull || 0, arrow: nocked };
       part('tool', limbs[other].cams.hand - SPACE.held, t => { pts.tip = bowSeen(t, at[0], at[1], { ...bow, only: 'stave' }); }, { anchor: at, piece: 'stave' });
       part('tool', (p.bow >= 1 ? Math.min(limbs[other].cams.hand, limbs[toolSide].cams.hand) : limbs[other].cams.hand) - SPACE.held, t => bowSeen(t, at[0], at[1], { ...bow, only: 'string' }), { anchor: at, piece: 'string' });
+      if (nocked) part('tool', Math.min(limbs[other].cams.hand, limbs[toolSide].cams.hand) - SPACE.held, t => bowSeen(t, at[0], at[1], { ...bow, only: 'arrow' }), { anchor: at, piece: 'arrow' });
+      if (fetched) { const by = handsAt[toolSide]; part('tool', limbs[toolSide].cams.hand - SPACE.held, t => arrowSeen(t, by[0], by[1], view.seen(held3.shaft), fetched), { anchor: by, piece: 'arrow' }); }
     }
     pts.hand = th; pts.hands = [hL, hR].filter((h, i) => !(o.oneArm && i === other)); pts.mouth = [HX, hTop + Math.floor(f.hh * .5) + 4]; pts.head = [HX, hTop - 3];
     pts.feet = [[cx - hw + 2, base - fl[1]], [cx + 3, base - fr[1]]];
