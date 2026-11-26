@@ -14,6 +14,7 @@ in float a_row;
 in vec4 a_vein;
 in float a_veinNear;
 in float a_sway;
+in float a_tree;
 
 // Uniforms (constant for all vertices in a draw call)
 uniform mat4 u_projection;  // Orthographic projection matrix
@@ -31,6 +32,8 @@ uniform vec4 u_windPhase;
 uniform float u_basePerArt;
 uniform float u_swayReach;
 uniform mediump vec2 u_paintTexelSize;
+uniform highp vec4 u_treeTime;
+uniform vec3 u_treeVeil;
 
 // Varying outputs (passed to fragment shader)
 out vec2 v_texCoord;     // Pass texture coordinates to fragment
@@ -46,6 +49,10 @@ flat out float v_veinNear;
 flat out highp float v_row;
 flat out highp float v_lean;
 flat out highp float v_reach;
+flat out highp vec4 v_tree;
+
+const int TREE_CURTAIN = 2;
+const float FLUTTER_REACH = 2.0;
 
 float cell(ivec2 c) {
     uint h = uint(c.x) * 374761393u + uint(c.y) * 668265263u;
@@ -64,22 +71,22 @@ float valueNoise(highp vec2 p) {
     return mix(top, bottom, f.y);
 }
 
-float gustAt(highp vec2 p) {
+float gustAt(highp vec2 p, highp float scroll) {
     vec2 across = vec2(-u_windDir.y, u_windDir.x);
     highp float raw = dot(p, u_windDir) * u_windPhase.z - dot(p, across) * u_windPhase.w
         + valueNoise(p * u_gustNoise.xy) * u_gustShape.z
-        + valueNoise(p * u_gustNoise.zw) * u_gustShape.w - u_wind.y;
+        + valueNoise(p * u_gustNoise.zw) * u_gustShape.w - scroll;
     highp float wave = mod(raw, 256.0);
     if (wave < u_gustShape.x) return 0.0;
     float s = sin((wave - u_gustShape.x) / u_gustShape.y * 3.14159265);
     return s * s;
 }
 
-float leanAt(highp vec2 foot, float amp) {
+float leanAt(highp vec2 foot, float amp, highp float scroll, highp float clock) {
     float ph = dot(foot, u_windPhase.xy);
-    float gust = gustAt(foot) * u_swayShape.y;
-    float flutter = (1.0 - abs(u_windDir.x)) * sin(u_wind.z * u_swayShape.w + ph);
-    float idle = sin(u_wind.z * u_swayShape.z + ph) * u_swayShape.x;
+    float gust = gustAt(foot, scroll) * u_swayShape.y;
+    float flutter = (1.0 - abs(u_windDir.x)) * sin(clock * u_swayShape.w + ph);
+    float idle = sin(clock * u_swayShape.z + ph) * u_swayShape.x;
     return amp * u_wind.x * (idle + gust * (u_windDir.x + flutter));
 }
 
@@ -90,11 +97,20 @@ void main() {
     vec2 pos = (a_position - u_viewOffset) * u_zoom;
     v_lean = 0.0;
     v_reach = 0.0;
+    v_tree = vec4(0.0);
     vec2 texCoord = a_texCoord;
     float span = a_uvBounds.w - a_uvBounds.y;
     if (a_sway > 0.0 && u_wind.x > 0.0 && span > 0.0) {
-        v_lean = leanAt((a_vein.zw + vec2(0.5, 1.0)) * u_wind.w, a_sway);
+        highp vec2 foot = (a_vein.zw + vec2(0.5, 1.0)) * u_wind.w;
+        v_lean = leanAt(foot, a_sway, u_wind.y, u_wind.z);
         v_reach = ceil(a_sway * u_swayReach);
+        if (a_tree > 0.0) {
+            float lag = leanAt(foot, a_sway, u_treeTime.x, u_treeTime.y) * u_treeTime.z;
+            v_tree = vec4(lag, gustAt(foot, u_wind.y), a_tree, foot.x);
+            v_reach += FLUTTER_REACH;
+            if ((int(a_tree) & TREE_CURTAIN) != 0)
+                v_reach += ceil(u_wind.x * (u_treeVeil.x + u_treeVeil.y + u_treeVeil.z)) + 1.0;
+        }
         float side = a_texCoord.x * 2.0 < a_uvBounds.x + a_uvBounds.z - 4.0 ? -1.0 : 1.0;
         pos.x += side * v_reach * u_basePerArt * u_zoom.x;
         texCoord.x += side * v_reach * u_paintTexelSize.x;

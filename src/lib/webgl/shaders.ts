@@ -2,6 +2,7 @@ import type { ShaderProgram } from './types.js';
 import vertexShaderSource from './shaders/vertex.glsl?raw';
 import fragmentShaderSource from './shaders/fragment.glsl?raw';
 import { withRockSurface } from './painted/rockSurface.js';
+import { withTreeParts } from './painted/treeParts.js';
 
 export interface ShaderSource {
   vertex: string;
@@ -358,7 +359,7 @@ export class ShaderManager {
 }
 
 const withPaintedPath = (source: string): string =>
-  withRockSurface(source.replace(/^(#version[^\n]*\n)/, '$1#define PAINTED\n'));
+  withTreeParts(withRockSurface(source.replace(/^(#version[^\n]*\n)/, '$1#define PAINTED\n')));
 
 export async function createTileRendererShaders(
   gl: WebGL2RenderingContext,

@@ -14,14 +14,16 @@ import {
   spriteAt,
   type PaintedSprite
 } from '$lib/webgl/painted/manifest';
-import { WindClock, gustAt, heading, swayTable } from '$lib/webgl/painted/wind';
+import { WindClock, byLevel, gustAt, heading, swayTable } from '$lib/webgl/painted/wind';
+import WIND from '$lib/webgl/painted/wind.json';
 import { LeafField, leafTarget, type LeafFrame } from '$lib/webgl/painted/leaves';
 import { GroundBlend, waterTime } from '$lib/webgl/painted/groundBlend';
 import { FLUID_DEFS, FluidClock } from '$lib/webgl/painted/fluids';
 
 const GLYPH_FLOATS = 24;
-const ROW_FLOATS = 31;
+const ROW_FLOATS = 32;
 const SWAY = GLYPH_FLOATS + 6;
+const TREE = GLYPH_FLOATS + 7;
 
 const atlas = {
   characters: new Map([['A', { x: 16, y: 32, width: 16, height: 16 }]]),
@@ -32,7 +34,9 @@ const atlas = {
 const raw = JSON.parse(readFileSync(join(__dirname, 'fixture', 'manifest.json'), 'utf8'));
 const { tileset } = buildTileset(parseManifest(raw), {
   sway: { [raw.map.resource.pine_tree[0]]: 1.7 },
-  leafy: [raw.map.resource.pine_tree[0]]
+  leafy: [raw.map.resource.pine_tree[0]],
+  trees: { [raw.map.resource.pine_tree[0]]: 5 },
+  fx: {}
 });
 const pine = spriteAt(tileset.lookup.get('resource')!.get('pine_tree')![0], 4, 6);
 const rgb = (r: number, g: number, b: number) => ({ r, g, b });
@@ -112,6 +116,49 @@ describe('wind in the vertex data', () => {
     expect(swayOf(0)).toEqual(new Set([Math.fround(1.7)]));
     expect(swayOf(1)).toEqual(new Set([0]));
     expect(swayOf(2)).toEqual(new Set([0]));
+    const treeOf = (q: number) =>
+      new Set(Array.from({ length: 6 }, (_, v) => data[(q * 6 + v) * ROW_FLOATS + TREE]));
+    expect(treeOf(0)).toEqual(new Set([5]));
+    expect(treeOf(2)).toEqual(new Set([0]));
+  });
+});
+
+describe("a tree's parts in the wind", () => {
+  const tree = (strength: number) => {
+    const c = new WindClock();
+    c.set(strength, heading(1, 0));
+    return c.uniforms(32, 0.5).u_treeWind;
+  };
+
+  it('flutters more leaves, bobs more pine layers and bends the trunk only as the wind rises to a gale', () => {
+    const [breeze, windy, gale] = [0.36, 0.6, 0.95].map(tree);
+    expect(breeze[0]).toBeGreaterThan(windy[0]);
+    expect(windy[0]).toBeGreaterThan(gale[0]);
+    expect(breeze[2]).toBeGreaterThan(gale[2]);
+    expect(windy[3]).toBeCloseTo(breeze[3], 5);
+    expect(gale[3]).toBeGreaterThan(windy[3] * 5);
+    expect(gale[1]).toBeLessThan(1);
+    expect(windy[1]).toBeGreaterThan(1);
+  });
+
+  it('holds every leaf still when there is no wind at all', () => {
+    expect(byLevel(0, WIND.trees.flutter)).toBeGreaterThan(1);
+    expect(byLevel(0, WIND.trees.bob)).toBeGreaterThan(1);
+  });
+
+  it('lags the boughs behind the crown by the same gust a moment earlier', () => {
+    const c = new WindClock();
+    c.set(0.6, heading(1, 0));
+    c.tick(0);
+    c.tick(3000);
+    const u = c.uniforms(32, 0.5);
+    const back = (u.u_wind[1] - u.u_treeTime[0] + 256) % 256;
+    expect(back).toBeGreaterThan(0);
+    expect(back).toBeLessThan(WIND.gust.speed);
+    expect((u.u_wind[2] - u.u_treeTime[1] + 8 * Math.PI) % (8 * Math.PI)).toBeCloseTo(
+      WIND.trees.lag,
+      5
+    );
   });
 });
 
@@ -353,6 +400,7 @@ function leafFrame(season: string): LeafFrame {
     view: { x: 0, y: 0, w: 40, h: 30 },
     season,
     treeAt: (x, y) => ((x * 7 + y * 3) % 5 === 0 ? pine : undefined),
+    fxAt: () => undefined,
     texels: { w: 64, h: 64, kinds: new Uint8Array(64 * 64).fill(1) },
     light: { fieldLit: false, ambient: [1, 1, 1], tone: [1, 1] }
   };

@@ -45,6 +45,34 @@ describe('big trees in the painted atlas', () => {
     expect(parted(parsed.sprites['trees/oak/mature/summer/0'])).toBe(true);
   });
 
+  it('marks each willow strand with its bunch, its layer and how far down it hangs, beside the shadow bit', () => {
+    const light = decodePng(
+      readFileSync(new URL('../../../../static/tilesets/painted/atlas-light.png', import.meta.url))
+    );
+    const s = parsed.sprites['trees/willow/mature/summer/0'];
+    const bunches = new Set<number>();
+    const heights = new Set<number>();
+    const layers = new Set<number>();
+    let covering = 0;
+    let shaded = 0;
+    for (let y = 0; y < s.h; y++)
+      for (let x = 0; x < s.w; x++) {
+        const o = ((s.y + y) * light.w + s.x + x) * 4;
+        const [g, b] = [light.rgba[o + 1], light.rgba[o + 2]];
+        if (g & 128) shaded++;
+        if (![4, 7, 9, 12].includes(b & 15)) continue;
+        if ((b & 15) >= 9) covering++;
+        bunches.add(g & 63);
+        layers.add(g & 64);
+        heights.add(b >> 4);
+      }
+    expect(bunches.size).toBeGreaterThan(8);
+    expect(layers).toEqual(new Set([0, 64]));
+    expect(heights.size).toBe(16);
+    expect(covering).toBeGreaterThan(0);
+    expect(shaded).toBeGreaterThan(0);
+  });
+
   it('gives each magical tree an elder, and no other tree', () => {
     const magic = ['heartwood_grove', 'frostheart_pine', 'soulwood_grove', 'bonewood_snag'];
     for (const id of magic) expect(tileset.trees.get(id)?.elder?.winter.length, id).toBe(1);

@@ -13,7 +13,7 @@ const NO_OUTLINE = [0, 0, 0];
 const PAINTED_UV_SHIFT = 2;
 const corners = [0, 0, 0, 0];
 const GLYPH_VERTEX_FLOATS = 24;
-const ROW_VERTEX_FLOATS = 31;
+const ROW_VERTEX_FLOATS = 32;
 const NO_VEIN = { x: -1, y: -1, near: 0 };
 export { ALPHA_CUT } from './drawnSprites.js';
 
@@ -684,6 +684,7 @@ export class GridRenderer {
         const row = tile.position.y + offsetY / tileH;
         const vein = painted?.vein ?? NO_VEIN;
         const sway = tile.rotation ? 0 : (painted?.sway ?? 0);
+        const tree = tile.rotation ? 0 : (painted?.tree ?? 0);
         for (let v = 0; v < 6; v++) {
           const at = o + v * ROW_VERTEX_FLOATS;
           for (let f = 0; f < GLYPH_VERTEX_FLOATS; f++)
@@ -695,6 +696,7 @@ export class GridRenderer {
           out[at + GLYPH_VERTEX_FLOATS + 4] = tile.position.y;
           out[at + GLYPH_VERTEX_FLOATS + 5] = vein.near;
           out[at + GLYPH_VERTEX_FLOATS + 6] = sway;
+          out[at + GLYPH_VERTEX_FLOATS + 7] = tree;
         }
       }
       o += FLOATS_PER_TILE;
@@ -736,7 +738,8 @@ export class GridRenderer {
         ['a_row', 1, GLYPH_VERTEX_FLOATS],
         ['a_vein', 4, GLYPH_VERTEX_FLOATS + 1],
         ['a_veinNear', 1, GLYPH_VERTEX_FLOATS + 5],
-        ['a_sway', 1, GLYPH_VERTEX_FLOATS + 6]
+        ['a_sway', 1, GLYPH_VERTEX_FLOATS + 6],
+        ['a_tree', 1, GLYPH_VERTEX_FLOATS + 7]
       );
     for (const [name, size, offset] of attribs) {
       const loc = this.shaderManager.getAttributeLocation('tileRenderer', name);

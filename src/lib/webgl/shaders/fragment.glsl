@@ -2,7 +2,7 @@
 /* filepath: src/lib/webgl/shaders/fragment.glsl */
 precision mediump float;
 
-in vec2 v_texCoord;
+in highp vec2 v_texCoord;
 in vec3 v_foreground;
 in vec4 v_background;    // rgb + per-cell opacity (a; 1 = opaque terrain cell)
 in vec3 v_detail;
@@ -71,6 +71,7 @@ int rockShade(int rim, highp ivec2 p) {
 }
 
 #define ROCK_SURFACE_CODE
+#define TREE_PARTS_CODE
 
 vec3 rockTop(int rim, highp ivec2 p) {
     int shade = rockShade(rim, p);
@@ -96,18 +97,18 @@ bool offSprite(highp vec2 uv) {
     return v_reach > 0.0 && (uv.x < v_uvBounds.x - 2.0 || uv.x > v_uvBounds.z - 2.0);
 }
 
-vec2 paintedUv(highp vec2 uv) {
-    vec4 cell = v_uvBounds - vec4(2.0, 0.0, 2.0, 0.0);
-    vec2 inset = 0.5 * u_paintTexelSize;
+highp vec2 paintedUv(highp vec2 uv) {
+    highp vec4 cell = v_uvBounds - vec4(2.0, 0.0, 2.0, 0.0);
+    highp vec2 inset = 0.5 / vec2(textureSize(u_paintAtlas, 0));
     return clamp(uv, cell.xy + inset, cell.zw - inset);
 }
 
-bool treePart(vec2 uv) {
+bool treePart(highp vec2 uv) {
     return texture(u_lightAtlas, uv).b > 0.0;
 }
 
-bool cutAway(highp vec2 at, vec2 uv) {
-    if (u_cuts < 0.5 || !treePart(uv)) return false;
+bool cutAway(highp vec2 at, bool part) {
+    if (u_cuts < 0.5 || !part) return false;
     highp ivec2 p = ivec2(floor(at));
     highp float edge = CUT_EDGE + roofWobble(p);
     float keep = 1.0;
@@ -158,16 +159,29 @@ void main() {
 #ifdef PAINTED
     bool painted = v_uvBounds.x >= 2.0;
     if (painted) {
-        highp vec2 leaned = swayed(v_texCoord);
-        bool off = offSprite(leaned);
-        vec2 uv = paintedUv(leaned);
-        sprite = off ? vec4(0.0) : texture(u_paintAtlas, uv);
-        if (u_fieldLit > 0.5 && !off) {
-            float glow = texture(u_lightAtlas, uv).r;
-            if (glow > 0.0) light = mix(u_ambient, vec3(1.0), glow);
-        }
         highp vec2 at = v_world * u_atlasScale;
-        if (sprite.a > 0.0 && !off && cutAway(at, uv)) discard;
+        if (v_tree.z > 0.0) {
+            g_treeFlags = int(v_tree.z + 0.5);
+            highp vec2 size = vec2(textureSize(u_paintAtlas, 0));
+            highp vec4 cell = v_uvBounds - vec4(2.0, 0.0, 2.0, 0.0);
+            g_treeOrg = ivec2(floor(cell.xy * size + 0.5));
+            g_treeDim = ivec2(floor((cell.zw - cell.xy) * size + 0.5));
+            TreePixel px = treePixelAt(ivec2(floor((v_texCoord - cell.xy) * size)));
+            float glow = px.mark.r;
+            sprite = px.hit ? treeColor(px, ivec2(floor(at)), glow) : vec4(0.0);
+            if (u_fieldLit > 0.5 && px.hit && glow > 0.0) light = mix(u_ambient, vec3(1.0), glow);
+            if (sprite.a > 0.0 && cutAway(at, px.hit)) discard;
+        } else {
+            highp vec2 leaned = swayed(v_texCoord);
+            bool off = offSprite(leaned);
+            highp vec2 uv = paintedUv(leaned);
+            sprite = off ? vec4(0.0) : texture(u_paintAtlas, uv);
+            if (u_fieldLit > 0.5 && !off) {
+                float glow = texture(u_lightAtlas, uv).r;
+                if (glow > 0.0) light = mix(u_ambient, vec3(1.0), glow);
+            }
+            if (sprite.a > 0.0 && !off && cutAway(at, treePart(uv))) discard;
+        }
         int alpha = int(sprite.a * 255.0 + 0.5);
         highp float ground = v_row * u_rowPx + OBJECT_FOOT;
         if (alpha == 255 && sprite.r > 0.99 && sprite.b > 0.99 && sprite.g < 0.05) {

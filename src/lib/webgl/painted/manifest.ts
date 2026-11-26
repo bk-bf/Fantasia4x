@@ -116,14 +116,41 @@ export interface PaintedSprite {
   vein?: PaintedVein;
   sway?: number;
   leafy?: boolean;
+  tree?: number;
+  fx?: TreeFx;
+}
+
+export type TreeFxKind =
+  | 'ember'
+  | 'moon'
+  | 'frost'
+  | 'apple'
+  | 'spore'
+  | 'bark'
+  | 'wisp'
+  | 'hollow';
+
+export interface TreeFx {
+  fx: TreeFxKind[];
+  age: 'young' | 'mature' | 'elder';
+  h: number;
+  w: number;
+  box: [number, number, number, number];
+  leaves: number[];
+  bright?: number[];
+  edges?: number[];
+  orbs?: number[];
+  hollow?: number[];
 }
 
 export interface PaintedWind {
   sway: Readonly<Record<string, number>>;
   leafy: readonly string[];
+  trees: Readonly<Record<string, number>>;
+  fx: Readonly<Record<string, TreeFx>>;
 }
 
-const STILL: PaintedWind = { sway: {}, leafy: [] };
+const STILL: PaintedWind = { sway: {}, leafy: [], trees: {}, fx: {} };
 
 export interface PaintedRamp {
   x: number;
@@ -484,6 +511,10 @@ export function buildTileset(
       const sway = wind.sway[sid];
       if (sway) for (const c of v.cells) c.sway = sway;
       if (leafy.has(sid)) for (const c of v.cells) c.leafy = true;
+      const tree = wind.trees[sid];
+      if (tree) for (const c of v.cells) c.tree = tree;
+      const fx = wind.fx[sid];
+      if (fx) for (const c of v.cells) c.fx = fx;
       resolved.set(sid, v);
     }
     return v;
