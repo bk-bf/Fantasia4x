@@ -17,14 +17,15 @@ function pieces(px, w) {
   }
   return n;
 }
-function tapers(px, w) {
+function tapers(px, w, shoulder) {
   const b = box(px, w);
   if (!b) return false;
   const along = b[2] - b[0] >= b[3] - b[1], long = along ? b[2] - b[0] + 1 : b[3] - b[1] + 1, widths = new Map();
   if (long < TAPER.long) return false;
   for (const i of px) { const k = along ? i % w : (i / w) | 0; widths.set(k, (widths.get(k) || 0) + 1); }
-  const inner = [...widths.entries()].sort((a, b) => a[0] - b[0]).slice(1, -1).map(e => e[1]);
-  return inner.length > 1 && Math.max(...inner) >= TAPER.wide && Math.min(...inner) <= TAPER.thin;
+  const inner = [...widths.entries()].sort((a, b) => a[0] - b[0]).slice(1, -1), at = shoulder ? shoulder[along ? 0 : 1] : null, capFirst = at !== null && inner.length > 1 && Math.abs(inner[0][0] - at) < Math.abs(inner[inner.length - 1][0] - at);
+  const past = at === null ? inner : capFirst ? inner.slice(inner.length >> 1) : inner.slice(0, (inner.length + 1) >> 1);
+  return inner.length > 1 && Math.max(...inner.map(e => e[1])) >= TAPER.wide && Math.min(...past.map(e => e[1])) <= TAPER.thin;
 }
 const touches = (a, b, w) => { const near = new Set(); for (const i of a) for (let dy = -TOUCH; dy <= TOUCH; dy++) for (let dx = -TOUCH; dx <= TOUCH; dx++) near.add(i + dy * w + dx); return b.some(i => near.has(i)); };
 
@@ -36,9 +37,9 @@ export function pictured(now, face, ink) {
   const centre = now.rigged.pts.torso ? now.rigged.pts.torso[0] : now.spr.ax, half = sp ? sp.torso.half : 6;
   for (const [name, limb] of limbs) {
     if (!limb.all.length || limb.lost) continue;
-    if (limb.hand.length < HAND_BLOCK) { counts.q++; said.push(name + ' has no hand block'); }
+    if (limb.hand.length < Math.min(HAND_BLOCK, 2 * (sp && sp.armWide || HAND_BLOCK) - 1)) { counts.q++; said.push(name + ' has no hand block'); }
     else if (pieces(limb.all, w) > 1) { counts.q++; said.push(name + ' is in pieces'); }
-    for (const [seg, px] of limb.segs) if (tapers(px, w)) { counts.r++; said.push(name + ' ' + seg + ' tapers'); }
+    for (const [seg, px] of limb.segs) if (tapers(px, w, seg === 'upper' ? limb.anchor : null)) { counts.r++; said.push(name + ' ' + seg + ' tapers'); }
     if (face !== 's' && limb.anchor && limb.hand.length) {
       const side = Math.sign(limb.anchor[0] - centre) || 1, out = limb.all.filter(i => ((i % w) - limb.anchor[0]) * side >= FIN.out && ((i / w) | 0) <= limb.anchor[1] + FIN.above).length, hb = box(limb.hand, w), inward = Math.abs((hb[0] + hb[2]) / 2 - centre) < half && (hb[1] + hb[3]) / 2 > limb.anchor[1];
       if (out && inward) { counts.r++; said.push(name + ' fins out at the shoulder'); }

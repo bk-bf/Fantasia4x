@@ -28,7 +28,7 @@ function limbDrawn(s, seg, path, w, zones, col) {
   const [S, E, H] = path, back = Math.hypot(H[0] - E[0], H[1] - E[1]) || 1, wrist = [H[0] - (H[0] - E[0]) / back * Math.min(back, LIMB.hand), H[1] - (H[1] - E[1]) / back * Math.min(back, LIMB.hand)];
   if (seg === 'upper') { limbJoint(s, S, w, zones.upper[0], col); limbStrip(s, S, E, w, zones.upper[0], zones.upper[1], col); limbJoint(s, E, w, zones.upper[1], col); }
   else if (seg === 'fore') { limbJoint(s, E, w, zones.fore[0], col); limbStrip(s, E, wrist, w, zones.fore[0], zones.fore[1], col); }
-  else { limbStrip(s, wrist, H, w, zones.hand[0], zones.hand[1], col); limbJoint(s, H, Math.max(w, LIMB.block), zones.hand[1], col); }
+  else { limbStrip(s, wrist, H, w, zones.hand[0], zones.hand[1], col); limbJoint(s, H, Math.max(w, LIMB.block), zones.block, col); }
 }
 const LIMB = { hand: 2, block: 3 };
 function rigLimb(s, pts, w, col, rim) {
