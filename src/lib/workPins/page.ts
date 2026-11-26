@@ -47,21 +47,17 @@ function pixelBytes(pixels: unknown, width?: unknown, height?: unknown): number 
   return Number(width ?? source.width) * Number(height ?? source.height) * 4;
 }
 
-function texImageBytes(a: GlArgs): number {
-  if (a.length >= 9) {
-    const [width, height] = [Number(a[3]), Number(a[4])];
-    return a[8] === null || a[8] === undefined ? width * height * 4 : pixelBytes(a[8], width, height);
-  }
-  return pixelBytes(a[5]);
-}
-
 function residentTextureBytes(): number {
   let sum = 0;
   for (const levels of textureBytes.values()) for (const bytes of levels.values()) sum += bytes;
   return sum;
 }
 
-function wrapGl(gl: WebGL2RenderingContext, method: keyof WebGL2RenderingContext, before: (a: GlArgs) => void) {
+function wrapGl(
+  gl: WebGL2RenderingContext,
+  method: keyof WebGL2RenderingContext,
+  before: (a: GlArgs) => void
+) {
   const original = (gl[method] as (...a: GlArgs) => unknown).bind(gl);
   (gl as unknown as Record<string, (...a: GlArgs) => unknown>)[method] = (...a) => {
     before(a);
@@ -73,18 +69,28 @@ export function countGl(gl: WebGL2RenderingContext): void {
   let viewportArea = gl.drawingBufferWidth * gl.drawingBufferHeight;
   let program: unknown = null;
   let bound: WebGLTexture | null = null;
-  wrapGl(gl, 'bufferData', (a) => (totals.bufferUploadBytes += typeof a[1] === 'number' ? a[1] : dataBytes(a[1])));
+  wrapGl(
+    gl,
+    'bufferData',
+    (a) => (totals.bufferUploadBytes += typeof a[1] === 'number' ? a[1] : dataBytes(a[1]))
+  );
   wrapGl(gl, 'bufferSubData', (a) => (totals.bufferUploadBytes += dataBytes(a[2])));
   wrapGl(gl, 'texSubImage2D', (a) => {
     totals.textureUploadBytes += a.length >= 9 ? pixelBytes(a[8], a[4], a[5]) : pixelBytes(a[6]);
   });
-  wrapGl(gl, 'texImage2D', (a) => {
-    const bytes = texImageBytes(a);
-    totals.textureUploadBytes += a.length >= 9 && (a[8] === null || a[8] === undefined) ? 0 : bytes;
+  const texelBytes = new Map<number, number>([
+    [gl.RGBA8, 4],
+    [gl.RG8, 2],
+    [gl.R8, 1],
+    [gl.R8UI, 1],
+    [gl.RGBA16UI, 8],
+    [gl.RGBA16F, 8],
+    [gl.RGBA32F, 16]
+  ]);
+  wrapGl(gl, 'texStorage2D', (a) => {
     if (!bound) return;
-    const levels = textureBytes.get(bound) ?? new Map<number, number>();
-    levels.set(Number(a[1]), bytes);
-    textureBytes.set(bound, levels);
+    const bytes = Number(a[3]) * Number(a[4]) * (texelBytes.get(Number(a[2])) ?? 4);
+    textureBytes.set(bound, new Map([[0, bytes]]));
   });
   wrapGl(gl, 'bindTexture', (a) => {
     if (a[0] === gl.TEXTURE_2D) bound = a[1] as WebGLTexture | null;

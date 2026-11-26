@@ -29,18 +29,56 @@ export interface SamplerDescriptor {
   addressModeV: AddressMode;
 }
 
-export interface TextureExtent {
+export const TextureUsage = { TEXTURE_BINDING: 1, COPY_DST: 2, RENDER_ATTACHMENT: 4 } as const;
+
+export interface TextureDescriptor {
+  label?: string;
   format: TextureFormat;
+  width: number;
+  height: number;
+  usage: number;
+}
+
+export function bytesPerTexel(format: TextureFormat): number {
+  switch (format) {
+    case 'r8unorm':
+    case 'r8uint':
+      return 1;
+    case 'rg8unorm':
+      return 2;
+    case 'rgba8unorm':
+      return 4;
+    case 'rgba16uint':
+    case 'rgba16float':
+      return 8;
+    case 'rgba32float':
+      return 16;
+  }
+}
+
+export interface TextureCopyDestination {
+  texture: GpuTexture;
+  origin?: { x: number; y: number };
+}
+
+export interface Extent {
   width: number;
   height: number;
 }
 
-export interface TextureRegion extends TextureExtent {
-  x: number;
-  y: number;
+export interface GpuQueue {
+  writeTexture(
+    destination: TextureCopyDestination,
+    data: ArrayBufferView,
+    layout: { bytesPerRow: number },
+    size: Extent
+  ): void;
+  copyExternalImageToTexture(
+    source: { source: TexImageSource },
+    destination: { texture: GpuTexture },
+    size: Extent
+  ): void;
 }
-
-export type TextureData = ArrayBufferView | null;
 
 export type BufferUsage = 'static' | 'dynamic';
 
@@ -114,6 +152,7 @@ export interface ClearDescriptor {
 
 export interface GpuDevice {
   readonly backend: 'webgl2';
+  readonly queue: GpuQueue;
 
   limits(): GpuLimits;
   checkError(operation: string): boolean;
@@ -146,18 +185,12 @@ export interface GpuDevice {
   setVertexLayout(layout: GpuVertexLayout | null): void;
   vertexAttribute(location: number, attribute: VertexAttribute): void;
 
-  createTexture(): GpuTexture;
+  createTexture(desc: TextureDescriptor): GpuTexture;
   destroyTexture(texture: GpuTexture | null): void;
   setTextureSlot(slot: number): void;
   bindTexture(texture: GpuTexture | null): void;
   createSampler(desc: SamplerDescriptor): GpuSampler;
   bindSampler(slot: number, sampler: GpuSampler | null): void;
-  writeTexture(extent: TextureExtent, data: TextureData): void;
-  writeTextureImage(format: TextureFormat, source: TexImageSource): void;
-  writeSubTexture(region: TextureRegion, data: ArrayBufferView): void;
-  setUnpackAlignment(bytes: 1 | 2 | 4 | 8): void;
-  setUnpackPremultiplyAlpha(on: boolean): void;
-  setUnpackFlipY(on: boolean): void;
 
   createRenderTarget(): GpuRenderTarget;
   destroyRenderTarget(target: GpuRenderTarget | null): void;

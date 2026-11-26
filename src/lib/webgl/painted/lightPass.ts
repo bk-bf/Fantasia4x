@@ -9,14 +9,17 @@ import {
   type PointLight,
   type TileRect
 } from './lightGrade.js';
-import type {
-  GpuDevice,
-  GpuPipeline,
-  GpuRenderTarget,
-  GpuTexture,
-  GpuUniform,
-  GpuVertexLayout
+import {
+  TextureUsage,
+  type GpuDevice,
+  type GpuPipeline,
+  type GpuRenderTarget,
+  type GpuUniform,
+  type GpuVertexLayout
 } from '../../gpu/device.js';
+import { SizedTexture } from '../sizedTexture.js';
+
+const FIELD_USAGE = TextureUsage.TEXTURE_BINDING | TextureUsage.RENDER_ATTACHMENT;
 
 const TIME_AMBIENT = new Float32Array([
   ...TIMES.day.ambient,
@@ -50,7 +53,7 @@ export class PaintedLightPass {
   private readonly vao: GpuVertexLayout;
   private readonly at: Record<string, GpuUniform | null>;
   private readonly packed = new Float32Array(MAX_LIGHTS * 8);
-  private readonly field: GpuTexture;
+  private field: SizedTexture;
   private readonly target: GpuRenderTarget;
   private fieldSize: [number, number] = [0, 0];
 
@@ -68,7 +71,7 @@ export class PaintedLightPass {
     this.gpu = gpu;
     this.program = program;
     this.vao = gpu.createVertexLayout()!;
-    this.field = gpu.createTexture()!;
+    this.field = new SizedTexture(gpu, 'rgba8unorm', 1, 1, FIELD_USAGE);
     this.target = gpu.createRenderTarget()!;
     const names = [
       'u_canvas',
@@ -87,11 +90,8 @@ export class PaintedLightPass {
   private sizeField(w: number, h: number): void {
     if (this.fieldSize[0] === w && this.fieldSize[1] === h) return;
     const gpu = this.gpu;
-    gpu.setTextureSlot(LIGHT_FIELD_UNIT);
-    gpu.bindTexture(this.field);
-    gpu.writeTexture({ format: 'rgba8unorm', width: w, height: h }, null);
-    gpu.attachColorTexture(this.target, this.field);
-    gpu.setTextureSlot(0);
+    this.field.resize(w, h);
+    gpu.attachColorTexture(this.target, this.field.texture);
     this.fieldSize = [w, h];
   }
 
@@ -122,14 +122,14 @@ export class PaintedLightPass {
     gpu.endRenderPass();
     gpu.setVertexLayout(null);
     gpu.setTextureSlot(LIGHT_FIELD_UNIT);
-    gpu.bindTexture(this.field);
+    gpu.bindTexture(this.field.texture);
     gpu.setTextureSlot(0);
     return 1;
   }
 
   dispose(): void {
     this.gpu.destroyRenderTarget(this.target);
-    this.gpu.destroyTexture(this.field);
+    this.field.destroy();
     this.gpu.destroyVertexLayout(this.vao);
     this.gpu.destroyPipeline(this.program);
   }

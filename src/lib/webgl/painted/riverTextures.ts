@@ -1,5 +1,6 @@
 import { FLOW_RES, riverField, type RiverInput } from './riverFlow.js';
-import type { GpuDevice, GpuTexture } from '../../gpu/device.js';
+import type { GpuDevice } from '../../gpu/device.js';
+import { SizedTexture } from '../sizedTexture.js';
 import { samplersOf } from '../samplers.js';
 
 export const FLOW_UNIT = 14;
@@ -36,26 +37,17 @@ export function riverKey(input: RiverInput, active: Uint8Array | null): number {
 
 export class RiverTextures {
   private readonly gpu: GpuDevice;
-  private readonly flowTex: GpuTexture;
-  private readonly streamTex: GpuTexture;
+  private readonly flowTex: SizedTexture;
+  private readonly streamTex: SizedTexture;
   private key: number | null = null;
   private active: Uint8Array | null = null;
 
   constructor(gpu: GpuDevice) {
     this.gpu = gpu;
-    this.flowTex = this.make(FLOW_UNIT);
-    this.streamTex = this.make(STREAM_UNIT);
+    this.flowTex = new SizedTexture(gpu, 'rgba8unorm');
+    this.streamTex = new SizedTexture(gpu, 'rgba32float');
     gpu.bindSampler(FLOW_UNIT, samplersOf(gpu).linear);
     this.clear();
-  }
-
-  private make(unit: number): GpuTexture {
-    const gpu = this.gpu;
-    const tex = gpu.createTexture()!;
-    gpu.setTextureSlot(unit);
-    gpu.bindTexture(tex);
-    gpu.setTextureSlot(0);
-    return tex;
   }
 
   private upload(
@@ -66,16 +58,10 @@ export class RiverTextures {
     w: number,
     h: number
   ) {
-    const gpu = this.gpu;
-    gpu.setUnpackAlignment(1);
-    gpu.setTextureSlot(FLOW_UNIT);
-    gpu.bindTexture(this.flowTex);
-    gpu.writeTexture({ format: 'rgba8unorm', width: fw, height: fh }, flow);
-    gpu.setTextureSlot(STREAM_UNIT);
-    gpu.bindTexture(this.streamTex);
-    gpu.writeTexture({ format: 'rgba32float', width: w, height: h }, stream);
-    gpu.setUnpackAlignment(4);
-    gpu.setTextureSlot(0);
+    this.flowTex.resize(fw, fh);
+    this.flowTex.write(flow);
+    this.streamTex.resize(w, h);
+    this.streamTex.write(stream);
   }
 
   private clear(): void {
@@ -95,13 +81,13 @@ export class RiverTextures {
   bind(): void {
     const gpu = this.gpu;
     gpu.setTextureSlot(FLOW_UNIT);
-    gpu.bindTexture(this.flowTex);
+    gpu.bindTexture(this.flowTex.texture);
     gpu.setTextureSlot(STREAM_UNIT);
-    gpu.bindTexture(this.streamTex);
+    gpu.bindTexture(this.streamTex.texture);
   }
 
   dispose(): void {
-    this.gpu.destroyTexture(this.flowTex);
-    this.gpu.destroyTexture(this.streamTex);
+    this.flowTex.destroy();
+    this.streamTex.destroy();
   }
 }

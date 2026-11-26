@@ -25,6 +25,7 @@ import { TREE_UNIT, TreeGroundLayer, withTreeGround } from './treeGroundLayer.js
 import { treeSoils } from './treeGroundTable.js';
 import type { TreeSoil } from './treeGroundManifest.js';
 import { samplersOf } from '../samplers.js';
+import { SizedTexture } from '../sizedTexture.js';
 
 const PROGRAM = 'groundBlend';
 const MAX_KINDS = 64;
@@ -126,8 +127,8 @@ export class GroundBlend {
   private readonly gpu: GpuDevice;
   private readonly program: GpuPipeline;
   private readonly atlas: GpuTexture;
-  private readonly kindTex: GpuTexture;
-  private readonly tideTex: GpuTexture;
+  private readonly kindTex: SizedTexture;
+  private readonly tideTex: SizedTexture;
   private readonly water: GpuTexture;
   private readonly field: LoadedGroundField | null;
   private readonly artPerBase: number;
@@ -135,7 +136,7 @@ export class GroundBlend {
   private readonly shoreOf: Uint8Array;
   private readonly stillOf: Uint8Array;
   private waveStyle = 0;
-  private readonly lightTex: GpuTexture;
+  private readonly lightTex: SizedTexture;
   private readonly ice: WaterIce;
   private readonly rivers: RiverTextures;
   private readonly unitsPerTile: number;
@@ -186,9 +187,9 @@ export class GroundBlend {
     this.water = water;
     this.field = painted.ground;
     this.artPerBase = painted.tileset.tile / BASE_TILE_PX;
-    this.kindTex = this.makeTexture(KIND_UNIT);
-    this.tideTex = this.makeTexture(TIDE_UNIT);
-    this.lightTex = this.makeTexture(LIGHT_UNIT);
+    this.kindTex = new SizedTexture(gpu, 'r8uint');
+    this.tideTex = new SizedTexture(gpu, 'rgba8unorm');
+    this.lightTex = new SizedTexture(gpu, 'rgba16float');
     gpu.bindSampler(TIDE_UNIT, samplersOf(gpu).linear);
     gpu.bindSampler(LIGHT_UNIT, samplersOf(gpu).linear);
     this.ice = new WaterIce(gpu);
@@ -290,14 +291,6 @@ export class GroundBlend {
     this.gpu.bindTexture(tex);
   }
 
-  private makeTexture(unit: number): GpuTexture {
-    const gpu = this.gpu;
-    const tex = gpu.createTexture()!;
-    this.bindOn(unit, tex);
-    gpu.setTextureSlot(0);
-    return tex;
-  }
-
   setGrid(grid: GameGrid, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
     if (grid !== this.grid || !dirtyTiles || dirtyTiles.length === 0) {
       this.grid = grid;
@@ -336,13 +329,14 @@ export class GroundBlend {
     }
     this.fillShore();
     this.fillStill();
-    gpu.setUnpackAlignment(1);
-    this.bindOn(KIND_UNIT, this.kindTex);
-    gpu.writeTexture({ format: 'r8uint', width: w, height: h }, this.kinds);
-    this.bindOn(TIDE_UNIT, this.tideTex);
-    gpu.writeTexture({ format: 'rgba8unorm', width: w, height: h }, this.tides);
-    gpu.setUnpackAlignment(4);
-    gpu.setTextureSlot(0);
+    if (w === 0 || h === 0) return;
+    for (const [tex, data] of [
+      [this.kindTex, this.kinds],
+      [this.tideTex, this.tides]
+    ] as const) {
+      tex.resize(w, h);
+      tex.write(data);
+    }
   }
 
   private setRiverAt(i: number, t: TileData | undefined): void {
@@ -389,7 +383,6 @@ export class GroundBlend {
   }
 
   private updateKindTexels(grid: GameGrid): void {
-    const gpu = this.gpu;
     const changed: Changed[] = [];
     let reshore = false;
     let restill = false;
@@ -417,41 +410,24 @@ export class GroundBlend {
         (y * this.w + x) * TIDE_BYTES,
         (y * this.w + x) * TIDE_BYTES + TIDE_BYTES
       );
-    gpu.setUnpackAlignment(1);
     const layers = [
       {
-        unit: KIND_UNIT,
         tex: this.kindTex,
-        format: 'r8uint' as const,
         all: this.kinds,
         whole: false,
         one: (c: Changed) => Uint8Array.of(c.k)
       },
       {
-        unit: TIDE_UNIT,
         tex: this.tideTex,
-        format: 'rgba8unorm' as const,
         all: this.tides,
         whole: reshore,
         one: (c: Changed) => tideAt(c.x, c.y)
       }
     ];
     for (const layer of layers) {
-      this.bindOn(layer.unit, layer.tex);
-      if (layer.whole || changed.length > TEXEL_UPDATE_LIMIT)
-        gpu.writeSubTexture(
-          { format: layer.format, x: 0, y: 0, width: this.w, height: this.h },
-          layer.all
-        );
-      else
-        for (const c of changed)
-          gpu.writeSubTexture(
-            { format: layer.format, x: c.x, y: c.y, width: 1, height: 1 },
-            layer.one(c)
-          );
+      if (layer.whole || changed.length > TEXEL_UPDATE_LIMIT) layer.tex.write(layer.all);
+      else for (const c of changed) layer.tex.write(layer.one(c), c.x, c.y, 1, 1);
     }
-    gpu.setUnpackAlignment(4);
-    gpu.setTextureSlot(0);
   }
 
   private sampleRect(r: Rect, sampler: LightSampler | undefined, time: number): Float32Array {
@@ -467,17 +443,12 @@ export class GroundBlend {
   private rebuildLight(f: GroundBlendFrame): void {
     const built = this.lightBuilt;
     if (built && built.version === f.lightVersion && built.sampler === f.lightSampler) return;
-    const gpu = this.gpu;
     const cw = this.w + 1;
     const ch = this.h + 1;
-    this.bindOn(LIGHT_UNIT, this.lightTex);
-    if (!built) gpu.writeTexture({ format: 'rgba16float', width: cw, height: ch }, null);
+    if (!built) this.lightTex.resize(cw, ch, true);
     const old = this.litRect;
     if (old && old.w > 0 && old.h > 0)
-      gpu.writeSubTexture(
-        { format: 'rgba16float', x: old.x, y: old.y, width: old.w, height: old.h },
-        new Float32Array(old.w * old.h * 4)
-      );
+      this.lightTex.write(new Float32Array(old.w * old.h * 4), old.x, old.y, old.w, old.h);
     const whole = { x: 0, y: 0, w: cw, h: ch };
     const rect =
       !f.lightSampler || f.litBounds === undefined
@@ -486,9 +457,12 @@ export class GroundBlend {
           ? null
           : lightRect(f.litBounds, this.w, this.h);
     if (rect && rect.w > 0 && rect.h > 0)
-      gpu.writeSubTexture(
-        { format: 'rgba16float', x: rect.x, y: rect.y, width: rect.w, height: rect.h },
-        this.sampleRect(rect, f.lightSampler, f.lightTime)
+      this.lightTex.write(
+        this.sampleRect(rect, f.lightSampler, f.lightTime),
+        rect.x,
+        rect.y,
+        rect.w,
+        rect.h
       );
     this.litRect = rect;
     this.lightBuilt = { version: f.lightVersion, sampler: f.lightSampler };
@@ -533,14 +507,14 @@ export class GroundBlend {
     if (f.fluid) gpu.setVec4fv(this.at['u_fluid[0]'], f.fluid);
     gpu.setVec2i(this.at.u_mapSize, this.w, this.h);
     this.bindOn(ATLAS_UNIT, this.atlas);
-    this.bindOn(KIND_UNIT, this.kindTex);
-    this.bindOn(TIDE_UNIT, this.tideTex);
+    this.bindOn(KIND_UNIT, this.kindTex.texture);
+    this.bindOn(TIDE_UNIT, this.tideTex.texture);
     this.bindOn(WATER_UNIT, this.water);
     if (this.field) {
       this.bindOn(GROUND_UNIT, this.field.field);
       this.bindOn(FAR_UNIT, this.field.far);
     }
-    this.bindOn(LIGHT_UNIT, this.lightTex);
+    this.bindOn(LIGHT_UNIT, this.lightTex.texture);
     this.ice.bind();
     this.rivers.bind();
     if (this.trees) this.bindOn(TREE_UNIT, this.trees.texture);
@@ -553,9 +527,9 @@ export class GroundBlend {
 
   dispose(): void {
     const gpu = this.gpu;
-    gpu.destroyTexture(this.kindTex);
-    gpu.destroyTexture(this.tideTex);
-    gpu.destroyTexture(this.lightTex);
+    this.kindTex.destroy();
+    this.tideTex.destroy();
+    this.lightTex.destroy();
     this.trees?.dispose();
     this.ice.dispose();
     this.rivers.dispose();

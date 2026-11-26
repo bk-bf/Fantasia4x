@@ -8,14 +8,9 @@ import { withRockSurface } from './rockSurface.js';
 import { LIGHT_FIELD_UNIT } from './lightPass.js';
 import { NOISE_SIZE, tierNoiseTexels } from './tierNoise.js';
 import { TIER_FIELDS, TIER_TEXEL, TierTiles, type TileAt } from './tierTiles.js';
-import type {
-  GpuDevice,
-  GpuPipeline,
-  GpuTexture,
-  GpuUniform,
-  GpuVertexLayout
-} from '../../gpu/device.js';
+import type { GpuDevice, GpuPipeline, GpuUniform, GpuVertexLayout } from '../../gpu/device.js';
 import { samplersOf } from '../samplers.js';
+import { SizedTexture } from '../sizedTexture.js';
 
 const PROGRAM = 'tiers';
 export const TIER_TILE_UNIT = 4;
@@ -70,21 +65,14 @@ const UNIFORMS = [
   'u_rowDepth'
 ] as const;
 
-function texture(gpu: GpuDevice, unit: number): GpuTexture {
-  const tex = gpu.createTexture()!;
-  gpu.setTextureSlot(unit);
-  gpu.bindTexture(tex);
-  return tex;
-}
-
 export class Tiers {
   private readonly gpu: GpuDevice;
   private readonly program: GpuPipeline;
   private readonly painted: LoadedPaintedTileset;
   private readonly tiles = new TierTiles();
-  private readonly tileTex: GpuTexture;
-  private readonly fieldTex: GpuTexture;
-  private readonly noiseTex: GpuTexture;
+  private readonly tileTex: SizedTexture;
+  private readonly fieldTex: SizedTexture;
+  private readonly noiseTex: SizedTexture;
   private readonly vao: GpuVertexLayout;
   private readonly at: Record<(typeof UNIFORMS)[number], GpuUniform | null>;
   private terrain: GameGrid | null = null;
@@ -111,17 +99,11 @@ export class Tiers {
     this.program = program;
     this.painted = painted;
     this.vao = gpu.createVertexLayout()!;
-    this.tileTex = texture(gpu, TIER_TILE_UNIT);
-    gpu.writeTexture({ format: 'rgba16uint', width: 1, height: 1 }, new Uint16Array(4));
-    this.fieldTex = texture(gpu, TIER_FIELD_UNIT);
+    this.tileTex = new SizedTexture(gpu, 'rgba16uint');
+    this.fieldTex = new SizedTexture(gpu, 'rgba8unorm');
     gpu.bindSampler(TIER_FIELD_UNIT, samplersOf(gpu).linear);
-    gpu.writeTexture({ format: 'rgba8unorm', width: 1, height: 1 }, new Uint8Array(4));
-    this.noiseTex = texture(gpu, TIER_NOISE_UNIT);
-    gpu.writeTexture(
-      { format: 'rgba8unorm', width: NOISE_SIZE, height: NOISE_SIZE },
-      tierNoiseTexels()
-    );
-    gpu.setTextureSlot(0);
+    this.noiseTex = new SizedTexture(gpu, 'rgba8unorm', NOISE_SIZE, NOISE_SIZE);
+    this.noiseTex.write(tierNoiseTexels());
     this.at = Object.fromEntries(UNIFORMS.map((n) => [n, gpu.uniform(program, n)])) as Record<
       (typeof UNIFORMS)[number],
       GpuUniform | null
@@ -158,36 +140,29 @@ export class Tiers {
     if (moved) this.uploadFields();
   }
 
-  private upload(unit: number, tex: GpuTexture, format: 'tiles' | 'fields'): void {
-    const gpu = this.gpu;
+  private upload(tex: SizedTexture, data: ArrayBufferView): void {
     const { w, h } = this.tiles;
     if (w === 0 || h === 0) return;
-    gpu.setTextureSlot(unit);
-    gpu.bindTexture(tex);
-    gpu.setUnpackAlignment(1);
-    if (format === 'tiles')
-      gpu.writeTexture({ format: 'rgba16uint', width: w, height: h }, this.tiles.texels);
-    else gpu.writeTexture({ format: 'rgba8unorm', width: w, height: h }, this.tiles.fields);
-    gpu.setUnpackAlignment(4);
-    gpu.setTextureSlot(0);
+    tex.resize(w, h);
+    tex.write(data);
   }
 
   private uploadTiles(): void {
     if (this.tiles.texels.length === this.tiles.w * this.tiles.h * TIER_TEXEL)
-      this.upload(TIER_TILE_UNIT, this.tileTex, 'tiles');
+      this.upload(this.tileTex, this.tiles.texels);
   }
 
   private uploadFields(): void {
     if (this.tiles.fields.length === this.tiles.w * this.tiles.h * TIER_FIELDS)
-      this.upload(TIER_FIELD_UNIT, this.fieldTex, 'fields');
+      this.upload(this.fieldTex, this.tiles.fields);
   }
 
   bindShared(): void {
     const gpu = this.gpu;
     gpu.setTextureSlot(TIER_TILE_UNIT);
-    gpu.bindTexture(this.tileTex);
+    gpu.bindTexture(this.tileTex.texture);
     gpu.setTextureSlot(TIER_NOISE_UNIT);
-    gpu.bindTexture(this.noiseTex);
+    gpu.bindTexture(this.noiseTex.texture);
     gpu.setTextureSlot(0);
   }
 
@@ -227,7 +202,7 @@ export class Tiers {
     gpu.setTextureSlot(VEIN_UNIT);
     gpu.bindTexture(top.veins);
     gpu.setTextureSlot(TIER_FIELD_UNIT);
-    gpu.bindTexture(this.fieldTex);
+    gpu.bindTexture(this.fieldTex.texture);
     this.bindShared();
     gpu.setVertexLayout(this.vao);
     gpu.draw('triangle-list', 6);
@@ -237,9 +212,9 @@ export class Tiers {
 
   dispose(): void {
     const gpu = this.gpu;
-    gpu.destroyTexture(this.tileTex);
-    gpu.destroyTexture(this.fieldTex);
-    gpu.destroyTexture(this.noiseTex);
+    this.tileTex.destroy();
+    this.fieldTex.destroy();
+    this.noiseTex.destroy();
     gpu.destroyVertexLayout(this.vao);
     gpu.destroyPipeline(this.program);
   }

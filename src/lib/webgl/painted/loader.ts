@@ -12,7 +12,7 @@ import { setPaintedTileset } from './tileset.js';
 import { pawnLook, type PawnLookOf, type PawnLookPool } from './pawnLook.js';
 import { atlasTexels, type AtlasTexels } from '../drawnSprites.js';
 import { swayTable } from './wind.js';
-import type { GpuDevice, GpuTexture } from '../../gpu/device.js';
+import { TextureUsage, type GpuDevice, type GpuTexture } from '../../gpu/device.js';
 
 export const PAINTED_BASE_URL = '/tilesets/painted/';
 const LIGHT_IMAGE = 'atlas-light.png';
@@ -96,23 +96,22 @@ async function fetchSway(url: string): Promise<unknown> {
   }
 }
 
-function uploadAtlas(gpu: GpuDevice, image: TexImageSource): GpuTexture {
-  const texture = gpu.createTexture();
-  if (!texture) throw new Error('could not create the painted atlas texture');
-  gpu.bindTexture(texture);
-  gpu.setUnpackPremultiplyAlpha(false);
-  gpu.setUnpackFlipY(false);
-  gpu.writeTextureImage('rgba8unorm', image);
-  gpu.bindTexture(null);
+const ATLAS_USAGE = TextureUsage.TEXTURE_BINDING | TextureUsage.COPY_DST;
+
+function uploadAtlas(gpu: GpuDevice, image: HTMLImageElement | ImageBitmap): GpuTexture {
+  const size =
+    image instanceof HTMLImageElement
+      ? { width: image.naturalWidth, height: image.naturalHeight }
+      : { width: image.width, height: image.height };
+  const texture = gpu.createTexture({ format: 'rgba8unorm', ...size, usage: ATLAS_USAGE });
+  gpu.queue.copyExternalImageToTexture({ source: image }, { texture }, size);
   return texture;
 }
 
 function unlitTexture(gpu: GpuDevice): GpuTexture {
-  const texture = gpu.createTexture();
-  if (!texture) throw new Error('could not create the painted light texture');
-  gpu.bindTexture(texture);
-  gpu.writeTexture({ format: 'rgba8unorm', width: 1, height: 1 }, new Uint8Array([0, 0, 0, 255]));
-  gpu.bindTexture(null);
+  const size = { width: 1, height: 1 };
+  const texture = gpu.createTexture({ format: 'rgba8unorm', ...size, usage: ATLAS_USAGE });
+  gpu.queue.writeTexture({ texture }, new Uint8Array([0, 0, 0, 255]), { bytesPerRow: 4 }, size);
   return texture;
 }
 
