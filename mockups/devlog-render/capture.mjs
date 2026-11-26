@@ -36,6 +36,15 @@ async function trees(name, query) {
   await p.close();
 }
 
+async function ground(name, query) {
+  const p = await page(2060, 1420);
+  await p.goto(`${BASE}/fantasia4x-tree-ground/?show=new&zoom=1&strip=0&${query}`, { waitUntil: 'networkidle' });
+  await p.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 120000 });
+  const url = await p.evaluate(() => document.querySelector('.pane.shown canvas').toDataURL('image/png'));
+  save(name, Buffer.from(url.split(',')[1], 'base64'));
+  await p.close();
+}
+
 if (!CROPS_ONLY) {
 await hud('new-day.png', 13, 'clear');
 await hud('new-dusk.png', 19, 'clear');
@@ -45,6 +54,7 @@ await trees('trees.png', 'show=trees');
 await trees('forest.png', 'show=forest');
 await trees('magic.png', 'show=magic&see=emberwood-elder');
 await trees('magic-night.png', 'show=magic&see=emberwood-elder&light=night');
+await ground('ground-autumn.png', 'season=autumn');
 }
 
 const IMG = new URL('img/', import.meta.url).pathname;
