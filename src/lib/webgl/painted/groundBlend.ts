@@ -13,13 +13,14 @@ import { ICE_UNIT, WaterIce } from './waterIce.js';
 import { FLOW_UNIT, RiverTextures, STREAM_UNIT } from './riverTextures.js';
 import { riverTiles, type RiverTiles } from './riverGrid.js';
 import type { TileData } from '../tile-types.js';
-import type {
-  GpuBuffer,
-  GpuDevice,
-  GpuPipeline,
-  GpuTexture,
-  GpuUniform,
-  GpuVertexLayout
+import {
+  halfFloats,
+  type GpuBuffer,
+  type GpuDevice,
+  type GpuPipeline,
+  type GpuTexture,
+  type GpuUniform,
+  type GpuVertexLayout
 } from '../../gpu/device.js';
 import { TREE_UNIT, TreeGroundLayer, withTreeGround } from './treeGroundLayer.js';
 import { treeSoils } from './treeGroundTable.js';
@@ -430,14 +431,14 @@ export class GroundBlend {
     }
   }
 
-  private sampleRect(r: Rect, sampler: LightSampler | undefined, time: number): Float32Array {
+  private sampleRect(r: Rect, sampler: LightSampler | undefined, time: number): Uint16Array {
     const out = new Float32Array(r.w * r.h * 4);
     for (let j = 0; j < r.h; j++)
       for (let i = 0; i < r.w; i++) {
         const l = sampler ? sampler(r.x + i, r.y + j, time) : [1, 1, 1];
         out.set([l[0], l[1], l[2], 1], (j * r.w + i) * 4);
       }
-    return out;
+    return halfFloats(out);
   }
 
   private rebuildLight(f: GroundBlendFrame): void {
@@ -448,7 +449,7 @@ export class GroundBlend {
     if (!built) this.lightTex.resize(cw, ch, true);
     const old = this.litRect;
     if (old && old.w > 0 && old.h > 0)
-      this.lightTex.write(new Float32Array(old.w * old.h * 4), old.x, old.y, old.w, old.h);
+      this.lightTex.write(new Uint16Array(old.w * old.h * 4), old.x, old.y, old.w, old.h);
     const whole = { x: 0, y: 0, w: cw, h: ch };
     const rect =
       !f.lightSampler || f.litBounds === undefined
