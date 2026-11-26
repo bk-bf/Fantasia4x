@@ -118,7 +118,7 @@ const HAUL = (() => {
     const across = whole.w > whole.h && (face === 's' ? IN_BOTH_ARMS.includes(hold) && HELD_ACROSS.includes(load.storage) : hold === 'hip' && !!load.slim), spr = across ? endOn(load.id + '/' + variant, whole) : whole;
     const out = { key: load.id + '/' + variant + (across ? '/end' : ''), sprite: 'item/' + load.id + '/' + variant, spr, grip: spr.hold || GRIPS[hold](spr), sag: load.limp && !ended ? SAG[hold] : 0 };
     if (upright) {
-      const seen = Math.min(spr.h, SEEN_ROWS.most, Math.max(SEEN_ROWS.least, Math.round(spr.h * SEEN.depth))), rows = face === 'f' ? [spr.h - seen, spr.h] : [0, seen], held = face === 'f' ? rows[0] + SEEN_ROWS.behind : rows[1] - 1 - SEEN_ROWS.behind;
+      const seen = face === 'b' ? Math.min(spr.h, SEEN_ROWS.least) : Math.min(spr.h, SEEN_ROWS.most, Math.max(SEEN_ROWS.least, Math.round(spr.h * SEEN.depth))), rows = face === 'f' ? [spr.h - seen, spr.h] : [0, seen], held = face === 'f' ? rows[0] + SEEN_ROWS.behind : rows[1] - 1 - SEEN_ROWS.behind;
       Object.assign(out, { key: out.key + (headDown ? '/upside' : '') + '/' + rows, upside: headDown, rows, grip: shaftAt(spr, held, headDown) });
     }
     if (FUSED.includes(hold) && face === 's') out.fused = true;
