@@ -15,21 +15,21 @@ const ECO_DATA = (() => {
     quillback: { rarity: 'uncommon', active: 'night' },
     giant_olm: { rarity: 'rare', active: 'night', burrow: 1 },
     woolly_mammoth: { rarity: 'rare', active: 'day', migr: .4, cold: 1 },
-    wolf: { rarity: 'common', style: 'pursuit', active: 'dusk', life: 10, social: 'pack', scav: 1, litter: [3, 6] },
+    wolf: { rarity: 'common', pack: [4, 8], style: 'pursuit', active: 'dusk', life: 10, social: 'pack', scav: 1, litter: [3, 6] },
     jackal: { rarity: 'uncommon', style: 'pursuit', active: 'crep', small: 2, scav: 1, life: 8, social: 'pack', litter: [3, 6] },
-    worg: { rarity: 'rare', style: 'pursuit', active: 'night', life: 14, social: 'pack', scav: 1, litter: [3, 5] },
+    worg: { rarity: 'uncommon', style: 'pursuit', active: 'night', life: 14, social: 'pack', scav: 1, litter: [3, 5] },
     gnoll_marauder: { rarity: 'uncommon', style: 'pursuit', active: 'dusk', life: 25, social: 'tribe', scav: 1 },
     sabretooth: { rarity: 'rare', style: 'pursuit', active: 'night', solo: 2, life: 16, social: 'pair' },
     owlbear: { rarity: 'rare', style: 'pursuit', active: 'night', solo: 1, life: 25, social: 'solo' },
     hippogriff: { rarity: 'rare', style: 'pursuit', active: 'day', air: 1, solo: 3, life: 30, social: 'pair' },
-    bear: { rarity: 'rare', style: 'forage', active: 'day', solo: 1, sleeps: 1, life: 30, social: 'solo', scav: 1, fish: 1, breed: .35 },
-    mire_crocodile: { rarity: 'uncommon', style: 'ambush', active: 'sun', waits: 'water', solo: 3, sleeps: 1, life: 50, social: 'solo' },
-    thornwood_spider: { rarity: 'common', style: 'trap', active: 'night', life: 6, social: 'solo' },
+    bear: { rarity: 'rare', share: .012, style: 'forage', active: 'day', solo: 1, sleeps: 1, life: 30, social: 'solo', scav: 1, fish: 1, breed: .35 },
+    mire_crocodile: { rarity: 'rare', style: 'ambush', active: 'sun', waits: 'water', solo: 3, sleeps: 1, life: 50, social: 'solo' },
+    thornwood_spider: { rarity: 'common', share: .3, style: 'trap', active: 'night', life: 6, social: 'solo' },
     marsh_viper: { rarity: 'common', style: 'pursuit', active: 'sun', small: 1, sleeps: 1, life: 12, social: 'solo' },
     harpy: { rarity: 'uncommon', style: 'pursuit', active: 'day', small: 1, air: 1, grounded: 'storm', life: 25, social: 'flock' },
     stirge: { rarity: 'common', style: 'scavenge', active: 'dusk', air: 1, life: 4, social: 'swarm' },
     goblin: { rarity: 'common', style: 'raid', active: 'night', life: 30, social: 'tribe' },
-    orc: { rarity: 'uncommon', style: 'raid', active: 'dusk', life: 40, social: 'tribe' },
+    orc: { rarity: 'rare', style: 'raid', active: 'dusk', life: 40, social: 'tribe' },
     kobold_skulker: { rarity: 'uncommon', style: 'raid', active: 'night', thief: 1, life: 30, social: 'tribe' },
     bullywug: { rarity: 'common', style: 'raid', active: 'night', life: 20, social: 'tribe' },
     fox: { rarity: 'common', style: 'pursuit', active: 'crep', small: 1, scav: 1, life: 6, social: 'pair', litter: [3, 6] },
@@ -54,7 +54,7 @@ const ECO_DATA = (() => {
       list.sort((a, b) => a.raw.tier - b.raw.tier);
       const base = list.find(o => o.raw.tier === 2) || list[0], r = base.raw, bw = r.biomeWeights || { plains: 1 };
       const top = Object.entries(bw).sort((a, b) => b[1] - a[1])[0][0], carcass = objs.get('item/' + r.carcassItemId), mass = (carcass && carcass.raw.weightKg) || 20;
-      const pack = [Math.max(1, (r.pack || [1, 2])[0]), Math.max(1, (r.pack || [1, 2])[1])], threat = r.threatLevel || 1;
+      const src = P.pack || r.pack || [1, 2], pack = [Math.max(1, src[0]), Math.max(1, src[1])], threat = r.threatLevel || 1;
       const temper = ({ passive: .2, neutral: .6, aggressive: 1 }[r.behaviour] || .6) + (r.chargesWhenWounded ? .25 : 0);
       const tiers = list.map(o => ({ tier: o.raw.tier, id: o.id, name: o.name, threat: o.raw.threatLevel || threat, young: YOUNG.test(o.name) }));
       const k = { id: sp, name: base.name, tiers, top: Math.max(...tiers.map(t => t.tier)), biomes: bw, land: BIOME[top], mass, threat, temper, behaviour: r.behaviour, rarity: P.rarity, active: P.active, src: { pack: r.pack, lairRange: r.lairRange, lair: r.lair, diet: r.diet, kg: mass } };
@@ -67,7 +67,7 @@ const ECO_DATA = (() => {
         Object.assign(k, {
           style: P.style, lair: site ? site.name : 'Lair', den: DEN[r.lair] || 'den', site: BIOME[top], need, size: P.solo ? [1, Math.min(P.solo, pack[1])] : pack, cap: P.solo || pack[1] * 2 + 2,
           range: (r.lairRange || 50) * 2.5, speed: P.air ? 110 : P.style === 'ambush' ? 22 : mass > 50 ? 42 : 62, skill: clamp(.28 + threat / 40, .28, .75), litter: P.litter || [1, Math.max(1, pack[1] - 1)],
-          breed: P.breed || .65, floor: P.style === 'forage' ? .7 : clamp(need * .55, .3, 1.8), share: SHARE[P.rarity], small: P.small || 0, scav: P.scav || 0, air: P.air || 0, sleeps: P.sleeps || 0, waits: P.waits || null, grounded: P.grounded || null, thief: P.thief || 0, life: P.life || 10, social: P.social || 'pack', fish: P.fish || 0,
+          breed: P.breed || .65, floor: P.style === 'forage' ? .7 : clamp(need * .55, .3, 1.8), share: P.share || SHARE[P.rarity], small: P.small || 0, scav: P.scav || 0, air: P.air || 0, sleeps: P.sleeps || 0, waits: P.waits || null, grounded: P.grounded || null, thief: P.thief || 0, life: P.life || 10, social: P.social || 'pack', fish: P.fish || 0,
         });
       }
       out[sp] = k;
