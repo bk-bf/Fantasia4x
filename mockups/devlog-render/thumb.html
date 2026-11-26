@@ -12,36 +12,31 @@ html, body { margin: 0; background: #000; }
 .clip { position: absolute; top: 0; height: 720px; overflow: hidden; }
 .art { position: absolute; image-rendering: pixelated; transform-origin: 0 0; max-width: none; }
 .seam { position: absolute; top: 0; height: 720px; width: 8px; left: 636px; background: #ffc468; }
-.t { position: absolute; font: 128px/1 Jersey20, sans-serif; color: #fff; letter-spacing: 4px;
-  text-shadow: 8px 8px 0 #000, -4px 4px 0 #000, 4px -4px 0 #000, -4px -4px 0 #000, 8px 0 0 #000, 0 8px 0 #000; }
-.t em { font-style: normal; color: #ffc468; }
-.t i { font-style: normal; color: #b0dc80; }
-.t.bl { font: 200px/.82 Blackletter, serif; letter-spacing: 0; }
 .ov { position: absolute; image-rendering: pixelated; }
 </style>
 </head>
 <body>
 <section class="th" id="split">
-  <div class="clip" style="left:0;width:640px"><img class="art" src="src/old16.png" style="left:-1120px;top:-480px;width:3840px;height:2176px" alt=""></div>
+  <div class="clip" style="left:0;width:640px"><img class="art" src="src/old-glyph.png" style="left:-304px;top:-48px;width:1280px;height:1088px" alt=""></div>
   <div class="clip" style="left:640px;width:640px"><img class="art" src="src/new-day.png" style="left:-1120px;top:-480px;width:3840px;height:2176px" alt=""></div>
   <div class="seam"></div>
-  <div class="t" style="left:40px;top:32px">UGLY</div>
-  <div class="t" style="right:40px;top:32px"><em>5 DAYS</em></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="40" data-k="3" data-x="40" data-y="32" data-lines='[[["UGLY","#ffffff"]]]'></canvas>
+  <canvas class="ov txt" data-font="Jersey20" data-size="40" data-k="3" data-right="40" data-y="32" data-lines='[[["5 DAYS","#ffc468"]]]'></canvas>
   <canvas class="ov arrow" width="56" height="26" style="left:416px;top:488px;width:448px;height:208px"></canvas>
 </section>
 <section class="th" id="night">
   <div class="clip" style="left:0;width:1280px"><img class="art" src="src/new-night.png" style="left:-1040px;top:-440px;width:3840px;height:2176px" alt=""></div>
-  <div class="t bl" style="left:48px;bottom:56px">Painted<br><em>light</em></div>
+  <canvas class="ov txt" data-font="Blackletter" data-size="24" data-k="8" data-x="48" data-bottom="48" data-lh="20" data-lines='[[["Painted","#ffffff"]],[["light","#ffc468"]]]'></canvas>
 </section>
 <section class="th" id="magic">
-  <div class="clip" style="left:0;width:1280px"><img class="art" src="src/magic.png" style="left:-825px;top:-1209px;width:4764px;height:2964px" alt=""></div>
-  <div class="t" style="left:48px;top:48px;font-size:160px">301<br><i>commits</i></div>
+  <div class="clip" style="left:0;width:1280px"><img class="art" src="src/magic.png" style="left:-750px;top:-1236px;width:4764px;height:2964px" alt=""></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="20" data-k="7" data-x="49" data-y="49" data-lh="18" data-lines='[[["301","#ffffff"]],[["commits","#b0dc80"]]]'></canvas>
 </section>
 <script>
 const id = new URLSearchParams(location.search).get('t') || 'split';
 document.getElementById(id).classList.add('on');
 for (const c of document.querySelectorAll('canvas.arrow')) {
-  const g = c.getContext('2d'), W = c.width, H = c.height, dot = (x, y, col) => { g.fillStyle = col; g.fillRect(x, y, 1, 1); };
+  const g = c.getContext('2d'), dot = (x, y, col) => { g.fillStyle = col; g.fillRect(x, y, 1, 1); };
   const pts = [];
   for (let s = 0; s <= 400; s++) { const u = s / 400, x = 4 + u * 44, y = 20 - Math.sin(u * Math.PI) * 15; pts.push([Math.round(x), Math.round(y)]); }
   const head = [[49, 15], [50, 16], [51, 17], [52, 18], [53, 19], [52, 20], [51, 21], [50, 22], [49, 23], [48, 18], [48, 19], [48, 20], [48, 21], [48, 22], [49, 17], [49, 18], [49, 19], [49, 20], [49, 21], [49, 22], [50, 17], [50, 18], [50, 19], [50, 20], [50, 21], [51, 18], [51, 19], [51, 20], [52, 19]];
@@ -49,6 +44,50 @@ for (const c of document.querySelectorAll('canvas.arrow')) {
   for (const [x, y] of body) for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [1, -1], [-1, 1], [0, 2], [1, 2], [-1, 2]]) dot(x + dx, y + dy, '#000');
   for (const [x, y] of body) { dot(x, y, '#ffc468'); dot(x, y + 1, '#ffc468'); }
 }
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+async function text(c) {
+  const d = c.dataset, size = +d.size, k = +d.k, lh = +(d.lh || size), lines = JSON.parse(d.lines);
+  await document.fonts.load(`${size}px ${d.font}`);
+  const m = document.createElement('canvas').getContext('2d');
+  m.font = `${size}px ${d.font}`;
+  const widths = lines.map(l => l.reduce((w, [t]) => w + Math.ceil(m.measureText(t).width), 0));
+  const pad = 2, W = Math.max(...widths) + pad * 2 + 1, H = lines.length * lh + Math.ceil(size * .4) + pad * 2 + 1;
+  const ink = new Int32Array(W * H).fill(-1), cols = [];
+  lines.forEach((l, li) => {
+    let x = pad;
+    for (const [t, col] of l) {
+      const s = document.createElement('canvas'); s.width = W; s.height = H;
+      const g = s.getContext('2d'); g.font = `${size}px ${d.font}`; g.textBaseline = 'top'; g.fillStyle = '#fff';
+      g.fillText(t, x, pad + li * lh);
+      const a = g.getImageData(0, 0, W, H).data, ci = cols.push(hex(col)) - 1;
+      for (let i = 0; i < W * H; i++) if (a[i * 4 + 3] >= 128) ink[i] = ci;
+      x += Math.ceil(m.measureText(t).width);
+    }
+  });
+  const edge = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (ink[y * W + x] >= 0) continue;
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const nx = x - dx, ny = y - dy;
+      if (nx >= 0 && ny >= 0 && nx < W && ny < H && ink[ny * W + nx] >= 0) { edge[y * W + x] = 1; break; }
+    }
+  }
+  const shade = new Uint8Array(W * H);
+  for (let y = 1; y < H; y++) for (let x = 1; x < W; x++) if (ink[y * W + x] < 0 && !edge[y * W + x] && (edge[(y - 1) * W + x - 1] || ink[(y - 1) * W + x - 1] >= 0)) shade[y * W + x] = 1;
+  c.width = W; c.height = H;
+  const g = c.getContext('2d'), img = g.createImageData(W, H);
+  for (let i = 0; i < W * H; i++) {
+    const rgb = ink[i] >= 0 ? cols[ink[i]] : edge[i] || shade[i] ? [0, 0, 0] : null;
+    if (rgb) img.data.set([...rgb, 255], i * 4);
+  }
+  g.putImageData(img, 0, 0);
+  Object.assign(c.style, { width: W * k + 'px', height: H * k + 'px' });
+  const T = 720, L = 1280;
+  c.style.left = (d.right ? L - +d.right - W * k : +d.x) - ((d.right ? L - +d.right - W * k : +d.x) % k) + 'px';
+  const top = d.bottom ? T - +d.bottom - H * k : +d.y;
+  c.style.top = top - (top % k) + 'px';
+}
+window.thumbReady = Promise.all([...document.querySelectorAll('.th.on canvas.txt')].map(text)).then(() => document.body.dataset.ready = '1');
 </script>
 </body>
 </html>

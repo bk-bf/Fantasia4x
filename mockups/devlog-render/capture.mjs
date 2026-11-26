@@ -5,6 +5,7 @@ const BASE = process.env.MOCKUPS || 'http://ubuntuserver:8794';
 const DEV = process.argv[2];
 const CROPS_ONLY = DEV === '--crops';
 if (!DEV) throw new Error('usage: node capture.mjs <dev-worktree> | --crops  (git worktree add --detach /tmp/f4x-dev dev)');
+if (!CROPS_ONLY) await import('./capture-glyph.mjs');
 const OUT = new URL('src/', import.meta.url).pathname;
 mkdirSync(OUT, { recursive: true });
 const HIDE = '#mock,#hud,#marks,#stamp,#busy,#wx,header,footer,[class*=comment],[id*=comment]{display:none!important}';
@@ -25,15 +26,6 @@ async function hud(name, hour, weather) {
   await p.close();
 }
 
-async function oldTiles(name, path, sel) {
-  const p = await page(2200, 1400);
-  await p.goto(`file://${DEV}/mockups/tileset-archive/${path}`, { waitUntil: 'networkidle' });
-  await p.waitForTimeout(2500);
-  await p.addStyleTag({ content: '#gridcv{display:none!important}' });
-  save(name, await p.locator(sel).screenshot({ animations: 'disabled' }));
-  await p.close();
-}
-
 async function trees(name, query) {
   const p = await page(1600, 1000);
   await p.goto(`${BASE}/fantasia4x-big-trees/?${query}&zoom=1&play=off&wind=still`, { waitUntil: 'networkidle' });
@@ -49,8 +41,6 @@ await hud('new-day.png', 13, 'clear');
 await hud('new-dusk.png', 19, 'clear');
 await hud('new-night.png', 23.5, 'clear');
 await hud('new-summer.png', 13, 'summer_windy');
-await oldTiles('old16.png', '16/index.html', '#cv');
-await oldTiles('old32.png', 'index.html', '#cv');
 await trees('trees.png', 'show=trees');
 await trees('forest.png', 'show=forest');
 await trees('magic.png', 'show=magic&see=emberwood-elder');
@@ -60,9 +50,8 @@ await trees('magic-night.png', 'show=magic&see=emberwood-elder&light=night');
 const IMG = new URL('img/', import.meta.url).pathname;
 const MOCK = process.env.MOCKUP_DIR || process.env.HOME + '/mockups';
 const CROPS = {
-  'grass-before': ['old16.png', 540, 240, 640, 400],
+  'glyph-before': ['old-glyph.png', 300, 80, 640, 400],
   'grass-after': ['new-day.png', 540, 240, 640, 400],
-  'old32': ['old32.png', 540, 240, 640, 400],
   'map-day': ['new-day.png', 380, 160, 960, 600],
   'map-dusk': ['new-dusk.png', 380, 160, 960, 600],
   'map-night': ['new-night.png', 380, 160, 960, 600],
@@ -77,13 +66,13 @@ const COPIES = {
 mkdirSync(IMG, { recursive: true });
 for (const [to, from] of Object.entries(COPIES)) { copyFileSync(`${MOCK}/${from}`, IMG + to); console.log('copied img/' + to); }
 const cp = await page(100, 100);
-for (const [name, [file, x, y, w, h]] of Object.entries(CROPS)) {
+for (const [name, [file, x, y, w, h, k = 1]] of Object.entries(CROPS)) {
   await cp.goto(`file://${OUT}${file}`);
-  const url = await cp.evaluate(([x, y, w, h]) => {
-    const im = document.querySelector('img'), c = document.createElement('canvas');
-    c.width = w; c.height = h; c.getContext('2d').drawImage(im, x, y, w, h, 0, 0, w, h);
+  const url = await cp.evaluate(([x, y, w, h, k]) => {
+    const im = document.querySelector('img'), c = document.createElement('canvas'), g = c.getContext('2d');
+    c.width = w * k; c.height = h * k; g.imageSmoothingEnabled = false; g.drawImage(im, x, y, w, h, 0, 0, w * k, h * k);
     return c.toDataURL('image/png');
-  }, [x, y, w, h]);
+  }, [x, y, w, h, k]);
   writeFileSync(IMG + name + '.png', Buffer.from(url.split(',')[1], 'base64'));
   console.log('cropped img/' + name + '.png');
 }
