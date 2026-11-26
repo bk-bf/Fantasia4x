@@ -99,9 +99,19 @@ export const TREE_FLAGS = {
   mature: 128
 };
 
+/**
+ * @typedef {{
+ *   age?: string, box: number[], heart?: boolean, soul?: boolean, frost?: boolean, iron?: boolean,
+ *   ember?: boolean, moon?: boolean, apple?: boolean, witch?: boolean, bone?: boolean,
+ *   hollow?: string[] | null, hollowAt?: number[] | null, orbs?: number[][]
+ * }} TreeAnim
+ */
+
+/** @param {{ kind?: Uint8Array, anim?: Partial<TreeAnim> }} s */
 export function treeFlags(s = { kind: new Uint8Array(0), anim: { age: '' } }) {
   const a = s.anim ?? {};
   const strands = [...(s.kind ?? [])].some((k) => STRAND.has(k & PART_BITS));
+  /** @type {Record<string, boolean>} */
   const on = {
     parts: Boolean(s.kind),
     curtain: strands,
@@ -132,8 +142,17 @@ const sampled = (pts = [0], n = FX_SAMPLE) => {
 
 const hexRgb = (h = '#000000') => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 
+/** @param {{ w: number, h: number, ax: number, ay: number, c: number[][], kind?: Uint8Array, anim?: TreeAnim }} s */
 export function treeFx(
-  s = { w: 0, h: 0, ax: 0, ay: 0, c: [[0, 0, 0]], kind: new Uint8Array(0), anim: { age: '' } }
+  s = {
+    w: 0,
+    h: 0,
+    ax: 0,
+    ay: 0,
+    c: [[0, 0, 0]],
+    kind: new Uint8Array(0),
+    anim: { age: '', box: [0, 0, 0, 0] }
+  }
 ) {
   const a = s.anim;
   if (!a || !s.kind) return null;
