@@ -51,29 +51,29 @@
     return { x: lo, y: 0, w: W - lo, h: H, poly: [[s.x0 - lo, 0], [W - lo, 0], [W - lo, H], [s.x1 - lo, H]] };
   }
 
-  function arrowShape(kind, a, b, via) {
+  function arrowShape(kind, a, b, via, z = 1) {
     if (kind === 'block') {
-      const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux, hl = 110, sw = 24, hw = 70, bx = b[0] - ux * hl, by = b[1] - uy * hl;
+      const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux, hl = 110 * z, sw = 24 * z, hw = 70 * z, bx = b[0] - ux * hl, by = b[1] - uy * hl;
       return [[a[0] + nx * sw * .3, a[1] + ny * sw * .3], [bx + nx * sw, by + ny * sw], [bx + nx * hw, by + ny * hw], b, [bx - nx * hw, by - ny * hw], [bx - nx * sw, by - ny * sw], [a[0] - nx * sw * .3, a[1] - ny * sw * .3]];
     }
     const q = t => [(1 - t) ** 2 * a[0] + 2 * (1 - t) * t * via[0] + t * t * b[0], (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * via[1] + t * t * b[1]];
     const te = .76, N = 40, Lt = [], R = [];
     for (let i = 0; i <= N; i++) {
-      const t = te * i / N, p = q(t), p2 = q(t + .001), dx = p2[0] - p[0], dy = p2[1] - p[1], d = Math.hypot(dx, dy) || 1, w = 3 + 21 * Math.pow(i / N, .7);
+      const t = te * i / N, p = q(t), p2 = q(t + .001), dx = p2[0] - p[0], dy = p2[1] - p[1], d = Math.hypot(dx, dy) || 1, w = (3 + 21 * Math.pow(i / N, .7)) * z;
       Lt.push([p[0] - dy / d * w, p[1] + dx / d * w]); R.push([p[0] + dy / d * w, p[1] - dx / d * w]);
     }
-    const B = q(te), dx = b[0] - B[0], dy = b[1] - B[1], d = Math.hypot(dx, dy) || 1, hw = 58;
+    const B = q(te), dx = b[0] - B[0], dy = b[1] - B[1], d = Math.hypot(dx, dy) || 1, hw = 58 * z;
     return [...Lt, [B[0] - dy / d * hw, B[1] + dx / d * hw], b, [B[0] + dy / d * hw, B[1] - dx / d * hw], ...R.reverse()];
   }
-  function pixelPoly(a, b) {
-    const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux, hl = 12, sw = 2.6, hw = 8, bx = b[0] - ux * hl, by = b[1] - uy * hl;
-    return [[a[0] + nx * .6, a[1] + ny * .6], [bx + nx * sw, by + ny * sw], [bx + nx * hw, by + ny * hw], b, [bx - nx * hw, by - ny * hw], [bx - nx * sw, by - ny * sw], [a[0] - nx * .6, a[1] - ny * .6]];
+  function pixelPoly(a, b, z = 1) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux, hl = 12 * z, sw = 2.6 * z, hw = 8 * z, e = .6 * z, bx = b[0] - ux * hl, by = b[1] - uy * hl;
+    return [[a[0] + nx * e, a[1] + ny * e], [bx + nx * sw, by + ny * sw], [bx + nx * hw, by + ny * hw], b, [bx - nx * hw, by - ny * hw], [bx - nx * sw, by - ny * sw], [a[0] - nx * e, a[1] - ny * e]];
   }
   const inside = (poly, x, y) => { let r = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) r = !r; } return r; };
   const hi = fill => fill.toLowerCase() === '#ffc468' ? [255, 232, 176] : hex(fill).map(v => Math.round(v + (255 - v) * .5));
 
   function pixelArrow(ar) {
-    const k = ar.k, w = W / k, h = H / k, a = ar.from.map(v => v / k), b = ar.to.map(v => v / k), poly = pixelPoly(a, b);
+    const k = ar.k, w = Math.ceil(W / k), h = Math.ceil(H / k), a = ar.from.map(v => v / k), b = ar.to.map(v => v / k), poly = pixelPoly(a, b, ar.s || 1);
     const ink = new Uint8Array(w * h);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (inside(poly, x + .5, y + .5)) ink[y * w + x] = 1;
     const at = (x, y) => x >= 0 && y >= 0 && x < w && y < h && ink[y * w + x];
@@ -88,18 +88,18 @@
     }
     g.putImageData(img, 0, 0);
     c.className = 'ov parrow';
-    Object.assign(c.style, { left: '0px', top: '0px', width: W + 'px', height: H + 'px' });
+    Object.assign(c.style, { left: '0px', top: '0px', width: w * k + 'px', height: h * k + 'px' });
     return c;
   }
 
   function vectorArrow(ar) {
-    const pts = arrowShape(ar.kind, ar.from, ar.to, ar.via), path = 'M' + pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join('L') + 'Z';
+    const z = ar.s || 1, pts = arrowShape(ar.kind, ar.from, ar.to, ar.via, z), path = 'M' + pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join('L') + 'Z';
     const s = document.createElementNS(NS, 'svg');
     s.setAttribute('class', 'arrow'); s.dataset.kind = ar.kind;
     s.setAttribute('width', W); s.setAttribute('height', H); s.setAttribute('viewBox', `0 0 ${W} ${H}`);
     Object.assign(s.style, { position: 'absolute', left: 0, top: 0 });
     s.innerHTML = ar.outline
-      ? `<path d="${path}" transform="translate(10 12)" fill="${ar.line}" stroke="${ar.line}" stroke-width="16" stroke-linejoin="round" opacity=".6"/><path d="${path}" fill="${ar.fill}" stroke="${ar.line}" stroke-width="14" stroke-linejoin="round" paint-order="stroke"/>`
+      ? `<path d="${path}" transform="translate(${10 * z} ${12 * z})" fill="${ar.line}" stroke="${ar.line}" stroke-width="${16 * z}" stroke-linejoin="round" opacity=".6"/><path d="${path}" fill="${ar.fill}" stroke="${ar.line}" stroke-width="${14 * z}" stroke-linejoin="round" paint-order="stroke"/>`
       : `<path d="${path}" fill="${ar.fill}"/>`;
     return s;
   }
@@ -159,10 +159,16 @@
     return c;
   }
   function textPlace(t, c) {
-    const k = t.k, w = c.width * k, h = c.height * k;
+    const k = t.k, w = c.width * k, h = c.height * k, grid = Number.isInteger(k);
     let left = t.right != null ? W - t.right - w : t.x, top = t.bottom != null ? H - t.bottom - h : t.y;
-    left -= left % k; top -= top % k;
-    return { x: left, y: top, w, h };
+    if (grid) { left -= left % k; top -= top % k; } else { left = Math.round(left); top = Math.round(top); }
+    const px = left + (grid ? Math.floor(c.width / 2) * k : Math.round(w / 2)), py = top + (grid ? Math.floor(c.height / 2) * k : Math.round(h / 2));
+    return { x: left, y: top, w, h, px, py, rot: t.rot || 0 };
+  }
+  function spin(el, x, y, px, py, rot, k) {
+    el.style.transformOrigin = rot ? `${px - x}px ${py - y}px` : '';
+    el.style.transform = rot ? `rotate(${rot}deg)` : '';
+    Object.assign(el.dataset, { k: String(k), rot: String(rot || 0), x: String(x), y: String(y), px: String(px), py: String(py) });
   }
 
   async function render(L, th) {
@@ -186,6 +192,7 @@
       if (r.poly) { clip.dataset.poly = JSON.stringify(r.poly); clip.style.clipPath = `polygon(${r.poly.map(p => p.map(v => v + 'px').join(' ')).join(',')})`; }
       const el = keep('img' + i, im.src, () => { const e = document.createElement('img'); e.className = 'art'; e.alt = ''; e.setAttribute('src', im.src); return e; });
       Object.assign(el.style, { left: im.x - r.x + 'px', top: im.y - r.y + 'px', width: nat.naturalWidth * im.k + 'px', height: nat.naturalHeight * im.k + 'px' });
+      spin(el, im.x, im.y, im.rot ? im.px : im.x, im.rot ? im.py : im.y, im.rot, im.k);
       clip.append(el); nodes.push(clip);
       geo.clips.push(r);
     }
@@ -201,6 +208,7 @@
       const c = await keepAsync('txt' + i, JSON.stringify([t.font, t.size, t.lh, t.lines, t.outline, t.k]), () => textCanvas(t));
       const p = textPlace(t, c);
       Object.assign(c.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px' });
+      spin(c, p.x, p.y, p.px, p.py, p.rot, t.k);
       nodes.push(c); geo.texts.push(p);
     }
     const ar = L.arrow;
@@ -210,6 +218,13 @@
     th.replaceChildren(...nodes);
     return geo;
   }
+
+  function turn(g, el) {
+    const d = el.dataset, rot = +d.rot || 0;
+    if (!rot) return;
+    g.translate(+d.px, +d.py); g.rotate(rot * Math.PI / 180); g.translate(-d.px, -d.py);
+  }
+  const exact = o => Number.isInteger(o.k) && (o.rot || 0) % 90 === 0;
 
   async function composite(th) {
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -222,13 +237,16 @@
         g.save(); g.beginPath(); g.rect(x, y, num(s.width), num(s.height)); g.clip();
         if (el.dataset.poly) { g.beginPath(); JSON.parse(el.dataset.poly).forEach(([px, py], j) => j ? g.lineTo(x + px, y + py) : g.moveTo(x + px, y + py)); g.closePath(); g.clip(); }
         await im.decode().catch(() => {});
+        turn(g, im);
         g.drawImage(im, x + num(is.left), y + num(is.top), num(is.width), num(is.height));
         g.restore();
       } else if (el.classList.contains('seam')) {
         const cs = getComputedStyle(el);
         g.fillStyle = cs.backgroundColor; g.fillRect(num(cs.left), num(cs.top), num(cs.width), num(cs.height));
       } else if (el.tagName === 'CANVAS') {
+        g.save(); turn(g, el);
         g.drawImage(el, num(s.left), num(s.top), num(s.width), num(s.height));
+        g.restore();
       } else if (el.tagName.toLowerCase() === 'svg') {
         const im = new Image(); im.src = 'data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(el)); await im.decode();
         g.drawImage(im, 0, 0);
@@ -237,5 +255,5 @@
     return cv;
   }
 
-  window.Thumb = { W, H, FONT_PIXEL, SRC, parse, render, composite, clipOf, seamAt, arrowShape, pixelPoly, inside, image, clone, textPlace };
+  window.Thumb = { W, H, FONT_PIXEL, SRC, exact, parse, render, composite, clipOf, seamAt, arrowShape, pixelPoly, inside, image, clone, textPlace };
 })();
