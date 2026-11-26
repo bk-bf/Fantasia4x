@@ -413,7 +413,6 @@ export class WebGLRendererCore {
       if (this.debug) console.log('🔄 Initializing WebGL2 renderer...');
 
       const gpu = await this.webglState.initialize({ depth: this.rowDepth });
-      const gl = gpu.gl;
 
       this.shaderManager = await createTileRendererShaders(gpu, this.debug, PAINTED_TILES);
       if (!this.shaderManager) throw new Error('Shader init failed');
@@ -448,9 +447,9 @@ export class WebGLRendererCore {
         this.debug,
         this.rowDepth
       );
-      if (PAINTED_TILES) this.painted = await loadPaintedTileset(gl);
+      if (PAINTED_TILES) this.painted = await loadPaintedTileset(gpu);
       if (GROUND_BLEND && this.painted)
-        this.groundBlend = GroundBlend.create(gl, this.shaderManager, this.painted);
+        this.groundBlend = GroundBlend.create(gpu, this.shaderManager, this.painted);
       this.groundBlend?.setWaterStyle(this.wavesOn);
       this.gridRenderer.skipBlendedGround = this.groundBlend !== null;
       this.gridRenderer.skipWaterIce = this.groundBlend !== null;
@@ -458,12 +457,12 @@ export class WebGLRendererCore {
       this.groundBlend?.setIce(this.snowGrid);
       this.snowVersion++;
       if (PAINTED_LIGHT && this.painted)
-        this.lightPass = PaintedLightPass.create(gl, this.shaderManager);
-      if (this.painted) this.shadowCast = PaintedShadowCast.create(gl, this.shaderManager);
-      if (this.lightPass) this.vignette = PaintedVignette.create(gl, this.shaderManager);
-      this.groundRings = GroundRings.create(gl, this.shaderManager);
-      if (this.painted) this.leaves = FallingLeaves.create(gl, this.shaderManager);
-      if (this.painted) this.tiers = Tiers.create(gl, this.shaderManager, this.painted);
+        this.lightPass = PaintedLightPass.create(gpu, this.shaderManager);
+      if (this.painted) this.shadowCast = PaintedShadowCast.create(gpu, this.shaderManager);
+      if (this.lightPass) this.vignette = PaintedVignette.create(gpu, this.shaderManager);
+      this.groundRings = GroundRings.create(gpu, this.shaderManager);
+      if (this.painted) this.leaves = FallingLeaves.create(gpu, this.shaderManager);
+      if (this.painted) this.tiers = Tiers.create(gpu, this.shaderManager, this.painted);
       if (this.gameGrid) this.tiers?.setGrids(this.gameGrid, this.resourceOverlayGrid);
 
       if (this.debug) console.log('✅ WebGL2 renderer ready');

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { WorldTile } from '$lib/game/core/types';
+import { Webgl2Device } from '$lib/gpu/webgl2/device';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
 vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
@@ -134,7 +135,7 @@ describe('the water clock', () => {
       createProgram: () => ({ success: true }),
       getProgram: () => ({ program: {} })
     } as unknown as Parameters<typeof GroundBlend.create>[1];
-    const blend = GroundBlend.create(recordingGl(calls), shaders, painted)!;
+    const blend = GroundBlend.create(new Webgl2Device(recordingGl(calls)), shaders, painted)!;
     const grid = new GameGrid();
     for (let x = 0; x < 4; x++) applyTileToGrid(grid, tile({ x, y: 0 }), []);
     blend.setGrid(grid);
@@ -166,7 +167,7 @@ describe('the wave water switch', () => {
       createProgram: () => ({ success: true }),
       getProgram: () => ({ program: {} })
     } as unknown as Parameters<typeof GroundBlend.create>[1];
-    const blend = GroundBlend.create(recordingGl(calls), shaders, painted)!;
+    const blend = GroundBlend.create(new Webgl2Device(recordingGl(calls)), shaders, painted)!;
     const grid = new GameGrid();
     for (let x = 0; x < 4; x++)
       applyTileToGrid(grid, tile({ x, y: 0, subType: x < 2 ? 'grass' : 'water' }), []);

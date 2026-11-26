@@ -13,6 +13,15 @@ import { ICE_UNIT, WaterIce } from './waterIce.js';
 import { FLOW_UNIT, RiverTextures, STREAM_UNIT } from './riverTextures.js';
 import { riverTiles, type RiverTiles } from './riverGrid.js';
 import type { TileData } from '../tile-types.js';
+import type {
+  GpuBuffer,
+  GpuDevice,
+  GpuPipeline,
+  GpuTexture,
+  GpuUniform,
+  GpuVertexLayout,
+  FilterMode
+} from '../../gpu/device.js';
 
 const PROGRAM = 'groundBlend';
 const MAX_KINDS = 64;
@@ -111,27 +120,27 @@ export function lightRect(bounds: Bounds, w: number, h: number): Rect {
 }
 
 export class GroundBlend {
-  private readonly gl: WebGL2RenderingContext;
-  private readonly program: WebGLProgram;
-  private readonly atlas: WebGLTexture;
-  private readonly kindTex: WebGLTexture;
-  private readonly tideTex: WebGLTexture;
-  private readonly water: WebGLTexture;
+  private readonly gpu: GpuDevice;
+  private readonly program: GpuPipeline;
+  private readonly atlas: GpuTexture;
+  private readonly kindTex: GpuTexture;
+  private readonly tideTex: GpuTexture;
+  private readonly water: GpuTexture;
   private readonly field: LoadedGroundField | null;
   private readonly artPerBase: number;
   private readonly tideOf: Uint8Array;
   private readonly shoreOf: Uint8Array;
   private readonly stillOf: Uint8Array;
   private waveStyle = 0;
-  private readonly lightTex: WebGLTexture;
+  private readonly lightTex: GpuTexture;
   private readonly ice: WaterIce;
   private readonly rivers: RiverTextures;
   private readonly unitsPerTile: number;
   private riverData: RiverTiles = riverTiles(0);
   private riverStale = true;
-  private readonly vao: WebGLVertexArrayObject;
-  private readonly vbo: WebGLBuffer;
-  private readonly at: Record<string, WebGLUniformLocation | null>;
+  private readonly vao: GpuVertexLayout;
+  private readonly vbo: GpuBuffer;
+  private readonly at: Record<string, GpuUniform | null>;
   private kinds = new Uint8Array(0);
   private tides = new Uint8Array(0);
   private w = 0;
@@ -143,7 +152,7 @@ export class GroundBlend {
   private litRect: Rect | null = null;
 
   static create(
-    gl: WebGL2RenderingContext,
+    gpu: GpuDevice,
     shaders: ShaderManager,
     painted: LoadedPaintedTileset
   ): GroundBlend | null {
@@ -157,35 +166,34 @@ export class GroundBlend {
       console.warn('[ground blend] off: the water field did not load');
       return null;
     }
-    return new GroundBlend(gl, program, painted, painted.water);
+    return new GroundBlend(gpu, program, painted, painted.water);
   }
 
   private constructor(
-    gl: WebGL2RenderingContext,
-    program: WebGLProgram,
+    gpu: GpuDevice,
+    program: GpuPipeline,
     painted: LoadedPaintedTileset,
-    water: WebGLTexture
+    water: GpuTexture
   ) {
-    this.gl = gl;
+    this.gpu = gpu;
     this.program = program;
     this.atlas = painted.texture;
     this.water = water;
     this.field = painted.ground;
     this.artPerBase = painted.tileset.tile / BASE_TILE_PX;
-    this.kindTex = this.makeTexture(KIND_UNIT, gl.NEAREST);
-    this.tideTex = this.makeTexture(TIDE_UNIT, gl.LINEAR);
-    this.lightTex = this.makeTexture(LIGHT_UNIT, gl.LINEAR);
-    this.ice = new WaterIce(gl);
-    this.rivers = new RiverTextures(gl);
+    this.kindTex = this.makeTexture(KIND_UNIT, 'nearest');
+    this.tideTex = this.makeTexture(TIDE_UNIT, 'linear');
+    this.lightTex = this.makeTexture(LIGHT_UNIT, 'linear');
+    this.ice = new WaterIce(gpu);
+    this.rivers = new RiverTextures(gpu);
     this.unitsPerTile = painted.tileset.tile / ART_PER_UNIT;
-    this.vao = gl.createVertexArray()!;
-    this.vbo = gl.createBuffer()!;
-    gl.bindVertexArray(this.vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
-    const loc = gl.getAttribLocation(program, 'a_position');
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    gl.bindVertexArray(null);
+    this.vao = gpu.createVertexLayout()!;
+    this.vbo = gpu.createBuffer()!;
+    gpu.setVertexLayout(this.vao);
+    gpu.setVertexBuffer(this.vbo);
+    const loc = gpu.attribute(program, 'a_position');
+    gpu.vertexAttribute(loc, { format: 'float32x2', stride: 0, offset: 0 });
+    gpu.setVertexLayout(null);
     const names = [
       'u_projection',
       'u_viewOffset',
@@ -219,28 +227,28 @@ export class GroundBlend {
       'u_flow',
       'u_stream'
     ];
-    this.at = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(program, n)]));
+    this.at = Object.fromEntries(names.map((n) => [n, gpu.uniform(program, n)]));
     const { patch, layer, tide, shore, still } = groundKindTable(painted);
     this.tideOf = tide;
     this.shoreOf = shore;
     this.stillOf = still;
-    gl.useProgram(program);
-    gl.uniform1i(this.at.u_tide, TIDE_UNIT);
-    gl.uniform1i(this.at.u_waterField, WATER_UNIT);
-    gl.uniform1i(this.at.u_ice, ICE_UNIT);
-    gl.uniform1i(this.at.u_flow, FLOW_UNIT);
-    gl.uniform1i(this.at.u_stream, STREAM_UNIT);
-    gl.uniform1i(this.at.u_groundField, GROUND_UNIT);
-    gl.uniform1i(this.at.u_groundFar, FAR_UNIT);
+    gpu.setPipeline(program);
+    gpu.setI32(this.at.u_tide, TIDE_UNIT);
+    gpu.setI32(this.at.u_waterField, WATER_UNIT);
+    gpu.setI32(this.at.u_ice, ICE_UNIT);
+    gpu.setI32(this.at.u_flow, FLOW_UNIT);
+    gpu.setI32(this.at.u_stream, STREAM_UNIT);
+    gpu.setI32(this.at.u_groundField, GROUND_UNIT);
+    gpu.setI32(this.at.u_groundFar, FAR_UNIT);
     const pieces = painted.tileset.ground?.pieces ?? { x: 0, y: 0 };
-    gl.uniform2f(this.at.u_pieces, pieces.x, pieces.y);
-    gl.uniform1i(this.at.u_paintAtlas, ATLAS_UNIT);
-    gl.uniform1i(this.at.u_kinds, KIND_UNIT);
-    gl.uniform1i(this.at.u_light, LIGHT_UNIT);
-    gl.uniform1f(this.at.u_tileArt, painted.tileset.tile);
-    gl.uniform1f(this.at.u_artPerBase, this.artPerBase);
-    gl.uniform4fv(this.at.u_patch, patch);
-    gl.uniform4fv(this.at.u_layer, layer);
+    gpu.setVec2f(this.at.u_pieces, pieces.x, pieces.y);
+    gpu.setI32(this.at.u_paintAtlas, ATLAS_UNIT);
+    gpu.setI32(this.at.u_kinds, KIND_UNIT);
+    gpu.setI32(this.at.u_light, LIGHT_UNIT);
+    gpu.setF32(this.at.u_tileArt, painted.tileset.tile);
+    gpu.setF32(this.at.u_artPerBase, this.artPerBase);
+    gpu.setVec4fv(this.at.u_patch, patch);
+    gpu.setVec4fv(this.at.u_layer, layer);
   }
 
   setIce(grid: GameGrid | null, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
@@ -251,20 +259,22 @@ export class GroundBlend {
     this.waveStyle = waves ? 1 : 0;
   }
 
-  private bindOn(unit: number, tex: WebGLTexture): void {
-    this.gl.activeTexture(this.gl.TEXTURE0 + unit);
-    this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
+  private bindOn(unit: number, tex: GpuTexture): void {
+    this.gpu.setTextureSlot(unit);
+    this.gpu.bindTexture(tex);
   }
 
-  private makeTexture(unit: number, filter: number): WebGLTexture {
-    const gl = this.gl;
-    const tex = gl.createTexture()!;
+  private makeTexture(unit: number, filter: FilterMode): GpuTexture {
+    const gpu = this.gpu;
+    const tex = gpu.createTexture()!;
     this.bindOn(unit, tex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.activeTexture(gl.TEXTURE0);
+    gpu.setSampler({
+      minFilter: filter,
+      magFilter: filter,
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge'
+    });
+    gpu.setTextureSlot(0);
     return tex;
   }
 
@@ -279,7 +289,7 @@ export class GroundBlend {
   }
 
   private rebuildKinds(grid: GameGrid): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
     const bounds = grid.getBounds();
     const w = bounds ? bounds.max.x + 1 : 0;
     const h = bounds ? bounds.max.y + 1 : 0;
@@ -288,14 +298,10 @@ export class GroundBlend {
       this.h = h;
       this.lightBuilt = null;
       this.litRect = null;
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+      gpu.setVertexBuffer(this.vbo);
       const r = w * BASE_TILE_PX;
       const b = h * BASE_TILE_PX;
-      gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Float32Array([0, 0, r, 0, 0, b, r, 0, r, b, 0, b]),
-        gl.STATIC_DRAW
-      );
+      gpu.writeBuffer(new Float32Array([0, 0, r, 0, 0, b, r, 0, r, b, 0, b]), 'static');
     }
     this.kinds = new Uint8Array(w * h);
     this.tides = new Uint8Array(w * h * TIDE_BYTES);
@@ -310,13 +316,13 @@ export class GroundBlend {
     }
     this.fillShore();
     this.fillStill();
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gpu.setUnpackAlignment(1);
     this.bindOn(KIND_UNIT, this.kindTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8UI, w, h, 0, gl.RED_INTEGER, gl.UNSIGNED_BYTE, this.kinds);
+    gpu.writeTexture({ format: 'r8uint', width: w, height: h }, this.kinds);
     this.bindOn(TIDE_UNIT, this.tideTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, this.tides);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-    gl.activeTexture(gl.TEXTURE0);
+    gpu.writeTexture({ format: 'rgba8unorm', width: w, height: h }, this.tides);
+    gpu.setUnpackAlignment(4);
+    gpu.setTextureSlot(0);
   }
 
   private setRiverAt(i: number, t: TileData | undefined): void {
@@ -363,7 +369,7 @@ export class GroundBlend {
   }
 
   private updateKindTexels(grid: GameGrid): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
     const changed: Changed[] = [];
     let reshore = false;
     let restill = false;
@@ -391,12 +397,12 @@ export class GroundBlend {
         (y * this.w + x) * TIDE_BYTES,
         (y * this.w + x) * TIDE_BYTES + TIDE_BYTES
       );
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gpu.setUnpackAlignment(1);
     const layers = [
       {
         unit: KIND_UNIT,
         tex: this.kindTex,
-        format: gl.RED_INTEGER,
+        format: 'r8uint' as const,
         all: this.kinds,
         whole: false,
         one: (c: Changed) => Uint8Array.of(c.k)
@@ -404,7 +410,7 @@ export class GroundBlend {
       {
         unit: TIDE_UNIT,
         tex: this.tideTex,
-        format: gl.RGBA,
+        format: 'rgba8unorm' as const,
         all: this.tides,
         whole: reshore,
         one: (c: Changed) => tideAt(c.x, c.y)
@@ -413,33 +419,19 @@ export class GroundBlend {
     for (const layer of layers) {
       this.bindOn(layer.unit, layer.tex);
       if (layer.whole || changed.length > TEXEL_UPDATE_LIMIT)
-        gl.texSubImage2D(
-          gl.TEXTURE_2D,
-          0,
-          0,
-          0,
-          this.w,
-          this.h,
-          layer.format,
-          gl.UNSIGNED_BYTE,
+        gpu.writeSubTexture(
+          { format: layer.format, x: 0, y: 0, width: this.w, height: this.h },
           layer.all
         );
       else
         for (const c of changed)
-          gl.texSubImage2D(
-            gl.TEXTURE_2D,
-            0,
-            c.x,
-            c.y,
-            1,
-            1,
-            layer.format,
-            gl.UNSIGNED_BYTE,
+          gpu.writeSubTexture(
+            { format: layer.format, x: c.x, y: c.y, width: 1, height: 1 },
             layer.one(c)
           );
     }
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-    gl.activeTexture(gl.TEXTURE0);
+    gpu.setUnpackAlignment(4);
+    gpu.setTextureSlot(0);
   }
 
   private sampleRect(r: Rect, sampler: LightSampler | undefined, time: number): Float32Array {
@@ -455,22 +447,15 @@ export class GroundBlend {
   private rebuildLight(f: GroundBlendFrame): void {
     const built = this.lightBuilt;
     if (built && built.version === f.lightVersion && built.sampler === f.lightSampler) return;
-    const gl = this.gl;
+    const gpu = this.gpu;
     const cw = this.w + 1;
     const ch = this.h + 1;
     this.bindOn(LIGHT_UNIT, this.lightTex);
-    if (!built) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, cw, ch, 0, gl.RGBA, gl.FLOAT, null);
+    if (!built) gpu.writeTexture({ format: 'rgba16float', width: cw, height: ch }, null);
     const old = this.litRect;
     if (old && old.w > 0 && old.h > 0)
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        old.x,
-        old.y,
-        old.w,
-        old.h,
-        gl.RGBA,
-        gl.FLOAT,
+      gpu.writeSubTexture(
+        { format: 'rgba16float', x: old.x, y: old.y, width: old.w, height: old.h },
         new Float32Array(old.w * old.h * 4)
       );
     const whole = { x: 0, y: 0, w: cw, h: ch };
@@ -481,15 +466,8 @@ export class GroundBlend {
           ? null
           : lightRect(f.litBounds, this.w, this.h);
     if (rect && rect.w > 0 && rect.h > 0)
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        rect.x,
-        rect.y,
-        rect.w,
-        rect.h,
-        gl.RGBA,
-        gl.FLOAT,
+      gpu.writeSubTexture(
+        { format: 'rgba16float', x: rect.x, y: rect.y, width: rect.w, height: rect.h },
         this.sampleRect(rect, f.lightSampler, f.lightTime)
       );
     this.litRect = rect;
@@ -499,7 +477,7 @@ export class GroundBlend {
   draw(f: GroundBlendFrame): boolean {
     const grid = this.grid;
     if (!grid) return false;
-    const gl = this.gl;
+    const gpu = this.gpu;
     if (this.stale) {
       this.rebuildKinds(grid);
       this.stale = false;
@@ -509,23 +487,23 @@ export class GroundBlend {
     this.ice.sync(this.w, this.h);
     if (f.sea && this.waveStyle) this.syncRivers();
     this.rebuildLight(f);
-    gl.useProgram(this.program);
-    gl.uniformMatrix4fv(this.at.u_projection, false, f.projection);
-    gl.uniform2fv(this.at.u_viewOffset, f.viewOffset);
-    gl.uniform2fv(this.at.u_zoom, f.zoom);
-    gl.uniform1f(this.at.u_artPerPx, this.artPerBase / f.zoom[0]);
-    gl.uniform3fv(this.at.u_ambient, f.ambient);
-    gl.uniform1f(this.at.u_lightFlicker, f.flicker);
-    gl.uniform1i(this.at.u_lightTexture, LIGHT_FIELD_UNIT);
-    gl.uniform1f(this.at.u_fieldLit, f.fieldLit ? 1 : 0);
-    gl.uniform1f(this.at.u_saturation, f.tone[0]);
-    gl.uniform1f(this.at.u_brightness, f.tone[1]);
-    gl.uniform1f(this.at.u_waterTime, f.waterTime);
-    gl.uniform1i(this.at.u_waterStyle, f.sea ? this.waveStyle : 0);
-    gl.uniform1i(this.at.u_waterBlock, waterBlockShift(this.artPerBase / f.zoom[0]));
-    if (f.sea) gl.uniform4fv(this.at['u_sea[0]'], f.sea);
-    if (f.fluid) gl.uniform4fv(this.at['u_fluid[0]'], f.fluid);
-    gl.uniform2i(this.at.u_mapSize, this.w, this.h);
+    gpu.setPipeline(this.program);
+    gpu.setMat4fv(this.at.u_projection, f.projection);
+    gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
+    gpu.setVec2fv(this.at.u_zoom, f.zoom);
+    gpu.setF32(this.at.u_artPerPx, this.artPerBase / f.zoom[0]);
+    gpu.setVec3fv(this.at.u_ambient, f.ambient);
+    gpu.setF32(this.at.u_lightFlicker, f.flicker);
+    gpu.setI32(this.at.u_lightTexture, LIGHT_FIELD_UNIT);
+    gpu.setF32(this.at.u_fieldLit, f.fieldLit ? 1 : 0);
+    gpu.setF32(this.at.u_saturation, f.tone[0]);
+    gpu.setF32(this.at.u_brightness, f.tone[1]);
+    gpu.setF32(this.at.u_waterTime, f.waterTime);
+    gpu.setI32(this.at.u_waterStyle, f.sea ? this.waveStyle : 0);
+    gpu.setI32(this.at.u_waterBlock, waterBlockShift(this.artPerBase / f.zoom[0]));
+    if (f.sea) gpu.setVec4fv(this.at['u_sea[0]'], f.sea);
+    if (f.fluid) gpu.setVec4fv(this.at['u_fluid[0]'], f.fluid);
+    gpu.setVec2i(this.at.u_mapSize, this.w, this.h);
     this.bindOn(ATLAS_UNIT, this.atlas);
     this.bindOn(KIND_UNIT, this.kindTex);
     this.bindOn(TIDE_UNIT, this.tideTex);
@@ -537,22 +515,22 @@ export class GroundBlend {
     this.bindOn(LIGHT_UNIT, this.lightTex);
     this.ice.bind();
     this.rivers.bind();
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindVertexArray(this.vao);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    gl.bindVertexArray(null);
+    gpu.setTextureSlot(0);
+    gpu.setVertexLayout(this.vao);
+    gpu.draw('triangle-list', 6);
+    gpu.setVertexLayout(null);
     return true;
   }
 
   dispose(): void {
-    const gl = this.gl;
-    gl.deleteTexture(this.kindTex);
-    gl.deleteTexture(this.tideTex);
-    gl.deleteTexture(this.lightTex);
+    const gpu = this.gpu;
+    gpu.destroyTexture(this.kindTex);
+    gpu.destroyTexture(this.tideTex);
+    gpu.destroyTexture(this.lightTex);
     this.ice.dispose();
     this.rivers.dispose();
-    gl.deleteBuffer(this.vbo);
-    gl.deleteVertexArray(this.vao);
-    gl.deleteProgram(this.program);
+    gpu.destroyBuffer(this.vbo);
+    gpu.destroyVertexLayout(this.vao);
+    gpu.destroyPipeline(this.program);
   }
 }

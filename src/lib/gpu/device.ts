@@ -126,10 +126,10 @@ export interface GpuDevice {
   setVec2f(u: GpuUniform | null, x: number, y: number): void;
   setVec2i(u: GpuUniform | null, x: number, y: number): void;
   setVec4f(u: GpuUniform | null, x: number, y: number, z: number, w: number): void;
-  setVec2fv(u: GpuUniform | null, v: Float32List): void;
-  setVec3fv(u: GpuUniform | null, v: Float32List): void;
-  setVec4fv(u: GpuUniform | null, v: Float32List, offset?: number, length?: number): void;
-  setMat4fv(u: GpuUniform | null, v: Float32List): void;
+  setVec2fv(u: GpuUniform | null, v: Iterable<number>): void;
+  setVec3fv(u: GpuUniform | null, v: Iterable<number>): void;
+  setVec4fv(u: GpuUniform | null, v: Iterable<number>, offset?: number, length?: number): void;
+  setMat4fv(u: GpuUniform | null, v: Iterable<number>): void;
 
   createBuffer(): GpuBuffer;
   destroyBuffer(buffer: GpuBuffer | null): void;

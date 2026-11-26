@@ -145,20 +145,20 @@ export class Webgl2Device implements GpuDevice {
     this.gl.uniform4f(raw<WebGLUniformLocation>(u), x, y, z, w);
   }
 
-  setVec2fv(u: GpuUniform | null, v: Float32List): void {
+  setVec2fv(u: GpuUniform | null, v: Iterable<number>): void {
     this.gl.uniform2fv(raw<WebGLUniformLocation>(u), v);
   }
 
-  setVec3fv(u: GpuUniform | null, v: Float32List): void {
+  setVec3fv(u: GpuUniform | null, v: Iterable<number>): void {
     this.gl.uniform3fv(raw<WebGLUniformLocation>(u), v);
   }
 
-  setVec4fv(u: GpuUniform | null, v: Float32List, offset?: number, length?: number): void {
+  setVec4fv(u: GpuUniform | null, v: Iterable<number>, offset?: number, length?: number): void {
     if (offset === undefined) this.gl.uniform4fv(raw<WebGLUniformLocation>(u), v);
     else this.gl.uniform4fv(raw<WebGLUniformLocation>(u), v, offset, length);
   }
 
-  setMat4fv(u: GpuUniform | null, v: Float32List): void {
+  setMat4fv(u: GpuUniform | null, v: Iterable<number>): void {
     this.gl.uniformMatrix4fv(raw<WebGLUniformLocation>(u), false, v);
   }
 

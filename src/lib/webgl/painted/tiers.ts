@@ -8,6 +8,14 @@ import { withRockSurface } from './rockSurface.js';
 import { LIGHT_FIELD_UNIT } from './lightPass.js';
 import { NOISE_SIZE, tierNoiseTexels } from './tierNoise.js';
 import { TIER_FIELDS, TIER_TEXEL, TierTiles, type TileAt } from './tierTiles.js';
+import type {
+  GpuDevice,
+  GpuPipeline,
+  GpuTexture,
+  GpuUniform,
+  GpuVertexLayout,
+  FilterMode
+} from '../../gpu/device.js';
 
 const PROGRAM = 'tiers';
 export const TIER_TILE_UNIT = 4;
@@ -62,34 +70,36 @@ const UNIFORMS = [
   'u_rowDepth'
 ] as const;
 
-function texture(gl: WebGL2RenderingContext, unit: number, filter: number): WebGLTexture {
-  const tex = gl.createTexture()!;
-  gl.activeTexture(gl.TEXTURE0 + unit);
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+function texture(gpu: GpuDevice, unit: number, filter: FilterMode): GpuTexture {
+  const tex = gpu.createTexture()!;
+  gpu.setTextureSlot(unit);
+  gpu.bindTexture(tex);
+  gpu.setSampler({
+    minFilter: filter,
+    magFilter: filter,
+    addressModeU: 'clamp-to-edge',
+    addressModeV: 'clamp-to-edge'
+  });
   return tex;
 }
 
 export class Tiers {
-  private readonly gl: WebGL2RenderingContext;
-  private readonly program: WebGLProgram;
+  private readonly gpu: GpuDevice;
+  private readonly program: GpuPipeline;
   private readonly painted: LoadedPaintedTileset;
   private readonly tiles = new TierTiles();
-  private readonly tileTex: WebGLTexture;
-  private readonly fieldTex: WebGLTexture;
-  private readonly noiseTex: WebGLTexture;
-  private readonly vao: WebGLVertexArrayObject;
-  private readonly at: Record<(typeof UNIFORMS)[number], WebGLUniformLocation | null>;
+  private readonly tileTex: GpuTexture;
+  private readonly fieldTex: GpuTexture;
+  private readonly noiseTex: GpuTexture;
+  private readonly vao: GpuVertexLayout;
+  private readonly at: Record<(typeof UNIFORMS)[number], GpuUniform | null>;
   private terrain: GameGrid | null = null;
   private resource: GameGrid | null = null;
   private pendingAll = false;
   private pending: TileAt[] = [];
 
   static create(
-    gl: WebGL2RenderingContext,
+    gpu: GpuDevice,
     shaders: ShaderManager,
     painted: LoadedPaintedTileset
   ): Tiers | null {
@@ -99,58 +109,28 @@ export class Tiers {
       console.error('[tiers] the rock tier shader did not build:', made.error);
       return null;
     }
-    return new Tiers(gl, program, painted);
+    return new Tiers(gpu, program, painted);
   }
 
-  private constructor(
-    gl: WebGL2RenderingContext,
-    program: WebGLProgram,
-    painted: LoadedPaintedTileset
-  ) {
-    this.gl = gl;
+  private constructor(gpu: GpuDevice, program: GpuPipeline, painted: LoadedPaintedTileset) {
+    this.gpu = gpu;
     this.program = program;
     this.painted = painted;
-    this.vao = gl.createVertexArray()!;
-    this.tileTex = texture(gl, TIER_TILE_UNIT, gl.NEAREST);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA16UI,
-      1,
-      1,
-      0,
-      gl.RGBA_INTEGER,
-      gl.UNSIGNED_SHORT,
-      new Uint16Array(4)
-    );
-    this.fieldTex = texture(gl, TIER_FIELD_UNIT, gl.LINEAR);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA8,
-      1,
-      1,
-      0,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      new Uint8Array(4)
-    );
-    this.noiseTex = texture(gl, TIER_NOISE_UNIT, gl.NEAREST);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA8,
-      NOISE_SIZE,
-      NOISE_SIZE,
-      0,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
+    this.vao = gpu.createVertexLayout()!;
+    this.tileTex = texture(gpu, TIER_TILE_UNIT, 'nearest');
+    gpu.writeTexture({ format: 'rgba16uint', width: 1, height: 1 }, new Uint16Array(4));
+    this.fieldTex = texture(gpu, TIER_FIELD_UNIT, 'linear');
+    gpu.writeTexture({ format: 'rgba8unorm', width: 1, height: 1 }, new Uint8Array(4));
+    this.noiseTex = texture(gpu, TIER_NOISE_UNIT, 'nearest');
+    gpu.writeTexture(
+      { format: 'rgba8unorm', width: NOISE_SIZE, height: NOISE_SIZE },
       tierNoiseTexels()
     );
-    gl.activeTexture(gl.TEXTURE0);
-    this.at = Object.fromEntries(
-      UNIFORMS.map((n) => [n, gl.getUniformLocation(program, n)])
-    ) as Record<(typeof UNIFORMS)[number], WebGLUniformLocation | null>;
+    gpu.setTextureSlot(0);
+    this.at = Object.fromEntries(UNIFORMS.map((n) => [n, gpu.uniform(program, n)])) as Record<
+      (typeof UNIFORMS)[number],
+      GpuUniform | null
+    >;
   }
 
   setGrids(terrain: GameGrid, resource: GameGrid | null, dirty?: readonly TileAt[]): void {
@@ -183,39 +163,18 @@ export class Tiers {
     if (moved) this.uploadFields();
   }
 
-  private upload(unit: number, tex: WebGLTexture, format: 'tiles' | 'fields'): void {
-    const gl = this.gl;
+  private upload(unit: number, tex: GpuTexture, format: 'tiles' | 'fields'): void {
+    const gpu = this.gpu;
     const { w, h } = this.tiles;
     if (w === 0 || h === 0) return;
-    gl.activeTexture(gl.TEXTURE0 + unit);
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gpu.setTextureSlot(unit);
+    gpu.bindTexture(tex);
+    gpu.setUnpackAlignment(1);
     if (format === 'tiles')
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA16UI,
-        w,
-        h,
-        0,
-        gl.RGBA_INTEGER,
-        gl.UNSIGNED_SHORT,
-        this.tiles.texels
-      );
-    else
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA8,
-        w,
-        h,
-        0,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        this.tiles.fields
-      );
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-    gl.activeTexture(gl.TEXTURE0);
+      gpu.writeTexture({ format: 'rgba16uint', width: w, height: h }, this.tiles.texels);
+    else gpu.writeTexture({ format: 'rgba8unorm', width: w, height: h }, this.tiles.fields);
+    gpu.setUnpackAlignment(4);
+    gpu.setTextureSlot(0);
   }
 
   private uploadTiles(): void {
@@ -229,64 +188,64 @@ export class Tiers {
   }
 
   bindShared(): void {
-    const gl = this.gl;
-    gl.activeTexture(gl.TEXTURE0 + TIER_TILE_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.tileTex);
-    gl.activeTexture(gl.TEXTURE0 + TIER_NOISE_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.noiseTex);
-    gl.activeTexture(gl.TEXTURE0);
+    const gpu = this.gpu;
+    gpu.setTextureSlot(TIER_TILE_UNIT);
+    gpu.bindTexture(this.tileTex);
+    gpu.setTextureSlot(TIER_NOISE_UNIT);
+    gpu.bindTexture(this.noiseTex);
+    gpu.setTextureSlot(0);
   }
 
   draw(f: TierFrame): number {
     const top = this.painted.top;
     if (!top || this.tiles.w === 0) return 0;
-    const gl = this.gl;
+    const gpu = this.gpu;
     const tile = this.painted.tileset.tile;
     const u = this.at;
-    gl.useProgram(this.program);
-    gl.uniformMatrix4fv(u.u_projection, false, f.projection);
-    gl.uniform2fv(u.u_viewOffset, f.viewOffset);
-    gl.uniform2fv(u.u_zoom, f.zoom);
-    gl.uniform1f(u.u_atlasScale, tile / BASE_TILE_PX);
-    gl.uniform4f(u.u_rect, f.view.x0, f.view.y0, f.view.x1, f.view.y1);
-    gl.uniform2f(u.u_rockRamp, top.ramp.x, top.ramp.y);
-    gl.uniform2f(u.u_snowRamp, top.snow.x, top.snow.y);
-    gl.uniform1f(u.u_snow, f.snow ? 1 : 0);
-    gl.uniform1f(u.u_rockLift, top.lift);
-    gl.uniform1f(u.u_fieldLit, f.fieldLit ? 1 : 0);
-    gl.uniform3fv(u.u_ambient, f.ambient);
-    gl.uniform1f(u.u_saturation, f.tone[0]);
-    gl.uniform1f(u.u_brightness, f.tone[1]);
-    gl.uniform1f(u.u_rowPx, f.rowPx);
-    gl.uniform1f(u.u_rowDepth, f.rowDepth);
-    gl.uniform1i(u.u_tierFieldTexture, TIER_FIELD_UNIT);
-    gl.uniform1i(u.u_tierNoiseTexture, TIER_NOISE_UNIT);
-    gl.uniform1i(u.u_tierTileTexture, TIER_TILE_UNIT);
-    gl.uniform1i(u.u_paintAtlas, ATLAS_UNIT);
-    gl.uniform1i(u.u_rockTexture, ROCK_UNIT);
-    gl.uniform1i(u.u_veinTexture, VEIN_UNIT);
-    gl.uniform1i(u.u_lightTexture, LIGHT_FIELD_UNIT);
-    gl.activeTexture(gl.TEXTURE0 + ATLAS_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.painted.texture);
-    gl.activeTexture(gl.TEXTURE0 + ROCK_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, top.texture);
-    gl.activeTexture(gl.TEXTURE0 + VEIN_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, top.veins);
-    gl.activeTexture(gl.TEXTURE0 + TIER_FIELD_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.fieldTex);
+    gpu.setPipeline(this.program);
+    gpu.setMat4fv(u.u_projection, f.projection);
+    gpu.setVec2fv(u.u_viewOffset, f.viewOffset);
+    gpu.setVec2fv(u.u_zoom, f.zoom);
+    gpu.setF32(u.u_atlasScale, tile / BASE_TILE_PX);
+    gpu.setVec4f(u.u_rect, f.view.x0, f.view.y0, f.view.x1, f.view.y1);
+    gpu.setVec2f(u.u_rockRamp, top.ramp.x, top.ramp.y);
+    gpu.setVec2f(u.u_snowRamp, top.snow.x, top.snow.y);
+    gpu.setF32(u.u_snow, f.snow ? 1 : 0);
+    gpu.setF32(u.u_rockLift, top.lift);
+    gpu.setF32(u.u_fieldLit, f.fieldLit ? 1 : 0);
+    gpu.setVec3fv(u.u_ambient, f.ambient);
+    gpu.setF32(u.u_saturation, f.tone[0]);
+    gpu.setF32(u.u_brightness, f.tone[1]);
+    gpu.setF32(u.u_rowPx, f.rowPx);
+    gpu.setF32(u.u_rowDepth, f.rowDepth);
+    gpu.setI32(u.u_tierFieldTexture, TIER_FIELD_UNIT);
+    gpu.setI32(u.u_tierNoiseTexture, TIER_NOISE_UNIT);
+    gpu.setI32(u.u_tierTileTexture, TIER_TILE_UNIT);
+    gpu.setI32(u.u_paintAtlas, ATLAS_UNIT);
+    gpu.setI32(u.u_rockTexture, ROCK_UNIT);
+    gpu.setI32(u.u_veinTexture, VEIN_UNIT);
+    gpu.setI32(u.u_lightTexture, LIGHT_FIELD_UNIT);
+    gpu.setTextureSlot(ATLAS_UNIT);
+    gpu.bindTexture(this.painted.texture);
+    gpu.setTextureSlot(ROCK_UNIT);
+    gpu.bindTexture(top.texture);
+    gpu.setTextureSlot(VEIN_UNIT);
+    gpu.bindTexture(top.veins);
+    gpu.setTextureSlot(TIER_FIELD_UNIT);
+    gpu.bindTexture(this.fieldTex);
     this.bindShared();
-    gl.bindVertexArray(this.vao);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    gl.bindVertexArray(null);
+    gpu.setVertexLayout(this.vao);
+    gpu.draw('triangle-list', 6);
+    gpu.setVertexLayout(null);
     return 1;
   }
 
   dispose(): void {
-    const gl = this.gl;
-    gl.deleteTexture(this.tileTex);
-    gl.deleteTexture(this.fieldTex);
-    gl.deleteTexture(this.noiseTex);
-    gl.deleteVertexArray(this.vao);
-    gl.deleteProgram(this.program);
+    const gpu = this.gpu;
+    gpu.destroyTexture(this.tileTex);
+    gpu.destroyTexture(this.fieldTex);
+    gpu.destroyTexture(this.noiseTex);
+    gpu.destroyVertexLayout(this.vao);
+    gpu.destroyPipeline(this.program);
   }
 }
