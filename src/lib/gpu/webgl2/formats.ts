@@ -28,7 +28,7 @@ export function textureFormat(gl: WebGL2RenderingContext, f: TextureFormat): GlT
     case 'rgba16uint':
       return { internalFormat: gl.RGBA16UI, format: gl.RGBA_INTEGER, type: gl.UNSIGNED_SHORT };
     case 'rgba16float':
-      return { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.FLOAT };
+      return { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT };
     case 'rgba32float':
       return { internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT };
   }

@@ -56,6 +56,10 @@ export function bytesPerTexel(format: TextureFormat): number {
   }
 }
 
+export function halfFloats(values: ArrayLike<number>): Uint16Array {
+  return new Uint16Array(Float16Array.from(values).buffer);
+}
+
 export interface TextureCopyDestination {
   texture: GpuTexture;
   origin?: { x: number; y: number };
