@@ -1,8 +1,8 @@
 import { chromium } from 'playwright';
 import { writeFileSync } from 'node:fs';
 
-const THUMBS = (process.env.THUMBS || 'night,night-ai,night-brush,night-block,night-pixel,ember,ember-ai,forest,day,night-inset,number').split(',');
-const SOURCES = { 'src/old-glyph.png': 'dev glyph renderer', 'src/new-day.png': 'HUD mockup', 'src/new-night.png': 'HUD mockup', 'src/magic-night.png': 'big-trees mockup', 'src/forest-ground.png': 'tree-ground mockup' };
+const THUMBS = (process.env.THUMBS || 'night,night-ai,night-brush,night-block,night-pixel,ember,ember-ai,day,night-inset,number').split(',');
+const SOURCES = { 'src/old-glyph.png': 'dev glyph renderer', 'src/new-day.png': 'HUD mockup', 'src/new-night.png': 'HUD mockup', 'src/magic-night.png': 'big-trees mockup' };
 const FONT_PIXEL = { Jersey20: 34, Blackletter: 43 };
 const WRITE = process.argv.includes('--write');
 const here = new URL('.', import.meta.url).pathname;
