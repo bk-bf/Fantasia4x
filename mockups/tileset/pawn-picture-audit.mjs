@@ -44,7 +44,7 @@ export function pictured(now, face, ink) {
       if (out && inward) { counts.r++; said.push(name + ' fins out at the shoulder'); }
     }
   }
-  for (let i = 0; i < shown.length; i++) {
+  for (let i = 0; i < shown.length && !now.fused; i++) {
     if (!shown[i] || isInk(shown[i])) continue;
     let owner = null;
     for (let k = stack.length - 1; k >= 0 && !owner; k--) if (stack[k].spr.c[i]) owner = stack[k];
