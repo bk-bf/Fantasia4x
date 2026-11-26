@@ -83,13 +83,13 @@
     } else if (s.t === 'text') {
       const t = N.texts[s.i], g = geo.texts[s.i], k2 = t.free ? round3(clamp(val, .25, 16)) : clamp(Math.round(val), 1, 16);
       if (!g) return;
-      const w = g.w / t.k * k2, h = g.h / t.k * k2, gr = t.free ? 1 : k2;
+      const w = g.w / t.k * k2, h = g.h / t.k * k2, cx = (t.right == null && t.x != null ? t.x : g.x) + g.w / 2, cy = (t.bottom == null && t.y != null ? t.y : g.y) + g.h / 2;
       delete t.right; delete t.bottom;
-      t.x = snap(g.x + g.w / 2 - w / 2, gr); t.y = snap(g.y + g.h / 2 - h / 2, gr); t.k = k2;
+      t.x = round3(cx - w / 2); t.y = round3(cy - h / 2); t.k = k2;
     } else if (s.t === 'arrow') {
       const a = N.arrow, z = a.s || 1, z2 = a.free ? round3(clamp(val, .1, 4)) : clamp(Math.round(val * 4) / 4, .25, 4), c = arrowCentre(a), f = z2 / z;
-      for (const h of arrowPts(a)) a[h] = [c[0] + (a[h][0] - c[0]) * f, c[1] + (a[h][1] - c[1]) * f];
-      a.s = z2; settleArrow(a);
+      for (const h of arrowPts(a)) a[h] = [round3(c[0] + (a[h][0] - c[0]) * f), round3(c[1] + (a[h][1] - c[1]) * f)];
+      a.s = z2;
     }
   }
   function zoomStep(N, s, dir, C) {
@@ -116,8 +116,8 @@
       if (d) t.rot = d; else delete t.rot;
     } else if (s.t === 'arrow') {
       const a = N.arrow, c = arrowCentre(a), by = d - (a.rot || 0);
-      for (const h of arrowPts(a)) a[h] = rotP(a[h], c, by);
-      a.rot = d; settleArrow(a);
+      for (const h of arrowPts(a)) a[h] = rotP(a[h], c, by).map(round3);
+      a.rot = d;
     }
   }
   function setFree(N, s, on) {
@@ -149,9 +149,10 @@
   }
 
   function persist() { if (S(L) === S(base)) store.del(KEY); else store.set(KEY, L); }
-  function commit(N, from = L) { hist.push(S(from)); fut.length = 0; L = N; persist(); draw(); panel(); }
-  function undo() { if (!hist.length) return; fut.push(S(L)); L = JSON.parse(hist.pop()); after(); }
-  function redo() { if (!fut.length) return; hist.push(S(L)); L = JSON.parse(fut.pop()); after(); }
+  function commit(N, from = L) { if (live && from === L) { clearTimeout(wheelTimer); const l = live; live = null; if (l !== S(L)) { hist.push(l); fut.length = 0; } } hist.push(S(from)); fut.length = 0; L = N; persist(); draw(); panel(); }
+  function flush() { clearTimeout(wheelTimer); if (live) endLive(); }
+  function undo() { flush(); if (!hist.length) return; fut.push(S(L)); L = JSON.parse(hist.pop()); after(); }
+  function redo() { flush(); if (!fut.length) return; hist.push(S(L)); L = JSON.parse(fut.pop()); after(); }
   async function after() { await Promise.all(L.images.map(i => nat(i.src))); persist(); await draw(); panel(); }
   function startLive() { if (!live) live = S(L); }
   function endLive() { if (live && live !== S(L)) { hist.push(live); fut.length = 0; persist(); } live = null; panel(); }
@@ -167,7 +168,6 @@
     return out.reverse();
   }
   const same = (a, b) => a && b && a.t === b.t && a.i === b.i;
-  const selName = () => (layerList().find(([s]) => same(s, sel)) || [, ''])[1];
 
   function el(tag, props = {}, ...kids) {
     const e = document.createElement(tag);
@@ -209,12 +209,13 @@
     const ls = $('#layers');
     ls.replaceChildren(...layerList().map(([s, name]) => el('button', { type: 'button', className: same(s, sel) ? 'on' : '', onclick: () => { sel = s; panel(); hud(); } }, name)));
     const props = $('#props'), p = { append: (...xs) => props.append(...xs.filter(x => x != null)) };
-    props.replaceChildren(el('b', { className: 'name' }, sel ? selName() : '—'));
+    props.replaceChildren();
+    const w = warnTag(); $('#warn').replaceChildren(...(w ? [w] : []));
     if (!sel) return;
     if (sel.t === 'image') {
       const im = L.images[sel.i], opts = T.SRC.includes(im.src) ? T.SRC : [im.src, ...T.SRC];
       const pick = el('select', { onchange: e => swap(sel.i, e.target.value) }, ...opts.map(s => new Option(s.replace(/^src\/|\.png$/g, ''), s, false, s === im.src)));
-      p.append(row('Source', pick), zoomRow(), rotRow(), warnTag());
+      p.append(row('Source', pick), zoomRow(), rotRow());
     } else if (sel.t === 'seam' && L.seam) {
       const s = L.seam;
       p.append(row('Seam', ...seg([['vertical', 'Vertical'], ['diagonal', 'Diagonal']], s.mode, m => edit(N => {
@@ -246,7 +247,7 @@
         const n = N.texts[i]; if (n.font === f) return false;
         n.lh = Math.round((n.lh || n.size) / n.size * T.FONT_PIXEL[f]); n.font = f; n.size = T.FONT_PIXEL[f];
       }))));
-      p.append(zoomRow(), rotRow(), row('Outline', el('input', { type: 'checkbox', checked: t.outline !== false, onchange: e => edit(N => { N.texts[i].outline = e.target.checked; }) })), warnTag());
+      p.append(zoomRow(), rotRow(), row('Outline', el('input', { type: 'checkbox', checked: t.outline !== false, onchange: e => edit(N => { N.texts[i].outline = e.target.checked; }) })));
     }
   }
 

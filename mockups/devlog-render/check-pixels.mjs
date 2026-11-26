@@ -90,9 +90,13 @@ for (const id of THUMBS) {
         if (L.vector) { if (L.vector[(y - L.oy) * L.w + (x - L.ox)]) return [null, L]; continue; }
         if (L.t) {
           const [sx, sy] = inv(L.t, x, y);
+          if (L.skip) {
+            for (let yy = sy - 1; yy <= sy + 1; yy++) for (let xx = sx - 1; xx <= sx + 1; xx++) if (xx >= 0 && yy >= 0 && xx < L.w && yy < L.h && L.alpha[(yy * L.w + xx) * 4 + 3]) return [null, L];
+            continue;
+          }
           if (sx < 0 || sy < 0 || sx >= L.w || sy >= L.h) continue;
           const j = sy * L.w + sx;
-          if (L.alpha[j * 4 + 3] === 255) return [L.skip ? null : L.px[j], L];
+          if (L.alpha[j * 4 + 3] === 255) return [L.px[j], L];
           continue;
         }
         const sx = Math.floor((x - L.ox) / L.k), sy = Math.floor((y - L.oy) / L.k), j = sy * L.w + sx;
@@ -113,8 +117,9 @@ for (const id of THUMBS) {
       let g;
       if (it) {
         if (getComputedStyle(im).imageRendering !== 'pixelated') out.push(`${name}: image-rendering is ${getComputedStyle(im).imageRendering}, not pixelated`);
-        if (!exactTf(it)) { out.push(`warn ${name}: ${why(it)}, drawn nearest-neighbour, not pixel-exact; not compared`); out.push(`ok? ${name} (${sources[name]}) ×${+it.k.toFixed(3)} rot ${it.rot}°: skipped`); continue; }
-        g = { k: it.k, map: (x, y) => inv(it, x, y), label: `×${it.k} rot ${it.rot}° at ${it.x},${it.y}` };
+        const ex = exactTf(it);
+        if (!ex) out.push(`warn ${name}: ${why(it)}, drawn nearest-neighbour, not pixel-exact; its own pixels are not compared`);
+        g = { k: it.k, skip: !ex, map: (x, y) => inv(it, x, y), label: `×${+it.k.toFixed(3)} rot ${it.rot}° at ${it.x},${it.y}` };
       } else {
         const s0 = scaled(im, im.naturalWidth, im.naturalHeight, name);
         if (!s0) continue;
@@ -127,6 +132,7 @@ for (const id of THUMBS) {
         if (!inClip(im.parentElement, x, y) || later.some(c => inClip(c, x, y))) continue;
         const v = screen[y * SW + x], o = overlay(x, y, im.parentElement);
         if (o) { const st = stats.get(o[1]); st.n++; if (o[0] !== null && v !== o[0]) { st.wrong++; st.at = st.at || [x, y]; } continue; }
+        if (g.skip) continue;
         const [sx, sy] = g.map(x, y);
         if (sx < 0 || sy < 0 || sx >= W || sy >= im.naturalHeight) continue;
         checked++;
@@ -135,7 +141,7 @@ for (const id of THUMBS) {
       }
       if (foreign) out.push(`${name}: ${foreign} px in colours not in the source palette`);
       if (wrong) out.push(`${name}: ${wrong} px differ from nearest-neighbour ×${g.k} (smoothing or misplacement), first at ${at}`);
-      out.push(`ok? ${name} (${sources[name]}) ${g.label}: ${checked} px checked`);
+      out.push(`ok? ${name} (${sources[name]}) ${g.label}: ${g.skip ? 'skipped' : checked + ' px checked'}`);
     }
     for (const [L, st] of stats) {
       if (st.wrong) out.push(`${L.name}: ${st.wrong} of ${st.n} screen px differ from its ×${L.k ?? 1} grid (antialiased or misplaced), first at ${st.at}`);
