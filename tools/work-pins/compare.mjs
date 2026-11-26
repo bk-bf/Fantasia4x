@@ -94,7 +94,7 @@ const totalCalls = (run) => Object.values(run.functions ?? {}).reduce((s, f) => 
 /** @typedef {{ name: string, file: string, line: number, count: number }} Pin */
 /** @typedef {{ family?: string, placed: number, added: number, alive: number }} Creatures */
 /** @typedef {{ scenario: string, functions?: Record<string, Pin>, counters?: Record<string, number>, creatures: Creatures }} CreatureRun */
-/** @typedef {{ scenario: string, fn: string, where: string, base: number, head: number }} Total */
+/** @typedef {{ scenario: string, fn: string, where: string, base: number, head: number, largerGrew?: boolean }} Total */
 
 const CREATURE_CODE = 'src/lib/game/services/entity/';
 /** @param {number} n @param {number} places */
@@ -149,13 +149,24 @@ function familyRatios(pairs) {
     };
     const base = ratio(bLarge, bSmall);
     const head = ratio(hLarge, hSmall);
+    const largeBase = perCreature(bLarge);
+    const largeHead = perCreature(hLarge);
     const scenario = `${hLarge.scenario} / ${hSmall.scenario}`;
     for (const [key, value] of Object.entries(head))
-      totals.push({ scenario, fn: `${key} per creature`, where: '', base: base[key] ?? 0, head: value });
+      totals.push({
+        scenario,
+        fn: `${key} per creature`,
+        where: '',
+        base: base[key] ?? 0,
+        head: value,
+        largerGrew: largeHead[key] > (largeBase[key] ?? 0)
+      });
   }
   return totals;
 }
-const overBudget = (t) => (t.base === 0 ? t.head > 0 : t.head > t.base * (1 + THRESHOLD));
+/** @param {Total} t */
+const overBudget = (t) =>
+  t.largerGrew !== false && (t.base === 0 ? t.head > 0 : t.head > t.base * (1 + THRESHOLD));
 
 export function compareRuns(baseRuns, headRuns) {
   const rows = [];

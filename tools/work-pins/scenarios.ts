@@ -8,6 +8,7 @@ import { isSpawnableTile } from '../../src/lib/game/core/defs/terrains';
 import { rng } from '../../src/lib/game/core/util/rng';
 import { devSpawnMobAt } from '../../src/lib/game/services/entity/entitySpawning';
 import { EDGE_BUFFER, MIN_PAWN_DISTANCE } from '../../src/lib/game/services/entity/entityConstants';
+import { entityService } from '../../src/lib/game/services/EntityService';
 import type { SimCommand } from '../../src/lib/game/sim/simProtocol';
 import type { GameState } from '../../src/lib/game/core/types';
 
@@ -58,6 +59,17 @@ export function placeCreatures(state: GameState, count: number): GameState {
   if (placed.mobs?.length !== count)
     throw new Error(`work pins: placed ${placed.mobs?.length ?? 0} of ${count} creatures`);
   return placed;
+}
+
+export function holdCreatureCount(): () => void {
+  const service = entityService as unknown as Record<string, unknown>;
+  const unchanged = (state: GameState) => state;
+  service.spawnEntities = unchanged;
+  service.tickLairs = unchanged;
+  return () => {
+    delete service.spawnEntities;
+    delete service.tickLairs;
+  };
 }
 
 export function initialState(sc: WorkPinScenario): GameState {

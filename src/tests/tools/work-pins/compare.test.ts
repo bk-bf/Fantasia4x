@@ -79,9 +79,12 @@ function creatureRun(scenario: string, placed: number, upserts: number) {
   };
 }
 
-function creatureDir(upsertsAt200: number): Map<string, ReturnType<typeof creatureRun>> {
+function creatureDir(
+  upsertsAt200: number,
+  upsertsAt50 = 5000
+): Map<string, ReturnType<typeof creatureRun>> {
   return new Map([
-    ['mobs-50', creatureRun('mobs-50', 50, 5000)],
+    ['mobs-50', creatureRun('mobs-50', 50, upsertsAt50)],
     ['mobs-200', creatureRun('mobs-200', 200, upsertsAt200)]
   ]);
 }
@@ -109,5 +112,13 @@ describe('the creature pins', () => {
     expect(over.map((r: { scenario: string; fn: string }) => `${r.scenario} ${r.fn}`)).toContain(
       'mobs-200 / mobs-50 counter mob upserts per creature'
     );
+  });
+
+  it('passes when both sizes get cheaper and the smaller one more so', async () => {
+    const { compareRuns } = await import(
+      new URL('../../../../tools/work-pins/compare.mjs', import.meta.url).href
+    );
+    const { over } = compareRuns(creatureDir(20000), creatureDir(19200, 4500));
+    expect(over).toEqual([]);
   });
 });
