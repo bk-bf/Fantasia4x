@@ -392,7 +392,14 @@ function rigPawn(o, p) {
       const whole = new Spr(s.w, s.h, s.ax, s.ay), chunks = new Map();
       pts.tip = toolAt(whole, kind, at[0], at[1], seen.ang, { fore: seen.fore });
       whole.c.forEach((c, q) => { if (!c) return; const k = Math.floor(((q % whole.w - at[0]) * along[0] + (((q / whole.w) | 0) - at[1]) * along[1]) / seen.fore / TOOL_CHUNK); if (!chunks.has(k)) chunks.set(k, []); chunks.get(k).push(q); });
-      for (const [k, px] of chunks) part('tool', k === 0 || k === -1 ? gripped : Math.min(gripped, camOf(add3(held3.from, mul3(held3.aim, (k + .5) * TOOL_CHUNK))) - SPACE.held), t => { for (const q of px) { t.c[q] = whole.c[q]; t.e[q] = whole.e[q]; } }, { anchor: th, inks: 'shield' });
+      const fists = [[limbs[toolSide].cams.hand, held3.R.H], ...(held3.second ? [[limbs[other].cams.hand, held3.L.H]] : [])].map(([cam, H]) => [cam - SPACE.held, dot3(sub3(H, held3.from), held3.aim)]);
+      const fistLayers = layers.filter(l => l.grips === 'tool');
+      for (const [k, px] of chunks) {
+        const reach3 = (k + .5) * TOOL_CHUNK, own = camOf(add3(held3.from, mul3(held3.aim, reach3))) - SPACE.held, inFist = fists.filter(g => Math.abs(reach3 - g[1]) <= TOOL_CHUNK).map(g => g[0]), loose = Math.min(gripped, own);
+        const lifted = !back && !inFist.length && own > D.torso && loose < D.torso, underFist = lifted ? px.filter(q => fistLayers.some(l => l.spr.c[q])) : [], clear = lifted ? px.filter(q => !underFist.includes(q)) : px, copied = from => t => { for (const q of from) { t.c[q] = whole.c[q]; t.e[q] = whole.e[q]; } };
+        if (clear.length) part('tool', back ? (k === 0 || k === -1 ? gripped : loose) : inFist.length ? Math.min(...inFist) : lifted ? D.torso + D.step / 2 : loose, copied(clear), { anchor: th, inks: 'shield', own, inFist: inFist.length > 0 });
+        if (underFist.length) part('tool', loose, copied(underFist), { anchor: th, inks: 'shield', own, inFist: true });
+      }
       if (kind === 'torch' || kind === 'staff') pts.glow = pts.tip;
     } else if (bowing) {
       const at = handsAt[other], bow = { u: view.seen(staveOf(held3.aim, p.cant)), v: view.seen(held3.aim), pull: p.pull || 0, arrow: nocked };

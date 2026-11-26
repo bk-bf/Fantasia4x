@@ -76,7 +76,8 @@ const SHIELD_SIDE = { f: 'front', b: 'inside', s: 'edge' }, SLUNG_SIDE = { f: 'i
 
 function audit(now, shown, face) {
   const stack = [...now.rigged.layers, ...(now.spr.loadLayer ? [now.spr.loadLayer] : [])].map((l, k) => [l, k]).sort((a, b) => a[0].cam - b[0].cam || a[1] - b[1]).map(x => x[0]);
-  const w = now.spr.w, n = w * now.spr.h, counts = { a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, i: 0, j: 0, k: 0, l: 0, m: 0, n: 0, p: 0 }, torsoCam = stack.find(l => l.name === 'torso').cam;
+  const w = now.spr.w, n = w * now.spr.h, counts = { a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, i: 0, j: 0, k: 0, l: 0, m: 0, n: 0, o: 0, p: 0 }, torsoCam = stack.find(l => l.name === 'torso').cam;
+  if (face === 'f') for (const l of stack) if (isTool(l) && !l.inFist && l.own > torsoCam && l.cam < torsoCam) for (let i = 0; i < n; i++) if (l.spr.c[i] && stack.some(b => (b.name === 'torso' || b.name === 'legs') && b.spr.c[i])) counts.o++;
   const at = (l, i) => l.spr.c[i], wanted = i => { for (let k = stack.length - 1; k >= 0; k--) if (at(stack[k], i)) return stack[k]; return null; };
   const drawn = i => { const want = wanted(i); if (want && shows(shown[i], at(want, i))) return want; for (let k = stack.length - 1; k >= 0; k--) if (at(stack[k], i) && shows(shown[i], at(stack[k], i))) return stack[k]; return null; };
   const region = now.pose.covers || now.fused ? null : faceOf(now.rigged.pts, face), over = new Map(), head = stack.find(l => l.name === 'head'), chin = now.rigged.pts.chin;
@@ -169,8 +170,8 @@ function audit(now, shown, face) {
   return counts;
 }
 
-const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'p', ...PICTURE_KEYS];
-const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', p: 'inside the body', ...PICTURE_NAMED };
+const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', ...PICTURE_KEYS];
+const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', o: 'held thing behind the body it is in front of', p: 'inside the body', ...PICTURE_NAMED };
 const anims = Object.keys(NOW.PAWN_ANIMS).filter(a => !only || new RegExp(only).test(a));
 const totals = Object.fromEntries(KEYS.map(k => [k, 0])), rows = [], notes = [], ground = new Map(), shares = [], seenShare = args.includes('--seen');
 let frames = 0;
@@ -193,7 +194,7 @@ for (const anim of anims) {
         for (const k of PICTURE_KEYS) got[k] = seen[k];
         if (kind.startsWith('folk-')) for (const k of COSTUMED) got[k] = 0;
         if (noted && seen.said.length) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + seen.said.join('; '));
-        for (const k of KEYS) if (got[k]) { sum[k] += got[k]; if (noted && 'bcefijklmnp'.includes(k)) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + NAMED[k] + ' ' + got[k] + (k === 'f' ? ' (' + got.over + ')' : k === 'p' ? ' (' + got.inside.join('; ') + ')' : '')); }
+        for (const k of KEYS) if (got[k]) { sum[k] += got[k]; if (noted && 'bcefijklmnop'.includes(k)) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + NAMED[k] + ' ' + got[k] + (k === 'f' ? ' (' + got.over + ')' : k === 'p' ? ' (' + got.inside.join('; ') + ')' : '')); }
         if (got.low > floor) { sum.h++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + (got.low - floor) + ' px below the ground'); }
         const expects = !loadId && !now.pose.carry && now.pose.item !== null && NOW.TOOLS[now.pose.item === undefined ? NOW.mkActor('pawn', kind, over).o.tool : now.pose.item];
         if (expects && !got.size) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': the tool is not drawn'); }
