@@ -10,6 +10,9 @@ if (!A || !B) {
   process.exit(2);
 }
 const diffDir = resolve(DIFF_DIR ?? join(B, 'diff'));
+const commitOf = (/** @type {string} */ dir) =>
+  existsSync(join(dir, 'COMMIT')) ? readFileSync(join(dir, 'COMMIT'), 'utf8').trim() : 'unknown';
+console.log(`before ${commitOf(A)}  after ${commitOf(B)}`);
 const scenes = readdirSync(A)
   .filter((f) => f.endsWith('.png'))
   .sort();

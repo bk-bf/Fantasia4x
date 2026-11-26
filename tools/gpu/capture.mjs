@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -18,6 +19,11 @@ if (!TREE_ARG || !OUT_ARG || !CHROME) {
 const TREE = resolve(TREE_ARG);
 const OUT = resolve(OUT_ARG);
 mkdirSync(OUT, { recursive: true });
+const git = (/** @type {string[]} */ args) =>
+  execFileSync('git', ['-C', TREE, ...args], { encoding: 'utf8' }).trim();
+const COMMIT = git(['rev-parse', 'HEAD']);
+const DIRTY = git(['status', '--porcelain', '--untracked-files=no']) !== '';
+console.log(`TREE ${TREE} at ${COMMIT}${DIRTY ? ' with uncommitted changes' : ''}`);
 
 const STORE = '/src/lib/stores/gameState.ts';
 const FIXTURE = join(TREE, 'tools/work-pins/fixtures/dev-save.json.gz');
@@ -333,7 +339,15 @@ for (const load of LOADS.filter((l) => !only || only.includes(l.name))) {
       const name = `${load.name}-${zoom}`;
       writeFileSync(join(OUT, `${name}.png`), encodePng(shot.w, shot.h, shot.rgba));
       const sha = createHash('sha256').update(shot.rgba).digest('hex');
-      manifest.push({ scene: name, w: shot.w, h: shot.h, sha256: sha, ...st });
+      manifest.push({
+        scene: name,
+        commit: COMMIT,
+        dirty: DIRTY,
+        w: shot.w,
+        h: shot.h,
+        sha256: sha,
+        ...st
+      });
       log(
         `SCENE ${name} ${shot.w}x${shot.h} glCanvases=${shot.canvases} sha256=${sha.slice(0, 16)} ${JSON.stringify(st)}`
       );
@@ -372,4 +386,5 @@ writeFileSync(
   join(OUT, 'SHA256SUMS'),
   manifest.map((m) => `${m.sha256}  ${m.scene}.rgba`).join('\n') + '\n'
 );
-console.log(`wrote ${manifest.length} scenes to ${OUT}`);
+writeFileSync(join(OUT, 'COMMIT'), `${COMMIT}${DIRTY ? ' dirty' : ''}\n`);
+console.log(`wrote ${manifest.length} scenes of ${COMMIT} to ${OUT}`);
