@@ -17,10 +17,7 @@ export type TextureFormat =
   | 'rgba16uint'
   | 'rgba16float'
   | 'rgba32float'
-  | 'legacy-rgba'
-  | 'legacy-rgb'
-  | 'legacy-luminance'
-  | 'legacy-alpha';
+  | 'legacy-rgba';
 
 export type FilterMode = 'nearest' | 'linear';
 export type AddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
@@ -157,7 +154,6 @@ export interface GpuDevice {
   writeTexture(extent: TextureExtent, data: TextureData): void;
   writeTextureImage(format: TextureFormat, source: TexImageSource): void;
   writeSubTexture(region: TextureRegion, data: ArrayBufferView): void;
-  generateMipmaps(): void;
   setUnpackAlignment(bytes: 1 | 2 | 4 | 8): void;
   setUnpackPremultiplyAlpha(on: boolean): void;
   setUnpackFlipY(on: boolean): void;

@@ -86,10 +86,6 @@ export function countGl(gl: WebGL2RenderingContext): void {
     levels.set(Number(a[1]), bytes);
     textureBytes.set(bound, levels);
   });
-  wrapGl(gl, 'generateMipmap', () => {
-    const levels = bound && textureBytes.get(bound);
-    if (levels) levels.set(-1, Math.round((levels.get(0) ?? 0) / 3));
-  });
   wrapGl(gl, 'bindTexture', (a) => {
     if (a[0] === gl.TEXTURE_2D) bound = a[1] as WebGLTexture | null;
   });

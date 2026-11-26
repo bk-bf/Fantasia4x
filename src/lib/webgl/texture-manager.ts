@@ -4,9 +4,7 @@ import type { AddressMode, GpuDevice, GpuTexture, TextureFormat } from '../gpu/d
 export interface TextureOptions {
   filtering?: 'nearest' | 'linear';
   wrapping?: 'clamp' | 'repeat' | 'mirror';
-  format?: 'rgba' | 'rgb' | 'luminance' | 'alpha';
   flipY?: boolean;
-  generateMipmap?: boolean;
 }
 
 export interface TextureInfo {
@@ -109,119 +107,6 @@ export class TextureManager {
     }
   }
 
-  createTextureFromImageData(
-    data: ImageData | Uint8Array,
-    width: number,
-    height: number,
-    options: TextureOptions = {},
-    textureId?: string
-  ): GpuTexture | null {
-    const gpu = this.gpu;
-    const texture = gpu.createTexture();
-
-    if (!texture) {
-      console.error('❌ Failed to create WebGL texture');
-      return null;
-    }
-
-    const id = textureId || `texture-${Date.now()}`;
-
-    try {
-      gpu.bindTexture(texture);
-
-      this.configureTextureParameters(options);
-
-      const format = this.getTextureFormat(options.format || 'rgba');
-
-      const textureData = data instanceof ImageData ? data.data : data;
-
-      gpu.writeTexture({ format, width, height }, textureData);
-
-      if (options.generateMipmap) {
-        gpu.generateMipmaps();
-      }
-
-      const bytesPerPixel = this.getBytesPerPixel(options.format || 'rgba');
-      const memoryUsage = width * height * bytesPerPixel;
-
-      const textureInfo: TextureInfo = {
-        texture,
-        width,
-        height,
-        format,
-        id,
-        memoryUsage
-      };
-
-      this.textures.set(id, textureInfo);
-      this.totalMemoryUsage += memoryUsage;
-
-      gpu.bindTexture(null);
-
-      if (this.debug) {
-        console.log(`✅ Texture created: ${id}`, {
-          dimensions: `${width}x${height}`,
-          memory: `${(memoryUsage / 1024).toFixed(1)}KB`,
-          format: options.format || 'rgba'
-        });
-      }
-
-      return texture;
-    } catch (error) {
-      console.error(`❌ Failed to create texture ${id}:`, error);
-      gpu.destroyTexture(texture);
-      return null;
-    }
-  }
-
-  bindTexture(textureId: string, unit: number = 0): boolean {
-    const textureInfo = this.textures.get(textureId);
-    if (!textureInfo) {
-      console.error(`❌ Texture not found: ${textureId}`);
-      return false;
-    }
-
-    const gpu = this.gpu;
-    gpu.setTextureSlot(unit);
-    gpu.bindTexture(textureInfo.texture);
-    return true;
-  }
-
-  getTextureInfo(textureId: string): TextureInfo | undefined {
-    return this.textures.get(textureId);
-  }
-
-  deleteTexture(textureId: string): boolean {
-    const textureInfo = this.textures.get(textureId);
-    if (!textureInfo) {
-      console.warn(`⚠️ Texture not found for deletion: ${textureId}`);
-      return false;
-    }
-
-    this.gpu.destroyTexture(textureInfo.texture);
-    this.totalMemoryUsage -= textureInfo.memoryUsage;
-    this.textures.delete(textureId);
-
-    if (this.debug) {
-      console.log(`🗑️ Texture deleted: ${textureId}`);
-    }
-
-    return true;
-  }
-
-  getMemoryStats() {
-    return {
-      totalTextures: this.textures.size,
-      totalMemoryUsage: this.totalMemoryUsage,
-      totalMemoryMB: (this.totalMemoryUsage / (1024 * 1024)).toFixed(2),
-      textures: Array.from(this.textures.values()).map((info) => ({
-        id: info.id,
-        dimensions: `${info.width}x${info.height}`,
-        memoryKB: (info.memoryUsage / 1024).toFixed(1)
-      }))
-    };
-  }
-
   dispose(): void {
     const gpu = this.gpu;
 
@@ -249,59 +134,7 @@ export class TextureManager {
     }
   }
 
-  private configureTextureParameters(options: TextureOptions): void {
-    const gpu = this.gpu;
-
-    const filtering = options.filtering || 'linear';
-    const wrapping = options.wrapping || 'clamp';
-
-    const wrapMode = this.getWrapMode(wrapping);
-    gpu.setSampler({
-      minFilter: filtering,
-      magFilter: filtering,
-      addressModeU: wrapMode,
-      addressModeV: wrapMode
-    });
-  }
-
-  private getTextureFormat(format: string): TextureFormat {
-    switch (format) {
-      case 'rgba':
-        return 'legacy-rgba';
-      case 'rgb':
-        return 'legacy-rgb';
-      case 'luminance':
-        return 'legacy-luminance';
-      case 'alpha':
-        return 'legacy-alpha';
-      default:
-        return 'legacy-rgba';
-    }
-  }
-
-  private getBytesPerPixel(format: string): number {
-    switch (format) {
-      case 'rgba':
-        return 4;
-      case 'rgb':
-        return 3;
-      case 'luminance':
-      case 'alpha':
-        return 1;
-      default:
-        return 4;
-    }
-  }
-
   private convertImageDataToRGBA(imageData: ImageData): Uint8Array {
     return new Uint8Array(imageData.data);
   }
-}
-
-export function isPowerOfTwo(value: number): boolean {
-  return (value & (value - 1)) === 0;
-}
-
-export function nextPowerOfTwo(value: number): number {
-  return Math.pow(2, Math.ceil(Math.log2(value)));
 }

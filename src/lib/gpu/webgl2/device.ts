@@ -268,10 +268,6 @@ export class Webgl2Device implements GpuDevice {
     );
   }
 
-  generateMipmaps(): void {
-    this.gl.generateMipmap(this.gl.TEXTURE_2D);
-  }
-
   setUnpackAlignment(bytes: 1 | 2 | 4 | 8): void {
     this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, bytes);
   }
