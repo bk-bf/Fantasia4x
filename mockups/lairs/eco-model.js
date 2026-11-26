@@ -235,7 +235,7 @@ const ECO = (() => {
 
   const SEXN = { m: 'male', f: 'female' };
   const RELEASE = SEASON_DAYS * 3, IGP = .025, EATS_RIVAL = .25, overlaps = new Map();
-  const ENDS = { 'a bigger hunter': 'the last one was killed by a bigger hunter', hunger: 'starved out', 'old age': 'the last one died of old age', sickness: 'the last one died of sickness', 'wounds from a fight': 'the last one fell fighting', 'a kick or a horn': 'the last one was killed by prey', 'a lost challenge': 'the last one fell fighting', colonists: 'cleared by colonists', raid: 'the last one fell raiding' };
+  const ENDS = { 'an attack by a bigger hunter': 'the last one was killed by a bigger hunter', hunger: 'starved out', 'old age': 'the last one died of old age', sickness: 'the last one died of sickness', 'wounds from a fight': 'the last one fell fighting', 'a kick or a horn': 'the last one was killed by prey', 'a lost challenge': 'the last one fell fighting', colonists: 'cleared by colonists', raid: 'the last one fell raiding' };
   function shiftDen(S, g) {
     const k = g.k, l = g.lair, here = foodAt(S, g, l.x, l.y);
     g.moved = S.day;
@@ -263,7 +263,7 @@ const ECO = (() => {
     }
   }
   const an = s => (/^[aeiou]/.test(s) ? 'an ' : 'a ') + s;
-  const whoOf = g => { const s = g.k.name.toLowerCase(); return g.n <= 1 ? an(s) : g.k.social === 'pack' ? an(s + ' pack') : g.k.social === 'tribe' ? an(s + ' band') : g.k.social === 'flock' ? an(s + ' flock') : g.k.social === 'swarm' ? an(s + ' swarm') : 'a pair of ' + many(s, 2); };
+  const whoOf = g => { const s = g.k.name.toLowerCase(); return g.n <= 1 || /(pack|band|flock|swarm|tribe)$/.test(s) ? an(s) : g.k.social === 'pack' ? an(s + ' pack') : g.k.social === 'tribe' ? an(s + ' band') : g.k.social === 'flock' ? an(s + ' flock') : g.k.social === 'swarm' ? an(s + ' swarm') : 'a pair of ' + many(s, 2); };
   const overlap = (a, b) => { const key = a.id + '|' + b.id; if (!overlaps.has(key)) { let m = 0, t = 0; for (let h = 0; h < 24; h++) { m += Math.min(a.clock[h], b.clock[h]); t += b.clock[h]; } overlaps.set(key, t ? m / t : 0); } return overlaps.get(key); };
   function suppress(S, g) {
     const k = g.k;
@@ -280,7 +280,7 @@ const ECO = (() => {
   }
   function killRival(S, g, o, at) {
     const by = whoOf(g), name = o.k.name.toLowerCase(), ate = S.r() < EATS_RIVAL, kg = o.k.mass * .8;
-    loseOne(S, o, 'a bigger hunter'); g.rivals = (g.rivals || 0) + 1; o.lostRivals = (o.lostRivals || 0) + 1;
+    loseOne(S, o, 'an attack by a bigger hunter'); g.rivals = (g.rivals || 0) + 1; o.lostRivals = (o.lostRivals || 0) + 1;
     S.tally.ipKill++; count(S, o.kind, 'killed by ' + g.kind, 1); trace(S, 'igp', { a: g.kind, b: o.kind, ate });
     if (ate) { g.larder += kg; S.tally.ipEat++; } else carcass(S, at, kg, 3);
     say(S, 'death', at); tell(S, g.lair, `killed ${an(name)} and ${ate ? 'ate it' : 'left it lying'}`); tell(S, o.lair, `${by} killed ${an(name)}`);
