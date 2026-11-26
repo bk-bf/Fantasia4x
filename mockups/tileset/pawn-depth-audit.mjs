@@ -17,7 +17,7 @@ function load(read, layered, composed) {
   const left = composed ? /^motion\.js$/ : /^motion\.js$|motion-folk|motion-sheet|motion-stage|motion-fell|motion-timeline/, motion = read('motion.html').match(/data-then="([^"]+)"/)[1].split(' ').filter(f => !left.test(f) && !registry.includes(f));
   const source = [...registry, ...motion].map(read).join('\n;');
   const data = JSON.parse(read('catalog-data.json'));
-  return new Function('DATA', 'innerWidth', source + '\nDBX.fromData(DATA); MOTION_LOAD.init(DATA);' + (composed ? 'MOTION_FOLK.init(FOLK_CAST);' : '') + (layered ? 'RIG_KEEP.layers = true;' : '') + '\nreturn { placed: typeof FOLK_PARTS !== "undefined" && !!FOLK_PARTS.rigged && typeof dressedLook === "function", style: typeof LOOK_STYLE === "undefined" ? null : LOOK_STYLE, PAWN_ANIMS, FB_POSES, fbPose, posed, PAWNS, FOLK, TOOLS, SEEN, BOW, rigPawn, fitted, HAUL, MOTION_LOAD, HOLDS, P, mkActor, tipped' + (layered ? ', shade' : '') + (composed ? ', drawLook' : '') + ' };')(data.objects, WIDE);
+  return new Function('DATA', 'innerWidth', source + '\nDBX.fromData(DATA); MOTION_LOAD.init(DATA);' + (composed ? 'MOTION_FOLK.init(FOLK_CAST);' : '') + (layered ? 'RIG_KEEP.layers = true;' : '') + '\nreturn { placed: typeof FOLK_PARTS !== "undefined" && !!FOLK_PARTS.rigged && typeof dressedLook === "function", style: typeof LOOK_STYLE === "undefined" ? null : LOOK_STYLE, PAWN_ANIMS, FB_POSES, fbPose, posed, PAWNS, FOLK, TOOLS, SEEN, BOW, rigPawn, rigPawnLie, RG, DBX, fitted, HAUL, MOTION_LOAD, HOLDS, P, mkActor, tipped' + (layered ? ', shade' : '') + (composed ? ', drawLook, SHEET' : '') + ' };')(data.objects, WIDE);
 }
 function loadThen(ref) {
   try { return load(fromGit(ref), false); } catch (e) {
@@ -53,11 +53,14 @@ function frame(G, kind, over, anim, face, u, loadId, seed) {
   const pose = G.posed(anim, def, u, c);
   G.fitted(A, pose);
   const layer = pose.carry && load ? G.HAUL.layer(load, pose.carry, c.face, pose.down > .5) : null;
-  if (layer) pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0, layer.draped ? 1 : 0, layer.under ? 1 : 0];
+  if (layer) pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0, layer.draped ? 1 : 0, layer.yoked ? 1 : 0];
   const rigged = look ? G.drawLook(look, face, null, JSON.parse(quant(pose, TURN)), A.gear) : G.rigPawn(A.o, JSON.parse(quant(pose, TURN)));
-  return { spr: layer && rigged.mask ? G.MOTION_LOAD.put(rigged, layer) : rigged, rigged, pose, seed: A.seed, fused: !!(layer && layer.fused), level: !!(layer && layer.rows), long: !!(load && (load.family === 'long' || load.slim || load.storage === 'shield')) };
+  const lying = pose.lie && !look ? G.rigPawnLie(A.o, { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, out: pose.out ? 1 : 0, bent: pose.bent ? 1 : 0 }) : null;
+  return { spr: layer && rigged.mask ? G.MOTION_LOAD.put(rigged, layer) : rigged, rigged, pose, lying, seed: A.seed, fused: !!(layer && layer.fused), level: !!(layer && layer.rows), long: !!(load && (load.family === 'long' || load.slim || load.storage === 'shield')), layer, load: load ? { ...load, figure: load.storage === 'body' || /_carcass$/.test(load.id) } : null, fullLoad: layer ? solid(G.DBX.built(G.DBX.byId.get(layer.sprite))) : 0 };
 }
 
+const solid = spr => { let n = 0; for (let i = 0; i < spr.c.length; i++) if (spr.c[i]) n++; return n; };
+const RIGID = { share: .88, least: 10 }, UNDER = 1, SEATED = ['sit', 'warm', 'eat'], SEATS = ['stool', 'bench', 'chair'], SEAT_REACH = 8;
 const alike = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
 const shows = (shown, own) => !!shown && !!own && (shown === own || alike(shown, own) || alike(shown, NOW.shade(own)) || alike(shown, NOW.shade(NOW.shade(own))));
 const isBody = l => BODY.includes(l.name), isArm = l => !!l.limb, isTool = l => l.name === 'tool' || l.name === 'tool butt', isArrow = l => isTool(l) && l.piece === 'arrow', isLoad = l => l.name === 'load';
@@ -80,7 +83,7 @@ function audit(now, shown, face) {
   if (face === 'f') for (const l of stack) if (isTool(l) && !l.inFist && l.own > torsoCam && l.cam < torsoCam) for (let i = 0; i < n; i++) if (l.spr.c[i] && stack.some(b => (b.name === 'torso' || b.name === 'legs') && b.spr.c[i])) counts.o++;
   const at = (l, i) => l.spr.c[i], wanted = i => { for (let k = stack.length - 1; k >= 0; k--) if (at(stack[k], i)) return stack[k]; return null; };
   const drawn = i => { const want = wanted(i); if (want && shows(shown[i], at(want, i))) return want; for (let k = stack.length - 1; k >= 0; k--) if (at(stack[k], i) && shows(shown[i], at(stack[k], i))) return stack[k]; return null; };
-  const region = now.pose.covers || now.fused ? null : faceOf(now.rigged.pts, face), over = new Map(), head = stack.find(l => l.name === 'head'), chin = now.rigged.pts.chin;
+  const region = (now.pose.covers && face !== 'b') || now.fused ? null : faceOf(now.rigged.pts, face), over = new Map(), head = stack.find(l => l.name === 'head'), chin = now.rigged.pts.chin;
   for (let i = 0; i < n; i++) {
     const want = wanted(i);
     if (!want || !shown[i] || sameInk(shown[i])) continue;
@@ -170,8 +173,8 @@ function audit(now, shown, face) {
   return counts;
 }
 
-const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', ...PICTURE_KEYS];
-const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', o: 'held thing behind the body it is in front of', p: 'inside the body', ...PICTURE_NAMED };
+const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', ...PICTURE_KEYS, 'z', 'I', 'J'];
+const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', o: 'held thing behind the body it is in front of', p: 'inside the body', ...PICTURE_NAMED, z: 'rigid thing changes length', I: 'seated with no seat', J: 'lying figure under its ground line' };
 const anims = Object.keys(NOW.PAWN_ANIMS).filter(a => !only || new RegExp(only).test(a));
 const totals = Object.fromEntries(KEYS.map(k => [k, 0])), rows = [], notes = [], ground = new Map(), shares = [], seenShare = args.includes('--seen');
 let frames = 0;
@@ -184,11 +187,12 @@ for (const anim of anims) {
     const sum = Object.fromEntries(KEYS.map(k => [k, 0])), share = { tool: [0, 0], load: [0, 0] };
     for (const [kind, over, loadId] of runs) {
       if (over.oneArm && PLAYED_WITH[anim] === 'bow') continue;
-      const floor = standing(kind, over, face), sizes = [], arrows = [], who = kind + Object.entries(over).map(([k, v]) => ' ' + k + ' ' + v).join('');
+      const floor = standing(kind, over, face), sizes = [], arrows = [], lengths = [], who = kind + Object.entries(over).map(([k, v]) => ' ' + k + ' ' + v).join('');
       for (let i = 0; i < n; i++) {
         const u = (i + .5) / n, now = frame(NOW, kind, over, anim, face, u, loadId);
         if (now.pose.tip && now.pose.face === face) { const tip = tipping(NOW.tipped(now.spr, face === 'f' ? -now.pose.tip : now.pose.tip), NOW.P.ink, false); if (tip.torn || tip.parts) { sum.v++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': ' + PICTURE_NAMED.v + ', ' + tip.torn + ' edge pixels not inked, ' + tip.parts + ' loose parts'); } }
-        if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); arrows.push(null); continue; }
+        if (now.lying && face === 's') { let low = 0; for (let q = 0; q < now.lying.c.length; q++) if (now.lying.c[q]) low = (q / now.lying.w) | 0; if (low > NOW.RG.BASE + UNDER) { sum.J++; if (noted) notes.push(anim + ' ' + who + ' frame ' + (i + 1) + ': ' + NAMED.J + ', ' + (low - NOW.RG.BASE) + ' px under'); } }
+        if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); arrows.push(null); lengths.push(null); continue; }
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId, now.seed) : now).spr.c, face), where = who + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
         const seen = pictured({ ...now, bowHalf: NOW.BOW.half, shade: NOW.shade }, face, NOW.P.ink);
         for (const k of PICTURE_KEYS) got[k] = seen[k];
@@ -198,12 +202,15 @@ for (const anim of anims) {
         if (got.low > floor) { sum.h++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + (got.low - floor) + ' px below the ground'); }
         const expects = !loadId && !now.pose.carry && now.pose.item !== null && NOW.TOOLS[now.pose.item === undefined ? NOW.mkActor('pawn', kind, over).o.tool : now.pose.item];
         if (expects && !got.size) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': the tool is not drawn'); }
+        lengths.push(now.rigged.space && now.rigged.space.tool === 'bow' ? null : seen.rigid || null);
         sizes.push(got.size && !got.hidden ? got.size : null);
         arrows.push(got.arrow);
         if (got.half !== null) { share.tool[0] += got.half; share.tool[1]++; }
         if (got.halfLoad !== null) { share.load[0] += got.halfLoad; share.load[1]++; }
         frames++;
       }
+      const longest = Math.max(0, ...lengths.filter(Boolean).map(r => r.all));
+      lengths.forEach((r, i) => { if (r && longest >= RIGID.least && r.all < RIGID.share * longest) { sum.z++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': tool drawn ' + r.all.toFixed(1) + ' px long, longest in the row ' + longest.toFixed(1)); } });
       const most = (def.hit ? JUMP.struck : JUMP.held) / (smooth ? 2 : 1) + (smooth ? 1 : 0);
       for (let i = 0; i < n; i++) { const a = arrows[i], b = arrows[(i + 1) % n]; if (i + 1 === n && def.once) continue; const loosed = def.hit && def.hit[1] === 'arrow' && b < a && (i + .5) / n <= def.hit[0] && (i + 1.5) / n > def.hit[0]; if (a !== null && b !== null && Math.abs(a - b) > most && !(def.hit && !b) && !loosed) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': arrow ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }
       for (let i = 0; i < n; i++) { const a = sizes[i], b = sizes[(i + 1) % n]; if (i + 1 === n && def.once) continue; if (a && b && Math.abs(a - b) > most) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': tool ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }
@@ -212,6 +219,10 @@ for (const anim of anims) {
     for (const what of ['tool', 'load']) if (share[what][1]) shares.push(anim.padEnd(12) + NAMES[face].padEnd(9) + what.padEnd(5) + String(Math.round(100 * share[what][0] / share[what][1])).padStart(4) + '% of ' + share[what][1] + ' frames at least half visible');
     if (listed || KEYS.some(k => sum[k])) rows.push(anim.padEnd(12) + NAMES[face].padEnd(9) + KEYS.map(k => ' ' + k + ' ' + String(sum[k]).padStart(6)).join(''));
   }
+}
+if (NOW.SHEET && !only) for (const cell of NOW.SHEET.CELLS) for (const p of cell.cast || []) {
+  const sits = p.rig === 'pawn' && p.steps.some(st => SEATED.includes(st[0] === 'act' ? st[1] : st[3]));
+  if (sits && !(cell.props || []).some(([name, x]) => SEATS.includes(name) && Math.abs(x - (p.at ? p.at[0] : 0)) <= SEAT_REACH)) { totals.I++; notes.push(cell.id + ': ' + NAMED.I); }
 }
 console.log(rows.join('\n'));
 if (noted) console.log(notes.join('\n'));

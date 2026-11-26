@@ -1,7 +1,10 @@
-export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y'];
-export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing with no hand on it', x: 'held thing against the face', y: 'legs shortened' };
+export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing shows with no hand showing on it', x: 'held thing against the face', y: 'legs shortened', B: 'arms knotted', C: 'tool in line with the arm', D: 'load cut short', E: 'carried body shows no head', F: 'load over one arm and under the other', G: 'hand on the wide end', H: 'load does not read' };
 const HAND_BLOCK = 4, TAPER = { long: 5, thin: 1, wide: 3 }, FIN = { out: 4, above: 1 }, PROFILE = .8, BAND = 2, LEGS = .6, TOUCH = 1;
 const LEG_LAYERS = ['legs', 'far leg', 'near leg'], BROW = 6, FRONT = 5, GRASPED = .2;
+const SHOWS = 3, APART = 4, IN_LINE = { cos: .94, straight: .97, tools: ['hammer', 'club', 'axe', 'pick'] }, WHOLE = .6, HEAD_SHOWS = .6, WIDE_END = 1, IN_ARMS = ['chest', 'low'];
+const QUIVERED = .9, BODY_HIDES = ['bow', 'arrow'];
+const READS = { bars: s => s.w <= 9 && s.w >= 2 * s.h, bundles: s => s.filled <= .6 * s.w * s.h };
 
 const same = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
 const pixels = spr => { const out = []; for (let i = 0; i < spr.c.length; i++) if (spr.c[i]) out.push(i); return out; };
@@ -27,24 +30,33 @@ function tapers(px, w, shoulder) {
   const past = at === null ? inner : capFirst ? inner.slice(inner.length >> 1) : inner.slice(0, (inner.length + 1) >> 1);
   return inner.length > 1 && Math.max(...inner.map(e => e[1])) >= TAPER.wide && Math.min(...past.map(e => e[1])) <= TAPER.thin;
 }
+const axisOf = (px, w) => { let mx = 0, my = 0; for (const i of px) { mx += i % w; my += (i / w) | 0; } mx /= px.length; my /= px.length; let xx = 0, yy = 0, xy = 0; for (const i of px) { const dx = i % w - mx, dy = ((i / w) | 0) - my; xx += dx * dx; yy += dy * dy; xy += dx * dy; } const a = .5 * Math.atan2(2 * xy, xx - yy); return [Math.cos(a), Math.sin(a), mx, my]; };
+const alongAxis = (px, w, ax) => { let lo = 1e9, hi = -1e9; for (const i of px) { const t = (i % w - ax[2]) * ax[0] + (((i / w) | 0) - ax[3]) * ax[1]; if (t < lo) lo = t; if (t > hi) hi = t; } return px.length ? hi - lo + 1 : 0; };
+const crosses = (a, b, c, d) => { const side = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])); return side(a, b, c) * side(a, b, d) < 0 && side(c, d, a) * side(c, d, b) < 0; };
+const centre = (px, w) => { let x = 0, y = 0; for (const i of px) { x += i % w; y += (i / w) | 0; } return [x / px.length, y / px.length]; };
 const touches = (a, b, w) => { const near = new Set(); for (const i of a) for (let dy = -TOUCH; dy <= TOUCH; dy++) for (let dx = -TOUCH; dx <= TOUCH; dx++) near.add(i + dy * w + dx); return b.some(i => near.has(i)); };
 
 export function pictured(now, face, ink) {
   const counts = Object.fromEntries(PICTURE_KEYS.map(k => [k, 0])), shown = now.spr.c, w = now.spr.w, sp = now.rigged.space, said = [];
   const stack = [...now.rigged.layers, ...(now.spr.loadLayer ? [now.spr.loadLayer] : [])].map((l, k) => [l, k]).sort((a, b) => a[0].cam - b[0].cam || a[1] - b[1]).map(x => x[0]);
   const isInk = c => same(c, ink), limbs = new Map(), hands = [];
-  for (const l of stack) if (l.limb) { const px = pixels(l.spr); if (!limbs.has(l.limb)) limbs.set(l.limb, { all: [], hand: [], segs: [], anchor: l.anchor, lost: l.lost }); const limb = limbs.get(l.limb); limb.all.push(...px); if (l.seg === 'hand') { limb.hand = px; hands.push(...px); } else limb.segs.push([l.seg, px]); }
-  const centre = now.rigged.pts.torso ? now.rigged.pts.torso[0] : now.spr.ax, half = sp ? sp.torso.half : 6;
+  for (const l of stack) if (l.limb) { const px = pixels(l.spr); if (!limbs.has(l.limb)) limbs.set(l.limb, { all: [], hand: [], segs: [], anchor: l.anchor, lost: l.lost, path: l.path }); const limb = limbs.get(l.limb); limb.all.push(...px); if (l.seg === 'hand') { limb.hand = px; hands.push(...px); } else limb.segs.push([l.seg, px]); }
+  const top = new Int16Array(shown.length).fill(-1);
+  stack.forEach((l, k) => { const c = l.spr.c; for (let i = 0; i < c.length; i++) if (c[i]) top[i] = k; });
+  const showing = l => { const k = stack.indexOf(l), out = []; for (let i = 0; i < top.length; i++) if (top[i] === k && shown[i] && (l.name !== 'load' || same(shown[i], l.spr.c[i]))) out.push(i); return out; };
+  const middleX = now.rigged.pts.torso ? now.rigged.pts.torso[0] : now.spr.ax, half = sp ? sp.torso.half : 6;
   for (const [name, limb] of limbs) {
     if (!limb.all.length || limb.lost) continue;
     if (limb.hand.length < Math.min(HAND_BLOCK, 2 * (sp && sp.armWide || HAND_BLOCK) - 1)) { counts.q++; said.push(name + ' has no hand block'); }
     else if (pieces(limb.all, w) > 1) { counts.q++; said.push(name + ' is in pieces'); }
     for (const [seg, px] of limb.segs) if (tapers(px, w, seg === 'upper' ? limb.anchor : null)) { counts.r++; said.push(name + ' ' + seg + ' tapers'); }
     if (face !== 's' && limb.anchor && limb.hand.length) {
-      const side = Math.sign(limb.anchor[0] - centre) || 1, out = limb.all.filter(i => ((i % w) - limb.anchor[0]) * side >= FIN.out && ((i / w) | 0) <= limb.anchor[1] + FIN.above).length, hb = box(limb.hand, w), inward = Math.abs((hb[0] + hb[2]) / 2 - centre) < half && (hb[1] + hb[3]) / 2 > limb.anchor[1];
+      const side = Math.sign(limb.anchor[0] - middleX) || 1, out = limb.all.filter(i => ((i % w) - limb.anchor[0]) * side >= FIN.out && ((i / w) | 0) <= limb.anchor[1] + FIN.above).length, hb = box(limb.hand, w), inward = Math.abs((hb[0] + hb[2]) / 2 - middleX) < half && (hb[1] + hb[3]) / 2 > limb.anchor[1];
       if (out && inward) { counts.r++; said.push(name + ' fins out at the shoulder'); }
     }
   }
+  const lumaOf = c => .3 * c[0] + .59 * c[1] + .11 * c[2];
+  const showing0 = px => px.filter(i => top[i] >= 0 && stack[top[i]].seg === 'hand').length;
   const shadeRimmed = i => !!now.shade && stack.some(l => l.rim && l.rim !== 'ink' && !l.spr.c[i] && [i - 1, i + 1, i - w, i + w].some(q => l.spr.c[q])) && stack.some(l => l.spr.c[i] && same(shown[i], now.shade(l.spr.c[i])));
   for (let i = 0; i < shown.length; i++) {
     if (!shown[i] || isInk(shown[i])) continue;
@@ -59,12 +71,43 @@ export function pictured(now, face, ink) {
   }
   const all = box(pixels(now.spr), w);
   if (sp && all && all[3] > sp.groundRow + BAND) { counts.u++; said.push((all[3] - sp.groundRow) + ' px below the foot line'); }
-  const things = [['tool', toolPx], ['arrow', tools.filter(l => l.piece === 'arrow').flatMap(l => pixels(l.spr))], ...stack.filter(l => l.name === 'load' && !(now.pose.cu !== undefined && now.pose.cu < GRASPED)).map(l => ['load', pixels(l.spr)])];
-  for (const [what, px] of things) if (px.length && !touches(px, hands, w)) { counts.w++; said.push(what + ' has no hand at it'); }
+  const rigid = tools.filter(l => l.piece !== 'arrow' && l.piece !== 'string'), loads = stack.filter(l => l.name === 'load'), onGround = now.pose.down > .5 && !(now.pose.reach >= .5);
+  const ownArm = h => { const mine = l => l.limb === h.limb || l.name === 'pad', k = new Set(stack.map((l, i) => mine(l) || l.name === 'tool' || l.name === 'tool butt' ? i : -1)), px = pixels(h.spr); return px.length && 2 * px.filter(i => k.has(top[i])).length >= px.length ? stack.filter(l => mine(l) && l !== h).flatMap(showing) : []; };
+  const shaft = now.pose.shaft, quivered = !!shaft && shaft[2] < -QUIVERED * Math.hypot(...shaft);
+  const handsOn = kind => { const own = stack.filter(l => l.seg === 'hand' && l.grips === kind); return (own.length ? own : stack.filter(l => l.seg === 'hand')).flatMap(h => [...showing(h), ...ownArm(h)]); };
+  const things = [['tool', rigid.flatMap(showing), handsOn('tool')], ['arrow', quivered ? [] : tools.filter(l => l.piece === 'arrow').flatMap(showing), stack.filter(l => l.seg === 'hand').flatMap(showing)], ...(onGround ? [] : loads.map(l => ['load', showing(l), handsOn('load')]))];
+  const behindBody = what => { const own = stack.filter(l => l.seg === 'hand' && l.grips === 'tool' && (what === 'arrow') === (l.piece !== 'stave')); return own.length > 0 && own.every(h => !showing(h).length); };
+  for (const [what, px, by] of things) if (px.length >= SHOWS && !touches(px, by, w) && !(BODY_HIDES.includes(what === 'tool' ? sp && sp.tool : what) && (face === 'b' || behindBody(what)))) { counts.w++; said.push(what + ' shows ' + px.length + ' px with no hand showing on it'); }
+  if (toolPx.length) { const ax = axisOf(toolPx, w), seen = rigid.flatMap(showing), gripped = toolPx.filter(i => top[i] >= 0 && stack[top[i]].seg === 'hand' && stack[top[i]].grips === 'tool'); counts.rigid = { all: alongAxis(toolPx, w, ax), seen: alongAxis([...seen, ...(seen.length ? gripped : [])], w, ax), px: seen.length }; }
+  if (face !== 's' && limbs.size === 2 && ![...limbs.values()].some(l => l.lost)) {
+    const [a, b] = [...limbs.values()], knot = a.path && b.path && a.path.slice(1).some((q, i) => b.path.slice(1).some((r, j) => crosses(a.path[i], q, b.path[j], r)));
+    const near = a.hand.length && b.hand.length ? Math.hypot(centre(a.hand, w)[0] - centre(b.hand, w)[0], centre(a.hand, w)[1] - centre(b.hand, w)[1]) : 99;
+    if ([a, b].every(l => showing0(l.hand) >= SHOWS) && (knot || near < APART)) { counts.B++; said.push(knot ? 'the arms cross' : 'the hands are ' + near.toFixed(1) + ' px apart'); }
+  }
+  if (sp && sp.arms && sp.arms.aim && IN_LINE.tools.includes(sp.tool) && !sp.arms.second) {
+    const R = sp.arms.R, d = (p, q) => [q[0] - p[0], q[1] - p[1], q[2] - p[2]], unit = v => { const n = Math.hypot(...v) || 1; return v.map(c => c / n); }, dot = (p, q) => p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
+    if (dot(unit(d(R.E, R.H)), sp.arms.aim) > IN_LINE.cos && dot(unit(d(R.S, R.E)), unit(d(R.E, R.H))) > IN_LINE.straight) { counts.C++; said.push('the ' + sp.tool + ' runs straight on from a straight arm'); }
+  }
+  for (const l of loads) {
+    const meta = now.load, lay = now.layer, placed = pixels(l.spr);
+    if (!meta || !lay) continue;
+    const sideOn = face === 's' && IN_ARMS.includes(now.pose.carry);
+    if (now.fullLoad && !sideOn && !onGround && placed.length < WHOLE * now.fullLoad) { counts.D++; said.push('load drawn ' + placed.length + ' px of ' + now.fullLoad); }
+    if (meta.figure && !onGround) { const h = l.head, disc = h ? placed.filter(i => Math.hypot(i % w - h[0], ((i / w) | 0) - h[1]) <= h[2]) : [], seen = new Set(showing(l)), headSeen = disc.filter(i => seen.has(i)).length; if (!h || !disc.length || headSeen < HEAD_SHOWS * disc.length) { counts.E++; said.push(h ? 'head of the carried body shows ' + headSeen + ' px of ' + disc.length : 'the carried body has no head marked'); } }
+    if (face !== 's' && IN_ARMS.includes(now.pose.carry) && limbs.size === 2) {
+      const state = [...limbs.keys()].map(name => { let over = 0, under = 0; for (const seg of stack.filter(s => s.limb === name && s.seg !== 'hand')) { const k = stack.indexOf(seg); for (const i of pixels(seg.spr)) if (l.spr.c[i]) { if (top[i] === k) over++; else if (stack[top[i]] === l) under++; } } return over + under < 2 ? 0 : over > under ? 1 : -1; });
+      if (state[0] * state[1] < 0) { counts.F++; said.push('load over one arm and under the other'); }
+    }
+    if (meta.family === 'long' && lay.spr && !onGround) {
+      const s = lay.spr, tall = s.h >= s.w, n = tall ? s.h : s.w, wide = k => { let c = 0; for (let j = 0; j < (tall ? s.w : s.h); j++) if (s.c[tall ? k * s.w + j : j * s.w + k]) c++; return c; }, widths = Array.from({ length: n }, (_, k) => wide(k)).filter(v => v).sort((x, y) => x - y), at = wide(lay.grip[tall ? 1 : 0]);
+      if (widths.length && at > widths[widths.length >> 1] + WIDE_END) { counts.G++; said.push('hand where the load is ' + at + ' px wide, its middle width is ' + widths[widths.length >> 1]); }
+    }
+    if (face !== 's' && READS[meta.storage] && lay.spr) { const s = lay.spr, filled = pixels(s).length; if (!READS[meta.storage]({ w: s.w, h: s.h, filled })) { counts.H++; said.push(meta.storage + ' sprite ' + s.w + 'x' + s.h + ' with ' + filled + ' px'); } }
+  }
   const head = stack.find(l => l.name === 'head'), pts = now.rigged.pts;
-  if (face === 's' && head && pts.mouth && !now.pose.covers && !now.fused) {
+  if (face === 's' && head && pts.mouth && !now.pose.covers) {
     let against = 0;
-    for (const l of [...tools.filter(l => l.piece !== 'string' && l.piece !== 'arrow'), ...stack.filter(k => k.name === 'load' && !(now.pose.cu < 1))]) for (const i of pixels(l.spr)) { const y = (i / w) | 0; if (y < pts.mouth[1] - BROW || y > pts.chin || !shown[i] || !same(shown[i], l.spr.c[i])) continue; if ([i - 1, i + 1, i - w, i + w, i].some(q => head.spr.c[q] && q % w >= pts.mouth[0] - FRONT)) against++; }
+    for (const l of [...tools.filter(l => l.piece !== 'arrow'), ...stack.filter(k => k.name === 'load' && !(now.pose.cu < 1))].filter(l => l.cam > head.cam)) for (const i of pixels(l.spr)) { const y = (i / w) | 0; if (y < pts.mouth[1] - BROW || y > pts.chin || !shown[i] || !same(shown[i], l.spr.c[i])) continue; if ([i - 1, i + 1, i - w, i + w, i].some(q => head.spr.c[q] && q % w >= pts.mouth[0] - FRONT)) against++; }
     if (against) { counts.x += against; said.push(against + ' px of a held thing against the face'); }
   }
   if (sp && !now.pose.sit && !now.pose.kneel) {
