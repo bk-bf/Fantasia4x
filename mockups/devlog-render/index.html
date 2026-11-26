@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasia4x render devlog</title>
+<style>
+@font-face { font-family: Blackletter; src: url(jacquard24-400.woff2) format("woff2"); }
+@font-face { font-family: VT; src: url(VT323.ttf); }
+@font-face { font-family: Pix; src: url(PixelifySans.ttf); font-weight: 400 700; }
+:root {
+  --bg: #f6f1e6; --card: #fffdf8; --ink: #2a2116; --dim: #6e6250; --edge: #e2d8c3;
+  --accent: #a8640a; --cool: #3d7a2e; --hot: #b23a2a; --chip: #efe6d3;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17120c; --card: #211a12; --ink: #f2e8cc; --dim: #b3a585; --edge: #3a2f20;
+  --accent: #ffc468; --cool: #b0dc80; --hot: #ff8a70; --chip: #2c2318;
+} }
+:root[data-theme="dark"] {
+  --bg: #17120c; --card: #211a12; --ink: #f2e8cc; --dim: #b3a585; --edge: #3a2f20;
+  --accent: #ffc468; --cool: #b0dc80; --hot: #ff8a70; --chip: #2c2318;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, sans-serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+h2 { font: 700 21px/1.2 Pix, sans-serif; margin: 40px 0 12px; }
+h3 { margin: 0 0 6px; font-size: 16px; }
+.lead { color: var(--dim); margin: 0 0 8px; }
+.card { background: var(--card); border: 1px solid var(--edge); border-radius: 10px; padding: 16px; }
+.grid3 { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 860px) { .grid3 { grid-template-columns: 1fr 1fr 1fr; } }
+.badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--dim); margin-left: 6px; vertical-align: 2px; }
+.badge.rec { background: var(--accent); color: #1b1300; }
+
+.thumb { position: relative; aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; container-type: inline-size; background: #120d08; }
+.thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.thumb .half { position: absolute; top: 0; bottom: 0; overflow: hidden; }
+.thumb .half img { position: absolute; inset: 0; width: 200%; max-width: none; }
+.thumb .shade { position: absolute; inset: 0; }
+.thumb .t { position: absolute; font-family: Pix, sans-serif; font-weight: 700; color: #fff; line-height: .95; letter-spacing: .5px;
+  text-shadow: 0 .5cqw 0 #000, .4cqw .4cqw 0 #000, -.4cqw .4cqw 0 #000, .4cqw -.2cqw 0 #000, -.4cqw -.2cqw 0 #000; }
+.thumb .t em { font-style: normal; color: #ffc468; }
+.thumb .t i { font-style: normal; color: #b0dc80; }
+.thumb .t.bl { font-family: Blackletter, serif; font-weight: 400; letter-spacing: 0; line-height: .82; }
+.thumb .s { position: absolute; font-family: VT, monospace; color: #fff; background: rgba(20,14,8,.85); border: .3cqw solid #ffc468; padding: .6cqw 1.4cqw; font-size: 3.4cqw; line-height: 1; }
+.thumb .len { position: absolute; right: 1.6cqw; bottom: 1.6cqw; background: rgba(0,0,0,.85); color: #fff; font: 600 2.6cqw/1 system-ui; padding: .6cqw 1cqw; border-radius: .8cqw; }
+.thumb .seam { position: absolute; top: 0; bottom: 0; width: .8cqw; background: #ffc468; box-shadow: 0 0 2cqw #000; }
+.thumb .arrow { position: absolute; font: 700 12cqw/1 Pix, sans-serif; color: #ffc468; text-shadow: .5cqw .5cqw 0 #000; }
+.result { display: grid; grid-template-columns: 168px 1fr; gap: 12px; align-items: start; margin-top: 12px; }
+.result .thumb { border-radius: 8px; }
+.result .rt { font-weight: 600; font-size: 15px; line-height: 1.3; }
+.result .meta { color: var(--dim); font-size: 12px; margin-top: 4px; }
+.titles { margin: 10px 0 0; padding: 0; list-style: none; }
+.titles li { padding: 8px 0; border-top: 1px solid var(--edge); font-size: 14px; }
+.titles li b { color: var(--accent); font-weight: 700; margin-right: 6px; font-size: 12px; }
+
+.ba { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ba figure { margin: 0; position: relative; }
+.ba img { width: 100%; aspect-ratio: 16/10; object-fit: cover; border-radius: 6px; image-rendering: pixelated; display: block; }
+.ba figcaption { position: absolute; left: 6px; top: 6px; font: 15px/1 VT, monospace; background: rgba(20,14,8,.85); color: #f2e8cc; padding: 3px 6px; border-radius: 3px; }
+.ba figure + figure figcaption { color: #ffc468; }
+
+.timeline { display: grid; gap: 8px; }
+.beat { display: grid; grid-template-columns: 64px 220px 1fr; gap: 12px; align-items: start; background: var(--card); border: 1px solid var(--edge); border-radius: 8px; padding: 10px; }
+.beat .tc { font: 18px VT, monospace; color: var(--accent); }
+.beat .bt { font-weight: 600; font-size: 15px; }
+.beat .bd { color: var(--dim); font-size: 13px; margin-top: 2px; }
+.beat .bd code { background: var(--chip); padding: 0 4px; border-radius: 3px; font-size: 12px; }
+.beat .todo, .todo { aspect-ratio: 16/10; border-radius: 6px; border: 2px dashed var(--edge); display: grid; place-items: center; color: var(--dim); font: 16px VT, monospace; text-align: center; padding: 8px; }
+.beat.act { background: transparent; border: none; padding: 14px 0 2px; grid-template-columns: 1fr; }
+.beat.act .bt { font: 700 15px Pix, sans-serif; color: var(--accent); }
+@media (max-width: 760px) { .beat { grid-template-columns: 52px 1fr; } .beat > .ba, .beat > .todo { grid-column: 1 / -1; order: 3; } }
+
+.script { display: grid; gap: 10px; }
+.line { display: grid; grid-template-columns: 64px 1fr; gap: 12px; background: var(--card); border: 1px solid var(--edge); border-radius: 8px; padding: 10px 12px; }
+.line .tc { font: 18px VT, monospace; color: var(--accent); }
+.line .vo { font-size: 15px; }
+.line .on { color: var(--dim); font-size: 13px; margin-top: 4px; }
+.line .on b { color: var(--cool); font-weight: 600; }
+
+.shorts { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 760px) { .shorts { grid-template-columns: repeat(3, 1fr); } }
+.phone { position: relative; aspect-ratio: 9/16; max-width: 280px; margin: 0 auto 10px; border-radius: 14px; overflow: hidden; background: #120d08; container-type: inline-size; }
+.phone img { position: absolute; left: 0; width: 100%; height: 50%; object-fit: cover; image-rendering: pixelated; }
+.phone img.top { top: 0; } .phone img.bot { bottom: 0; }
+.phone img.full { top: 0; height: 100%; }
+.phone .cap { position: absolute; left: 6cqw; right: 6cqw; top: 8cqw; font: 700 8.5cqw/1 Pix, sans-serif; color: #fff; text-align: center;
+  text-shadow: 0 1cqw 0 #000, .8cqw .8cqw 0 #000, -.8cqw .8cqw 0 #000; }
+.phone .cap em { font-style: normal; color: #ffc468; }
+.phone .tag { position: absolute; left: 4cqw; font: 7cqw/1 VT, monospace; background: rgba(20,14,8,.85); color: #f2e8cc; padding: 1cqw 2cqw; }
+.phone .tag.a { top: 52cqh; } .phone .tag.b { bottom: 4cqw; color: #ffc468; }
+.phone .mid { position: absolute; left: 0; right: 0; top: calc(50% - .6cqw); height: 1.2cqw; background: #ffc468; }
+.shorts ol { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--dim); }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+td, th { text-align: left; padding: 8px 6px; border-top: 1px solid var(--edge); vertical-align: top; }
+th { color: var(--dim); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stack { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.stack span { font: 16px/1 VT, monospace; background: var(--chip); padding: 5px 8px; border-radius: 4px; }
+.stack span b { color: var(--accent); font-weight: 400; }
+a { color: var(--cool); }
+.sources { font-size: 13px; color: var(--dim); }
+</style>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+</head>
+<body>
+<header id="mock" class="bar">
+  <strong>Devlog #1: the repaint</strong>
+  <nav><a href="#title">Title</a><a href="#outline">Outline</a><a href="#script">Script</a><a href="#shorts">Shorts</a><a href="#seo">Evidence</a></nav>
+  <span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span>
+  <p class="mnote">concept mockup · thumbnail view counts and durations are placeholders · competitor view counts are real, read from YouTube search on 2026-11-26</p>
+</header>
+<main>
+<p class="lead">The look overhaul on <code>test/look-overhaul</code>: 21–26 Nov 2026, 301 non-merge commits ahead of <code>dev</code>. Every frame below comes from an existing mockup render or the promo's live captures; dashed boxes are shots still to record. Narration is a TTS voice in first person, and it has opinions.</p>
+
+<h2 id="title">Title and thumbnail</h2>
+<div class="card">
+  <h3>Pick: “My Colony Sim Was Ugly. So I Repainted It in 5 Days” <span class="badge rec">recommended</span></h3>
+  <ul class="titles">
+    <li><b>A</b>My Colony Sim Was Ugly. So I Repainted It in 5 Days — self-deprecating confession plus a constraint. Same shape as “My Indie Game is Ugly…Let's Fix That” (75.8k) and “How I Made My Horror Game Look 10x Better” (49k on a small channel). “colony sim devlog” is an autocomplete hit with almost no competition.</li>
+    <li><b>B</b>301 Commits to Make My Pixel Game Look Alive — the number is real and odd enough to read as true; weaker hook, better for a second upload or a Short title.</li>
+    <li><b>C</b>I Painted Light Into a Pixel Art Game (Shaders, Not Sprites) — technique-first, the aarthificial lane (“Deferred Lights” 461k, “Next-Gen Pixel Art” 616k). Wins search on “pixel art lighting”, loses the casual browse.</li>
+  </ul>
+</div>
+
+<div class="grid3" style="margin-top:16px">
+  <div class="card">
+    <div class="thumb">
+      <div class="half" style="left:0;width:50%"><img src="img/grass-before.webp" alt=""></div>
+      <div class="half" style="left:50%;width:50%"><img src="img/grass-after.webp" alt="" style="left:-100%"></div>
+      <div class="seam" style="left:calc(50% - .4cqw)"></div>
+      <div class="t" style="left:3cqw;top:3cqw;font-size:9cqw">UGLY</div>
+      <div class="t" style="right:3cqw;top:3cqw;font-size:9cqw"><em>5 DAYS</em></div>
+      <span class="len">11:42</span>
+    </div>
+    <h3 style="margin-top:10px">1 · Split seam <span class="badge rec">pick</span></h3>
+    <p class="lead">Same scene, hard vertical seam: flat carpet grass left, dressed grass with deer and trees right. Two words only. The before/after split is the most common winning devlog thumbnail; it reads at 168 px.</p>
+  </div>
+  <div class="card">
+    <div class="thumb">
+      <img src="img/map-night.webp" alt="" style="object-position:50% 40%">
+      <div class="shade" style="background:radial-gradient(circle at 60% 55%, transparent 20%, rgba(0,0,0,.55) 70%)"></div>
+      <div class="t bl" style="left:4cqw;bottom:5cqw;font-size:14cqw">Painted<br><em>light</em></div>
+      <div class="s" style="right:3cqw;top:3cqw">no sprites were harmed</div>
+      <span class="len">11:42</span>
+    </div>
+    <h3 style="margin-top:10px">2 · Night glow</h3>
+    <p class="lead">One moody night frame, blackletter title from the promo kit. Pairs with title C; prettier, but no contrast story, so it relies on the image alone.</p>
+  </div>
+  <div class="card">
+    <div class="thumb">
+      <img src="img/magic.webp" alt="" style="object-position:50% 30%">
+      <div class="shade" style="background:linear-gradient(90deg, rgba(0,0,0,.7), transparent 60%)"></div>
+      <div class="t" style="left:4cqw;top:6cqw;font-size:8cqw">301<br><i>commits</i></div>
+      <div class="arrow" style="left:30cqw;top:30cqw">→</div>
+      <span class="len">11:42</span>
+    </div>
+    <h3 style="margin-top:10px">3 · Hero tree</h3>
+    <p class="lead">The emberwood elder alone, big number on the left. Works for title B and for the Shorts shelf; weakest at small size because the tree is the only subject.</p>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h3>How it sits in search</h3>
+  <div class="result"><div class="thumb"><div class="half" style="left:0;width:50%"><img src="img/grass-before.webp" alt=""></div><div class="half" style="left:50%;width:50%"><img src="img/grass-after.webp" alt="" style="left:-100%"></div><div class="seam" style="left:calc(50% - .4cqw)"></div><div class="t" style="left:3cqw;top:3cqw;font-size:9cqw">UGLY</div><div class="t" style="right:3cqw;top:3cqw;font-size:9cqw"><em>5 DAYS</em></div></div>
+    <div><div class="rt">My Colony Sim Was Ugly. So I Repainted It in 5 Days</div><div class="meta">Fantasia4x · placeholder views · Devlog #1</div></div></div>
+</div>
+
+<h2 id="outline">Long-form outline · ~11:40</h2>
+<p class="lead">Five acts. Every act ends on a reveal so the retention graph has a reason to stay flat.</p>
+<div class="timeline">
+  <div class="beat act"><div class="bt">Act 1 · The confession (0:00–1:50)</div></div>
+  <div class="beat"><div class="tc">0:00</div><div class="ba"><figure><img src="img/grass-before.webp" alt=""><figcaption>21 Nov</figcaption></figure><figure><img src="img/grass-after.webp" alt=""><figcaption>26 Nov</figcaption></figure></div><div><div class="bt">Cold open: the wipe</div><div class="bd">Five-second slow wipe, before to after, no music until the seam crosses. Then the hook line (see script).</div></div></div>
+  <div class="beat"><div class="tc">0:20</div><div class="todo">record: glyph renderer on a pre-overhaul commit, same seed</div><div><div class="bt">What it looked like</div><div class="bd">The glyph map that shipped before 21 Nov; painted tiles were behind a switch. Checkout before <code>9086b016</code>, glyph mode on.</div></div></div>
+  <div class="beat"><div class="tc">0:55</div><div class="ba"><figure><img src="img/live-noon.webp" alt=""><figcaption>painted, unlit</figcaption></figure><figure><img src="img/map-day.webp" alt=""><figcaption>now</figcaption></figure></div><div><div class="bt">The rule I set myself</div><div class="bd">The mockups already looked right; the game didn't. Port the mockup, pixel for pixel, or don't ship it. Every feature in the next 10 minutes was held to a mockup.</div></div></div>
+
+  <div class="beat act"><div class="bt">Act 2 · Ground (1:50–4:10)</div></div>
+  <div class="beat"><div class="tc">1:50</div><div class="ba"><figure><img src="img/blend-off.webp" alt=""><figcaption>tiles</figcaption></figure><figure><img src="img/blend-on.webp" alt=""><figcaption>blend pass</figcaption></figure></div><div><div class="bt">Killing the grid</div><div class="bd">Ground drawn through a blend pass so tiles bleed into each other (<code>9086b016</code>, default from <code>66dee6b0</code>). Hold the cut on a dirt/grass edge; the difference is subtle at full frame, obvious zoomed.</div></div></div>
+  <div class="beat"><div class="tc">2:40</div><div class="ba"><figure><img src="img/shore-off.webp" alt=""><figcaption>before</figcaption></figure><figure><img src="img/shore-on.webp" alt=""><figcaption>shore</figcaption></figure></div><div><div class="bt">Water that isn't a blue square</div><div class="bd">Depth bands, foam, wet sand, rapids and reeds (<code>56ccd47c</code>), one baked 2048 px field, wind gusts and ice. Rivers as lake water pushed downstream (<code>7dbd9499</code>).</div></div></div>
+  <div class="beat"><div class="tc">3:30</div><div class="todo">record: mined mountain, stepped tiers + cutaway</div><div><div class="bt">Mountains, take two</div><div class="bd">Fractured peaks shipped, got reverted the same night (<code>de30abee</code>), came back as stepped tiers (<code>556f9def</code>). Opinionated beat: “the first version was clever and wrong.”</div></div></div>
+
+  <div class="beat act"><div class="bt">Act 3 · Light (4:10–6:30)</div></div>
+  <div class="beat"><div class="tc">4:10</div><div class="ba"><figure><img src="img/light-noon.webp" alt=""><figcaption>12:00</figcaption></figure><figure><img src="img/light-night.webp" alt=""><figcaption>21:00</figcaption></figure></div><div><div class="bt">Stepped light, not smooth light</div><div class="bd">Light pass with the mockup's stepped point light, grade and vignette (<code>a022698e</code>). Glow and drop shadows baked into a light atlas beside the colour atlas (<code>1e3b23bb</code>).</div></div></div>
+  <div class="beat"><div class="tc">5:20</div><div class="ba"><figure><img src="img/map-dusk.webp" alt=""><figcaption>dusk</figcaption></figure><figure><img src="img/map-night.webp" alt=""><figcaption>night</figcaption></figure></div><div><div class="bt">Day cycle timelapse</div><div class="bd">One colony, noon to midnight in 20 seconds. A test holds the light to the mockup's table every quarter hour (<code>1947ea7f</code>): say that out loud, it's the honest flex.</div></div></div>
+
+  <div class="beat act"><div class="bt">Act 4 · Life (6:30–9:00)</div></div>
+  <div class="beat"><div class="tc">6:30</div><div class="ba"><figure><img src="img/trees-summer.webp" alt=""><figcaption>summer</figcaption></figure><figure><img src="img/trees-autumn.webp" alt=""><figcaption>autumn</figcaption></figure></div><div><div class="bt">Wind, gusts and falling leaves</div><div class="bd">Plants bend in travelling gusts (<code>5cf1f385</code>); then they flickered, fixed by leaning in whole art pixels (<code>ec9bc28f</code>). Show the flicker bug, it's the best 6 seconds of the act.</div></div></div>
+  <div class="beat"><div class="tc">7:40</div><div class="ba"><figure><img src="img/forest.webp" alt=""><figcaption>big trees</figcaption></figure><figure><img src="img/magic.webp" alt=""><figcaption>elder</figcaption></figure></div><div><div class="bt">Big trees and one elder</div><div class="bd">Young/mature trees across seasons, cut away around pawns (<code>73930932</code>); trunk, boughs and leaves split in the wind; the magical elder that sheds flame through its leaves (<code>c8cacec8</code>).</div></div></div>
+
+  <div class="beat act"><div class="bt">Act 5 · How it was made, and what it cost (9:00–11:40)</div></div>
+  <div class="beat"><div class="tc">9:00</div><div class="todo">screen: mockup page beside game, same scene</div><div><div class="bt">Mockup first, then port</div><div class="bd">Every look lived as a browser mockup (ground-blend, grass-layers, light-hex, big-trees, tree-ground) before a line went into the WebGL renderer. Agents did much of the porting, held to tests against the mockup.</div></div></div>
+  <div class="beat"><div class="tc">10:10</div><div class="todo">record: frame-time graph before/after the perf fixes</div><div><div class="bt">The frame-time bill</div><div class="bd">Shadow rescans, shader branches and per-tile tufts all cost frames; fixed by <code>53e344e7</code>, <code>d311fc48</code>, <code>dacae16a</code> and the <code>fix-frame-time-regression</code> branch. Put real numbers on screen or cut the beat.</div></div></div>
+  <div class="beat"><div class="tc">11:00</div><div class="ba"><figure><img src="img/map-summer.webp" alt=""><figcaption>summer</figcaption></figure><figure><img src="img/map-winter.webp" alt=""><figcaption>winter</figcaption></figure></div><div><div class="bt">Outro + wishlist</div><div class="bd">Seasons flip on the same map. One ask, one line, end screen to Devlog #0.</div></div></div>
+</div>
+
+<h2 id="script">TTS script · hook to 2:00</h2>
+<div class="script">
+  <div class="line"><div class="tc">0:00</div><div><div class="vo">(silence; the wipe runs)</div><div class="on"><b>On screen:</b> before → after, seam left to right.</div></div></div>
+  <div class="line"><div class="tc">0:05</div><div><div class="vo">Five days ago my game looked like this. Today it looks like this. Same map, same seed, same colonists. Three hundred and one commits in between, and one of them I'm still embarrassed about.</div></div></div>
+  <div class="line"><div class="tc">0:18</div><div><div class="vo">This is Fantasia, a colony sim. You run a settlement, the world runs itself, and until last week the world was, frankly, a spreadsheet with grass.</div><div class="on"><b>On screen:</b> glyph renderer, slow pan.</div></div></div>
+  <div class="line"><div class="tc">0:32</div><div><div class="vo">Here's the thing nobody tells you about pixel art games: the sprites aren't the problem. My sprites were fine. The problem is everything between the sprites. The ground stops at tile edges. Water is a blue square. Light is a number that changes the brightness. It all looks placed, not grown.</div><div class="on"><b>On screen:</b> zoom on a hard grass/dirt tile edge, freeze, red outline on the grid.</div></div></div>
+  <div class="line"><div class="tc">0:55</div><div><div class="vo">And the annoying part? I already knew what it should look like. I'd built mockups. Little browser pages where the grass blends, the water moves and the night actually feels like night. They looked great. The game didn't.</div><div class="on"><b>On screen:</b> mockup page beside the game, same scene.</div></div></div>
+  <div class="line"><div class="tc">1:15</div><div><div class="vo">So I set one rule. The game has to match the mockup. Not “inspired by”. Match. If a test can't hold the game to the mockup, it doesn't ship.</div><div class="on"><b>On screen:</b> test output, green, the quarter-hour light table.</div></div></div>
+  <div class="line"><div class="tc">1:32</div><div><div class="vo">That rule cost me a mountain range, a whole night of flickering trees and more frame time than I'd like to admit. We'll get to all of it. But first, the ground, because if the ground is wrong, nothing you put on it will ever look right.</div><div class="on"><b>On screen:</b> quick flashes: mountain revert, flicker, frame graph spike. Hard cut to ground.</div></div></div>
+  <div class="line"><div class="tc">1:52</div><div><div class="vo">Tiles are a lie we tell the computer. The player should never see them.</div><div class="on"><b>On screen:</b> blend pass toggles off, on, off, on.</div></div></div>
+</div>
+<p class="lead" style="margin-top:8px">TTS notes: one voice, slightly dry; pause 400 ms before each “before/after” cut; spell “301” as words.</p>
+
+<h2 id="shorts">Shorts · 9:16</h2>
+<div class="shorts">
+  <div class="card">
+    <div class="phone"><img class="top" src="img/grass-before.webp" alt=""><img class="bot" src="img/grass-after.webp" alt=""><div class="mid"></div><div class="cap">same map.<br><em>5 days.</em></div><span class="tag a">21 nov</span><span class="tag b">26 nov</span></div>
+    <h3>“Same map. 5 days.” · 25 s</h3>
+    <ol><li>0–2 s: the split, caption only, no voice.</li><li>Wipe top to bottom across four pairs: grass, shore, light, trees.</li><li>VO last 4 s: “Full breakdown on the channel.”</li></ol>
+  </div>
+  <div class="card">
+    <div class="phone"><img class="full" src="img/trees-summer.webp" alt=""><div class="cap">my trees<br>had a <em>seizure</em></div></div>
+    <h3>“My trees had a seizure” · 30 s</h3>
+    <ol><li>Open on the flickering sway bug, full screen.</li><li>VO: “Sub-pixel wind. Never again.” Fix: lean in whole art pixels.</li><li>End on the calm forest in a gust. Loopable.</li></ol>
+  </div>
+  <div class="card">
+    <div class="phone"><img class="top" src="img/map-dusk.webp" alt="" style="height:100%"><div class="cap">noon → midnight<br>in <em>20 seconds</em></div></div>
+    <h3>“Noon to midnight” · 20 s</h3>
+    <ol><li>Pure timelapse of the day cycle, no VO, campfire sound.</li><li>Caption counts the hours.</li><li>Built to loop; ASMR-ish, for the pixel art crowd.</li></ol>
+  </div>
+</div>
+
+<h2 id="seo">Evidence</h2>
+<div class="card">
+  <h3>YouTube autocomplete (public suggest endpoint, 26 Nov)</h3>
+  <div class="stack">
+    <span><b>colony sim devlog</b> → suggested as-is</span>
+    <span><b>pixel art lighting</b> → godot / unity / tutorial / dynamic</span>
+    <span><b>how i made my</b> → … indie game / dream game</span>
+    <span><b>indie game devlog</b> → shorts / rpg / godot</span>
+    <span><b>2d water shader</b> → unity / godot</span>
+  </div>
+  <p class="lead" style="margin-top:8px">“colony sim devlog” is suggested but the top results have 70–550 views: an empty niche to rank in. Engine names dominate the rest; a WebGL game can't claim those, so the title leans on the confession, not the tech.</p>
+  <h3 style="margin-top:14px">Comparable videos (YouTube search, 26 Nov)</h3>
+  <table>
+    <tr><th>Video</th><th>Channel</th><th>Views</th><th>Takeaway</th></tr>
+    <tr><td>Every Pixel Art Game Has This Problem...</td><td>Barry's Dev Hell</td><td class="n">707k</td><td>Problem framing beats feature listing.</td></tr>
+    <tr><td>Next-Gen Pixel Art - Legacy Devlog #20</td><td>aarthificial</td><td class="n">616k</td><td>Rendering technique is a proven draw.</td></tr>
+    <tr><td>Deferred Lights - Pixel Renderer Devlog #1</td><td>aarthificial</td><td class="n">461k</td><td>Lighting alone carries a video.</td></tr>
+    <tr><td>Creating 3D Lighting for my 2D Game</td><td>JohnBrx</td><td class="n">90k</td><td>“my 2D game” + one technique, small channel.</td></tr>
+    <tr><td>My Indie Game is Ugly...Let's Fix That</td><td>Nerd Chomp</td><td class="n">76k</td><td>The “ugly” confession is title A's template.</td></tr>
+    <tr><td>How I Made My Horror Game Look 10x Better</td><td>AkulDev</td><td class="n">49k</td><td>Before/after title works for small channels.</td></tr>
+    <tr><td>DEVLOG - How I made my GAME LOOK BETTER in only 1 day</td><td>DevRatGames</td><td class="n">4.6k</td><td>A time limit alone isn't enough: the thumbnail has to show the change.</td></tr>
+  </table>
+  <p class="sources">Channel sizes weren't available without the API; the 4.6k vs 76k pair is the closest control: same idea, different framing. Sources: YouTube search results pages; suggestqueries.google.com (client=firefox, ds=yt); <a href="https://itch.io/devlog/192949/4-things-we-did-to-add-light-and-depth-to-our-pixel-art-game.amp">pixel-beef on light and depth</a>.</p>
+</div>
+</main>
+</body>
+</html>
