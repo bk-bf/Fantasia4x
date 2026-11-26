@@ -160,7 +160,7 @@
   }
   function textPlace(t, c) {
     const k = t.k, w = c.width * k, h = c.height * k, grid = Number.isInteger(k);
-    let left = t.right != null ? W - t.right - w : t.x, top = t.bottom != null ? H - t.bottom - h : t.y;
+    let left = Math.round((t.right != null ? W - t.right - w : t.x) * 100) / 100, top = Math.round((t.bottom != null ? H - t.bottom - h : t.y) * 100) / 100;
     if (grid) { left -= left % k; top -= top % k; } else { left = Math.round(left); top = Math.round(top); }
     const px = left + (grid ? Math.floor(c.width / 2) * k : Math.round(w / 2)), py = top + (grid ? Math.floor(c.height / 2) * k : Math.round(h / 2));
     return { x: left, y: top, w, h, px, py, rot: t.rot || 0 };
