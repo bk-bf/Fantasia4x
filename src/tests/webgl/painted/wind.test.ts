@@ -9,7 +9,6 @@ import { WebGLRendererCore } from '$lib/webgl/renderer-core';
 import type { TileData } from '$lib/webgl/tile-types';
 import type { FontAtlas } from '$lib/webgl/types';
 import type { ShaderManager } from '$lib/webgl/shaders';
-import type { CharacterRenderer } from '$lib/webgl/character-renderer';
 import {
   buildTileset,
   parseManifest,
@@ -92,14 +91,7 @@ afterEach(() => vi.restoreAllMocks());
 describe('wind in the vertex data', () => {
   it('writes each sprite its own sway after the vein, and none for a still or lying one', () => {
     const uploads: Float32Array[] = [];
-    const r = new GridRenderer(
-      new Webgl2Device(recordingGl(uploads)),
-      shaders,
-      {} as CharacterRenderer,
-      atlas,
-      false,
-      true
-    );
+    const r = new GridRenderer(new Webgl2Device(recordingGl(uploads)), shaders, atlas, false, true);
     const quads = [
       tile(1, 1, pine),
       tile(2, 1, { ...pine, sway: undefined }),
@@ -225,7 +217,7 @@ function windyCore(
       useProgram: () => true,
       setUniform: (_p: string, name: string, value: unknown) => uniforms.set(name, value)
     },
-    gridRenderer: new GridRenderer(gpu, shaders, {} as CharacterRenderer, atlas, false, true)
+    gridRenderer: new GridRenderer(gpu, shaders, atlas, false, true)
   });
   return core;
 }

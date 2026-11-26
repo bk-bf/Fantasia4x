@@ -2,7 +2,6 @@ import { createOrthographicMatrix, PerformanceTimer } from './utils.js';
 import { ShaderManager, createTileRendererShaders } from './shaders.js';
 import { createSquareCellAtlas, loadBitlandsAtlas } from './font-atlas.js';
 import { TextureManager } from './texture-manager.js';
-import { CharacterRenderer } from './character-renderer.js';
 import { ALPHA_CUT, GridRenderer } from './grid-renderer.js';
 import { WebGLStateManager } from './webgl-state.js';
 import type { GameGrid } from './game-grid.js';
@@ -108,7 +107,6 @@ export class WebGLRendererCore {
   private webglState: WebGLStateManager;
   private shaderManager: ShaderManager | null = null;
   private textureManager: TextureManager | null = null;
-  private characterRenderer: CharacterRenderer | null = null;
   private gridRenderer: GridRenderer | null = null;
 
   private fontAtlas: FontAtlas | null = null;
@@ -445,16 +443,9 @@ export class WebGLRendererCore {
       });
       if (!this.fontTexture) throw new Error('Font texture creation failed');
 
-      this.characterRenderer = new CharacterRenderer(
-        gpu,
-        this.shaderManager,
-        this.fontAtlas,
-        this.debug
-      );
       this.gridRenderer = new GridRenderer(
         gpu,
         this.shaderManager,
-        this.characterRenderer,
         this.fontAtlas,
         this.debug,
         this.rowDepth
@@ -1066,9 +1057,6 @@ export class WebGLRendererCore {
   getShaderManager(): ShaderManager | null {
     return this.shaderManager;
   }
-  getCharacterRenderer(): CharacterRenderer | null {
-    return this.characterRenderer;
-  }
   getGridRenderer(): GridRenderer | null {
     return this.gridRenderer;
   }
@@ -1082,7 +1070,6 @@ export class WebGLRendererCore {
 
   dispose(): void {
     this.gridRenderer?.dispose();
-    this.characterRenderer?.dispose();
     this.shaderManager?.dispose();
     this.textureManager?.dispose();
     this.groundBlend?.dispose();
@@ -1106,7 +1093,6 @@ export class WebGLRendererCore {
     this.painted = null;
     this.webglState.dispose();
     this.gridRenderer = null;
-    this.characterRenderer = null;
     this.shaderManager = null;
     this.textureManager = null;
     this.fontAtlas = null;
