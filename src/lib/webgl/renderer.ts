@@ -8,7 +8,6 @@ import {
 import type { GroundRing, RingInk } from './groundRings.js';
 import type { DrawnFigure, Quad } from './drawnSprites.js';
 import type { ShaderManager } from './shaders.js';
-import type { CharacterRenderer } from './character-renderer.js';
 import type { GameGrid } from './game-grid.js';
 import type { FontAtlas } from './types.js';
 import type { GpuDevice } from '../gpu/device.js';
@@ -123,10 +122,6 @@ export class WebGLRenderer {
 
   getShaderManager(): ShaderManager | null {
     return this.core.getShaderManager();
-  }
-
-  getCharacterRenderer(): CharacterRenderer | null {
-    return this.core.getCharacterRenderer();
   }
 
   getFontAtlas(): FontAtlas | null {

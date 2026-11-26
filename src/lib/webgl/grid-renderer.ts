@@ -1,6 +1,5 @@
 import type { GameGrid } from './game-grid.js';
 import { withOverlays, type TileData, type Viewport } from './tile-types.js';
-import type { CharacterRenderer } from './character-renderer.js';
 import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
 import { tileQuad } from './drawnSprites.js';
@@ -65,7 +64,6 @@ interface WarmState {
 export class GridRenderer {
   private gpu: GpuDevice;
   private shaderManager: ShaderManager;
-  private characterRenderer: CharacterRenderer;
   private fontAtlas: FontAtlas;
   private debug: boolean;
   private vertexFloats: number;
@@ -102,14 +100,12 @@ export class GridRenderer {
   constructor(
     gpu: GpuDevice,
     shaderManager: ShaderManager,
-    characterRenderer: CharacterRenderer,
     fontAtlas: FontAtlas,
     debug = false,
     rowDepth = false
   ) {
     this.gpu = gpu;
     this.shaderManager = shaderManager;
-    this.characterRenderer = characterRenderer;
     this.fontAtlas = fontAtlas;
     this.debug = debug;
     this.vertexFloats = rowDepth ? ROW_VERTEX_FLOATS : GLYPH_VERTEX_FLOATS;

@@ -8,7 +8,6 @@ import { ROW_DEPTH_RANGE, WebGLRendererCore } from '$lib/webgl/renderer-core';
 import type { TileData } from '$lib/webgl/tile-types';
 import type { FontAtlas } from '$lib/webgl/types';
 import type { ShaderManager } from '$lib/webgl/shaders';
-import type { CharacterRenderer } from '$lib/webgl/character-renderer';
 import { buildTileset, parseManifest, spriteAt } from '$lib/webgl/painted/manifest';
 import { SHADOW_DEPTH } from '$lib/webgl/painted/shadowCast';
 import { WindClock } from '$lib/webgl/painted/wind';
@@ -82,14 +81,7 @@ function gridRenderer(rowDepth: boolean, uploads?: Float32Array[]) {
                 : 1,
     useProgram: () => true
   } as unknown as ShaderManager;
-  const r = new GridRenderer(
-    new Webgl2Device(gl),
-    shaders,
-    {} as CharacterRenderer,
-    atlas,
-    false,
-    rowDepth
-  );
+  const r = new GridRenderer(new Webgl2Device(gl), shaders, atlas, false, rowDepth);
   return { r, calls };
 }
 
@@ -372,14 +364,7 @@ function passesOf(chunked: boolean, rowPasses: boolean): Pass[] {
     useProgram: () => true,
     setUniform: (_p: string, name: string, value: number) => (uniforms[name] = value)
   } as unknown as ShaderManager;
-  const r = new GridRenderer(
-    new Webgl2Device(recorded),
-    shaders,
-    {} as CharacterRenderer,
-    atlas,
-    false,
-    true
-  );
+  const r = new GridRenderer(new Webgl2Device(recorded), shaders, atlas, false, true);
   const grid = new GameGrid();
   grid.setTile(4, 6, tiles[2]);
   r.renderGrid(grid, {
