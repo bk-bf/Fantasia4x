@@ -112,10 +112,12 @@ const drawn3 = family => (u, c) => {
 };
 const swinging = pose => { const q = turned3(pose, SWING_TURN); return { ...q, mid: 1, R: [q.R[0] + SWING_OUT, q.R[1], q.R[2]] }; };
 const swung3 = (rest, up, down, times) => u => keyed(u, { ...rest, both: 1 }, [[0, {}], [times[0], up, 'o'], [times[1], up], [times[2], down, 'i'], [times[3], down], [1, {}]]);
+const LEVEL_CHOP = { rest: { R: [-1, 6, -5], aim: [6, 14, -9] }, back: { R: [3, -2, -1], aim: [5, -16, 3] }, round: { R: [4, 4, -2], aim: [17, 4, 1] }, bites: { R: [1, 8, -3], aim: [8, 17, -1] } };
+const levelChop = u => ({ ...keyed(u, { ...LEVEL_CHOP.rest, both: 1, mid: 1 }, [[0, {}], [.3, LEVEL_CHOP.back, 'o'], [.42, LEVEL_CHOP.back], [.49, LEVEL_CHOP.round, 'i'], [.55, LEVEL_CHOP.bites, 'l'], [.78, LEVEL_CHOP.bites], [1, {}]]) });
 const ARMS3 = {
   idle: (u, c) => carried3(c, 0), look: (u, c) => carried3(c, 0), sit: () => null,
   walk: (u, c) => carried3(c, -sn(u)), run: (u, c) => carried3(c, -sn(u) * 1.4), stalk: (u, c) => carried3(c, 0), tuck: (u, c) => carried3(c, -sn(u)), tuckStand: (u, c) => carried3(c, 0),
-  chop: u => swinging(swung3({ R: [-6.5, 6, -3], aim: [14, 12, -8] }, { R: [-2.6, 7, -1.2], aim: [17, 6, 10] }, { R: [-6.5, 7.3, -3], aim: [9, 13, -12] }, [.3, .4, .58, .8])(u)),
+  chop: u => LOOK_STYLE.pieces ? levelChop(u) : swinging(swung3({ R: [-6.5, 6, -3], aim: [14, 12, -8] }, { R: [-2.6, 7, -1.2], aim: [17, 6, 10] }, { R: [-6.5, 7.3, -3], aim: [9, 13, -12] }, [.3, .4, .58, .8])(u)),
   mine: u => swinging(swung3({ R: [-6.5, 5.5, -3], aim: [14, 12, -6] }, { R: [-.5, 7, -1.2], aim: [17, 6, 10] }, { R: [-6.5, 6.8, -2], aim: [12, 16, -6] }, [.32, .4, .58, .76])(u)),
   hoe: u => swinging(swung3({ R: [0, 5.5, -5], aim: [13.5, 10, 12] }, { R: [0, 6.6, -3], aim: [16, 6, 11] }, { R: [-6.5, 5.5, -3], aim: [14, 11, -11] }, [.3, .36, .52, .72])(u)),
   hammer: u => keyed(u, { R: [2, 6.5, -5], aim: [8, 13.5, 9], L: [1, 5, -5] }, [[0, {}], [.3, { R: [5, 7.4, 1], aim: [6, 11, 15] }, 'o'], [.38, { R: [5, 7.4, 1], aim: [6, 10, 15] }], [.52, { R: [4, 7, -3.5], aim: [6, 13, -13] }, 'i'], [.6, { R: [4, 7, -3], aim: [6, 14, -12] }], [1, {}]]),

@@ -239,6 +239,7 @@ function rigPawn(o, p) {
   const camOf = q => SPACE.cam[face][0] + (view.depth(q) - SPACE.cam[face][1]) / SPACE.cam[face][2], mid3 = (a, b) => mul3(add3(a, b), .5);
   const limbOf = (arm, art) => { const path = [art, shownAt(arm.E), shownAt(arm.H)]; path.rigid = true; const before = face === 'f' && arm.H[1] * Math.cos(swung) - arm.H[0] * Math.sin(swung) > SPACE.chest ? TOWARD_DEPTH.torso + TOWARD_DEPTH.step : -Infinity; return { path, hand: shownAt(arm.H).map(rnd), cams: { upper: Math.max(before, camOf(mid3(arm.S, arm.E))), fore: Math.max(before + TOWARD_DEPTH.step, camOf(mid3(arm.E, arm.H))), hand: Math.max(before + 2 * TOWARD_DEPTH.step, camOf(arm.H)) } }; };
   const bowing = kind === 'bow' && !p.carry, wielded = !p.carry && !!TOOLS[kind] && !bowing, nocked = bowing && p.bow >= 1 && p.arrow > .5, fetched = bowing && !nocked && p.out > 0 ? Math.min(BOW.sag + BOW.nock, p.out) : 0;
+  const bladeOf = aim => shaped && !side ? edgeSeen(view, aim) : null;
   const aimOf = () => unit3(p.aim || (p.tool === undefined ? TOOL_AIM[kind] || [0, .3, .95] : side ? [0, Math.sin(p.tool * D2R), Math.cos(p.tool * D2R)] : [(back ? 1 : -1) * Math.sin(p.tool * D2R), 0, Math.cos(p.tool * D2R)]));
   const armed = (tR, tL) => {
     let R = solved('R', tR), L = solved('L', tL), aim = null, second = null, from = null;
@@ -254,7 +255,7 @@ function rigPawn(o, p) {
           tR = add3(tR, mul3(miss, .7)); R = solved('R', tR); aim = aimed();
         }
       };
-      const sunkRows = () => { const seen = toolSeen(view, aim), at = shownAt(sub3(R.H, mul3(aim, grips[0]))).map(rnd), t = new Spr(s.w, s.h, s.ax, s.ay); toolAt(t, kind, at[0], at[1], seen.ang, { fore: seen.fore }); for (let q = t.c.length - 1; q >= 0; q--) if (t.c[q]) return ((q / t.w) | 0) - base - FOOT_LINE.under; return 0; };
+      const sunkRows = () => { const seen = toolSeen(view, aim), at = shownAt(sub3(R.H, mul3(aim, grips[0]))).map(rnd), t = new Spr(s.w, s.h, s.ax, s.ay); toolAt(t, kind, at[0], at[1], seen.ang, { fore: seen.fore, edge: bladeOf(aim) }); for (let q = t.c.length - 1; q >= 0; q--) if (t.c[q]) return ((q / t.w) | 0) - base - FOOT_LINE.under; return 0; };
       aim = aimed();
       paired3();
       if (face !== 's') for (let n = 0; n < FOOT_LINE.lifts; n++) { const sunk = sunkRows(); if (sunk <= 0) break; tR = add3(tR, [0, 0, sunk]); R = solved('R', tR); if (second) { const want = add3(R.H, mul3(aim, grips[1])); L = solved('L', want); second = { want, got: L.H }; } }
@@ -404,7 +405,7 @@ function rigPawn(o, p) {
     else if (wielded) {
       const seen = toolSeen(view, held3.aim), at = shownAt(held3.from).map(rnd), along = [Math.sin(seen.ang * D2R), -Math.cos(seen.ang * D2R)], gripped = Math.min(limbs[toolSide].cams.hand, held3.second ? limbs[other].cams.hand : 9) - SPACE.held;
       const whole = new Spr(s.w, s.h, s.ax, s.ay), chunks = new Map();
-      pts.tip = toolAt(whole, kind, at[0], at[1], seen.ang, { fore: seen.fore });
+      pts.tip = toolAt(whole, kind, at[0], at[1], seen.ang, { fore: seen.fore, edge: bladeOf(held3.aim) });
       whole.c.forEach((c, q) => { if (!c) return; const k = Math.floor(((q % whole.w - at[0]) * along[0] + (((q / whole.w) | 0) - at[1]) * along[1]) / seen.fore / TOOL_CHUNK); if (!chunks.has(k)) chunks.set(k, []); chunks.get(k).push(q); });
       const fists = [[limbs[toolSide].cams.hand, held3.R.H], ...(held3.second ? [[limbs[other].cams.hand, held3.L.H]] : [])].map(([cam, H]) => [cam - SPACE.held, dot3(sub3(H, held3.from), held3.aim)]);
       const fistLayers = layers.filter(l => l.grips === 'tool');
