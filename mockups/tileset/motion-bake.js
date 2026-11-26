@@ -126,9 +126,9 @@ function frameOf(A, st, lvl, smooth) {
   return { s: cachedFrame(key + (pose.loose && c.tool ? '|' + c.tool : ''), () => { const bare = make(), laden = layer && bare.mask ? MOTION_LOAD.put(bare, layer) : bare, leant = pose.tip ? tipped(laden, c.face === 'f' ? -pose.tip : pose.tip) : laden, s = pose.loose && c.tool ? dropped(leant, c.tool, c.face, pose.loose) : leant; if (!s.pts) s.pts = {}; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
 }
 
-const FALLS_OVER = ['fall', 'down'], DROPPED = { rest: [12, 1], lies: 90, from: { s: [7, -9], f: [-8, -9], b: [8, -9] } };
+const FALLS_OVER = ['fall', 'down'], DROPPED = { rest: [12, 1], lies: 90, quick: 1.6, from: { s: [7, -9], f: [-8, -9], b: [8, -9] } };
 function dropped(pawn, kind, face, k) {
-  const loose = new Spr(pawn.w, pawn.h, pawn.ax, pawn.ay), from = DROPPED.from[face], side = face === 'f' ? -1 : 1, x = pawn.ax + rnd(mix(from[0], side * DROPPED.rest[0], k)), y = pawn.ay + rnd(mix(from[1], DROPPED.rest[1], k * k));
+  const loose = new Spr(pawn.w, pawn.h, pawn.ax, pawn.ay), from = DROPPED.from[face], side = face === 'f' ? -1 : 1, x = pawn.ax + rnd(mix(from[0], side * DROPPED.rest[0], k)), y = pawn.ay + rnd(mix(from[1], DROPPED.rest[1], Math.min(1, (k * DROPPED.quick) ** 2)));
   const held = toolSeen(VIEWS[face], unit3((carried3({ tool: kind }, 0) || {}).aim || [0, 0, 1]));
   toolAt(loose, kind, x, y, mix(held.ang, side * DROPPED.lies, k), { fore: mix(held.fore, 1, k) });
   loose.outline();
@@ -146,6 +146,23 @@ function tipped(src, deg) {
   s.bb = null;
   if (sunk > 0) for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) { const from = y + sunk < s.h ? (y + sunk) * s.w + x : -1; s.c[y * s.w + x] = from < 0 ? 0 : s.c[from]; s.e[y * s.w + x] = from < 0 ? 0 : s.e[from]; }
   s.sh = src.sh;
+  return closed(s);
+}
+function closed(s) {
+  const seen = new Uint8Array(s.c.length), groups = [], near = q => [q - 1, q + 1, q - s.w, q + s.w];
+  for (let q = 0; q < s.c.length; q++) {
+    if (!s.c[q] || seen[q]) continue;
+    const group = [q];
+    seen[q] = 1;
+    for (let k = 0; k < group.length; k++) for (const n of near(group[k])) if (n >= 0 && n < s.c.length && s.c[n] && !seen[n] && Math.abs((n % s.w) - (group[k] % s.w)) <= 1) { seen[n] = 1; group.push(n); }
+    groups.push(group);
+  }
+  const most = Math.max(0, ...groups.map(g => g.length));
+  for (const g of groups) if (g.length < most) for (const q of g) { s.c[q] = null; s.e[q] = 0; }
+  const edge = [];
+  for (let q = 0; q < s.c.length; q++) if (s.c[q] && near(q).some(n => n < 0 || n >= s.c.length || !s.c[n] || Math.abs((n % s.w) - (q % s.w)) > 1)) edge.push(q);
+  for (const q of edge) s.c[q] = P.ink;
+  s.bb = null;
   return s;
 }
 function rotated(src, deg, dir) {
