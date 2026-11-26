@@ -1,5 +1,5 @@
-export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing shows with no hand showing on it', x: 'held thing against the face', y: 'legs shortened', B: 'arms knotted', C: 'tool in line with the arm', D: 'load cut short', E: 'carried body shows no head', F: 'load over one arm and under the other', G: 'hand on the wide end', H: 'load does not read' };
+export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K'];
+export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing shows with no hand showing on it', x: 'held thing against the face', y: 'legs shortened', B: 'arms knotted', C: 'tool in line with the arm', D: 'load cut short', E: 'carried body shows no head', F: 'load over one arm and under the other', G: 'hand on the wide end', H: 'load does not read', K: 'load in the arms shows above the shoulders from behind' };
 const HAND_BLOCK = 4, TAPER = { long: 5, thin: 1, wide: 3 }, FIN = { out: 4, above: 1 }, PROFILE = .8, BAND = 2, LEGS = .6, TOUCH = 1;
 const LEG_LAYERS = ['legs', 'far leg', 'near leg'], BROW = 6, FRONT = 5, GRASPED = .2;
 const SHOWS = 3, APART = 4, IN_LINE = { cos: .94, reach: 5, tools: ['hammer', 'club', 'axe', 'pick'] }, WHOLE = .6, HEAD_SHOWS = .6, WIDE_END = 1, IN_ARMS = ['chest', 'low'];
@@ -108,8 +108,12 @@ export function pictured(now, face, ink) {
   const head = stack.find(l => l.name === 'head'), pts = now.rigged.pts;
   if (face === 's' && head && pts.mouth && !now.pose.covers) {
     let against = 0;
-    for (const l of [...tools.filter(l => l.piece !== 'arrow'), ...stack.filter(k => k.name === 'load' && !(now.pose.cu < 1))].filter(l => l.cam > head.cam)) for (const i of pixels(l.spr)) { const y = (i / w) | 0; if (y < pts.mouth[1] - BROW || y > pts.chin || !shown[i] || !same(shown[i], l.spr.c[i])) continue; if ([i - 1, i + 1, i - w, i + w, i].some(q => head.spr.c[q] && q % w >= pts.mouth[0] - FRONT)) against++; }
+    for (const l of [...tools.filter(l => l.piece !== 'arrow'), ...stack.filter(k => k.name === 'load' && !(now.pose.cu < 1) && k.cam > head.cam)]) for (const i of pixels(l.spr)) { const y = (i / w) | 0; if (y < pts.mouth[1] - BROW || y > pts.chin || !shown[i] || !same(shown[i], l.spr.c[i])) continue; if ([i - 1, i + 1, i - w, i + w, i].some(q => head.spr.c[q] && q % w >= pts.mouth[0] - FRONT)) against++; }
     if (against) { counts.x += against; said.push(against + ' px of a held thing against the face'); }
+  }
+  if (face === 'b' && IN_ARMS.includes(now.pose.carry) && pts.torso && !(now.pose.down > .5) && !(now.pose.cu < 1)) {
+    const above = loads.flatMap(showing).filter(i => ((i / w) | 0) <= pts.torso[1]).length;
+    if (above) { counts.K += above; said.push(above + ' px of the load above the shoulders'); }
   }
   if (sp && !now.pose.sit && !now.pose.kneel) {
     const legRows = new Set();
