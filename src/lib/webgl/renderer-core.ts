@@ -14,7 +14,7 @@ import { addFrameTotals } from '../workPins/page.js';
 import { GROUND_BLEND, PAINTED_LIGHT, PAINTED_TILES, ROCK_TIERS } from './painted/flag.js';
 import { passOn } from './passes.js';
 import { loadPaintedTileset, type LoadedPaintedTileset } from './painted/loader.js';
-import { GroundBlend, waterTime } from './painted/groundBlend.js';
+import { GroundBlend, waterTime, type GroundBlendFrame } from './painted/groundBlend.js';
 import { LIGHT_FIELD_UNIT, PaintedLightPass, type LightPassFrame } from './painted/lightPass.js';
 import {
   MAP_WEATHER,
@@ -45,6 +45,7 @@ import { CUT_MAX, CUT_UNIFORM, cutPoints } from './painted/cutaway.js';
 import { TIER_NOISE_UNIT, TIER_TILE_UNIT, Tiers } from './painted/tiers.js';
 
 const LIGHT_ATLAS_UNIT = 7;
+const DRESS_BUDGET_MS = 3;
 const WINTER = 'winter';
 
 export const ROW_DEPTH_RANGE = 8192;
@@ -202,6 +203,7 @@ export class WebGLRendererCore {
     this.gameGrid = grid;
     this.tiers?.setGrids(grid, this.resourceOverlayGrid, dirtyTiles);
     this.groundBlend?.setGrid(grid, dirtyTiles);
+    this.groundBlend?.setTrees(this.treeGrids(), dirtyTiles);
     if (dirtyTiles && dirtyTiles.length > 0) {
       this.gridRenderer?.markTerrainChunksDirty(dirtyTiles);
     } else {
@@ -235,10 +237,16 @@ export class WebGLRendererCore {
     if (this.gameGrid && grid !== this.resourceOverlayGrid)
       this.tiers?.setGrids(this.gameGrid, grid);
     this.resourceOverlayGrid = grid;
+    this.groundBlend?.setTrees(this.treeGrids());
+  }
+
+  private treeGrids(): (GameGrid | null)[] {
+    return [this.resourceOverlayGrid, this.resourceTallOverlayGrid];
   }
 
   setResourceTallOverlayGrid(grid: GameGrid | null): void {
     this.resourceTallOverlayGrid = grid;
+    this.groundBlend?.setTrees(this.treeGrids());
   }
 
   setGroundRings(list: readonly GroundRing[], ink: RingInk): void {
@@ -454,6 +462,7 @@ export class WebGLRendererCore {
       this.gridRenderer.skipBlendedGround = this.groundBlend !== null;
       this.gridRenderer.skipWaterIce = this.groundBlend !== null;
       if (this.gameGrid) this.groundBlend?.setGrid(this.gameGrid);
+      this.groundBlend?.setTrees(this.treeGrids());
       this.groundBlend?.setIce(this.snowGrid);
       this.snowVersion++;
       if (PAINTED_LIGHT && this.painted)
@@ -613,6 +622,7 @@ export class WebGLRendererCore {
         this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime);
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 0);
       }
+      this.drawTreeGround(gpu, flicker, lightTime, lightFrame, viewportTilesW, viewportTilesH);
       if (this.rowDepth) {
         gpu.setDepthTest(true);
         gpu.setDepthCompare('less-equal');
@@ -820,13 +830,56 @@ export class WebGLRendererCore {
     this.shaderManager.useProgram('tileRenderer');
   }
 
+  private drawTreeGround(
+    gpu: GpuDevice,
+    flicker: number,
+    lightTime: number,
+    lightFrame: LightPassFrame | null,
+    viewportTilesW: number,
+    viewportTilesH: number
+  ): void {
+    const blend = this.groundBlend;
+    if (!blend?.trees || !this.gridRenderer || !this.shaderManager || !passOn('terrain')) return;
+    const tone: [number, number] = [
+      lightFrame?.grade.saturation ?? 1,
+      lightFrame?.grade.brightness ?? 1
+    ];
+    if (this.drawGroundBlend(blend, flicker, lightTime, tone, true)) {
+      this.tiers?.bindShared();
+      this.shaderManager.useProgram('tileRenderer');
+      gpu.setTextureSlot(0);
+      gpu.bindTexture(this.fontTexture);
+    }
+    const view = { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH };
+    const touched = blend.trees.dressAround(view, DRESS_BUDGET_MS);
+    if (touched.length > 0) this.gridRenderer.markDecorChunksDirty(touched);
+    const s = this.gridRenderer.renderGrid(blend.trees.decor, {
+      tileWidth: BASE_TILE_PX,
+      tileHeight: BASE_TILE_PX,
+      viewportX: this.viewTileX,
+      viewportY: this.viewTileY,
+      viewportWidth: viewportTilesW,
+      viewportHeight: viewportTilesH,
+      lightSampler: this.lightSampler ?? undefined,
+      lightTime,
+      pointLightActive: this.dynamicLight,
+      lightVersion: this.lightVersion,
+      litBounds: this.lightBounds,
+      cacheVersion: this.gridVersion,
+      chunkLayer: 'decor'
+    });
+    this.stats.drawCalls++;
+    this.stats.vertexCount += s.tilesRendered * 6;
+  }
+
   private drawGroundBlend(
     blend: GroundBlend,
     flicker: number,
     lightTime: number,
-    tone: [number, number]
-  ): void {
-    const drawn = blend.draw({
+    tone: [number, number],
+    winterTrees = false
+  ): boolean {
+    const frame: GroundBlendFrame = {
       projection: this.projectionMatrix,
       viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
       zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
@@ -847,10 +900,12 @@ export class WebGLRendererCore {
       lightTime,
       lightVersion: this.lightVersion,
       litBounds: this.lightBounds
-    });
-    if (!drawn) return;
+    };
+    const drawn = winterTrees ? blend.drawWinterTrees(frame) : blend.draw(frame);
+    if (!drawn) return false;
     this.stats.drawCalls++;
     this.stats.vertexCount += 6;
+    return true;
   }
 
   private seaFrame(): Float32Array {
