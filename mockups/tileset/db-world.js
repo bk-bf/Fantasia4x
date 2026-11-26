@@ -24,7 +24,9 @@
     const s = new Spr(icon.w, icon.h, icon.ax, icon.ay), pool = [];
     for (let i = 0; i < icon.c.length; i++) { const c = icon.c[i]; if (c && c !== P.ink && POOLED(c)) pool.push(i % icon.w); else if (c) { s.c[i] = c; s.e[i] = icon.e[i]; } }
     for (let i = 0; i < s.c.length; i++) if (s.c[i] === P.ink && ![i - 1, i + 1, i - s.w, i + s.w].some(q => s.c[q] && s.c[q] !== P.ink)) s.c[i] = null;
-    const x = pool.length ? Math.round(pool.reduce((a, b) => a + b, 0) / pool.length) : HEAD_ROUND, rows = [];
+    const cols = [], rows = [];
+    for (let x = 0; x < s.w; x++) for (let y = 0; y < s.h; y++) if (s.c[y * s.w + x]) { cols.push(x); break; }
+    const pooled = pool.length ? pool.reduce((a, b) => a + b, 0) / pool.length : 0, x = pooled > (cols[0] + cols[cols.length - 1]) / 2 ? cols[cols.length - 1] - HEAD_ROUND : cols[0] + HEAD_ROUND;
     for (let y = 0; y < s.h; y++) if (s.c[y * s.w + x]) rows.push(y);
     s.head = [x, rows.length ? rows[rows.length >> 1] : s.h >> 1, HEAD_ROUND];
     return s;
@@ -37,14 +39,13 @@
     const toned = () => ({ a: PROPS.rampOf(toneOf(X.bake(X.byId.get('item/' + o.id + '/0')))) });
     return [['map-carry-draped', whole], ['map-carry-held', () => PROPS.carried('quarry', toned(), 1)]];
   }
-  const HARD = ['mail', 'plate'];
-  const soft = o => { const a = o.raw && o.raw.armorProperties; return !!a && !HARD.includes(a.armorLayer) && o.raw.category !== 'metal'; };
+  const CARRIED_AS = { branch: 'boughs' };
   function carryForms(o) {
     const k = RULES.classify(o), own = WORLD_GEAR.of(o), forms = [];
-    if (k.pile && PROPS.CARRIED.includes(k.pile)) forms.push(['map-carry', () => PROPS.carried(k.pile, RULES.rampsFor(k, o), 1)]);
+    if (k.pile && PROPS.CARRIED.includes(k.pile)) forms.push(['map-carry', () => PROPS.carried(CARRIED_AS[o.id] || k.pile, RULES.rampsFor(k, o), 1)]);
+    if (k.worn === 'torso') forms.push(['map-carry-folded', () => PROPS.carried('cloth', { a: PROPS.rampOf(toneOf(X.bake(X.byId.get('item/' + o.id + '/0')))) }, 1)]);
     if (o.sub === 'Carcass') forms.push(...carcassForms(o));
-    else if (k.pile && (PROPS.SHOULDERED.includes(k.pile) || PROPS.TURNED.includes(k.pile))) forms.push(['map-carry-end', () => PROPS.carriedEnd(k.pile, RULES.rampsFor(k, o))]);
-    if (k.worn === 'torso' && soft(o)) forms.push(['map-carry-folded', () => PROPS.carried('cloth', RULES.rampsFor(k, o), 1)]);
+    else if (k.pile && PROPS.SHOULDERED.includes(k.pile)) forms.push(['map-carry-end', () => PROPS.carriedEnd(k.pile, RULES.rampsFor(k, o))]);
     if (own && own.carried) forms.push(...Object.entries(own.carried));
     return forms;
   }

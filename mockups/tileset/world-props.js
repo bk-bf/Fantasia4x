@@ -440,17 +440,18 @@ const PROPS = (() => {
     rubble: (s, r, seed) => basket(s, CX, B, 6, 5, r.a, seed),
     heap: (s, r, seed) => basket(s, CX, B, 6, 5, r.a, seed),
     baskets: (s, r, seed) => basket(s, CX, B, 6, 5, r.a, seed),
-    bars: (s, r) => bar(s, CX - 6, B - 4, r.a),
+    bars: (s, r) => { const n = r.a.length - 1; s.rect(CX - 2, B - 1, 5, 1, r.a[n]); s.rect(CX - 3, B, 7, 1, r.a[n - 2]); s.set(CX + 3, B, r.a[1]); s.set(CX - 1, B - 1, lit(r.a[n], 1.18)); },
     sacks: (s, r) => { sack(s, CX, B - 5, 4, 0, r.a); trim(s); },
     fluids: (s, r) => flask(s, CX, B, r.a),
     blocks: (s, r) => s.slab(CX - 6, B - 9, 12, 3, 7, M.flat(r.a, 4, 3), M.flat(r.a, 3, 5)),
     hides: (s, r, seed) => pelt(s, CX, B - 3, 6, r.a, seed, r.smooth, true),
     bundles: (s, r, seed) => sheaf(s, CX - 7, B - 6, 14, r.a, seed),
+    boughs: (s, r) => { for (let i = 0; i < 13; i++) s.rect(CX - 6 + i, B - 1 - (i >> 2), 1, 2, r.a[i % 4 === 3 ? 2 : 3]); for (let i = 0; i < 5; i++) s.set(CX - 1 + i, B - 4 - i, r.a[2]); for (let i = 0; i < 3; i++) s.set(CX - 4 - i, B - 3 - i, r.a[2]); s.rect(CX + 4, B - 10, 2, 2, P.grass[4]); s.rect(CX - 7, B - 7, 2, 2, P.grass[4]); s.along = true; },
     cloth: (s, r, seed) => bolt(s, CX - 6, B - 5, 12, r.a, seed),
     meat: (s, r) => haunch(s, CX - 1, B - 5, .62, false, r.a, 0),
     quarry: (s, r) => { const tone = (px, py, nx, ny) => r.a[ny < -.35 ? 4 : ny > .4 ? 2 : 3]; s.rect(CX - 5, B - 2, 1, 3, r.a[2]); s.rect(CX + 1, B - 2, 1, 3, r.a[2]); s.oval(CX - 1, B - 5, 5, 2.9, tone); s.oval(CX + 6, B - 5, 2.7, 2.5, tone); s.set(CX + 7, B - 6, P.ink); s.rect(CX + 5, B - 9, 1, 2, r.a[2]); s.set(CX - 7, B - 7, r.a[4]); s.head = [CX + 6, B - 5, 3]; }
   };
-  const SHOULDER_FORMS = ['logs', 'planks'], TURNED_FORMS = ['bars'];
+  const SHOULDER_FORMS = ['logs', 'planks'];
   const END_REST = { logs: 0, planks: 0 };
   const ENDS = {
     logs(s, r) {
@@ -459,13 +460,9 @@ const PROPS = (() => {
       s.oval(CX + .5, B - 3, 4, 3.7, (px, py, nx, ny) => { const q = Math.hypot(nx, ny); return q > .8 ? at(r.a, 2) : q < .3 ? at(r.b, 2) : at(r.b, q < .6 ? 5 : 4); });
     },
     planks(s, r) {
-      const rows = SHOULDERED.recedes;
+      const rows = 1;
       for (let j = 0; j < rows; j++) for (let i = -3; i <= 4; i++) s.set(CX + i, B - 2 - rows + j, at(r.a, i === -1 || i === 2 ? 4 : 5));
       s.rect(CX - 3, B - 1, 8, 2, at(r.a, 3)); s.rect(CX - 3, B, 8, 1, at(r.a, 1));
-    },
-    bars(s, r) {
-      const n = r.a.length - 1;
-      s.rect(CX - 1, B - 4, 3, 1, r.a[n]); s.rect(CX - 2, B - 3, 5, 3, r.a[n - 2]); s.rect(CX - 2, B - 3, 5, 1, r.a[n - 1]); s.rect(CX - 2, B - 1, 5, 1, r.a[1]);
     },
     meat(s, r, size) {
       const rx = clamp(size * .3, 5, 9), ry = rx * .8, top = B - ry * 2;
@@ -530,5 +527,5 @@ const PROPS = (() => {
     return s;
   }
   const headUp = (kind, id) => id && WORLD_ITEMS.has(id) ? WORLD_ITEMS.headUp(id) : !!LONG[kind].headUp;
-  return { B, rampOf, mixed, pile, long, worn, carried, carriedEnd, SHOULDERED: SHOULDER_FORMS, TURNED: TURNED_FORMS, headUp, tucked, bedded, undersides, PILES: Object.keys(PILES), LONG: Object.keys(LONG), CARRIED: Object.keys(CARRIED), lengthOf: k => LONG[k].L };
+  return { B, rampOf, mixed, pile, long, worn, carried, carriedEnd, SHOULDERED: SHOULDER_FORMS, headUp, tucked, bedded, undersides, PILES: Object.keys(PILES), LONG: Object.keys(LONG), CARRIED: Object.keys(CARRIED), lengthOf: k => LONG[k].L };
 })();
