@@ -31,8 +31,6 @@ export function textureFormat(gl: WebGL2RenderingContext, f: TextureFormat): GlT
       return { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.FLOAT };
     case 'rgba32float':
       return { internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT };
-    case 'legacy-rgba':
-      return { internalFormat: gl.RGBA, format: gl.RGBA, type: gl.UNSIGNED_BYTE };
   }
 }
 

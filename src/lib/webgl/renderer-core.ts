@@ -395,7 +395,7 @@ export class WebGLRendererCore {
         addressModeV: 'clamp-to-edge'
       });
       gpu.writeTexture(
-        { format: 'legacy-rgba', width: newAtlas.atlasWidth, height: newAtlas.atlasHeight },
+        { format: 'rgba8unorm', width: newAtlas.atlasWidth, height: newAtlas.atlasHeight },
         newAtlas.texture.data
       );
 
