@@ -150,6 +150,7 @@ function tipped(src, deg) {
   s.sh = src.sh;
   return closed(s);
 }
+const SPUR_PASSES = 3;
 function closed(s) {
   const seen = new Uint8Array(s.c.length), groups = [], near = q => [q - 1, q + 1, q - s.w, q + s.w];
   for (let q = 0; q < s.c.length; q++) {
@@ -161,6 +162,8 @@ function closed(s) {
   }
   const most = Math.max(0, ...groups.map(g => g.length));
   for (const g of groups) if (g.length < most) for (const q of g) { s.c[q] = null; s.e[q] = 0; }
+  const joined = q => near(q).filter(n => n >= 0 && n < s.c.length && s.c[n] && Math.abs((n % s.w) - (q % s.w)) <= 1).length;
+  for (let pass = 0; pass < SPUR_PASSES; pass++) { const spurs = []; for (let q = 0; q < s.c.length; q++) if (s.c[q] && joined(q) <= 1) spurs.push(q); for (const q of spurs) { s.c[q] = null; s.e[q] = 0; } }
   const edge = [];
   for (let q = 0; q < s.c.length; q++) if (s.c[q] && near(q).some(n => n < 0 || n >= s.c.length || !s.c[n] || Math.abs((n % s.w) - (q % s.w)) > 1)) edge.push(q);
   for (const q of edge) s.c[q] = P.ink;

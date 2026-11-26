@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PICTURE_KEYS, PICTURE_NAMED, pictured, tipping } from './pawn-picture-audit.mjs';
+import { PICTURE_KEYS, PICTURE_NAMED, pictured, tipping, spursOf } from './pawn-picture-audit.mjs';
 
 const here = process.env.AUDIT_ROOT || dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2), flag = name => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1]; };
@@ -190,7 +190,7 @@ for (const anim of anims) {
       const floor = standing(kind, over, face), sizes = [], arrows = [], lengths = [], who = kind + Object.entries(over).map(([k, v]) => ' ' + k + ' ' + v).join('');
       for (let i = 0; i < n; i++) {
         const u = (i + .5) / n, now = frame(NOW, kind, over, anim, face, u, loadId);
-        if (now.pose.tip && now.pose.face === face) { const tip = tipping(NOW.tipped(now.spr, face === 'f' ? -now.pose.tip : now.pose.tip), NOW.P.ink, false); if (tip.torn || tip.parts) { sum.v++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': ' + PICTURE_NAMED.v + ', ' + tip.torn + ' edge pixels not inked, ' + tip.parts + ' loose parts'); } }
+        if (now.pose.tip && now.pose.face === face) { const tip = tipping(NOW.tipped(now.spr, face === 'f' ? -now.pose.tip : now.pose.tip), NOW.P.ink, false); const spurs = Math.max(0, tip.spurs - spursOf(now.spr)); if (tip.torn || tip.parts || spurs) { sum.v++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': ' + PICTURE_NAMED.v + ', ' + tip.torn + ' edge pixels not inked, ' + tip.parts + ' loose parts, ' + spurs + ' spurs'); } }
         if (now.lying && face === 's') { let low = 0; for (let q = 0; q < now.lying.c.length; q++) if (now.lying.c[q]) low = (q / now.lying.w) | 0; if (low > NOW.RG.BASE + UNDER) { sum.J++; if (noted) notes.push(anim + ' ' + who + ' frame ' + (i + 1) + ': ' + NAMED.J + ', ' + (low - NOW.RG.BASE) + ' px under'); } }
         if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); arrows.push(null); lengths.push(null); continue; }
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId, now.seed) : now).spr.c, face), where = who + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);

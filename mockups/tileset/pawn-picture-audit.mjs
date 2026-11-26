@@ -125,10 +125,17 @@ export function pictured(now, face, ink) {
   return counts;
 }
 
+export function spursOf(spr) {
+  const w = spr.w, filled = new Set(pixels(spr));
+  let spurs = 0;
+  for (const i of filled) { const x = i % w; if ([i - w, i + w, x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1].filter(q => filled.has(q)).length <= 1) spurs++; }
+  return spurs;
+}
+
 export function tipping(spr, ink, loose) {
   const w = spr.w, px = pixels(spr), filled = new Set(px), isInk = c => same(c, ink);
   let torn = 0;
   for (const i of px) { const x = i % w, edge = [i - w, i + w, x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1].some(q => q < 0 || q >= spr.c.length || !filled.has(q)); if (edge && !isInk(spr.c[i])) torn++; }
   const parts = pieces(px, w) - (loose ? 1 : 0);
-  return { torn, parts: Math.max(0, parts - 1) };
+  return { torn, parts: Math.max(0, parts - 1), spurs: spursOf(spr) };
 }
