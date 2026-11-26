@@ -71,12 +71,6 @@ const CROPS = {
   'magic': ['magic.png', 236, 300, 640, 400],
 };
 const COPIES = {
-  'blend-off.png': 'fantasia4x-ground-blend/off-32.png',
-  'blend-on.png': 'fantasia4x-ground-blend/on-32.png',
-  'shore-off.png': 'fantasia4x-ground-blend/shore-off.png',
-  'shore-on.png': 'fantasia4x-ground-blend/shore-on.png',
-  'light-noon.png': 'fantasia4x-light-hex/img/sheet-12.00.png',
-  'light-night.png': 'fantasia4x-light-hex/img/sheet-21.00.png',
   'trees-summer.webp': 'fantasia4x-tree-ground/img/trees-summer.webp',
   'trees-autumn.webp': 'fantasia4x-tree-ground/img/trees-autumn.webp',
 };
