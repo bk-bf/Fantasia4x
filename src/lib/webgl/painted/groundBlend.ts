@@ -14,6 +14,7 @@ import { FLOW_UNIT, RiverTextures, STREAM_UNIT } from './riverTextures.js';
 import { riverTiles, type RiverTiles } from './riverGrid.js';
 import type { TileData } from '../tile-types.js';
 import {
+  BufferUsage,
   halfFloats,
   type GpuBuffer,
   type GpuDevice,
@@ -197,7 +198,10 @@ export class GroundBlend {
     this.rivers = new RiverTextures(gpu);
     this.unitsPerTile = painted.tileset.tile / ART_PER_UNIT;
     this.vao = gpu.createVertexLayout()!;
-    this.vbo = gpu.createBuffer()!;
+    this.vbo = gpu.createBuffer({
+      size: 12 * 4,
+      usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
+    });
     gpu.setVertexLayout(this.vao);
     gpu.setVertexBuffer(this.vbo);
     const loc = gpu.attribute(program, 'a_position');
@@ -312,10 +316,9 @@ export class GroundBlend {
       this.h = h;
       this.lightBuilt = null;
       this.litRect = null;
-      gpu.setVertexBuffer(this.vbo);
       const r = w * BASE_TILE_PX;
       const b = h * BASE_TILE_PX;
-      gpu.writeBuffer(new Float32Array([0, 0, r, 0, 0, b, r, 0, r, b, 0, b]), 'static');
+      gpu.queue.writeBuffer(this.vbo, 0, new Float32Array([0, 0, r, 0, 0, b, r, 0, r, b, 0, b]));
     }
     this.kinds = new Uint8Array(w * h);
     this.tides = new Uint8Array(w * h * TIDE_BYTES);

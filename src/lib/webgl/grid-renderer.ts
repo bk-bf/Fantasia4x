@@ -4,7 +4,9 @@ import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
 import { tileQuad } from './drawnSprites.js';
 import { tuftTiles } from './painted/tufts.js';
+import { VertexArena } from './vertexArena.js';
 import {
+  BufferUsage,
   FLOAT32_FORMATS,
   type GpuBuffer,
   type GpuDevice,
@@ -49,6 +51,7 @@ export interface GridRenderStats {
 interface TerrainChunk {
   vao: GpuVertexLayout | null;
   vbo: GpuBuffer | null;
+  size: number;
   count: number;
   builtVersion: number;
   builtLight: number;
@@ -70,7 +73,8 @@ export class GridRenderer {
   private drawnChunks: TerrainChunk[] = [];
 
   private gridVAO: GpuVertexLayout | null = null;
-  private gridVBO: GpuBuffer | null = null;
+  private arena: VertexArena | null = null;
+  private arenaVersion = -1;
   private currentVertexCount: number = 0;
 
   private static readonly CHUNK_SIZE = 32;
@@ -311,6 +315,7 @@ export class GridRenderer {
       chunk = {
         vao: null,
         vbo: null,
+        size: 0,
         count: 0,
         builtVersion: version,
         builtLight: lightVersion,
@@ -322,17 +327,17 @@ export class GridRenderer {
       chunk.count = 0;
     } else {
       const data = this.generateBatchVertexData(tiles, options);
-      if (!chunk.vao || !chunk.vbo) {
-        chunk.vao = gpu.createVertexLayout();
-        chunk.vbo = gpu.createBuffer();
-        if (!chunk.vao || !chunk.vbo) {
-          console.error('❌ Failed to create terrain chunk VAO/VBO');
-          return undefined;
-        }
+      chunk.vao ??= gpu.createVertexLayout();
+      if (!chunk.vbo || chunk.size < data.byteLength) {
+        gpu.destroyBuffer(chunk.vbo);
+        chunk.vbo = gpu.createBuffer({
+          size: data.byteLength,
+          usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
+        });
+        chunk.size = data.byteLength;
         this.setupGridAttribs(chunk.vao, chunk.vbo);
       }
-      gpu.setVertexBuffer(chunk.vbo);
-      gpu.writeBuffer(data, 'static');
+      gpu.queue.writeBuffer(chunk.vbo, 0, data);
       chunk.count = data.length / this.vertexFloats;
     }
     chunk.builtVersion = version;
@@ -401,7 +406,7 @@ export class GridRenderer {
   }
 
   private uploadAndDraw(vertexData: Float32Array, rowPasses = false): void {
-    if (!this.gridVAO || !this.gridVBO) {
+    if (!this.gridVAO || !this.arena) {
       console.error('❌ Grid rendering resources not initialized');
       return;
     }
@@ -409,8 +414,11 @@ export class GridRenderer {
 
     const gpu = this.gpu;
 
-    gpu.setVertexBuffer(this.gridVBO);
-    gpu.writeBuffer(vertexData, 'dynamic');
+    const first = this.arena.push(vertexData);
+    if (this.arenaVersion !== this.arena.version) {
+      this.arenaVersion = this.arena.version;
+      this.setupGridAttribs(this.gridVAO, this.arena.buffer!);
+    }
 
     if (!this.shaderManager.useProgram('tileRenderer')) {
       console.error('❌ Failed to use tile renderer shader');
@@ -420,8 +428,8 @@ export class GridRenderer {
     gpu.setVertexLayout(this.gridVAO);
 
     const vertexCount = vertexData.length / this.vertexFloats;
-    gpu.draw('triangle-list', vertexCount);
-    if (rowPasses) this.drawShadows(() => gpu.draw('triangle-list', vertexCount));
+    gpu.draw('triangle-list', vertexCount, first);
+    if (rowPasses) this.drawShadows(() => gpu.draw('triangle-list', vertexCount, first));
 
     gpu.setVertexLayout(null);
 
@@ -732,9 +740,8 @@ export class GridRenderer {
     const gpu = this.gpu;
 
     this.gridVAO = gpu.createVertexLayout();
-    this.gridVBO = gpu.createBuffer();
-    if (!this.gridVAO || !this.gridVBO) throw new Error('Failed to create grid VAO/VBO');
-    this.setupGridAttribs(this.gridVAO, this.gridVBO);
+    this.arena = new VertexArena(gpu, this.vertexFloats * 4);
+    if (!this.gridVAO) throw new Error('Failed to create grid VAO');
 
     if (this.debug) {
       console.log('✅ Grid rendering resources initialized');
@@ -780,6 +787,10 @@ export class GridRenderer {
     return Math.max(0, totalTiles - estimatedVisible);
   }
 
+  beginFrame(): void {
+    this.arena?.beginFrame();
+  }
+
   getStats(): GridRenderStats {
     return { ...this.stats };
   }
@@ -787,10 +798,8 @@ export class GridRenderer {
   dispose(): void {
     const gpu = this.gpu;
 
-    if (this.gridVBO) {
-      gpu.destroyBuffer(this.gridVBO);
-      this.gridVBO = null;
-    }
+    this.arena?.destroy();
+    this.arena = null;
 
     if (this.gridVAO) {
       gpu.destroyVertexLayout(this.gridVAO);

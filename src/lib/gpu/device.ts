@@ -71,6 +71,13 @@ export interface Extent {
 }
 
 export interface GpuQueue {
+  writeBuffer(
+    buffer: GpuBuffer,
+    offset: number,
+    data: ArrayBufferView,
+    dataOffset?: number,
+    size?: number
+  ): void;
   writeTexture(
     destination: TextureCopyDestination,
     data: ArrayBufferView,
@@ -84,7 +91,13 @@ export interface GpuQueue {
   ): void;
 }
 
-export type BufferUsage = 'static' | 'dynamic';
+export const BufferUsage = { VERTEX: 1, UNIFORM: 2, COPY_DST: 4 } as const;
+
+export interface BufferDescriptor {
+  label?: string;
+  size: number;
+  usage: number;
+}
 
 export type VertexFormat = 'float32' | 'float32x2' | 'float32x3' | 'float32x4';
 export type VertexStepMode = 'vertex' | 'instance';
@@ -178,11 +191,9 @@ export interface GpuDevice {
   setVec4fv(u: GpuUniform | null, v: Iterable<number>, offset?: number, length?: number): void;
   setMat4fv(u: GpuUniform | null, v: Iterable<number>): void;
 
-  createBuffer(): GpuBuffer;
+  createBuffer(desc: BufferDescriptor): GpuBuffer;
   destroyBuffer(buffer: GpuBuffer | null): void;
   setVertexBuffer(buffer: GpuBuffer | null): void;
-  writeBuffer(data: AllowSharedBufferSource | number, usage: BufferUsage): void;
-  writeSubBuffer(offset: number, data: ArrayBufferView, srcOffset?: number, length?: number): void;
 
   createVertexLayout(): GpuVertexLayout;
   destroyVertexLayout(layout: GpuVertexLayout | null): void;

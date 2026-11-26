@@ -1,7 +1,6 @@
 import type {
   AddressMode,
   BlendFactor,
-  BufferUsage,
   CompareFunction,
   FilterMode,
   PrimitiveTopology,
@@ -70,10 +69,6 @@ export function compareFunction(gl: WebGL2RenderingContext, c: CompareFunction):
 
 export function topology(gl: WebGL2RenderingContext, t: PrimitiveTopology): number {
   return t === 'triangle-list' ? gl.TRIANGLES : gl.TRIANGLE_STRIP;
-}
-
-export function bufferUsage(gl: WebGL2RenderingContext, u: BufferUsage): number {
-  return u === 'static' ? gl.STATIC_DRAW : gl.DYNAMIC_DRAW;
 }
 
 export function vertexComponents(f: VertexFormat): number {
