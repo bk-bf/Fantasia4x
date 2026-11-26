@@ -14,7 +14,7 @@ const HAUL = (() => {
   const FUSED = ['shoulder'];
   const END_SOURCES = [['map-carry-toward', 'map-carry-away'], ['map-carry-end', 'map-carry-end']];
   const WORN_SOURCES = ['map-carry', 'map-ground', 'map-pile-1', 'map', '0'];
-  const SEEN_ROWS = { least: 4, most: 20, behind: 2 }, BELLY = { filled: .45, front: [.55, .82], held: 2 };
+  const SEEN_ROWS = { least: 4, most: 14, behind: 2 }, BELLY = { filled: .45, front: [.55, .82], held: 2 };
   const STANCES = { one: { carry: 'tuck', draw: 'ready', ready: 'guard', stow: 'stow' }, two: { carry: 'tuck', draw: 'readyTwo', ready: 'guardTwo', stow: 'stowTwo' }, bow: { carry: 'tuck', draw: 'readyBow', ready: 'guardBow', stow: 'stowBow' } };
   const POLES = ['spear', 'staff'], HANDLE = { pole: .45, haft: .16 };
   const NAMES = {

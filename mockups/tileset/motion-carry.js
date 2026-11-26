@@ -15,7 +15,7 @@ const MOTION_LOAD = (() => {
       for (let j = 0; j < spr.h; j++) {
         const row = layer.upside ? spr.h - 1 - j : j, c = spr.c[row * spr.w + i], Y = ay - grip[1] + j + drop, q = Y * s.w + X;
         const there = c && s.ok(X, Y) && !(layer.rows && (j < layer.rows[0] || j >= layer.rows[1])) && !(pawn.floor != null && Y > pawn.floor) && !(layer.fused && edged(spr, i, row));
-        if (there) whole.c[q] = c;
+        if (there) { whole.c[q] = c; whole.e[q] = spr.e[row * spr.w + i]; }
         if (!there || mask[q]) continue;
         s.c[q] = c; s.e[q] = spr.e[row * spr.w + i]; placed.push(q);
       }

@@ -84,7 +84,7 @@ function audit(now, shown, face) {
     if (got !== want) counts.d++;
     if (face === 'b' && got && got !== want && isBody(want) && (isArm(got) || isTool(got) || isLoad(got)) && got.cam < torsoCam) counts.a++;
     if (got && (HELD(got) || SHIELD(got)) && !(now.fused && isLoad(got)) && !alike(shown[i], at(got, i))) counts.i++;
-    if (region && got && at(head, i) && ((i / w) | 0) <= chin && (HELD(got) || SHIELD(got) || got.seg === 'hand')) { const x = i % w, y = (i / w) | 0; if (got.seg !== 'hand' || (x >= region[0] && x <= region[2] && y >= region[1] && y <= region[3])) { counts.f++; over.set(got.name, (over.get(got.name) || 0) + 1); } }
+    if (region && got && at(head, i) && ((i / w) | 0) <= chin && !(got.spr.e && got.spr.e[i]) && (HELD(got) || SHIELD(got) || got.seg === 'hand')) { const x = i % w, y = (i / w) | 0; if (got.seg !== 'hand' || (x >= region[0] && x <= region[2] && y >= region[1] && y <= region[3])) { counts.f++; over.set(got.name, (over.get(got.name) || 0) + 1); } }
   }
   for (const hand of stack.filter(l => l.grips && l.palm)) {
     let wrong = 0;

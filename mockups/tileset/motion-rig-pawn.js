@@ -331,9 +331,11 @@ function rigPawn(o, p) {
     origin = [mid, sy];
     ground = [mid, base - (load && resting && !load[3] ? REST.along : 0)];
     if (load && resting && !back && ground[1] - load[3] <= chinRow) ground = [mid, chinRow + 1 + load[3]];
+    if (load && resting && !back) ground = [mid, Math.min(ground[1], base + REST.sunk - (load[1] - 1 - load[3]))];
     let palms = null, grasps = null;
     const heaved = load && p.carry !== 'hip' && (resting || cu < (IN_BOTH_ARMS.includes(p.carry) ? 1 : SUNK.oneHand));
     if (load && p.carry === 'hip' && !resting && cu >= 1 && !load[6] && targets[toolSide]) targets[toolSide] = [targets[toolSide][0], Math.min(targets[toolSide][1], base - CLEAR.ground - (load[1] - 1 - load[3]) - 1 - sy)];
+    if (load && p.carry === 'hip' && !resting && load[6] && !back && targets[toolSide]) targets[toolSide] = [targets[toolSide][0], Math.min(targets[toolSide][1], base - (load[1] - 1 - load[3]) - sy)];
     if (load && p.carry === 'hip' && resting) { const b = boxAt(ground); targets[toolSide] = between(targets[toolSide] || [0, TOT], [(b.left + b.right) / 2 - roots[toolSide][0], Math.max(b.top, Math.min(b.bottom - 2, sy + TOT - 1)) - sy], reached); }
     if (load && p.carry !== 'hip') {
       const inArms = IN_BOTH_ARMS.includes(p.carry), w = load[0], h = load[1], sunk = p.carry === 'drape' ? h - 1 - load[3] : p.carry === 'shoulder' ? SUNK.log : SUNK.game, tucked = p.carry === 'shoulder' ? 0 : rnd(w * SUNK.behind);
