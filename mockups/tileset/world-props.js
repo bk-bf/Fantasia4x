@@ -92,7 +92,8 @@ const PROPS = (() => {
     s.ball(x, y, rr, rr * .98, z, c, { n: .22, ns: .5, d: .15, bias: -.04 });
     s.rect(x - 2, y - rr - 2, 4, 3, c[4]); s.rect(x - 2, y - rr + 1, 4, 1, P.leather[3]); s.set(x - 3, y - rr - 3, c[5]); s.set(x + 2, y - rr - 3, c[3]);
     for (let j = -4; j < 5; j += 2) s.set(x + 3, y + j, c[1]);
-    s.rect(x - 5, y, 3, 3, at(mark, 3)); s.rect(x - 5, y, 3, 1, at(mark, 5)); s.set(x - 3, y + 2, at(mark, 1));
+    const mx = x - Math.round(rr * .58);
+    s.rect(mx, y, 3, 3, at(mark, 3)); s.rect(mx, y, 3, 1, at(mark, 5)); s.set(mx + 2, y + 2, at(mark, 1));
   }
   const SACKS = [[[0, 8, 8.6, 0]], [[-9, 8, 8.6, 0], [8, 7, 8, 0]], [[-9, 8, 8.6, 0], [8, 7, 8, 0], [-1, 21, 8, 2]]];
   function sacks(s, cx, st, r) {
@@ -436,17 +437,18 @@ const PROPS = (() => {
   const CARRIED = {
     logs: (s, r) => shouldered(s, r.a, r.b),
     planks: (s, r, seed) => s.slab(CX - SHOULDERED.half, B - 3, SHOULDERED.half * 2 + 1, 2, 2, M.wood(r.a, { pw: 4, seed, b: 3 }), M.flat(r.a, 2, seed + 1, .04)),
-    rubble: (s, r, seed) => basket(s, CX, B, 6, 6, r.a, seed),
-    heap: (s, r, seed) => basket(s, CX, B, 6, 6, r.a, seed),
-    baskets: (s, r, seed) => basket(s, CX, B, 6, 6, r.a, seed),
+    rubble: (s, r, seed) => basket(s, CX, B, 6, 5, r.a, seed),
+    heap: (s, r, seed) => basket(s, CX, B, 6, 5, r.a, seed),
+    baskets: (s, r, seed) => basket(s, CX, B, 6, 5, r.a, seed),
     bars: (s, r) => bar(s, CX - 6, B - 4, r.a),
-    sacks: (s, r) => { sack(s, CX, B - 5, 4.6, 0, r.a); trim(s); },
+    sacks: (s, r) => { sack(s, CX, B - 5, 4, 0, r.a); trim(s); },
     fluids: (s, r) => flask(s, CX, B, r.a),
     blocks: (s, r) => s.slab(CX - 6, B - 9, 12, 3, 7, M.flat(r.a, 4, 3), M.flat(r.a, 3, 5)),
-    hides: (s, r, seed) => pelt(s, CX, B - 3, 7, r.a, seed, r.smooth, true),
+    hides: (s, r, seed) => pelt(s, CX, B - 3, 6, r.a, seed, r.smooth, true),
     bundles: (s, r, seed) => sheaf(s, CX - 7, B - 6, 14, r.a, seed),
-    cloth: (s, r, seed) => bolt(s, CX - 7, B - 5, 14, r.a, seed),
-    meat: (s, r) => haunch(s, CX - 1, B - 5, .62, false, r.a, 0)
+    cloth: (s, r, seed) => bolt(s, CX - 6, B - 5, 12, r.a, seed),
+    meat: (s, r) => haunch(s, CX - 1, B - 5, .62, false, r.a, 0),
+    quarry: (s, r) => { const tone = (px, py, nx, ny) => r.a[ny < -.35 ? 4 : ny > .4 ? 2 : 3]; s.rect(CX - 4, B - 2, 1, 3, r.a[2]); s.rect(CX + 2, B - 2, 1, 3, r.a[2]); s.oval(CX, B - 5, 5.6, 2.9, tone); s.oval(CX + 6, B - 3, 2.1, 2, tone); s.set(CX + 5, B - 5, r.a[2]); s.set(CX - 6, B - 6, r.a[4]); }
   };
   const SHOULDER_FORMS = ['logs', 'planks'], TURNED_FORMS = ['bars'];
   const END_REST = { logs: 0, planks: 0 };

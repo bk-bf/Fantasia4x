@@ -22,8 +22,9 @@
   function carcassForms(o) {
     const creature = o.id.replace(/_carcass$/, ''), beast = CARCASS_RIG[creature], race = CARCASS_FOLK[creature];
     if (beast) return [['map-carry-draped', () => quadDraped(beast)], ['map-carry-toward', () => quadDraped(beast, 'front')], ['map-carry-away', () => quadDraped(beast, 'hind')]];
-    if (race) return [['map-carry-toward', () => rigPawnSlung({ race }, 'f')], ['map-carry-away', () => rigPawnSlung({ race }, 'b')]];
-    return [['map-carry-end', () => { const icon = X.bake(X.byId.get('item/' + o.id + '/0')); return PROPS.carriedEnd('meat', { a: PROPS.rampOf(toneOf(icon)) }, icon.h); }]];
+    if (race) return [['map-carry-slung', () => rigPawnSlung({ race }, 's')], ['map-carry-toward', () => rigPawnSlung({ race }, 'f')], ['map-carry-away', () => rigPawnSlung({ race }, 'b')]];
+    const toned = () => ({ a: PROPS.rampOf(toneOf(X.bake(X.byId.get('item/' + o.id + '/0')))) });
+    return [['map-carry-end', () => PROPS.carriedEnd('meat', toned(), X.bake(X.byId.get('item/' + o.id + '/0')).h)], ['map-carry-held', () => PROPS.carried('quarry', toned(), 1)]];
   }
   function carryForms(o) {
     const k = RULES.classify(o), own = WORLD_GEAR.of(o), forms = [];

@@ -149,7 +149,7 @@ function quadSlung(kind, back) {
   s.hold = [QG.CX, QG.GY - dangle + 1];
   return s;
 }
-const DRAPED = { legs: 3, held: 5, across: 12, hangs: 8 };
+const DRAPED = { legs: 3, held: 5, across: 12, hangs: 8, chest: 4, sunk: 2, rise: 5 };
 function quadLimp(kind) {
   const o = BEASTS[kind].o, whole = rigQuad(kind, { by: o.leg - DRAPED.legs, head: [3, Math.min(o.Hb * 1.7, DRAPED.hangs)], blink: 1, ear: -1, tail: { a: 40 } });
   let x0 = whole.w, y0 = whole.h, x1 = -1, y1 = -1;
@@ -162,7 +162,18 @@ function quadDraped(kind, half) {
   const limp = quadLimp(kind), mid = limp.w >> 1;
   const under = x => { let y = limp.h - 1; while (y > 0 && !limp.c[y * limp.w + x]) y--; return y; }, over = x => { let y = 0; while (y < limp.h - 1 && !limp.c[y * limp.w + x]) y++; return y; };
   const paw = Math.min(limp.w - 1, mid + DRAPED.held), spine = (over(mid) + under(mid)) >> 1;
-  if (!half) { limp.hold = [mid, under(mid)]; limp.grasp = [paw, under(paw)]; limp.hangs = (limp.w - DRAPED.across) / 2; return limp; }
+  if (!half) {
+    const hind = quadDraped(kind, 'hind'), front = quadDraped(kind, 'front'), belly = under(mid), top = over(mid), thick = belly - top + 1, rise = Math.min(DRAPED.rise, thick >> 1), cx = DRAPED.chest + belly;
+    const bent = new Spr(2 * cx + 1, rise + Math.max(hind.h, front.h), 0, 0), wide = DRAPED.chest + thick, last = limp.h - 1;
+    const hung = (part, x0) => { for (let d = 0; d < part.h; d++) for (let c = 0; c < part.w; c++) { const q = d * part.w + c, at = (rise + d) * bent.w + x0 + last - c; if (part.c[q]) { bent.c[at] = part.c[q]; bent.e[at] = part.e[q]; } } };
+    for (let Y = 0; Y < rise + DRAPED.sunk; Y++) for (let dx = -wide; dx <= wide; dx++) {
+      const round = Y < rise ? Math.hypot(dx / wide, (rise - Y) / rise) : Math.abs(dx) / wide, deep = Math.min(thick - 1, Math.round((1 - round) * wide)), q = (top + deep) * limp.w + mid;
+      if (round <= 1 && (Y < rise || Math.abs(dx) < DRAPED.chest)) { bent.c[Y * bent.w + cx + dx] = limp.c[q]; bent.e[Y * bent.w + cx + dx] = limp.e[q]; }
+    }
+    hung(hind, cx - DRAPED.chest - belly); hung(front, cx + DRAPED.chest + belly - last);
+    bent.hold = [cx, rise + DRAPED.sunk]; bent.grasp = [cx + DRAPED.chest + belly - front.grasp[0], rise + front.grasp[1]]; bent.long = limp.w; bent.droops = Math.max(hind.h, front.h);
+    return bent;
+  }
   const front = half === 'front', long = front ? limp.w - mid : mid, s = new Spr(limp.h, long, 0, 0), across = y => front ? y : limp.h - 1 - y;
   for (let d = 0; d < long; d++) for (let y = 0; y < limp.h; y++) {
     const q = y * limp.w + (front ? mid + d : mid - 1 - d), at = d * s.w + across(y);

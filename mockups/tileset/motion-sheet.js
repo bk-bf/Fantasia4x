@@ -19,7 +19,7 @@ const SHEET = (() => {
   const one = (id, group, label, rig, kind, anim, x) => ({ id, group, label, cast: [P1(rig, kind, loop(anim))], ...(x || {}) });
   const go = (id, group, label, rig, kind, anim, dir, v, x) => ({ id, group, label, follow: 1, cast: [P1(rig, kind, [['run', dir, v, anim]])], ...(x || {}) });
   const BARE = { tool: null, shield: null }, PACE = { hip: 26, chest: 17, low: 11.5, shoulder: 13, game: 11.5, drape: 11.5 }, BEARER = { hip: 'weaver', chest: 'cook', low: 'woodcutter', shoulder: 'hauler', game: 'hauler', drape: 'woodcutter' };
-  const OWN = { hip: 'bone_stock', chest: 'wild_berries', low: 'granite_block', shoulder: 'pine_log', game: 'deer_carcass', drape: 'carried_pawn' }, FIXED = ['drape'];
+  const OWN = { hip: 'bone_stock', chest: 'wild_berries', low: 'granite_block', shoulder: 'pine_log', game: 'harpy_carcass', drape: 'carried_pawn' }, FIXED = ['drape'];
   const HOLD_NAMES = { hip: 'at the hip', chest: 'in front', low: 'low in front', shoulder: 'on one shoulder', game: 'game on one shoulder', drape: 'draped over one shoulder' };
   const WAYS = [['side', 'sideways', [1, 0]], ['toward', 'toward', [0, 1]], ['away', 'away', [0, -1]], ['left', 'the other way', [-1, 0]]];
   const haul = (id, label, kind, hold, dir, load, x) => go(id, 'Carrying', label, 'pawn', kind, HOLDS[hold][0], dir, PACE[hold], { over: BARE, loads: [load], hold, w: 120, h: 108, ...(x || {}) });
