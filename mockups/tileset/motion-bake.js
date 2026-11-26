@@ -123,7 +123,7 @@ function frameOf(A, st, lvl, smooth) {
   } else if (A.rig === 'critter') { pose = def.pose(u, c); make = () => rigCritter(A.kind, JSON.parse(key0)); }
   else { pose = def.pose(u, c); make = () => (A.rig === 'fowl' ? rigFowl : rigRabbit)(JSON.parse(key0)); }
   const layer = pose.carry && A.load ? HAUL.layer(A.load, pose.carry, c.face, pose.down > .5) : null;
-  if (layer && A.rig === 'pawn') pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0, layer.draped ? 1 : 0];
+  if (layer && A.rig === 'pawn') pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0, layer.draped ? 1 : 0, layer.under ? 1 : 0];
   const key0 = quant(pose, ang), key = A.look + '|' + lvl + (c.face !== 's' ? c.face : '') + (flip ? 'F' : '') + key0 + (layer ? '|' + layer.key : '');
   return { s: cachedFrame(key + (pose.loose && c.tool ? '|' + c.tool : ''), () => { const bare = make(), laden = layer && bare.mask ? MOTION_LOAD.put(bare, layer) : bare, leant = pose.tip ? tipped(laden, c.face === 'f' ? -pose.tip : pose.tip) : laden, s = pose.loose && c.tool ? dropped(leant, c.tool, c.face, pose.loose) : leant; if (!s.pts) s.pts = {}; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
 }

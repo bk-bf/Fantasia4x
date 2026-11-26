@@ -104,6 +104,36 @@ const HAUL = (() => {
     ENDS_ON.set(key, s);
     return s;
   }
+  const DRAWN_ALONE = ['branch'], LAID_ALONG = new Map(), UNDER = [.25, .6];
+  function laidAlong(key, spr) {
+    if (LAID_ALONG.has(key)) return LAID_ALONG.get(key);
+    const fill = [];
+    for (let y = 0; y < spr.h; y++) for (let x = 0; x < spr.w; x++) { const c = spr.c[y * spr.w + x]; if (c && c !== P.ink) fill.push([x, y]); }
+    const mx = fill.reduce((a, q) => a + q[0], 0) / fill.length, my = fill.reduce((a, q) => a + q[1], 0) / fill.length;
+    let xx = 0, yy = 0, xy = 0;
+    for (const [x, y] of fill) { xx += (x - mx) ** 2; yy += (y - my) ** 2; xy += (x - mx) * (y - my); }
+    const a = Math.atan2(2 * xy, xx - yy) / 2, cs = Math.cos(a), sn = Math.sin(a), R = Math.ceil(Math.hypot(spr.w, spr.h) / 2) + 1, t = new Spr(R * 2 + 1, R * 2 + 1, R, R);
+    for (let y = -R; y <= R; y++) for (let x = -R; x <= R; x++) {
+      const sx = Math.round(mx + x * cs - y * sn), sy = Math.round(my + x * sn + y * cs), c = spr.get(sx, sy);
+      if (c && c !== P.ink) { t.c[(y + R) * t.w + x + R] = c; t.e[(y + R) * t.w + x + R] = spr.e[sy * spr.w + sx]; }
+    }
+    t.outline();
+    let x0 = t.w, y0 = t.h, x1 = -1, y1 = -1;
+    for (let y = 0; y < t.h; y++) for (let x = 0; x < t.w; x++) if (t.c[y * t.w + x]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    const s = new Spr(x1 - x0 + 1, y1 - y0 + 1, 0, 0);
+    for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) { s.c[y * s.w + x] = t.c[(y0 + y) * t.w + x0 + x]; s.e[y * s.w + x] = t.e[(y0 + y) * t.w + x0 + x]; }
+    LAID_ALONG.set(key, s);
+    return s;
+  }
+  function underside(spr) {
+    let best = null;
+    for (let x = Math.round(spr.w * UNDER[0]); x <= Math.round(spr.w * UNDER[1]); x++) {
+      let y = spr.h - 1;
+      while (y > 0 && !spr.c[y * spr.w + x]) y--;
+      if (!best || y < best[1] - 1) best = [x, y + 1];
+    }
+    return best;
+  }
   const filledIn = (spr, y) => { let n = 0; for (let x = 0; x < spr.w; x++) if (spr.c[y * spr.w + x]) n++; return n; };
   function slung(spr) {
     let belly = spr.h - 1;
@@ -116,7 +146,7 @@ const HAUL = (() => {
     const src = load.source, folk = handPlaced();
     if (resting) { const along = (hold === 'shoulder' || src.turned) && face !== 's' && (face === 'f' ? src.toward : src.away), lying = along || src.lying || src.side, spr = cropped(load.id, lying); return { key: load.id + '/' + lying + '/rest', sprite: 'item/' + load.id + '/' + lying, spr, grip: [face === 's' ? REST.edge : spr.w >> 1, along && face === 'f' && !src.turned ? 0 : spr.h - 1], hand: hiltAt(spr, 1), sag: 0 }; }
     const upright = hold === 'hip' && face !== 's' && src.upright, ended = (ON_SHOULDER.includes(hold) || src.turned) && face !== 's' && (face === 'f' ? src.toward : src.away);
-    const variant = upright || (IN_HAND.includes(hold) && src.held) || ended || (folk && src.folded) || src.side, whole = cropped(load.id, variant), headDown = (face === 'f') === !!src.headUp;
+    const variant = upright || (IN_HAND.includes(hold) && src.held) || ended || (folk && src.folded) || (folk && DRAWN_ALONE.includes(load.id) && '0') || src.side, whole = folk && variant === '0' && DRAWN_ALONE.includes(load.id) ? laidAlong(load.id, cropped(load.id, variant)) : cropped(load.id, variant), headDown = (face === 'f') === !!src.headUp;
     const across = whole.w > whole.h && (face === 's' ? IN_BOTH_ARMS.includes(hold) && HELD_ACROSS.includes(load.storage) && !(folk && LENGTHWISE.includes(load.storage)) : hold === 'hip' && !!load.slim), spr = across ? endOn(load.id + '/' + variant, whole) : whole;
     const out = { key: load.id + '/' + variant + (across ? '/end' : ''), sprite: 'item/' + load.id + '/' + variant, spr, grip: spr.hold || GRIPS[hold](spr, load.storage), sag: load.limp && !ended ? SAG[hold] : 0 };
     if (upright) {
@@ -128,7 +158,7 @@ const HAUL = (() => {
     if (hold === 'game' && face === 's' && !spr.hold) Object.assign(out, slung(spr));
     if (spr.grasp) out.hand = spr.grasp;
     if (src.draped && face === 's' && hold === 'game') out.sag = SAG.draped;
-    if (folk && face === 's' && IN_BOTH_ARMS.includes(hold) && load.family !== 'long' && !spr.hold && !ended) out.grip = [out.grip[0], spr.h];
+    if (folk && face === 's' && IN_BOTH_ARMS.includes(hold) && load.family !== 'long' && !spr.hold && !ended) Object.assign(out, { grip: [out.grip[0], spr.h] }, variant === src.held ? { hand: underside(spr), under: true } : null);
     if (hold === 'hip' && face === 's' && load.family === 'long' && !spr.hold) { const x = Math.round(spr.w * (POLES.includes(load.storage) ? HANDLE.pole : HANDLE.haft)); out.grip = hiltAt(spr, x); }
     return out;
   }

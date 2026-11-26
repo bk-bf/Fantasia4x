@@ -121,7 +121,7 @@ const TOOLS = {
   cup: { hold: 0, tip: [3, 0], f(l, b) { return l >= -1 && l <= 3 && b >= -1 && b <= 2 ? P.wood[l === 3 ? 5 : b === 2 ? 2 : 4] : null; } },
   bread: { hold: 0, tip: [2, 0], f(l, b) { return l >= -1 && l <= 2 && b >= -2 && b <= 3 ? P.thatch[l === 2 ? 5 : b === 3 || l === -1 ? 2 : 4] : null; } },
 };
-const FORE_FILLS = .5, EDGE_SEEN = { least: .6 };
+const FORE_FILLS = .5, EDGE_SEEN = { least: .6 }, EDGE_DOWN = ['axe'];
 const edgeSeen = (view, aim) => { const e = [0, aim[2], -aim[1]], n = len3(e); return n < .2 ? null : view.at(mul3(e, 1 / n)); };
 function toolAt(s, kind, gx, gy, ang, o) {
   const T = TOOLS[kind];

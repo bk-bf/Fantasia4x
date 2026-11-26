@@ -239,7 +239,7 @@ function rigPawn(o, p) {
   const camOf = q => SPACE.cam[face][0] + (view.depth(q) - SPACE.cam[face][1]) / SPACE.cam[face][2], mid3 = (a, b) => mul3(add3(a, b), .5);
   const limbOf = (arm, art) => { const path = [art, shownAt(arm.E), shownAt(arm.H)]; path.rigid = true; const before = face === 'f' && arm.H[1] * Math.cos(swung) - arm.H[0] * Math.sin(swung) > SPACE.chest ? TOWARD_DEPTH.torso + TOWARD_DEPTH.step : -Infinity; return { path, hand: shownAt(arm.H).map(rnd), cams: { upper: Math.max(before, camOf(mid3(arm.S, arm.E))), fore: Math.max(before + TOWARD_DEPTH.step, camOf(mid3(arm.E, arm.H))), hand: Math.max(before + 2 * TOWARD_DEPTH.step, camOf(arm.H)) } }; };
   const bowing = kind === 'bow' && !p.carry, wielded = !p.carry && !!TOOLS[kind] && !bowing, nocked = bowing && p.bow >= 1 && p.arrow > .5, fetched = bowing && !nocked && p.out > 0 ? Math.min(BOW.sag + BOW.nock, p.out) : 0;
-  const bladeOf = aim => shaped && !side ? edgeSeen(view, aim) : null;
+  const bladeOf = aim => shaped && !side && EDGE_DOWN.includes(kind) ? edgeSeen(view, aim) : null;
   const aimOf = () => unit3(p.aim || (p.tool === undefined ? TOOL_AIM[kind] || [0, .3, .95] : side ? [0, Math.sin(p.tool * D2R), Math.cos(p.tool * D2R)] : [(back ? 1 : -1) * Math.sin(p.tool * D2R), 0, Math.cos(p.tool * D2R)]));
   const armed = (tR, tL) => {
     let R = solved('R', tR), L = solved('L', tL), aim = null, second = null, from = null;
@@ -303,7 +303,7 @@ function rigPawn(o, p) {
       if (inArms && bottom - load[1] + 1 < chin && left <= head[1]) bottom = chin + load[1] - 1;
       put = between(anchored(ground[0] - REST.edge, base), inArms ? anchored(left, bottom) : load[7] ? [sx0 - aft, tTop + 1 + jaw - br] : [sx0 - 1 - aft, tTop + SUNK.slung + jaw - br], cu);
       const b = boxAt(put), low = clamp(sy + TOT - 1, b.top, b.bottom);
-      grasp = inArms ? [b.left + (low === b.bottom ? 1 : 0), low] : [b.left + load[4] + aft, b.top + load[5] - jaw];
+      grasp = inArms && load[8] ? [b.left + load[4], b.top + load[5]] : inArms ? [b.left + (low === b.bottom ? 1 : 0), low] : [b.left + load[4] + aft, b.top + load[5] - jaw];
     }
     if (grasp) { const k = resting ? reached : 1; hr = between(hr || [0, TOT], [grasp[0] - near[0], grasp[1] - near[1]], k); htl = between(htl || [0, TOT], [grasp[0] + 1 - far[0], grasp[1] - far[1]], k); }
     const bent = hr && hr[0] < 0 && hr[1] < 0 ? -1 : 1;
