@@ -1,8 +1,8 @@
 'use strict';
 const FRAMES = new Map();
 const LOOK_CAST = {};
-const HELD = ['tool', 'shield'];
-const heldOf = gear => Object.fromEntries(HELD.filter(k => gear && k in gear).map(k => [k, gear[k]]));
+const IN_HAND_GEAR = ['tool', 'shield'];
+const inHandOf = gear => Object.fromEntries(IN_HAND_GEAR.filter(k => gear && k in gear).map(k => [k, gear[k]]));
 const STRIKES = new Set(['chop', 'mine', 'hoe', 'hammer', 'attack', 'thrust', 'bite']);
 const NODS = { stir: 2, gather: 2, draw: 2, eat: 3, drink: 1, talk: 4, listen: 2, warm: 1, tired: 1, cry: 6, graze: 3, peck: 2, cud: 4, sniff: 2 };
 let SEEDS = 0;
@@ -10,7 +10,7 @@ let SEEDS = 0;
 function mkActor(rig, kind, over) {
   const A = { rig, kind, seed: (++SEEDS * .618) % 1, id: rig + ':' + kind + ':' + SEEDS };
   const cast = rig === 'pawn' && (LOOK_CAST[kind] || (LOOK_STYLE.pieces ? dressedLook(kind) : null));
-  if (cast) { A.lookOf = cast.look; A.gear = { ...(LOOK_STYLE.pieces ? heldOf(cast.gear) : cast.gear || {}), ...(over || {}) }; A.o = { ...(LOOK_STYLE.pieces ? FOLK_PARTS.rigged(cast.look) : lookRig(cast.look)).o, ...A.gear }; A.base = drawLook(cast.look, 's', null, { face: 's' }, A.gear); A.name = cast.name; A.ls = FOLK[A.o.race].legs / 10; A.as = (FOLK[A.o.race].tl - 1) / 11; A.look = JSON.stringify(cast.look) + JSON.stringify(A.gear); }
+  if (cast) { A.lookOf = cast.look; A.gear = { ...(LOOK_STYLE.pieces ? inHandOf(cast.gear) : cast.gear || {}), ...(over || {}) }; A.o = { ...(LOOK_STYLE.pieces ? FOLK_PARTS.rigged(cast.look) : lookRig(cast.look)).o, ...A.gear }; A.base = drawLook(cast.look, 's', null, { face: 's' }, A.gear); A.name = cast.name; A.ls = FOLK[A.o.race].legs / 10; A.as = (FOLK[A.o.race].tl - 1) / 11; A.look = JSON.stringify(cast.look) + JSON.stringify(A.gear); }
   else if (rig === 'pawn') { A.o = { ...PAWNS[kind].o, ...(over || {}) }; A.base = mkPawn(A.o); A.name = PAWNS[kind].name; A.ls = FOLK[A.o.race || 'human'].legs / 10; A.as = (FOLK[A.o.race || 'human'].tl - 1) / 11; A.look = JSON.stringify(Object.entries(A.o).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])); }
   else { A.base = mkBeast(kind); A.name = (BEASTS[kind] || {}).name || OTHER[kind]; A.look = kind; }
   A.anims = rig === 'pawn' ? PAWN_ANIMS : rig === 'quad' ? QUAD_ANIMS : rig === 'fowl' ? FOWL_ANIMS : rig === 'rabbit' ? RABBIT_ANIMS : rig === 'critter' ? CRIT_ANIMS[kind] : QUAD_ANIMS;
