@@ -185,6 +185,18 @@ function aimGrounded(aim, handZ, tip, butt, head) {
   const k = Math.sqrt(Math.max(0, 1 - up * up)) / flat;
   return [aim[0] * k, aim[1] * k, up];
 }
+function aimSeen(aim, hand, tip, face) {
+  if (face !== 'f') return aim;
+  let v = aim;
+  for (let n = 0; n < FOOT_LINE.turns; n++) {
+    const sunk = SEEN.depth * Math.max(0, hand[1] + v[1] * tip) - (hand[2] + v[2] * tip);
+    if (sunk <= FOOT_LINE.band) break;
+    const up = Math.min(1, v[2] + FOOT_LINE.step), flat = Math.hypot(v[0], v[1]) || 1, k = Math.sqrt(Math.max(0, 1 - up * up)) / flat;
+    v = [v[0] * k, v[1] * k, up];
+  }
+  return v;
+}
+const FOOT_LINE = { band: .5, step: .03, turns: 40 };
 function toolSeen(view, aim) {
   const v = view.at(aim);
   return { ang: Math.atan2(v[0], -v[1]) / D2R, fore: Math.max(SPACE.least, Math.hypot(v[0], v[1])) };

@@ -243,7 +243,7 @@ function rigPawn(o, p) {
     let R = solved('R', tR), L = solved('L', tL), aim = null, second = null, from = null;
     const far = TOOL_REACH[kind] || 1, butt = TOOL_BUTT[kind] || 1, head = TOOL_HEAD[kind] || 1;
     if (wielded) {
-      const raw = aimOf(), paired = p.both && TWO_HANDED[kind] ? TWO_HANDED[kind] : null, grips = [p.grip === undefined ? (paired ? paired[0] : 0) : p.grip, ...(paired ? [paired[1]] : [])], aimed = () => aimGrounded(raw, shoulderZ + R.H[2], far - grips[0], butt + grips[0], head);
+      const raw = aimOf(), paired = p.both && TWO_HANDED[kind] ? TWO_HANDED[kind] : null, grips = [p.grip === undefined ? (paired ? paired[0] : 0) : p.grip, ...(paired ? [paired[1]] : [])], aimed = () => aimSeen(aimGrounded(raw, shoulderZ + R.H[2], far - grips[0], butt + grips[0], head), [R.H[0], R.H[1], shoulderZ + R.H[2]], far - grips[0] + head / 2, face);
       aim = aimed();
       if (grips.length > 1 && !o.oneArm) for (let n = 0; n < 6; n++) {
         const want = add3(R.H, mul3(aim, grips[1]));
