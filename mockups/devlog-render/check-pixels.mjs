@@ -1,9 +1,7 @@
 import { chromium } from 'playwright';
-import { writeFileSync, readFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 
-const LAYOUT = process.argv.find(a => a.startsWith('--layout='))?.slice(9);
-const LAYOUT_JSON = LAYOUT && JSON.parse(readFileSync(LAYOUT, 'utf8'));
-const THUMBS = LAYOUT_JSON ? [LAYOUT_JSON.v] : (process.env.THUMBS || 'night,night-ai,night-brush,night-block,night-pixel,ember,ember-ai,day,night-inset,number,oak,heartwood,oak-pair,grove').split(',');
+const THUMBS = (process.env.THUMBS || 'night,night-ai,night-brush,night-block,night-pixel,ember,ember-ai,day,night-inset,number,oak,heartwood,oak-pair,grove').split(',');
 const SOURCES = { 'src/old-glyph.png': 'dev glyph renderer', 'src/new-day.png': 'HUD mockup', 'src/new-dusk.png': 'HUD mockup', 'src/new-night.png': 'HUD mockup', 'src/new-summer.png': 'HUD mockup', 'src/magic-night.png': 'big-trees mockup', 'src/magic.png': 'big-trees mockup', 'src/forest.png': 'big-trees mockup', 'src/trees.png': 'big-trees mockup', 'src/ground-autumn.png': 'tree-ground mockup' };
 const FONT_PIXEL = { Jersey20: 34, Blackletter: 43 };
 const WRITE = process.argv.includes('--write');
@@ -15,7 +13,7 @@ await page.route('**/_comments/**', r => r.abort());
 let failed = 0;
 
 for (const id of THUMBS) {
-  await page.goto(`${URL_BASE}thumb.html?t=${id}` + (LAYOUT_JSON ? '&layout=' + encodeURIComponent(JSON.stringify(LAYOUT_JSON)) : ''));
+  await page.goto(`${URL_BASE}thumb.html?t=${id}`);
   await page.waitForFunction(() => document.body.dataset.ready === '1');
   await page.evaluate(async () => { await document.fonts.ready; await Promise.all([...document.querySelectorAll('.th.on img')].map(i => i.decode())); });
   const shot = await page.screenshot({ type: 'png' });

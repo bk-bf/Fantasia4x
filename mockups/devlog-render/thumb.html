@@ -97,12 +97,8 @@
 <script>
 (async () => {
   const q = new URLSearchParams(location.search);
-  let id = q.get('t') || q.get('v') || 'night';
-  let L = null;
-  if (q.get('layout')) { L = JSON.parse(q.get('layout')); id = L.v || id; }
-  else if (!q.has('orig')) { try { const r = await fetch(`layouts/${id}.json`, { cache: 'no-store' }); if (r.ok) L = await r.json(); } catch {} }
-  const sec = document.getElementById(id);
-  L = L || await Thumb.parse(sec);
+  const sec = document.getElementById(q.get('t') || 'night');
+  const L = await Thumb.parse(sec);
   sec.classList.add('on');
   await Thumb.render(L, sec);
   await Promise.all([...sec.querySelectorAll('img')].map(i => i.decode().catch(() => {})));
