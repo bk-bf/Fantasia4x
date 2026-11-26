@@ -22,7 +22,7 @@ const FB_POSES = {
   },
   stir(u, c) { return { item: 'ladle', hl: [4, 8], hr: [-4 + cs(u) * 2, 9 + sn(u) * 1], tool: 180 + sn(u) * 14, by: 1, hd: [cs(u) > .6 ? 1 : 0, 1], blink: c.lvl > 2 && u > .9 ? 1 : 0 }; },
   gather(u) { return { item: null, by: 5, hl: [4 + sn(u), 10 - Math.max(0, sn(u)) * 2], hr: [-4 + sn(u), 10 - Math.max(0, -sn(u)) * 2], hd: [0, 2] }; },
-  lift(u, c) { const k = stooped(c); return lifted(u, { item: null, carry: c.hold, hl: HANG, hr: HANG, by: 0, hd: [0, 0], fl: [0, 0], fr: [0, 0], cu: 0, down: 1, reach: 0 }, { by: 6 * k, hl: [3, 10], hr: [-3, 10], hd: [0, k], reach: 1 }, carried(c.hold, 0, { ...c, face: 'f' }, 0)); },
+  lift(u, c) { const k = stooped(c); return lifted(u, { item: null, carry: c.hold, hl: HANG, hr: HANG, by: 0, hd: [0, 0], fl: [0, 0], fr: [0, 0], cu: 0, down: 1, reach: 0 }, { by: 6 * k + deeper(c), hl: [3, 10], hr: [-3, 10], hd: [0, k], reach: 1 }, carried(c.hold, 0, { ...c, face: 'f' }, 0)); },
   drop(u, c) { return FB_POSES.lift(1 - u, c); },
   held(u, c) { return carried(c.hold, u, { ...c, face: 'f' }, 0); },
   tuck(u, c) { return tucked(u, { ...c, face: 'f' }, 1); },
