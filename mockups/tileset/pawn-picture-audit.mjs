@@ -1,0 +1,77 @@
+export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'y'];
+export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing with no hand on it', y: 'legs shortened' };
+const HAND_BLOCK = 4, TAPER = { long: 5, thin: 1, wide: 3 }, FIN = { out: 4, above: 1 }, PROFILE = .8, BAND = 2, LEGS = .6, TOUCH = 1;
+const LEG_LAYERS = ['legs', 'far leg', 'near leg'];
+
+const same = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
+const pixels = spr => { const out = []; for (let i = 0; i < spr.c.length; i++) if (spr.c[i]) out.push(i); return out; };
+const box = (px, w) => { let x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1; for (const i of px) { const x = i % w, y = (i / w) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return px.length ? [x0, y0, x1, y1] : null; };
+function pieces(px, w) {
+  const left = new Set(px);
+  let n = 0;
+  while (left.size) {
+    n++;
+    const todo = [left.values().next().value];
+    left.delete(todo[0]);
+    while (todo.length) { const i = todo.pop(), x = i % w; for (const dy of [-w, 0, w]) for (const dx of [-1, 0, 1]) { const q = i + dy + dx; if (Math.abs((q % w) - x) <= 1 && left.has(q)) { left.delete(q); todo.push(q); } } }
+  }
+  return n;
+}
+function tapers(px, w) {
+  const b = box(px, w);
+  if (!b) return false;
+  const along = b[2] - b[0] >= b[3] - b[1], long = along ? b[2] - b[0] + 1 : b[3] - b[1] + 1, widths = new Map();
+  if (long < TAPER.long) return false;
+  for (const i of px) { const k = along ? i % w : (i / w) | 0; widths.set(k, (widths.get(k) || 0) + 1); }
+  const all = [...widths.values()];
+  return Math.max(...all) >= TAPER.wide && Math.min(...all) <= TAPER.thin;
+}
+const touches = (a, b, w) => { const near = new Set(); for (const i of a) for (let dy = -TOUCH; dy <= TOUCH; dy++) for (let dx = -TOUCH; dx <= TOUCH; dx++) near.add(i + dy * w + dx); return b.some(i => near.has(i)); };
+
+export function pictured(now, face, ink) {
+  const counts = Object.fromEntries(PICTURE_KEYS.map(k => [k, 0])), shown = now.spr.c, w = now.spr.w, sp = now.rigged.space, said = [];
+  const stack = [...now.rigged.layers, ...(now.spr.loadLayer ? [now.spr.loadLayer] : [])].map((l, k) => [l, k]).sort((a, b) => a[0].cam - b[0].cam || a[1] - b[1]).map(x => x[0]);
+  const isInk = c => same(c, ink), limbs = new Map(), hands = [];
+  for (const l of stack) if (l.limb) { const px = pixels(l.spr); if (!limbs.has(l.limb)) limbs.set(l.limb, { all: [], hand: [], segs: [], anchor: l.anchor }); const limb = limbs.get(l.limb); limb.all.push(...px); if (l.seg === 'hand') { limb.hand = px; hands.push(...px); } else limb.segs.push([l.seg, px]); }
+  const centre = now.rigged.pts.torso ? now.rigged.pts.torso[0] : now.spr.ax, half = sp ? sp.torso.half : 6;
+  for (const [name, limb] of limbs) {
+    if (!limb.all.length) continue;
+    if (limb.hand.length < HAND_BLOCK) { counts.q++; said.push(name + ' has no hand block'); }
+    else if (pieces(limb.all, w) > 1) { counts.q++; said.push(name + ' is in pieces'); }
+    for (const [seg, px] of limb.segs) if (tapers(px, w)) { counts.r++; said.push(name + ' ' + seg + ' tapers'); }
+    if (face !== 's' && limb.anchor && limb.hand.length) {
+      const side = Math.sign(limb.anchor[0] - centre) || 1, out = limb.all.filter(i => ((i % w) - limb.anchor[0]) * side >= FIN.out && ((i / w) | 0) <= limb.anchor[1] + FIN.above).length, hb = box(limb.hand, w), inward = Math.abs((hb[0] + hb[2]) / 2 - centre) < half;
+      if (out && inward) { counts.r++; said.push(name + ' fins out at the shoulder'); }
+    }
+  }
+  for (let i = 0; i < shown.length; i++) {
+    if (!shown[i] || isInk(shown[i])) continue;
+    let owner = null;
+    for (let k = stack.length - 1; k >= 0 && !owner; k--) if (stack[k].spr.c[i]) owner = stack[k];
+    if (owner && !same(shown[i], owner.spr.c[i]) && !stack.some(l => l.spr.c[i] && same(shown[i], l.spr.c[i]))) counts.s++;
+  }
+  const tools = stack.filter(l => l.name === 'tool' || l.name === 'tool butt'), toolPx = tools.filter(l => l.piece !== 'arrow' && l.piece !== 'string').flatMap(l => pixels(l.spr));
+  if (face === 's' && sp && sp.tool && toolPx.length) {
+    const b = box(toolPx, w), drawn = Math.hypot(b[2] - b[0] + 1, b[3] - b[1] + 1), real = sp.tool === 'bow' ? 2 * now.bowHalf : sp.reach + sp.butt;
+    if (real > 4 && drawn < PROFILE * real) { counts.t++; said.push('tool ' + drawn.toFixed(0) + ' px of ' + real.toFixed(0)); }
+  }
+  const all = box(pixels(now.spr), w);
+  if (sp && all && all[3] > sp.groundRow + BAND) { counts.u++; said.push((all[3] - sp.groundRow) + ' px below the foot line'); }
+  for (const l of [...tools.filter(l => l.piece !== 'string'), ...stack.filter(l => l.name === 'load')]) { const px = pixels(l.spr); if (px.length && !touches(px, hands, w)) { counts.w++; said.push((l.name === 'load' ? 'load' : 'tool ' + (l.piece || '')) + ' has no hand at it'); } }
+  if (sp && !now.pose.sit && !now.pose.kneel) {
+    const legRows = new Set();
+    for (let i = 0; i < shown.length; i++) { if (!shown[i]) continue; let owner = null; for (let k = stack.length - 1; k >= 0 && !owner; k--) if (stack[k].spr.c[i]) owner = stack[k]; if (owner && LEG_LAYERS.includes(owner.name)) legRows.add((i / w) | 0); }
+    const full = sp.groundRow - sp.hipRow + 1;
+    if (legRows.size && legRows.size < LEGS * full) { counts.y++; said.push('legs ' + legRows.size + ' rows of ' + full); }
+  }
+  counts.said = said;
+  return counts;
+}
+
+export function tipping(spr, ink, loose) {
+  const w = spr.w, px = pixels(spr), filled = new Set(px), isInk = c => same(c, ink);
+  let torn = 0;
+  for (const i of px) { const x = i % w, edge = [i - w, i + w, x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1].some(q => q < 0 || q >= spr.c.length || !filled.has(q)); if (edge && !isInk(spr.c[i])) torn++; }
+  const parts = pieces(px, w) - (loose ? 1 : 0);
+  return { torn, parts: Math.max(0, parts - 1) };
+}

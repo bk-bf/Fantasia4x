@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PICTURE_KEYS, PICTURE_NAMED, pictured, tipping } from './pawn-picture-audit.mjs';
 
 const here = process.env.AUDIT_ROOT || dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2), flag = name => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1]; };
@@ -165,8 +166,8 @@ function audit(now, shown, face) {
   return counts;
 }
 
-const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'p'];
-const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', p: 'inside the body' };
+const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'p', ...PICTURE_KEYS];
+const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', p: 'inside the body', ...PICTURE_NAMED };
 const anims = Object.keys(NOW.PAWN_ANIMS).filter(a => !only || new RegExp(only).test(a));
 const totals = Object.fromEntries(KEYS.map(k => [k, 0])), rows = [], notes = [], ground = new Map(), shares = [], seenShare = args.includes('--seen');
 let frames = 0;
@@ -181,8 +182,12 @@ for (const anim of anims) {
       const floor = standing(kind, over, face), sizes = [], arrows = [];
       for (let i = 0; i < n; i++) {
         const u = (i + .5) / n, now = frame(NOW, kind, over, anim, face, u, loadId);
+        if (now.pose.tip && now.pose.face === face) { const tip = tipping(now.spr, NOW.P.ink, !!(now.pose.loose && NOW.TOOLS[NOW.mkActor('pawn', kind, over).o.tool])); if (tip.torn || tip.parts) { sum.v++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + kind + ' frame ' + (i + 1) + ': ' + PICTURE_NAMED.v + ', ' + tip.torn + ' edge pixels not inked, ' + tip.parts + ' loose parts'); } }
         if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); arrows.push(null); continue; }
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId, now.seed) : now).spr.c, face), where = kind + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
+        const seen = pictured({ ...now, bowHalf: NOW.BOW.half }, face, NOW.P.ink);
+        for (const k of PICTURE_KEYS) got[k] = seen[k];
+        if (noted && seen.said.length) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + seen.said.join('; '));
         for (const k of KEYS) if (got[k]) { sum[k] += got[k]; if (noted && 'bcefijklmnp'.includes(k)) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + NAMED[k] + ' ' + got[k] + (k === 'f' ? ' (' + got.over + ')' : k === 'p' ? ' (' + got.inside.join('; ') + ')' : '')); }
         if (got.low > floor) { sum.h++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + (got.low - floor) + ' px below the ground'); }
         const expects = !loadId && !now.pose.carry && now.pose.item !== null && NOW.TOOLS[now.pose.item === undefined ? NOW.mkActor('pawn', kind, over).o.tool : now.pose.item];
