@@ -9,7 +9,7 @@ const ECO_DATA = (() => {
     giant_rat: { rarity: 'common', active: 'night', burrow: 1 },
     boar: { rarity: 'common', active: 'night' },
     elk: { rarity: 'uncommon', active: 'crep', migr: .75 },
-    mountain_goat: { rarity: 'uncommon', active: 'day', migr: .3, cold: 1 },
+    mountain_goat: { rarity: 'uncommon', active: 'day', migr: .3, cold: 1, browse: 1 },
     aurochs: { calves: 1, rarity: 'uncommon', active: 'day', migr: .45 },
     hoarfowl: { rarity: 'uncommon', active: 'day', burrow: 1, cold: 1 },
     quillback: { rarity: 'uncommon', active: 'night' },
@@ -22,9 +22,9 @@ const ECO_DATA = (() => {
     sabretooth: { rank: 5, calf: 1, rarity: 'rare', share: .05, range: 140, style: 'pursuit', active: 'night', solo: 2, life: 16, social: 'pair' },
     owlbear: { rank: 6, rarity: 'rare', share: .08, range: 160, style: 'pursuit', active: 'night', solo: 1, life: 25, social: 'solo' },
     hippogriff: { rank: 4, rarity: 'rare', style: 'pursuit', active: 'day', air: 1, solo: 3, life: 30, social: 'pair' },
-    bear: { rank: 6, rarity: 'rare', share: .013, style: 'forage', active: 'day', solo: 1, sleeps: 1, life: 30, social: 'solo', scav: 1, fish: 1, breed: .35 },
+    bear: { rank: 6, rarity: 'rare', share: .03, range: 120, style: 'forage', active: 'day', solo: 1, sleeps: 1, life: 30, social: 'solo', scav: 1, fish: 1, breed: .16 },
     mire_crocodile: { rank: 6, rarity: 'rare', share: .2, range: 110, style: 'ambush', active: 'sun', waits: 'water', solo: 3, sleeps: 1, life: 50, social: 'solo' },
-    thornwood_spider: { rank: 3, rarity: 'common', share: .55, style: 'trap', active: 'night', life: 6, social: 'solo' },
+    thornwood_spider: { rank: 3, rarity: 'common', share: .8, style: 'trap', active: 'night', life: 9, social: 'solo' },
     marsh_viper: { rank: 1, rarity: 'common', style: 'pursuit', active: 'sun', small: 1, sleeps: 1, life: 12, social: 'solo' },
     harpy: { rank: 2, rarity: 'uncommon', share: .02, style: 'pursuit', active: 'day', small: 2, air: 1, grounded: 'storm', life: 25, social: 'flock' },
     stirge: { rank: 1, rarity: 'common', style: 'scavenge', active: 'dusk', air: 1, life: 4, social: 'swarm' },
@@ -60,7 +60,7 @@ const ECO_DATA = (() => {
       const k = { id: sp, name: base.name, tiers, top: Math.max(...tiers.map(t => t.tier)), biomes: bw, land: BIOME[top], mass, threat, temper, behaviour: r.behaviour, rarity: P.rarity, active: P.active, src: { pack: r.pack, lairRange: r.lairRange, lair: r.lair, diet: r.diet, kg: mass } };
       if (!P.style) Object.assign(k, {
         prey: 1, size: pack, cap: Math.max(6, pack[1] * 3), fec: mass < 5 ? 4.5 : mass < 30 ? 1.2 : mass < 60 ? .6 : .25, breeds: P.breeds || (P.burrow ? 2 : 1), nest: mass < 5 ? 3 : 2, grow: mass < 5 ? 18 : mass < 30 ? 30 : mass < 60 ? 45 : 60, live: mass < 5 ? .5 : mass < 30 ? .45 : .6, speed: mass > 80 ? 35 : mass < 5 ? 40 : 55,
-        roam: P.burrow ? 2 : 8, calves: P.calves || 0, migr: P.migr || 0, cold: P.cold || 0, danger: clamp(threat / 60 * (temper >= .6 ? 1 : .35), 0, .5), eats: clamp(Math.pow(mass / 25, .75), .08, 6), want: WANT[P.rarity], burrow: P.burrow || 0,
+        roam: P.burrow ? 2 : 8, calves: P.calves || 0, migr: P.migr || 0, cold: P.cold || 0, danger: clamp(threat / 60 * (temper >= .6 ? 1 : .35), 0, .5), eats: clamp(Math.pow(mass / 25, .75), .08, 6), want: WANT[P.rarity], burrow: P.burrow || 0, browse: P.browse || 0,
       });
       else {
         const site = objs.get('site/' + r.lair), need = clamp(mass / 25 * 1.6, .25, 4.5);

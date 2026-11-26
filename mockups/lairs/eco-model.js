@@ -98,7 +98,7 @@ const ECO = (() => {
   const hunts = (p, h) => {
     if (h.k.calves) return h.young > 0 && !!p.k.calf && p.n >= p.k.calf;
     const tiny = h.k.mass < 5;
-    if (p.k.small === 1) return tiny;
+    if (p.k.small === 1) return h.k.mass <= 5;
     if (!p.k.small && tiny) return p.k.rank >= 3 ? p.hungry >= 3 : h.n >= p.n * 2 || p.hungry >= 2;
     const power = p.n * threatOf(p), guard = threatOf(h) * h.k.temper * Math.min(h.n, 4);
     return guard <= power * .6 || (p.hungry >= 3 && guard <= power * 1.2);
@@ -492,7 +492,7 @@ const ECO = (() => {
     else if (!there) move(S, g, g.goal, sp);
     const j = cellOf(S, g.x, g.y), want = g.n * k.eats * act / 12 / HEAD_DAYS * (1.15 + g.lean * .2 + (g.cond < .6 ? .3 : 0)), got = Math.min(want, Math.max(0, S.grass[j] - S.K[j] * .08) * (season(S) === 3 ? 1 - .75 * (S.snow || 0) * (k.cold ? .25 : 1) : 1) + (season(S) === 3 && S.land[j] === FOREST ? want * .35 : 0));
     S.grass[j] -= got; g.eaten += got * HEAD_DAYS;
-    if (k.land === FOREST) { const m = Math.min(S.mast[j] * MAST[season(S)] * .2, g.n * act / 12 / 6); S.mast[j] = Math.max(0, S.mast[j] - m * .5); g.eaten += m * 6; }
+    if (k.land === FOREST || k.browse) { const m = Math.min(S.mast[j] * MAST[season(S)] * .2, g.n * act / 12 / 6); S.mast[j] = Math.max(0, S.mast[j] - m * .5); g.eaten += m * 6; }
   }
   const around = (S, g) => { const a = S.r() * 6.283, d = S.r() * g.k.range; return { x: clamp(g.lair.x + Math.cos(a) * d, 5, S.N - 5), y: clamp(g.lair.y + Math.sin(a) * d, 5, S.N - 5) }; };
   const nibble = (S, g, gain) => { const j = cellOf(S, g.x, g.y), take = Math.min(S.small[j], .22); S.small[j] -= take; g.larder += take * gain; };
