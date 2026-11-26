@@ -3,13 +3,8 @@ import fragmentSource from '../shaders/paintedShadow.frag.glsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import type { GameGrid, GridUpdateEvent } from '../game-grid.js';
 import type { TileRect } from './lightGrade.js';
-import type {
-  GpuDevice,
-  GpuPipeline,
-  GpuTexture,
-  GpuUniform,
-  GpuVertexLayout
-} from '../../gpu/device.js';
+import type { GpuDevice, GpuPipeline, GpuUniform, GpuVertexLayout } from '../../gpu/device.js';
+import { SizedTexture } from '../sizedTexture.js';
 
 const PROGRAM = 'paintedShadow';
 export const CAST_UNIT = 8;
@@ -61,7 +56,7 @@ export class PaintedShadowCast {
   private readonly gpu: GpuDevice;
   private readonly program: GpuPipeline;
   private readonly vao: GpuVertexLayout;
-  private readonly texture: GpuTexture;
+  private readonly texture: SizedTexture;
   private readonly at: Record<string, GpuUniform | null>;
   private heights = new Uint8Array(0);
   private builtKey = '';
@@ -86,7 +81,7 @@ export class PaintedShadowCast {
     this.gpu = gpu;
     this.program = program;
     this.vao = gpu.createVertexLayout()!;
-    this.texture = gpu.createTexture()!;
+    this.texture = new SizedTexture(gpu, 'r8unorm');
     const names = [
       'u_canvas',
       'u_viewOffset',
@@ -143,13 +138,8 @@ export class PaintedShadowCast {
     if (this.heights.length !== rect.w * rect.h) this.heights = new Uint8Array(rect.w * rect.h);
     this.casts = castHeights(f.casters, rect, this.heights);
     if (!this.casts) return;
-    const gpu = this.gpu;
-    gpu.setTextureSlot(CAST_UNIT);
-    gpu.bindTexture(this.texture);
-    gpu.setUnpackAlignment(1);
-    gpu.writeTexture({ format: 'r8unorm', width: rect.w, height: rect.h }, this.heights);
-    gpu.setUnpackAlignment(4);
-    gpu.setTextureSlot(0);
+    this.texture.resize(rect.w, rect.h);
+    this.texture.write(this.heights);
   }
 
   draw(f: CastFrame): number {
@@ -166,7 +156,7 @@ export class PaintedShadowCast {
     const gpu = this.gpu;
     gpu.setPipeline(this.program);
     gpu.setTextureSlot(CAST_UNIT);
-    gpu.bindTexture(this.texture);
+    gpu.bindTexture(this.texture.texture);
     gpu.setTextureSlot(0);
     gpu.setVec2fv(this.at.u_canvas, f.canvas);
     gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
@@ -186,7 +176,7 @@ export class PaintedShadowCast {
   dispose(): void {
     for (const off of this.unwatch) off();
     this.unwatch = [];
-    this.gpu.destroyTexture(this.texture);
+    this.texture.destroy();
     this.gpu.destroyVertexLayout(this.vao);
     this.gpu.destroyPipeline(this.program);
   }

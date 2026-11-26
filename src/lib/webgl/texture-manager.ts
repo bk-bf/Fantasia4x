@@ -1,5 +1,21 @@
 import type { FontAtlas } from './types.js';
-import type { GpuDevice, GpuTexture, TextureFormat } from '../gpu/device.js';
+import {
+  TextureUsage,
+  type GpuDevice,
+  type GpuTexture,
+  type TextureFormat
+} from '../gpu/device.js';
+
+export function uploadFontAtlas(gpu: GpuDevice, atlas: FontAtlas): GpuTexture {
+  const size = { width: atlas.atlasWidth, height: atlas.atlasHeight };
+  const texture = gpu.createTexture({
+    format: 'rgba8unorm',
+    ...size,
+    usage: TextureUsage.TEXTURE_BINDING | TextureUsage.COPY_DST
+  });
+  gpu.queue.writeTexture({ texture }, atlas.texture.data, { bytesPerRow: size.width * 4 }, size);
+  return texture;
+}
 
 export interface TextureInfo {
   texture: GpuTexture;
@@ -40,21 +56,11 @@ export class TextureManager {
     }
 
     const gpu = this.gpu;
-    const texture = gpu.createTexture();
-
-    if (!texture) {
-      console.error('❌ Failed to create WebGL texture');
-      return null;
-    }
+    const format: TextureFormat = 'rgba8unorm';
+    let texture: GpuTexture | null = null;
 
     try {
-      gpu.bindTexture(texture);
-
-      const format: TextureFormat = 'rgba8unorm';
-
-      const textureData = this.convertImageDataToRGBA(atlas.texture);
-
-      gpu.writeTexture({ format, width: atlas.atlasWidth, height: atlas.atlasHeight }, textureData);
+      texture = uploadFontAtlas(gpu, atlas);
 
       const bytesPerPixel = 4;
       const memoryUsage = atlas.atlasWidth * atlas.atlasHeight * bytesPerPixel;
@@ -70,8 +76,6 @@ export class TextureManager {
 
       this.textures.set(textureId, textureInfo);
       this.totalMemoryUsage += memoryUsage;
-
-      gpu.bindTexture(null);
 
       if (this.debug) {
         console.log(`✅ Font atlas texture created: ${textureId}`, {
@@ -101,9 +105,5 @@ export class TextureManager {
     if (this.debug) {
       console.log('🧹 TextureManager disposed');
     }
-  }
-
-  private convertImageDataToRGBA(imageData: ImageData): Uint8Array {
-    return new Uint8Array(imageData.data);
   }
 }

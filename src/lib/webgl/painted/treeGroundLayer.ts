@@ -1,6 +1,7 @@
 import source from '../shaders/treeGround.glsl?raw';
 import { GameGrid } from '../game-grid.js';
 import type { GpuDevice, GpuTexture } from '../../gpu/device.js';
+import { SizedTexture } from '../sizedTexture.js';
 import type { TileData } from '../tile-types.js';
 import { TreeField, type PlacedTree } from './treeGround.js';
 import { TABLE_W, tableRows, treeGroundTable } from './treeGroundTable.js';
@@ -22,7 +23,7 @@ type Tile = { x: number; y: number };
 type Rect = { x0: number; y0: number; x1: number; y1: number };
 
 export class TreeGroundLayer {
-  readonly texture: GpuTexture;
+  private readonly tex: SizedTexture;
   private field: TreeField | null = null;
   private bytes: Uint8Array = new Uint8Array(0);
   private grids: readonly (GameGrid | null)[] = [];
@@ -42,7 +43,11 @@ export class TreeGroundLayer {
     private readonly look: PaintedTreeGround,
     private readonly art: number
   ) {
-    this.texture = gpu.createTexture();
+    this.tex = new SizedTexture(gpu, 'rgba8unorm');
+  }
+
+  get texture(): GpuTexture {
+    return this.tex.texture;
   }
 
   get tableRow(): number {
@@ -122,18 +127,10 @@ export class TreeGroundLayer {
   }
 
   private allocate(w: number, h: number, soils: readonly TreeSoil[]): void {
-    const gpu = this.gpu;
     const rows = tableRows(this.look.kinds.length);
     this.bytes = new Uint8Array(w * h * 4);
-    this.bind();
-    gpu.setUnpackAlignment(1);
-    gpu.writeTexture({ format: 'rgba8unorm', width: Math.max(w, TABLE_W), height: h + rows }, null);
-    gpu.writeSubTexture(
-      { format: 'rgba8unorm', x: 0, y: h, width: TABLE_W, height: rows },
-      treeGroundTable(this.look, soils)
-    );
-    gpu.setUnpackAlignment(4);
-    gpu.setTextureSlot(0);
+    this.tex.resize(Math.max(w, TABLE_W), h + rows, true);
+    this.tex.write(treeGroundTable(this.look, soils), 0, h, TABLE_W, rows);
   }
 
   private restamp(r: Rect): void {
@@ -180,7 +177,6 @@ export class TreeGroundLayer {
         bytes[i * 4 + 2] = near ? FULL : 0;
         bytes[i * 4 + 3] = t ? SEASON[t.stand.season] : 0;
       }
-    const gpu = this.gpu;
     const rw = r.x1 - r.x0 + 1;
     const rh = r.y1 - r.y0 + 1;
     const sub = new Uint8Array(rw * rh * 4);
@@ -189,11 +185,7 @@ export class TreeGroundLayer {
         bytes.subarray(((r.y0 + j) * w + r.x0) * 4, ((r.y0 + j) * w + r.x1 + 1) * 4),
         j * rw * 4
       );
-    this.bind();
-    gpu.setUnpackAlignment(1);
-    gpu.writeSubTexture({ format: 'rgba8unorm', x: r.x0, y: r.y0, width: rw, height: rh }, sub);
-    gpu.setUnpackAlignment(4);
-    gpu.setTextureSlot(0);
+    this.tex.write(sub, r.x0, r.y0, rw, rh);
   }
 
   private undress(r: Rect): void {
@@ -249,12 +241,7 @@ export class TreeGroundLayer {
     return touched;
   }
 
-  private bind(): void {
-    this.gpu.setTextureSlot(TREE_UNIT);
-    this.gpu.bindTexture(this.texture);
-  }
-
   dispose(): void {
-    this.gpu.destroyTexture(this.texture);
+    this.tex.destroy();
   }
 }

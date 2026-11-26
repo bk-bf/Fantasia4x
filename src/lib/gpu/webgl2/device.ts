@@ -7,6 +7,7 @@ import type {
   GpuBuffer,
   GpuDevice,
   GpuLimits,
+  GpuQueue,
   GpuPipeline,
   GpuRenderTarget,
   GpuSampler,
@@ -18,10 +19,7 @@ import type {
   RenderPipelineDescriptor,
   RenderPipelineResult,
   SamplerDescriptor,
-  TextureData,
-  TextureExtent,
-  TextureFormat,
-  TextureRegion,
+  TextureDescriptor,
   VertexAttribute
 } from '../device.js';
 import {
@@ -30,11 +28,11 @@ import {
   bufferUsage,
   compareFunction,
   filterMode,
-  textureFormat,
   topology,
   vertexComponents
 } from './formats.js';
 import { createRenderPipeline } from './pipeline.js';
+import { Webgl2Textures } from './textures.js';
 
 const raw = <T>(h: unknown): T => h as T;
 
@@ -64,11 +62,17 @@ const STENCIL_MASK = 0xff;
 export class Webgl2Device implements GpuDevice {
   readonly backend = 'webgl2' as const;
 
-  private slot = 0;
-  private readonly scratchSlot: number;
+  private readonly textures: Webgl2Textures;
+  readonly queue: GpuQueue;
 
   constructor(private readonly gl: WebGL2RenderingContext) {
-    this.scratchSlot = (Number(gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)) || 32) - 1;
+    const textures = new Webgl2Textures(gl);
+    this.textures = textures;
+    this.queue = {
+      writeTexture: (dst, data, layout, size) =>
+        textures.write(dst.texture, dst.origin ?? { x: 0, y: 0 }, data, layout.bytesPerRow, size),
+      copyExternalImageToTexture: (src, dst) => textures.copyImage(src.source, dst.texture)
+    };
   }
 
   static rawContextForInstrumentation(device: Webgl2Device): WebGL2RenderingContext {
@@ -208,26 +212,16 @@ export class Webgl2Device implements GpuDevice {
     if (a.stepMode === 'instance') gl.vertexAttribDivisor(location, 1);
   }
 
-  createTexture(): GpuTexture {
-    const gl = this.gl;
-    const texture = gl.createTexture();
-    gl.activeTexture(gl.TEXTURE0 + this.scratchSlot);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, 0);
-    gl.activeTexture(gl.TEXTURE0 + this.slot);
-    return texture as unknown as GpuTexture;
+  createTexture(desc: TextureDescriptor): GpuTexture {
+    return this.textures.create(desc);
   }
 
   destroyTexture(texture: GpuTexture | null): void {
-    this.gl.deleteTexture(raw<WebGLTexture>(texture));
+    if (texture) this.textures.destroy(texture);
   }
 
   setTextureSlot(slot: number): void {
-    this.slot = slot;
+    this.textures.slot = slot;
     this.gl.activeTexture(this.gl.TEXTURE0 + slot);
   }
 
@@ -247,56 +241,6 @@ export class Webgl2Device implements GpuDevice {
 
   bindSampler(slot: number, sampler: GpuSampler | null): void {
     this.gl.bindSampler(slot, raw<WebGLSampler | null>(sampler));
-  }
-
-  writeTexture(extent: TextureExtent, data: TextureData): void {
-    const gl = this.gl;
-    const f = textureFormat(gl, extent.format);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      f.internalFormat,
-      extent.width,
-      extent.height,
-      0,
-      f.format,
-      f.type,
-      data
-    );
-  }
-
-  writeTextureImage(format: TextureFormat, source: TexImageSource): void {
-    const gl = this.gl;
-    const f = textureFormat(gl, format);
-    gl.texImage2D(gl.TEXTURE_2D, 0, f.internalFormat, f.format, f.type, source);
-  }
-
-  writeSubTexture(region: TextureRegion, data: ArrayBufferView): void {
-    const gl = this.gl;
-    const f = textureFormat(gl, region.format);
-    gl.texSubImage2D(
-      gl.TEXTURE_2D,
-      0,
-      region.x,
-      region.y,
-      region.width,
-      region.height,
-      f.format,
-      f.type,
-      data
-    );
-  }
-
-  setUnpackAlignment(bytes: 1 | 2 | 4 | 8): void {
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, bytes);
-  }
-
-  setUnpackPremultiplyAlpha(on: boolean): void {
-    this.gl.pixelStorei(this.gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, on);
-  }
-
-  setUnpackFlipY(on: boolean): void {
-    this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, on);
   }
 
   createRenderTarget(): GpuRenderTarget {

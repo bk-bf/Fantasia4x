@@ -1,7 +1,7 @@
 import { createOrthographicMatrix, PerformanceTimer } from './utils.js';
 import { ShaderManager, createTileRendererShaders } from './shaders.js';
 import { createSquareCellAtlas, loadBitlandsAtlas } from './font-atlas.js';
-import { TextureManager } from './texture-manager.js';
+import { TextureManager, uploadFontAtlas } from './texture-manager.js';
 import { samplersOf } from './samplers.js';
 import { ALPHA_CUT, GridRenderer } from './grid-renderer.js';
 import { WebGLStateManager } from './webgl-state.js';
@@ -385,14 +385,7 @@ export class WebGLRendererCore {
 
       const newAtlas = await createSquareCellAtlas(cellSize, this.debug);
 
-      const newTexture = gpu.createTexture();
-      if (!newTexture) return;
-
-      gpu.bindTexture(newTexture);
-      gpu.writeTexture(
-        { format: 'rgba8unorm', width: newAtlas.atlasWidth, height: newAtlas.atlasHeight },
-        newAtlas.texture.data
-      );
+      const newTexture = uploadFontAtlas(gpu, newAtlas);
 
       if (this.fontTexture) gpu.destroyTexture(this.fontTexture);
       this.fontTexture = newTexture;
