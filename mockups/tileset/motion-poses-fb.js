@@ -1,6 +1,7 @@
 'use strict';
 const FBX_KEYS = ['hl', 'hr', 'hd'];
 const SWUNG = { hr: [-2.6, 4.4], tool: 100, choke: 4, two: -5, ahead: .3 };
+const outward = c => c && c.face === 'b' ? 1 : -1;
 const FB_POSES = {
   chop(u, c) {
     const x = c.lvl > 2 ? 1 : 0, up = { hr: [3, -4], tool: 52 - x * 5, choke: 12, two: -15, ahead: 0, by: -x, hd: [-1, 0] }, down = { hr: [-8.5, 6.5], tool: 178, choke: 2, two: -4, ahead: .9, by: 1 + x, hd: [0, 1] };
@@ -59,11 +60,12 @@ const FB_POSES = {
     return keyed(u, { hl: [3, 8], hr: [-3, 8], bow: 0, cant: 54, yaw: 60, hd: [0, 0] }, [[0, {}], [.22, aimed], [.3, aimed], [.6, { ...aimed, bow: 5, by: tr }, 'o'], [.75, { ...aimed, bow: 5, by: tr }], [.76, { ...aimed, bow: 0, hr: [-6, 5] }, 'l'], [.9, { hl: [4, 8], hr: [-5, 6] }], [1, {}]]);
   },
   hit(u) { return keyed(u, { hr: [3, 8.5], hl: [2, 8], tool: 176, bx: 0, hd: [0, 0], blink: 0, by: 0 }, [[0, {}], [.25, { bx: -1, hd: [0, -2], hr: [6, 5], hl: [6, 3], tool: 170, blink: 1, by: -1 }, 'o'], [.55, { bx: 0, hd: [0, -1], hr: [5, 6], hl: [5, 5], tool: 172, blink: 1, by: 0 }], [1, {}]]); },
-  stagger(u) { return keyed(u, { hr: [-2, 8], hl: [2, 8], bx: 0, hd: [0, 0], by: 0, fl: [0, 0], fr: [0, 0], blink: 0 }, [[0, {}], [.2, { hd: [0, -1], hr: [-4, 3], hl: [4, 3], by: .5, blink: 1 }, 'o'], [.45, { bx: -1, hr: [-4, 5], hl: [4, 5], by: 1 }], [.7, { bx: 1, hd: [0, 1], hr: [-3, 8], hl: [3, 8], by: 1 }], [1, { by: .5 }]]); },
+  stagger(u, c) { const o = outward(c); return keyed(u, { hr: [-2 * o, 8], hl: [2 * o, 8], bx: 0, hd: [0, 0], by: 0, fl: [0, 0], fr: [0, 0], blink: 0 }, [[0, {}], [.2, { hd: [0, -1], hr: [-4 * o, 3], hl: [4 * o, 3], by: .5, blink: 1 }, 'o'], [.45, { bx: -1, hr: [-4 * o, 5], hl: [4 * o, 5], by: 1 }], [.7, { bx: 1, hd: [0, 1], hr: [-3 * o, 8], hl: [3 * o, 8], by: 1 }], [1, { by: .5 }]]); },
   fall(u, c) {
     if (u >= FELL.lands) return { lie: 1, blink: 1, loose: 1 };
     const held = u < FELL.lets ? {} : { item: null };
-    return { ...keyed(u, { hr: [-2, 8], hl: [2, 8], hd: [0, 0], by: 0, bx: 0, blink: 1, tip: 0, loose: 0 }, [[0, {}], [FELL.lets, { hd: [0, -1], hr: [-6, 3], hl: [6, 3], by: 1 }, 'o'], [FELL.gives, { hd: [0, 0], hr: [-5, 5], hl: [5, 5], by: 3, tip: FELL.leans, loose: .5 }], [FELL.lands, { hr: [-4, 6], hl: [4, 6], by: 3, tip: FELL.flat, loose: 1 }, 'i']]), ...held };
+    const o = outward(c);
+    return { ...keyed(u, { hr: [-2 * o, 8], hl: [2 * o, 8], hd: [0, 0], by: 0, bx: 0, blink: 1, tip: 0, loose: 0 }, [[0, {}], [FELL.lets, { hd: [0, -1], hr: [-6 * o, 3], hl: [6 * o, 3], by: 1 }, 'o'], [FELL.gives, { hd: [0, 0], hr: [-5 * o, 5], hl: [5 * o, 5], by: 3, tip: FELL.leans, loose: .5 }], [FELL.lands, { hr: [-4 * o, 6], hl: [4 * o, 6], by: 3, tip: FELL.flat, loose: 1 }, 'i']]), ...held };
   },
 };
 const FB_READY = {

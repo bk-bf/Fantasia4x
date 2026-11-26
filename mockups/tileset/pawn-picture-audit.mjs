@@ -112,7 +112,7 @@ export function pictured(now, face, ink) {
     if (against) { counts.x += against; said.push(against + ' px of a held thing against the face'); }
   }
   if (face === 'b' && IN_ARMS.includes(now.pose.carry) && pts.torso && !(now.pose.down > .5) && !(now.pose.cu < 1)) {
-    const above = loads.flatMap(showing).filter(i => ((i / w) | 0) <= pts.torso[1]).length;
+    const above = loads.flatMap(showing).filter(i => ((i / w) | 0) < pts.torso[1]).length;
     if (above) { counts.K += above; said.push(above + ' px of the load above the shoulders'); }
   }
   if (sp && !now.pose.sit && !now.pose.kneel) {

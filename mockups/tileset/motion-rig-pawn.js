@@ -111,7 +111,7 @@ function rigHat(s, o, X, hTop, face, skin, tunic, hd, hh, drape = 2) {
 const WRAP = [P.cloth[2], P.cloth[1]];
 const rimOf = (was, c) => !!(was && c) && c[0] === was[0] * .6 && c[1] === was[1] * .6;
 
-const TURN_MOST = 1.1, REACH = { hip: 3, front: 6, emptyGrip: -3 }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3, clasp: [1, 5], yoke: -4, yokeGrip: 3, yokeAt: { f: -.45, b: .25 }, byHead: 3, byJaw: .29, underShoulders: 1, underJaw: { drape: 1 }, pastJaw: { game: 1 } }, CLEAR = { ground: 4, shins: 3, hop: 3 }, BEHIND_HEAD = ['game', 'drape'];
+const TURN_MOST = 1.1, REACH = { hip: 3, front: 6, emptyGrip: -3 }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3, clasp: [1, 5], yoke: -4, yokeGrip: 3, yokeAt: { f: -.45, b: .25 }, byHead: 3, byJaw: .29, underShoulders: 1, underHip: 2, underJaw: { drape: 1 }, pastJaw: { game: 1 } }, CLEAR = { ground: 4, shins: 3, hop: 3 }, BEHIND_HEAD = ['game', 'drape'];
 function rigPawn(o, p) {
   p = p || {};
   let s = new Spr(RG.W, RG.H, RG.CX, RG.BASE);
@@ -390,7 +390,7 @@ function rigPawn(o, p) {
     if (shaped && bowing && back && p.bow >= 1) limbs[toolSide].cams.upper = Math.max(limbs[toolSide].cams.upper, D.head + SPACE.held);
     if (put && !resting && (IN_BOTH_ARMS.includes(p.carry) || cu < 1)) { const on = [0, 1].filter(i => grasps[i]), miss = on.reduce((m, i) => [m[0] + handsAt[i][0] - rnd(grasps[i][0]), m[1] + handsAt[i][1] - rnd(grasps[i][1])], [0, 0]); put = [rnd(put[0] + miss[0] / on.length), rnd(put[1] + miss[1] / on.length)]; }
     if (put && !resting && IN_BOTH_ARMS.includes(p.carry) && !back && boxAt(put).top < chin) put = [put[0], put[1] + chin - boxAt(put).top];
-    if (put && !resting && IN_BOTH_ARMS.includes(p.carry) && back && cu >= 1 && boxAt(put).top < tTop + SUNK.underShoulders - br) put = [put[0], put[1] + tTop + SUNK.underShoulders - br - boxAt(put).top];
+    if (put && !resting && IN_BOTH_ARMS.includes(p.carry) && back && cu >= 1) { const b = boxAt(put), lower = Math.min(tTop + SUNK.underShoulders - br - b.top, legTop + SUNK.underHip - b.bottom); if (lower > 0) put = [put[0], put[1] + lower]; }
     if (put && !resting && p.carry === 'shoulder') { const b = boxAt(put); if (b.top <= chinRow && b.left <= head[1] && b.right >= head[0]) put = [back ? head[1] + 1 + load[2] : head[0] - load[0] + load[2], put[1]]; }
     const seen = i => paths[i];
     const carrying = p.carry ? (p.carry === 'hip' ? [toolSide] : ON_ONE_SHOULDER.includes(p.carry) && !heaved && !(load && load[8]) ? [laden] : [0, 1]) : [];
