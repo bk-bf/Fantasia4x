@@ -357,7 +357,6 @@ function rigPawn(o, p) {
     const hopped = q => o.oneLeg ? [q[0], Math.min(q[1], CLEAR.hop)] : q;
     part('legs', D.legs, () => { legF(-1, hopped(fl), !back && o.oneLeg); legF(1, hopped(fr), back && o.oneLeg); }, { anchor: [cx, legTop] });
     part('torso', D.torso, torso, { anchor: [sx0, tTop] });
-    part('pad', D.pad, () => { pad(cx - hw - aw + rnd(lean), true); pad(cx + hw - 1 + rnd(lean), false); }, { anchor: [sx0, tTop] });
     if (o.cape) part('cape', D.cape, () => { for (let j = 0; j < capeLen; j++) {
       const k = j / capeLen, w = rnd(cs * k * k), xa = cx - hw - aw - (j > 6 ? 1 : 0) + w, xb = cx + hw + aw - 1 + (j > 6 ? 1 : 0) + w;
       for (let x = xa + 1; x < xb; x++) { const u = (x - xa) / (xb - xa); s.set(x, tTop + 1 + j, o.cape[clamp((back ? (u < .25 ? 3 : u < .7 ? 2 : 1) : 1) - ((x + (j >> 2)) % 5 === 0 ? 1 : 0), 0, 4)]); }
@@ -382,6 +381,7 @@ function rigPawn(o, p) {
     const over = i => lifted(i) && palmOf(i) === 'around';
     for (const i of [0, 1]) armParts(i ? 'right arm' : 'left arm', paths[i], seen(i), !i, false, p.carry ? { upper: over(i) ? Math.max(D.upper, held.at + D.step / 4) : D.upper, fore: over(i) ? Math.max(D.fore, held.at + D.step / 2) : D.fore, hand: handCam(i) } : limbs[i].cams, i === other && o.oneArm, lifted(i) ? { grips: 'load', palm: palmOf(i) } : gripping.includes(i) ? { grips: 'tool', palm: palmOf(i), ...(bowing ? { piece: i === other ? 'stave' : fetched ? 'arrow' : 'string' } : null) } : null);
     if (!targets[0] && !p.carry && !gripping.includes(0)) layers.find(l => l.name === 'left arm upper').spr.set(xL - (aw >> 1), sy, null);
+    for (const i of [0, 1]) part('pad', back || p.carry ? D.pad : Math.max(D.torso, limbs[i].cams.upper) + D.step / 2, () => pad(i ? cx + hw - 1 + rnd(lean) : cx - hw - aw + rnd(lean), !i), { anchor: [sx0, tTop] });
     if (o.shield) { const on = slung ? [mid, tTop + 7] : [handsAt[other][0], handsAt[other][1]], shows = slung === back ? 'front' : 'inside'; part('shield', slung ? D.slung : limbs[other].cams.hand + (back ? -SPACE.shield : SPACE.shield), () => shieldDrawn(on[0], on[1], shows), { anchor: on, shows, slung }); }
     const low = Math.max(hL[1], hR[1]);
     hand = p.carry === 'hip' ? th : put || [mid, low + 2 + nearer(REACH.front)];
