@@ -26,11 +26,14 @@
     const toned = () => ({ a: PROPS.rampOf(toneOf(X.bake(X.byId.get('item/' + o.id + '/0')))) });
     return [['map-carry-end', () => PROPS.carriedEnd('meat', toned(), X.bake(X.byId.get('item/' + o.id + '/0')).h)], ['map-carry-held', () => PROPS.carried('quarry', toned(), 1)]];
   }
+  const HARD = ['mail', 'plate'];
+  const soft = o => { const a = o.raw && o.raw.armorProperties; return !!a && !HARD.includes(a.armorLayer) && o.raw.category !== 'metal'; };
   function carryForms(o) {
     const k = RULES.classify(o), own = WORLD_GEAR.of(o), forms = [];
     if (k.pile && PROPS.CARRIED.includes(k.pile)) forms.push(['map-carry', () => PROPS.carried(k.pile, RULES.rampsFor(k, o), 1)]);
     if (o.sub === 'Carcass') forms.push(...carcassForms(o));
     else if (k.pile && (PROPS.SHOULDERED.includes(k.pile) || PROPS.TURNED.includes(k.pile))) forms.push(['map-carry-end', () => PROPS.carriedEnd(k.pile, RULES.rampsFor(k, o))]);
+    if (k.worn === 'torso' && soft(o)) forms.push(['map-carry-folded', () => PROPS.carried('cloth', RULES.rampsFor(k, o), 1)]);
     if (own && own.carried) forms.push(...Object.entries(own.carried));
     return forms;
   }

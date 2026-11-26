@@ -108,7 +108,7 @@ function fitted(A, pose) {
 function frameOf(A, st, lvl, smooth) {
   const def = animOf(A, st.anim), n = (def.n || 6) * (smooth ? 3 : 1), u0 = clamp(st.u - Math.floor(st.u), 0, .9999), u = (Math.floor(u0 * n) + .5) / n;
   if (lvl < 2 || A.rig === 'plain') return procFrame(A, st, def, lvl ? u : u0, lvl);
-  const c = { face: st.face || 's', lvl, t: st.t || 0, seed: A.seed, tool: A.o && A.o.tool, hold: A.load ? A.load.hold : 'chest', ...(A.load ? HAUL.span(A.load, A.load.hold, st.face || 's') : null), o: A.rig === 'quad' ? BEASTS[A.kind].o : null }, ang = smooth ? 2 : 5;
+  const c = { face: st.face || 's', lvl, t: st.t || 0, seed: A.seed, tool: A.o && A.o.tool, hold: A.load ? A.load.hold : 'chest', long: !!A.load && A.load.family === 'long', ...(A.load ? HAUL.span(A.load, A.load.hold, st.face || 's') : null), o: A.rig === 'quad' ? BEASTS[A.kind].o : null }, ang = smooth ? 2 : 5;
   let flip = !!st.flip, make, pose;
   if (A.rig === 'pawn') {
     pose = posed(st.anim, def, u, c);

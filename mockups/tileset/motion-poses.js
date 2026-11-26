@@ -17,7 +17,7 @@ const stride = (ph, duty, S, H) => {
   const v = (ph - duty) / (1 - duty);
   return [-S / 2 + S * (v * v * (3 - 2 * v)), Math.sin(Math.PI * v) * H];
 };
-const HANG = [0, 10];
+const HANG = [0, 10], FLUNG = { out: 7, up: 0, back: 3 };
 const CARRY = {
   axe: s => ({ hr: [1 + s * 2, 9.5], tool: 108 }), pick: s => ({ hr: [1 + s * 2, 9.5], tool: 108 }), hoe: s => ({ hr: [1 + s * 2, 9.5], tool: 104 }),
   spear: s => ({ hr: [1 + s * 2, 9], tool: 96 }), staff: s => ({ hr: [1 + s * 2, 9], tool: 96 }), torch: s => ({ hr: [7.5 + s * .5, 3], tool: 20 }),
@@ -38,12 +38,12 @@ const GAIT = {
 for (const g of Object.values(GAIT)) g.dist = g.S / g.duty;
 const ELBOW_OUT = [.9, .2, -.45];
 const HOLD = {
-  hip: { gait: 'light', swing: 1, side: { hr: [3, 7], lean: 1 }, fb: { hr: [1, 8] } },
+  hip: { gait: 'light', swing: 1, side: { hr: [3, 7], lean: 1 }, folk: { hr: [5.5, 7.5] }, fb: { hr: [1, 8] } },
   chest: { gait: 'bulky', side: { hr: [6, 7], hl: [7, 6.5], lean: -1 }, fb: { hl: [2.6, 8], hr: [-2.6, 8], fore: ['hl', 'hr'] }, beside: 8 },
   low: { gait: 'heavy', sink: .9, side: { hr: [6.5, 7.5], hl: [7.5, 7], lean: -1.6 }, fb: { hl: [1, 9], hr: [-1, 9], fore: ['hl', 'hr'] }, beside: 9 },
   shoulder: { gait: 'shouldered', tilt: 1, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 1.4 }, fb: { hl: [-5.5, -4], wing: 1, lean: 1.5, hd: [1, 0], elbow: ELBOW_OUT } },
   game: { gait: 'heavy', sink: .9, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 2.4, hd: [1, 1], tilt: 5 }, fb: { hl: [-5.5, -4], wing: 1, lean: 1.5, hd: [1, 1] } },
-  drape: { gait: 'heavy', sink: .4, free: 1, side: { hr: [5, 3.5], hl: [6, 4], lean: 1.8 }, fb: { hl: [4, 4], crook: ['hl'], fore: ['hl'] } },
+  drape: { gait: 'heavy', sink: .4, free: 1, side: { hr: [5, 3.5], hl: [6, 4], lean: 1.8 }, folk: { hr: [4, 7.5], hl: [5, 8] }, fb: { hl: [4, 4], crook: ['hl'], fore: ['hl'] } },
 };
 const FELL = { lets: .2, gives: .36, lands: .72, leans: 20, flat: 80 };
 const LIFT = { reaches: .4, grips: .5, lands: .9, stands: 24, bends: 8 };
@@ -54,8 +54,9 @@ const HANGS_AHEAD = 10.2;
 const HOLDS = { hip: ['tote', 'toteStand'], chest: ['heft', 'heftStand'], low: ['lug', 'lugStand'], shoulder: ['haul', 'haulStand'], game: ['bear', 'bearStand'], drape: ['rescue', 'rescueStand'] };
 const turned = (p, keys) => { for (const k of keys) if (p[k]) p[k] = [-p[k][0], p[k][1]]; return p; };
 function carried(hold, u, c, go) {
+  if (LOOK_STYLE.pieces && c.long && HOLD[hold].beside && c.face === 's') return carried('hip', u, c, go);
   const h = HOLD[hold], g = GAIT[h.gait], a = sn(u), side = c.face === 's', push = c.lvl > 2 && go ? 1 : 0;
-  const p = { face: c.face, carry: hold, item: null, ...(side ? h.side : h.fb), by: g.by + (h.sink || 0) + (go ? cs(u * 2) * g.bob : 0), br: !go && u > .35 && u < .8 ? 1 : 0 };
+  const p = { face: c.face, carry: hold, item: null, ...(side ? h.side : h.fb), ...(side && LOOK_STYLE.pieces ? h.folk : null), by: g.by + (h.sink || 0) + (go ? cs(u * 2) * g.bob : 0), br: !go && u > .35 && u < .8 ? 1 : 0 };
   if (side) { p.fr = go ? stride(u, g.duty, g.S, g.H) : [1.5, 0]; p.fl = go ? stride(u + .5, g.duty, g.S, g.H) : [-1.5, 0]; }
   else { p.fl = [0, go ? Math.max(0, a) * g.up : 0]; p.fr = [0, go ? Math.max(0, -a) * g.up : 0]; }
   if (h.beside && !side && c.wide) { const out = clamp(BESIDE.shoulder - c.wide / 2 + BESIDE.wrap, -BESIDE.reach, BESIDE.shoulder); p.hl = [out, h.beside]; p.hr = [-out, h.beside]; }
@@ -110,7 +111,8 @@ const PAWN_ANIMS = {
   panic: { label: 'Panicking', group: 'Movement', dist: 30, n: 8, pose(u, c) {
     const a = sn(u), b = sn(u * 2);
     if (c.face !== 's') return { ...face(c), fl: [0, Math.max(0, a) * 5], fr: [0, Math.max(0, -a) * 5], by: -Math.abs(a) * 1.4 + .5, hl: [-3, -8 + b], hr: [3, -8 - b], covers: 1, mouth: 1, item: null, ...flow(c, u, 2) };
-    return { face: 's', fr: stride(u, .4, 12, 5), fl: stride(u + .5, .4, 12, 5), by: .6 - Math.abs(sn(u + .12)) * 2, lean: 1.5, hl: [2, -8 + b], hr: [4, -8 - b], covers: 1, mouth: 1, item: null, ...flow(c, u, 5) };
+    const arms = LOOK_STYLE.pieces ? { hl: [-FLUNG.out - b, FLUNG.back + b * 2], hr: [FLUNG.out + b, FLUNG.up - b * 2] } : { hl: [2, -8 + b], hr: [4, -8 - b], covers: 1 };
+    return { face: 's', fr: stride(u, .4, 12, 5), fl: stride(u + .5, .4, 12, 5), by: .6 - Math.abs(sn(u + .12)) * 2, lean: 1.5, ...arms, mouth: 1, item: null, ...flow(c, u, 5) };
   } },
   stalk: { label: 'Stalking', group: 'Movement', dist: 9.5, n: 8, pose(u, c) {
     return { face: 's', fr: stride(u, .7, 6.5, 2), fl: stride(u + .5, .7, 6.5, 2), by: 2.4 + cs(u * 2) * .4, lean: 2.6, hd: [1, 0], hl: [6, 7], hr: [5, 7.5], tool: 62, ...flow(c, u, 1) };

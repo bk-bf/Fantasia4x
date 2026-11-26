@@ -39,6 +39,7 @@ const RULES = (() => {
     return { pile: 'crates' };
   }
 
+  const WOODY = /Wood/, WOODY_ID = /branch|bark/;
   const RAMP = {
     logs: c => ({ a: PROPS.mixed(P.wood, c, .3), b: PROPS.mixed(P.plank, c, .25) }),
     planks: c => ({ a: PROPS.mixed(P.plank, c, .35) }),
@@ -48,7 +49,7 @@ const RULES = (() => {
     meat: c => ({ a: PROPS.mixed(P.red, c, .2) }),
     hides: (c, o) => ({ a: PROPS.mixed(P.furBrown, c, .7), b: PROPS.mixed(P.furTan, c, .5), smooth: o.sub !== 'Hide' }),
     cloth: c => ({ a: PROPS.rampOf(c), b: PROPS.mixed(P.cloth, c, .6) }),
-    bundles: c => ({ a: PROPS.mixed(P.hay, c, .45) })
+    bundles: (c, o) => ({ a: PROPS.mixed(WOODY.test(o.sub) || WOODY_ID.test(o.id) ? P.wood : P.hay, c, .45) })
   };
   const WORN_BASE = { helm: 'iron', cuirass: 'iron', shield: 'plank' };
   const rampsFor = (k, o) => k.pile ? (RAMP[k.pile] || (c => ({ a: PROPS.rampOf(c) })))(o.color, o) : { a: PROPS.mixed(P[WORN_BASE[k.worn] || 'leather'], o.color, k.worn === 'shield' ? .3 : .45) };

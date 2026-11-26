@@ -112,10 +112,10 @@ function lieLolledFace(s, f, o, x0, ex, cy, skin, lid) {
   s.rect(ex + 3, cy - 1, 1, 2, dark(skin[0], .5));
   s.set(ex - 1, cy + 3, skin[Math.max(0, sn - 2)]);
 }
-const SLUNG = { hip: [5, 3.5], hang: 8, arm: 8 };
+const SLUNG = { hip: [5, 3.5], hang: 8, arm: 8, shins: 4 };
 function rigPawnSlung(o, view) {
   const f = FOLK[o.race || 'human'], s = new Spr(RG.W, RG.H, RG.CX, RG.BASE), skin = o.skin || f.skin, sn = skin.length - 1, tunic = o.tunic || P.cloth, pants = o.pants || P.leather, body = o.armor || tunic, hair = o.hair || P.furBrown, hn = hair.length - 1;
-  const X = RG.CX, Y = 34, [rx, ry] = SLUNG.hip, lw = 3, legs = f.legs, hd = f.hd, bald = o.bald || f.bald;
+  const X = RG.CX, Y = 34, [rx, ry] = SLUNG.hip, lw = 3, legs = f.legs + SLUNG.shins, hd = f.hd, bald = o.bald || f.bald;
   const leg = (path, far) => { const len = lieLength(path); rigLimb(s, path, lw, (t, k) => { const boot = t > len - 3.5, c = pick3(boot ? P.leather : pants, k / (lw - 1) * .8, boot && t < len - 2.5 ? 1 : 0); return far ? dark(c, .82) : c; }, far ? null : shade); };
   const arm = (x, y, far) => rigLimb(s, [[x, y], [x, y + SLUNG.arm]], f.aw, (t, k) => { const c = t > SLUNG.arm - 3 || o.sleeves === 0 ? skin[clamp(sn - 1 - (k ? 1 : 0), 0, sn)] : pick3(body, k / f.aw * .5, 0); return far ? dark(c, .82) : c; }, far ? null : shade);
   const rump = () => s.oval(X, Y - ry + 1, rx, ry, (x, y, nx, ny) => pick3(pants, (nx + 1) / 2, ny < -.4 ? 1 : ny > .5 ? -1 : 0));

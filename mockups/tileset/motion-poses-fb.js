@@ -112,7 +112,7 @@ const drawn3 = family => (u, c) => {
 };
 const swinging = pose => { const q = turned3(pose, SWING_TURN); return { ...q, mid: 1, R: [q.R[0] + SWING_OUT, q.R[1], q.R[2]] }; };
 const swung3 = (rest, up, down, times) => u => keyed(u, { ...rest, both: 1 }, [[0, {}], [times[0], up, 'o'], [times[1], up], [times[2], down, 'i'], [times[3], down], [1, {}]]);
-const LEVEL_CHOP = { rest: { R: [-1, 6, -5], aim: [6, 14, -9] }, back: { R: [3, -2, -1], aim: [5, -16, 3] }, round: { R: [4, 4, -2], aim: [17, 4, 1] }, bites: { R: [1, 8, -3], aim: [8, 17, -1] } };
+const LEVEL_CHOP = { rest: { R: [0, 8, -3], aim: [2, 12, -9] }, back: { R: [4, -2, 1], aim: [5, -16, 4] }, round: { R: [5, 4, 0], aim: [17, 4, 2] }, bites: { R: [1, 8, -1], aim: [8, 17, -1] } };
 const levelChop = u => ({ ...keyed(u, { ...LEVEL_CHOP.rest, both: 1, mid: 1 }, [[0, {}], [.3, LEVEL_CHOP.back, 'o'], [.42, LEVEL_CHOP.back], [.49, LEVEL_CHOP.round, 'i'], [.55, LEVEL_CHOP.bites, 'l'], [.78, LEVEL_CHOP.bites], [1, {}]]) });
 const ARMS3 = {
   idle: (u, c) => carried3(c, 0), look: (u, c) => carried3(c, 0), sit: () => null,
