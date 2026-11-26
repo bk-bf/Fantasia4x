@@ -78,6 +78,12 @@ function rigHead(s, f, o, X, hTop, face, p) {
     else if (!back) { s.rect(X - 4, er + 3, 1, 2, P.bone[5]); s.rect(X + 3, er + 3, 1, 2, P.bone[4]); s.rect(X - 4, er - 1, 8, 1, skin[0]); s.rect(X - 3, er + 4, 6, 1, skin[1]); }
     if (o.mohawk) { if (side) for (let i = -hd + 1; i < hd - 1; i++) s.rect(X + i, hTop - 3 + (Math.abs(i + .5) > 3 ? 1 : 0), 1, 3, o.mohawk[3 - (i & 1)]); else for (let j = -3; j < (back ? hh - 3 : 4); j++) s.rect(X - 1, hTop + j, 2, 1, o.mohawk[3 - (j & 1)]); }
   }
+  rigHat(s, o, X, hTop, face, skin, tunic, hd, hh);
+  return er;
+}
+
+function rigHat(s, o, X, hTop, face, skin, tunic, hd, hh) {
+  const sn = skin.length - 1, side = face === 's', back = face === 'b', hat = o.hat;
   if (hat === 'straw') { for (let i = -hd - 5; i < hd + 5; i++) { s.set(X + i, hTop + 1, P.thatch[(i & 1) ? 4 : 5]); s.set(X + i, hTop + 2, P.thatch[2]); } for (let i = -hd - 3; i < hd + 3; i++) s.set(X + i, hTop, P.thatch[4]); for (let j = 0; j < 4; j++) for (let i = -hd + 1; i < hd - 1; i++) s.set(X + i, hTop - 4 + j, j === 3 ? P.red[2] : P.thatch[clamp(5 - (i > 1 ? 1 : 0) - ((i + j) & 1), 0, 5)]); }
   if (hat === 'hood') {
     const c = o.hood || tunic, n = c.length - 1;
@@ -100,7 +106,6 @@ function rigHead(s, f, o, X, hTop, face, p) {
     }
   }
   if (hat === 'crown') { const cm = o.band || P.gold; s.rect(X - hd, hTop - 1, 2 * hd, 2, cm[3]); s.rect(X - hd, hTop - 1, 2 * hd, 1, cm[4]); for (const i of [-hd, -1, hd - 2]) s.rect(X + i, hTop - 3, 2, 2, cm[4]); if (!back) s.set(X - 1 + (side ? hd - 1 : 0), hTop, P.red[4]); }
-  return er;
 }
 
 const WRAP = [P.cloth[2], P.cloth[1]];
@@ -120,36 +125,31 @@ function rigPawn(o, p) {
   const fl = p.fl || [0, 0], fr = p.fr || [0, 0], SW = 2 * hw, shaped = o.shape || null;
 
   const legF = (sd, ft, lost) => {
-    const dx = rnd(ft[0]), n = Math.max(3, f.legs - by - rnd(ft[1])), x0 = sd < 0 ? cx - hw + dx : cx + 1 + dx, cut = Math.ceil(f.legs * .4);
+    const dx = rnd(ft[0]), n = Math.max(3, f.legs - by - rnd(ft[1])), x0 = shaped ? (sd < 0 ? cx - lw + dx : cx + dx) : sd < 0 ? cx - hw + dx : cx + 1 + dx, cut = Math.ceil(f.legs * .4), glyph = shaped && shaped.leg(face, sd > 0);
     for (let j = 0; j < n; j++) {
       const y = legTop + j, jb = n - 1 - j, boot = jb < 3, sole = jb === 0;
       if (lost && j >= cut) continue;
       if (lost && j === cut - 1) { for (let i = 0; i < lw; i++) s.set(x0 + i, y, WRAP[(x0 + i) & 1]); if (sd < 0) s.set(x0 + lw, y, j < 2 ? pick3(pants, .6, -1) : P.ink); continue; }
       for (let i = 0; i < lw; i++) {
         const u = i / (lw - 1), R = boot ? boots : pants, d = boot ? (jb === 2 ? 1 : sole ? -2 : 0) : (j === Math.floor(f.legs * .4) ? 1 : 0);
-        const w = wv(boot ? 'boots' : 'legs', x0 + i, y), c = sd < 0 ? pick3(R, u * .7, d + w) : pick3(R, .3 + u * .7, d - 1 + w); s.set(x0 + i, y, shaped ? shaped('leg', c, { j, k: i, w: lw, len: n, sd }) : c);
+        const w = wv(boot ? 'boots' : 'legs', x0 + i, y), c = sd < 0 ? pick3(R, u * .7, d + w) : pick3(R, .3 + u * .7, d - 1 + w); s.set(x0 + i, y, shaped ? shaped.tone(c, glyph(j, i, n)) : c);
       }
-      if (jb < (shaped ? 1 : 2)) s.set(sd < 0 ? x0 - 1 : x0 + lw, y, boots[shaped ? 2 : sole ? 0 : sd < 0 ? 3 : 1]);
+      if (jb < 2 && !shaped) s.set(sd < 0 ? x0 - 1 : x0 + lw, y, boots[sole ? 0 : sd < 0 ? 3 : 1]);
       if (sd < 0 && !shaped) s.set(x0 + lw, y, j < 2 ? pick3(pants, .6, -1) : P.ink);
     }
   };
   const legS = (ft, far) => {
     const w = lw, tot = f.legs - 1, l1 = Math.ceil(tot / 2), l2 = tot - l1, rx = cx - 2 + (far ? 3 : 0);
-    const [kx, ky, ex, ey] = ik2(rx, legTop, rx + ft[0], base - ft[1], l1, l2, -1);
+    const glyph = shaped && shaped.leg('s', false, far), [kx, ky, ex, ey] = ik2(rx, legTop, rx + ft[0], base - ft[1], l1, l2, -1);
     (pts.legs = pts.legs || []).push({ path: [[rx, legTop], [kx, ky], [ex, ey]], w });
     rigLimb(s, [[rx, legTop], [kx, ky], [ex, ey]], w, (t, k) => {
       const u = k / (w - 1), boot = t >= tot - 2.5, sole = t >= tot - .5, c = pick3(boot ? boots : pants, far ? .3 + u * .7 : u * .7, (boot ? (sole ? -2 : t < tot - 1.5 ? 1 : 0) : 0) - (far ? 1 : 0) + wv(boot ? 'boots' : 'legs', k, Math.round(t)));
-      return shaped ? shaped('leg', c, { j: rnd(t), k, w, len: tot + 1, far, side: 1 }) : far ? dark(c, .82) : c;
+      return shaped ? shaped.tone(c, glyph(rnd(t), k, tot + 1, w), far) : far ? dark(c, .82) : c;
     }, far ? null : shade);
     const tx = rnd(ex) - (w >> 1) + w, ty = rnd(ey);
     s.set(tx, ty, boots[shaped ? 1 : 0]); s.set(tx, ty - 1, far ? dark(boots[2], .82) : boots[2]);
   };
-  const torso = () => {
-    const sw = SW;
-    for (let j = -br; j < f.tl + 2; j++) {
-      const jj = Math.max(0, j), taper = jj > 5 && jj < f.tl ? 1 : 0, y = tTop + j, ox = cx + lx(jj), w = hw - taper, i0 = side ? -(sw >> 1) - 1 + taper : -w, i1 = side ? sw - (sw >> 1) - 1 : w;
-      for (let i = i0; i < i1; i++) {
-        const u = (i - i0) / (i1 - i0 - 1);
+  const torsoAt = (i, jj, y, ox, u, i1, w) => {
         let c;
         if (belted && jj >= f.tl - 2 && jj < f.tl) c = (side ? i === i1 - 1 : !back && Math.abs(i + .5) < 1.2) ? P.gold[jj === f.tl - 2 ? 4 : 2] : pick3(P.leather, u, jj === f.tl - 2 ? 1 : -1);
         else if (o.armor === P.iron && !o.plate) c = P.iron[clamp((u < .25 ? 4 : u < .7 ? 3 : 2) + (((i + jj) & 1) ? 1 : -1), 0, 6)];
@@ -162,21 +162,34 @@ function rigPawn(o, p) {
           if (o.apron && back && jj === 3 && Math.abs(i + .5) < w - 1.5) c = P.leather[2];
           if (o.trim && (jj === f.tl || (!back && !side && jj < 3 && Math.abs(i + .5) < 1 + (2 - jj)))) c = o.trim[3];
         }
-        s.set(ox + i, y, shaped ? shaped('torso', c, { j: jj, k: i - (side ? -(sw >> 1) - 1 : -hw), w: sw, len: f.tl + 2 }) : c);
-      }
+        return c;
+  };
+  const torso = () => {
+    const sw = SW;
+    if (shaped) {
+      const layer = shaped.torso(face, br), cut = side ? 0 : aw;
+      layer.rows.forEach((row, r) => {
+        const j = r - br, jj = Math.max(0, j), y = tTop + j, ox = cx + lx(jj), i0 = layer.x + cut, i1 = layer.x + row.length - cut;
+        for (let i = i0; i < i1; i++) { const g = row[i - layer.x]; if (g && g !== ' ') s.set(ox + i, y, shaped.tone(torsoAt(i, jj, y, ox, (i - i0) / Math.max(1, i1 - i0 - 1), i1, hw), g)); }
+      });
+      return;
+    }
+    for (let j = -br; j < f.tl + 2; j++) {
+      const jj = Math.max(0, j), taper = jj > 5 && jj < f.tl ? 1 : 0, y = tTop + j, ox = cx + lx(jj), w = hw - taper, i0 = side ? -(sw >> 1) - 1 + taper : -w, i1 = side ? sw - (sw >> 1) - 1 : w;
+      for (let i = i0; i < i1; i++) s.set(ox + i, y, torsoAt(i, jj, y, ox, (i - i0) / (i1 - i0 - 1), i1, w));
     }
     if (!o.armor && !back && !side) { s.set(sx0 - 1, tTop - br, skin[sn - 2]); s.set(sx0, tTop - br, skin[sn - 3]); s.set(sx0 - 1, tTop + 1 - br, skin[sn - 2]); }
     for (let y = hTop + f.hh; y < tTop - br; y++) s.rect(HX - 2, y, side ? 3 : 4, 1, skin[clamp(sn - 3, 0, sn)]);
   };
   const cuff = armLen - 4, bn = sl.length - 1;
-  const armCol = (lit, far, lost) => (t, k, v, X) => {
+  const armCol = (lit, far, lost) => { const glyph = shaped && shaped.arm(face, br, lit, far); return (t, k, v, X) => {
     const j = rnd(t), hand = j >= armLen - 3, bare = o.sleeves === 0 || j > 6, L = hand || bare ? skin : sl, last = j >= armLen - 1, e = k === aw - 1;
     if (lost && j > 2 + br) return null;
     if (lost && j === 2 + br) return WRAP[X & 1];
     let c = L === skin ? skin[clamp(lit ? sn - 1 - (e ? 1 : 0) - (last ? 1 : 0) : sn - 3 + (e ? 1 : 0) - (last ? 1 : 0), 0, sn)] : lit ? pick3(L, k / aw * .5, (j === 6 ? -1 : 0) + wv('sleeve', X, j)) : pick3(L, .7, (e ? 1 : 0) + (j === 6 ? -1 : 0) + wv('sleeve', X, j));
     if (o.sleeves === 'long' && j > 6 && j <= cuff) c = sl[clamp(bn - (j === cuff ? 4 : side ? 2 : lit ? 1 : 3), 0, bn)];
-    return shaped ? shaped('arm', c, { j, k, w: aw, len: armLen, lit, far }) : far ? dark(c, .8) : c;
-  };
+    return shaped ? shaped.tone(c, glyph(j, k, armLen), far) : far ? dark(c, .8) : c;
+  }; };
   const TOT = armLen - 1;
   const reach = (ax, ay, tgt, bend, crook) => {
     const l1 = Math.ceil(TOT / 2), t = tgt || [0, TOT];
@@ -285,7 +298,7 @@ function rigPawn(o, p) {
     if (f.tail) part('tail', D.tail, () => { for (let k = 0; k < 9; k++) s.rect(cx - (SW >> 1) - 2 - k, legTop + 1 + rnd(Math.sin(k * .5 + (p.tail || 0)) * 2) + (k >> 2), 1, k < 5 ? 3 : 2, skin[k < 5 ? sn - 2 : sn - 3]); }, { anchor: [cx, legTop] });
     part('far leg', D.farLeg, () => legS(fl, true), { anchor: [cx + 1, legTop] }); part('near leg', D.nearLeg, () => legS(fr, false), { anchor: [cx - 2, legTop] });
     part('torso', D.torso, torso, { anchor: [sx0, tTop] });
-    part('head', D.head, t => rigHead(t, f, o, HX + 1, hTop, 's', p), { anchor: [HX + 1, hTop + f.hh] });
+    part('head', D.head, t => shaped ? (shaped.head(t, 's', HX, hTop, p), rigHat(t, o, HX, hTop, 's', skin, tunic, f.hd, f.hh)) : rigHead(t, f, o, HX + 1, hTop, 's', p), { anchor: [HX + 1, hTop + f.hh] });
     part('pad', D.pad, () => pad(sx0 - 3, true), { anchor: near });
     const nearPath = fused ? reach(near[0], near[1], hr, bent) : nearLimb.path, nh = fused ? handOf(nearPath) : nearLimb.hand, nearCams = p.carry ? { upper: D.near, fore: D.near, hand: D.near } : nearLimb.cams;
     if (wielded) {
@@ -304,7 +317,7 @@ function rigPawn(o, p) {
     hand = [nh[0], nh[1] + 1];
     holds = { hip: hand, chest: nh, low: nh, shoulder: [sx0 + 1, tTop + 1 - br], game: [sx0 - 1, tTop + 2 - br], drape: [sx0 - 1, tTop + 1 - br] };
     if (put) { put = [rnd(put[0] + nh[0] - rnd(grasp[0])), Math.min(rnd(put[1] + nh[1] - rnd(grasp[1])), base - (load[1] - 1 - load[3]))]; hand = put; holds[p.carry] = put; }
-    pts.hand = nh; pts.hands = [nh]; pts.mouth = [HX + f.hd + 2, hTop + Math.floor(f.hh * .5) + 3]; pts.head = [HX + 1, hTop - 3];
+    pts.hand = nh; pts.hands = [nh]; pts.mouth = [HX + f.hd + 2, hTop + Math.floor(f.hh * .5) + 3]; pts.head = [HX + (shaped ? 0 : 1), hTop - 3];
     pts.feet = [[cx + fl[0], base - fl[1]], [cx - 1 + fr[0], base - fr[1]]];
   } else {
     const xL = cx - hw - 1 - ((aw - 1) >> 1) + rnd(lean), xR = cx + hw + (aw >> 1) + rnd(lean), roots = [[xL, sy], [xR, sy]], head = [HX - f.hd, HX + f.hd];
@@ -342,7 +355,7 @@ function rigPawn(o, p) {
       for (let x = xa + 1; x < xb; x++) { const u = (x - xa) / (xb - xa); s.set(x, tTop + 1 + j, o.cape[clamp((back ? (u < .25 ? 3 : u < .7 ? 2 : 1) : 1) - ((x + (j >> 2)) % 5 === 0 ? 1 : 0), 0, 4)]); }
       s.set(xa, tTop + 1 + j, o.cape[3]); s.set(xb, tTop + 1 + j, o.cape[1]);
     } }, { anchor: [sx0, tTop] });
-    part('head', D.head, t => rigHead(t, f, o, HX, hTop, face, p), { anchor: [HX, hTop + f.hh] });
+    part('head', D.head, t => shaped ? (shaped.head(t, face, HX, hTop, p), rigHat(t, o, HX, hTop, face, skin, tunic, f.hd, f.hh)) : rigHead(t, f, o, HX, hTop, face, p), { anchor: [HX, hTop + f.hh] });
     const reachOut = p.carry ? SPACE.carried : 0, wanted = i => !p.carry && p[armKey(i)] ? add3(joints[armKey(i)], p[armKey(i)]) : spaceOf(targets[i] ? [roots[i][0] + targets[i][0], roots[i][1] + targets[i][1]] : [roots[i][0], roots[i][1] + TOT], 0, reachOut);
     const held3 = armed(wanted(toolSide), wanted(other)), limbs = [0, 1].map(i => limbOf(held3[armKey(i)], roots[i])), paths = limbs.map(l => l.path), hL = limbs[0].hand, hR = limbs[1].hand, handsAt = [hL, hR], th = handsAt[toolSide];
     space.arms = { R: held3.R, L: held3.L, aim: held3.aim, second: held3.second, from: held3.from };

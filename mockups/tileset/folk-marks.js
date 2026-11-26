@@ -16,11 +16,12 @@ function paintLook(s, look, skin, hair, face, pose) {
   paintBack(body, g, look, skin, hair);
 }
 
-function paintLookLying(s, look, skin, hair, pose) {
+function paintLookLying(s, look, skin, hair, pose, shape) {
   const [x0, hTop, top, gy, ex, cy] = s.pts.lie, out = ex !== x0, g = lookGeometry(look, out ? 'f' : 's', pose), mid = Math.round((top + gy) / 2);
   const head = canvasPen(s, null, null, out ? (x, y) => [ex + y - g.er, cy + x - g.X] : (x, y) => [x0 + y - g.hTop, hTop + g.X + g.hd - 1 - x]);
   const body = canvasPen(s, null, null, out ? (x, y) => [x0 + y - g.hTop, mid + x - g.cx] : (x, y) => [x0 + y - g.hTop, mid + g.cx - x]);
-  paintWomanFace(head, g, look, skin);
+  if (shape) shape.head({ set: head.put, rect: head.rect, get: head.get }, g.face, g.X, g.hTop, pose);
+  else paintWomanFace(head, g, look, skin);
   paintSkin(canvasPen(s), g, look, skin, hair);
   paintFaceMarks(head, g, look, skin);
   paintHair(head, g, look, hair, skin);

@@ -419,14 +419,19 @@ const FOLK_PARTS = (() => {
   }
   const luma = col => col[0] * .3 + col[1] * .59 + col[2] * .11;
 
-  function look(lk, face, time) {
-    face = face || 'f';
-    const pose = idlePose(lk, time), rig = lookRig(lk), f = FOLK[rig.o.race], b = lk.body, sex = lk.sex === 'female' ? 'woman' : 'man';
-    const c = { skin: tinted(kitTones('skin' + (SALLOW[lk.skin] || lk.skin)), skinTint(lk)), hair: kitTones('hair' + lk.hair), eye: f.eyes };
+  const coloursOf = (lk, f) => ({ skin: tinted(kitTones('skin' + (SALLOW[lk.skin] || lk.skin)), skinTint(lk)), hair: kitTones('hair' + lk.hair), eye: f.eyes });
+  function dimsOf(lk, o) {
+    const b = lk.body, sex = lk.sex === 'female' ? 'woman' : 'man';
     const hw = Math.max(3, Math.round(REF.hw * b.tall * (1 + (b.girth - 1) * .5)));
     const aw = Math.max(1, Math.min(b.aw, Math.round(ARM[sex][0].length * Math.max(3, Math.round(REF.hw * b.tall)) / REF.hw)));
     const neck = b.tl >= 23 ? 3 : b.tl >= 17 ? 2 : 1, belly = b.girth >= 1.36 ? 2 : b.girth >= 1.1 ? 1 : b.girth < .9 ? -1 : 0;
-    const d = { hw, aw, neck, belly, tl: b.tl, legs: b.legs, br: pose.br, sway: Math.round(pose.wave() * 1.2), oneArm: rig.o.oneArm, oneLeg: rig.o.oneLeg, beard: rig.o.beard };
+    return { hw, aw, neck, belly, tl: b.tl, legs: b.legs, oneArm: o.oneArm, oneLeg: o.oneLeg, beard: o.beard };
+  }
+
+  function look(lk, face, time) {
+    face = face || 'f';
+    const pose = idlePose(lk, time), rig = lookRig(lk), f = FOLK[rig.o.race], b = lk.body, sex = lk.sex === 'female' ? 'woman' : 'man';
+    const c = coloursOf(lk, f), d = { ...dimsOf(lk, rig.o), br: pose.br, sway: Math.round(pose.wave() * 1.2) };
     const X = RG.CX, legTop = RG.BASE + 1 - d.legs, sTop = legTop - d.tl - d.br, hTop = sTop - HEAD_ROWS, er = hTop + (HEAD_ROWS >> 1), half = d.hw + d.aw, hy = sTop + d.neck + shoulderRows(d) + armRows(d) - 2;
     const s = new Spr(RG.W, RG.H, RG.CX, RG.BASE);
     for (const layer of layers(sex, face, lk.style, d)) put(s, layer, c);
@@ -439,5 +444,83 @@ const FOLK_PARTS = (() => {
     return edged(s, c);
   }
 
-  return { look, layers, sprite };
+  const HEAD_LAYERS = ['Head', 'Hair', 'Hair ends', 'Beard', 'Crown'];
+  const along = (rows, j, n, head, tail) => rows[spread(clamp(j, 0, n - 1), n, rows.length, head, tail)] || '';
+  const trimmedAt = (row, k, w) => { const flesh = row.trim(); return flesh ? stretch(flesh, w, 1, 1)[k] : ' '; };
+
+  function shapeOf(sex, style, d, c, f) {
+    const laid = new Map(), from = d.neck + shoulderRows(d) - 1, fromSide = Math.max(0, from - 1), skin = new Set(c.skin);
+    const at = (face, br, sway) => {
+      const key = face + br + ',' + sway;
+      if (!laid.has(key)) laid.set(key, Object.fromEntries(layers(sex, face, style, { ...d, br, sway, oneArm: 0, oneLeg: 0 }).map(layer => [layer.name, layer])));
+      return laid.get(key);
+    };
+    const sideArm = { near: ARM_SIDE[sex].map(row => row.length > d.aw ? row.substr((row.length - d.aw) >> 1, d.aw) : stretch(row, d.aw, 1, 1)) }, frontArm = ARM[sex].map(row => { const fit = stretch(row, d.aw, 1, 1), flesh = row.trim(); return fit.trim() ? fit : centred(stretch(flesh, Math.min(d.aw, flesh.length), 1, 1), d.aw); });
+    sideArm.far = shaded(sideArm.near);
+    const arms = { lit: frontArm, dim: flipped(frontArm) };
+    return {
+      skin: c.skin,
+      torso: (face, br) => at(face, br, 0).Torso,
+      arm(face, br, lit, far) {
+        if (face === 's') { const rows = far ? sideArm.far : sideArm.near; return (j, k, len) => j < fromSide ? ' ' : along(rows, j - fromSide, len - fromSide, 2, 2)[k] || ' '; }
+        const torso = at(face, br, 0).Torso.rows, rows = lit ? arms.lit : arms.dim;
+        return (j, k, len) => {
+          if (j < from) { const row = torso[j + 1] || ''; return (lit ? row.slice(0, d.aw) : row.slice(-d.aw))[k] || ' '; }
+          return along(rows, j - from, len - from, 3, 4)[k] || ' ';
+        };
+      },
+      leg(face, right, far) {
+        const L = at(face, 0, 0);
+        if (face === 's') { const rows = (far ? L['Far leg'] : L['Near leg']).rows; return (j, k, n, w) => trimmedAt(along(rows, j, n, 2, 2), k, w); }
+        const rows = (right ? L['Leg, mirrored'] : L.Leg).rows;
+        return (j, k, n) => along(rows, j, n, 2, 2)[k] || ' ';
+      },
+      tone(col, glyph, far) {
+        if (!glyph || glyph === ' ') return null;
+        if (skin.has(col)) return c.skin[TONE[glyph] === undefined ? 3 : TONE[glyph]];
+        return far ? dark(col, .82) : col;
+      },
+      head(t, face, X, hTop, p) {
+        const br = p.br ? 1 : 0, L = at(face, br, Math.round(p.hair || 0)), dx = X - RG.CX, dy = hTop - (RG.BASE + 1 - d.legs - d.tl - br - HEAD_ROWS), er = hTop + (HEAD_ROWS >> 1);
+        for (const name of HEAD_LAYERS) if (L[name]) put(t, { ...L[name], x: L[name].x + dx, y: L[name].y + dy }, c);
+        eyes(t, face, p, c, X, er);
+        beastHead(t, f, face, c, X, hTop, er);
+      },
+      lined: s => lined(s, c),
+    };
+  }
+
+  function lined(s, c) {
+    const { w, c: cells } = s, near = [-1, 1, -w, w], lines = new Map([...c.skin.map(t => [t, c.skin[0]]), ...c.hair.map(t => [t, c.hair[0]]), ...LIP.map(t => [t, LIP[0]])]);
+    const lineOf = col => { if (!lines.has(col)) lines.set(col, dark(col, LINE)); return lines.get(col); };
+    const inked = i => cells[i] === P.ink, loose = [], seen = new Set(), drawn = [];
+    for (let i = 0; i < cells.length; i++) if (inked(i) && near.some(k => !cells[i + k] || inked(i + k))) { loose.push(i); seen.add(i); }
+    for (let n = 0; n < loose.length; n++) for (const k of near) { const q = loose[n] + k; if (inked(q) && !seen.has(q)) { seen.add(q); loose.push(q); } }
+    for (const i of loose) {
+      let best = null;
+      for (const k of near) { const q = cells[i + k]; if (!q || q === P.ink) continue; const line = lineOf(q); if (!best || luma(line) < luma(best)) best = line; }
+      if (best) drawn.push([i, best]);
+    }
+    for (const [i, line] of drawn) cells[i] = line;
+    return s;
+  }
+
+  const RIGGED = new WeakMap();
+  function rigged(lk) {
+    const known = RIGGED.get(lk);
+    if (known) { FOLK[known.o.race] = known.folk; return known; }
+    const made = fresh(lk);
+    RIGGED.set(lk, made);
+    return made;
+  }
+  function fresh(lk) {
+    const rig = lookRig(lk), sex = lk.sex === 'female' ? 'woman' : 'man', d = dimsOf(lk, rig.o), race = rig.o.race;
+    FOLK[race] = { ...FOLK[race], hw: d.hw, aw: d.aw, pointears: FOLK[race].pointears || (lk.ears ? 1 : 0) };
+    const c = coloursOf(lk, FOLK[race]);
+    FOLK[race].skin = c.skin;
+    const shape = shapeOf(sex, lk.style, d, c, FOLK[race]);
+    return { o: { ...rig.o, shape }, c, folk: FOLK[race], look: { ...lk, body: { ...lk.body, hw: d.hw, aw: d.aw } } };
+  }
+
+  return { look, layers, sprite, rigged };
 })();

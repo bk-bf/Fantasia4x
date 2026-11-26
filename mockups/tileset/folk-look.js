@@ -202,18 +202,41 @@ function lookRig(look) {
 const LOOK_STYLE = { pieces: false };
 
 function drawLook(look, face, time, act, gear) {
-  const { o, skin, hair } = lookRig(look), idle = idlePose(look, time), pieces = LOOK_STYLE.pieces;
-  const styled = s => FOLK_SHAPE.restyle(s, look, skin, hair), finished = s => pieces ? Object.assign(styled(s), { styled }) : s;
+  if (LOOK_STYLE.pieces) return drawPlaced(look, face, time, act, gear);
+  const { o, skin, hair } = lookRig(look), idle = idlePose(look, time);
   if (act) {
     const pose = { ...idle, br: act.br ? 1 : 0, blink: !!act.blink }, rig = { ...o, ...(gear || {}) };
-    if (act.lie) { const s = rigPawnLie(rig, act); paintLookLying(s, look, skin, hair, { ...pose, rest: !!act.rest }); return finished(s); }
-    if (pieces) rig.shape = FOLK_SHAPE.shaper(look, skin, act.face || 's');
+    if (act.lie) { const s = rigPawnLie(rig, act); paintLookLying(s, look, skin, hair, { ...pose, rest: !!act.rest }); return s; }
     const s = rigPawn(rig, act);
     paintLook(s, look, skin, hair, act.face || 's', pose);
-    return finished(s);
+    return s;
   }
-  if (pieces) o.shape = FOLK_SHAPE.shaper(look, skin, face || 'f');
   const s = rigPawn(o, { face: face || 'f', br: idle.br, blink: idle.blink, look: idle.glance, hair: idle.wave() * 1.2, cape: idle.wave(.2) * 1.5 });
   paintLook(s, look, skin, hair, face || 'f', idle);
-  return finished(s);
+  return s;
+}
+
+function drawPlaced(look, face, time, act, gear) {
+  const { o, c, look: shown } = FOLK_PARTS.rigged(look), idle = idlePose(look, time), lined = o.shape.lined;
+  const placed = (s, f, pose) => { s.placed = true; paintLook(s, shown, c.skin, c.hair, f, pose); return Object.assign(lined(s), { styled: lined }); };
+  if (act) {
+    const pose = { ...idle, br: act.br ? 1 : 0, blink: !!act.blink }, rig = { ...o, ...(gear || {}) };
+    if (act.lie) { const s = rigPawnLie(rig, act); paintLookLying(s, shown, c.skin, c.hair, { ...pose, rest: !!act.rest, blink: true }, o.shape); return Object.assign(lined(s), { styled: lined }); }
+    return placed(rigPawn(rig, act), act.face || 's', pose);
+  }
+  return placed(rigPawn(o, { face: face || 'f', br: idle.br, blink: idle.blink, look: idle.glance, hair: idle.wave() * 1.2, cape: idle.wave(.2) * 1.5 }), face || 'f', idle);
+}
+
+const DRESSED_RACES = ['human', 'dwarf', 'elf'];
+const rampKey = (table, ramp, fallback) => Object.keys(table).find(k => table[k].ramp === ramp) || fallback;
+function dressedLook(kind) {
+  const entry = PAWNS[kind], o = entry && entry.o, race = o && (o.race || 'human');
+  if (!o || !DRESSED_RACES.includes(race)) return null;
+  const f = FOLK[race], { race: _, skin, hair, beard, longhair, bun, seed, ...worn } = o;
+  const body = { legs: f.legs, tl: f.tl, hh: 10, hd: 5, hw: f.hw, aw: f.aw, build: 1, girth: f.hw / FOLK.human.hw, tall: (f.legs + f.tl + f.hh) / 32 };
+  const look = {
+    id: 'pawn-' + kind, sex: 'male', body, skin: rampKey(SKINS, skin || f.skin, 'fair'), hair: hair === P.furGrey ? 'grey' : rampKey(HAIRS, hair || P.furBrown, 'brown'), eyes: 'dark', oddEye: null,
+    style: bun ? 'bun' : longhair || f.longhair ? 'long' : 'short', beard: beard || f.beard ? 'full' : 'none', ears: f.ears ? 1 : 0, marks: {}, from: {},
+  };
+  return { name: entry.name, look, gear: { pants: P.leather, boots: P.leather, tunic: P.cloth, ...worn } };
 }
