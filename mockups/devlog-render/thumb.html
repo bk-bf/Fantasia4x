@@ -16,25 +16,130 @@ html, body { margin: 0; background: #000; }
 </style>
 </head>
 <body>
-<section class="th" id="split">
-  <div class="clip" style="left:0;width:640px"><img class="art" src="src/old-glyph.png" style="left:-304px;top:-48px;width:1280px;height:1088px" alt=""></div>
-  <div class="clip" style="left:640px;width:640px"><img class="art" src="src/new-day.png" style="left:-1120px;top:-480px;width:3840px;height:2176px" alt=""></div>
-  <div class="seam"></div>
-  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="5" data-x="40" data-y="32" data-lines='[[["UGLY","#ffffff"]]]'></canvas>
-  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="5" data-right="40" data-y="32" data-lines='[[["5 DAYS","#ffc468"]]]'></canvas>
-  <canvas class="ov arrow" width="56" height="26" style="left:416px;top:488px;width:448px;height:208px"></canvas>
-</section>
 <section class="th" id="night">
-  <div class="clip" style="left:0;width:1280px"><img class="art" src="src/new-night.png" style="left:-1040px;top:-440px;width:3840px;height:2176px" alt=""></div>
-  <canvas class="ov txt" data-font="Blackletter" data-size="43" data-k="4" data-x="48" data-bottom="48" data-lh="36" data-lines='[[["Painted","#ffffff"]],[["light","#ffc468"]]]'></canvas>
+  <div class="clip" style="left:0px;width:640px"><img class="art" src="src/old-glyph.png" style="left:-672px;top:-432px;width:2560px;height:2176px" alt=""></div>
+  <div class="clip" style="left:640px;width:640px"><img class="art" src="src/new-night.png" style="left:-2440px;top:-1240px;width:7680px;height:4352px" alt=""></div>
+  <div class="seam"></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="5" data-right="40" data-bottom="32" data-lines='[[["5 DAYS","#ffc468"]]]'></canvas>
 </section>
-<section class="th" id="magic">
-  <div class="clip" style="left:0;width:1280px"><img class="art" src="src/magic.png" style="left:-795px;top:-1236px;width:4764px;height:2964px" alt=""></div>
-  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="4" data-x="48" data-y="48" data-lh="31" data-lines='[[["301","#ffffff"]],[["commits","#b0dc80"]]]'></canvas>
+<section class="th" id="night-ai">
+  <div class="clip" style="left:0px;width:640px"><img class="art" src="src/old-glyph.png" style="left:-672px;top:-432px;width:2560px;height:2176px" alt=""></div>
+  <div class="clip" style="left:640px;width:640px"><img class="art" src="src/new-night.png" style="left:-2440px;top:-1240px;width:7680px;height:4352px" alt=""></div>
+  <div class="seam"></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="5" data-right="40" data-y="24" data-lines='[[["5 DAYS","#ffc468"]]]'></canvas>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="4" data-right="40" data-bottom="24" data-lines='[[["WITH CLAUDE","#ffffff"]]]'></canvas>
+</section>
+<section class="th" id="night-brush">
+  <div class="clip" style="left:0px;width:640px"><img class="art" src="src/old-glyph.png" style="left:-672px;top:-432px;width:2560px;height:2176px" alt=""></div>
+  <div class="clip" style="left:640px;width:640px"><img class="art" src="src/new-night.png" style="left:-2440px;top:-1240px;width:7680px;height:4352px" alt=""></div>
+  <div class="seam"></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="5" data-right="40" data-bottom="24" data-lines='[[["5 DAYS","#ffc468"]]]'></canvas>
+  <svg class="arrow" data-kind="brush" data-from="400,560" data-via="620,330" data-to="960,330"></svg>
+</section>
+<section class="th" id="night-block">
+  <div class="clip" style="left:0px;width:640px"><img class="art" src="src/old-glyph.png" style="left:-672px;top:-432px;width:2560px;height:2176px" alt=""></div>
+  <div class="clip" style="left:640px;width:640px"><img class="art" src="src/new-night.png" style="left:-2440px;top:-1240px;width:7680px;height:4352px" alt=""></div>
+  <div class="seam"></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="5" data-right="40" data-bottom="24" data-lines='[[["5 DAYS","#ffc468"]]]'></canvas>
+  <svg class="arrow" data-kind="block" data-from="420,590" data-to="950,340"></svg>
+</section>
+<section class="th" id="night-pixel">
+  <div class="clip" style="left:0px;width:640px"><img class="art" src="src/old-glyph.png" style="left:-672px;top:-432px;width:2560px;height:2176px" alt=""></div>
+  <div class="clip" style="left:640px;width:640px"><img class="art" src="src/new-night.png" style="left:-2440px;top:-1240px;width:7680px;height:4352px" alt=""></div>
+  <div class="seam"></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="5" data-right="40" data-bottom="24" data-lines='[[["5 DAYS","#ffc468"]]]'></canvas>
+  <canvas class="ov parrow" data-k="8" data-from="52,74" data-to="118,42"></canvas>
+</section>
+<section class="th" id="ember">
+  <div class="clip" style="left:0px;width:640px"><img class="art" src="src/old-glyph.png" style="left:-1920px;top:-80px;width:2560px;height:2176px" alt=""></div>
+  <div class="clip" style="left:640px;width:640px"><img class="art" src="src/magic-night.png" style="left:-1351px;top:-1230px;width:4764px;height:2964px" alt=""></div>
+  <div class="seam"></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="5" data-right="40" data-bottom="32" data-lines='[[["5 DAYS","#ffc468"]]]'></canvas>
+</section>
+<section class="th" id="ember-ai">
+  <div class="clip" style="left:0px;width:640px"><img class="art" src="src/old-glyph.png" style="left:-1920px;top:-80px;width:2560px;height:2176px" alt=""></div>
+  <div class="clip" style="left:640px;width:640px"><img class="art" src="src/magic-night.png" style="left:-1351px;top:-1230px;width:4764px;height:2964px" alt=""></div>
+  <div class="seam"></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="5" data-right="40" data-y="24" data-lines='[[["5 DAYS","#ffc468"]]]'></canvas>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="4" data-right="40" data-bottom="24" data-lines='[[["WITH CLAUDE","#ffffff"]]]'></canvas>
+</section>
+<section class="th" id="forest">
+  <div class="clip" style="left:0px;width:640px"><img class="art" src="src/old-glyph.png" style="left:-1920px;top:-80px;width:2560px;height:2176px" alt=""></div>
+  <div class="clip" style="left:640px;width:640px"><img class="art" src="src/forest-ground.png" style="left:-80px;top:-220px;width:792px;height:988px" alt=""></div>
+  <div class="seam"></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="5" data-right="40" data-bottom="32" data-lines='[[["5 DAYS","#ffc468"]]]'></canvas>
+</section>
+<section class="th" id="day">
+  <div class="clip" style="left:0px;width:640px"><img class="art" src="src/old-glyph.png" style="left:-672px;top:-432px;width:2560px;height:2176px" alt=""></div>
+  <div class="clip" style="left:640px;width:640px"><img class="art" src="src/new-day.png" style="left:-2440px;top:-1240px;width:7680px;height:4352px" alt=""></div>
+  <div class="seam"></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="5" data-right="40" data-bottom="32" data-lines='[[["5 DAYS","#ffc468"]]]'></canvas>
+</section>
+<section class="th" id="night-inset">
+  <div class="clip" style="left:0px;width:1280px"><img class="art" src="src/new-night.png" style="left:-1680px;top:-780px;width:5760px;height:3264px" alt=""></div>
+  <div class="seam" style="left:808px;top:400px;width:440px;height:296px;background:#140c06"></div>
+  <div class="seam" style="left:816px;top:408px;width:424px;height:280px"></div>
+  <div class="clip" style="left:824px;width:408px;top:416px;height:264px"><img class="art" src="src/old-glyph.png" style="left:-360px;top:-216px;width:1280px;height:1088px" alt=""></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="5" data-x="40" data-y="24" data-lines='[[["5 DAYS","#ffc468"]]]'></canvas>
+</section>
+<section class="th" id="number">
+  <div class="clip" style="left:0px;width:1280px"><img class="art" src="src/magic-night.png" style="left:-540px;top:-1140px;width:4764px;height:2964px" alt=""></div>
+  <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="10" data-x="40" data-bottom="24" data-lh="28" data-lines='[[["5","#ffc468"]],[["DAYS","#ffffff"]]]'></canvas>
 </section>
 <script>
-const id = new URLSearchParams(location.search).get('t') || 'split';
+const id = new URLSearchParams(location.search).get('t') || 'night';
 document.getElementById(id).classList.add('on');
+for (const c of document.querySelectorAll('.th.on .clip[data-steps]')) {
+  const [x0, y0, x1, y1, st] = c.dataset.steps.split(',').map(Number), pts = [[0, 0]], n = Math.round((y1 - y0) / st);
+  for (let i = 0; i < n; i++) { const x = Math.round((x0 + (x1 - x0) * i / n) / 8) * 8, xn = Math.round((x0 + (x1 - x0) * (i + 1) / n) / 8) * 8; pts.push([x, y0 + i * st], [xn, y0 + i * st]); }
+  pts.splice(1, 0); pts.push([pts.at(-1)[0], y1], [0, y1]);
+  c.dataset.poly = JSON.stringify(pts);
+  c.style.clipPath = `polygon(${pts.map(([x, y]) => `${x}px ${y}px`).join(',')})`;
+}
+const NS = 'http://www.w3.org/2000/svg';
+const P = s => s.split(',').map(Number);
+function arrowShape(kind, a, b, via) {
+  if (kind === 'block') {
+    const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, nx = -uy, ny = ux, hl = 110, sw = 24, hw = 70, bx = b[0] - ux * hl, by = b[1] - uy * hl;
+    return [[a[0] + nx * sw * .7, a[1] + ny * sw * .7], [bx + nx * sw, by + ny * sw], [bx + nx * hw, by + ny * hw], b, [bx - nx * hw, by - ny * hw], [bx - nx * sw, by - ny * sw], [a[0] - nx * sw * .7, a[1] - ny * sw * .7]];
+  }
+  const q = t => [(1 - t) ** 2 * a[0] + 2 * (1 - t) * t * via[0] + t * t * b[0], (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * via[1] + t * t * b[1]];
+  const te = .76, N = 40, L = [], R = [];
+  for (let i = 0; i <= N; i++) {
+    const t = te * i / N, p = q(t), p2 = q(t + .001), dx = p2[0] - p[0], dy = p2[1] - p[1], d = Math.hypot(dx, dy), w = 3 + 21 * Math.pow(i / N, .7);
+    L.push([p[0] - dy / d * w, p[1] + dx / d * w]); R.push([p[0] + dy / d * w, p[1] - dx / d * w]);
+  }
+  const B = q(te), dx = b[0] - B[0], dy = b[1] - B[1], d = Math.hypot(dx, dy), hw = 58;
+  return [...L, [B[0] - dy / d * hw, B[1] + dx / d * hw], b, [B[0] + dy / d * hw, B[1] - dx / d * hw], ...R.reverse()];
+}
+for (const s of document.querySelectorAll('.th.on svg.arrow')) {
+  const d = s.dataset, pts = arrowShape(d.kind, P(d.from), P(d.to), d.via && P(d.via)), path = 'M' + pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join('L') + 'Z';
+  s.setAttribute('width', 1280); s.setAttribute('height', 720); s.setAttribute('viewBox', '0 0 1280 720');
+  Object.assign(s.style, { position: 'absolute', left: 0, top: 0 });
+  const fill = d.kind === 'block' ? '#ffffff' : '#ffc468';
+  s.innerHTML = `<path d="${path}" transform="translate(10 12)" fill="#140c06" stroke="#140c06" stroke-width="16" stroke-linejoin="round" opacity=".6"/><path d="${path}" fill="${fill}" stroke="#140c06" stroke-width="14" stroke-linejoin="round" paint-order="stroke"/>`;
+}
+for (const c of document.querySelectorAll('.th.on canvas.parrow')) {
+  const k = +c.dataset.k, W = 1280 / k, H = 720 / k, a = P(c.dataset.from), b = P(c.dataset.to);
+  const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, nx = -uy, ny = ux, hl = 12, sw = 2.6, hw = 8, bx = b[0] - ux * hl, by = b[1] - uy * hl;
+  const poly = [[a[0] + nx * sw, a[1] + ny * sw], [bx + nx * sw, by + ny * sw], [bx + nx * hw, by + ny * hw], b, [bx - nx * hw, by - ny * hw], [bx - nx * sw, by - ny * sw], [a[0] - nx * sw, a[1] - ny * sw]];
+  const inside = (x, y) => { let r = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) r = !r; } return r; };
+  const ink = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (inside(x + .5, y + .5)) ink[y * W + x] = 1;
+  const at = (x, y) => x >= 0 && y >= 0 && x < W && y < H && ink[y * W + x];
+  c.width = W; c.height = H;
+  const g = c.getContext('2d'), img = g.createImageData(W, H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let rgb = null;
+    if (at(x, y)) rgb = at(x - 1, y - 1) ? [255, 196, 104] : [255, 232, 176];
+    else if ([[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [1, -1], [-1, 1]].some(([ox, oy]) => at(x + ox, y + oy))) rgb = [20, 12, 6];
+    else if (at(x - 2, y - 2) || at(x - 1, y - 2) || at(x - 2, y - 1)) rgb = [20, 12, 6];
+    if (rgb) img.data.set([...rgb, 255], (y * W + x) * 4);
+  }
+  g.putImageData(img, 0, 0);
+  Object.assign(c.style, { left: 0, top: 0, width: '1280px', height: '720px' });
+}
+
 for (const c of document.querySelectorAll('canvas.arrow')) {
   const g = c.getContext('2d'), dot = (x, y, col) => { g.fillStyle = col; g.fillRect(x, y, 1, 1); };
   const pts = [];

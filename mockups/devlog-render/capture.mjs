@@ -44,6 +44,14 @@ await hud('new-summer.png', 13, 'summer_windy');
 await trees('trees.png', 'show=trees');
 await trees('forest.png', 'show=forest');
 await trees('magic.png', 'show=magic&see=emberwood-elder');
+{
+  const p = await page(1600, 1000);
+  await p.goto(`${BASE}/fantasia4x-tree-ground/`, { waitUntil: 'networkidle' });
+  await p.waitForTimeout(4000);
+  const url = await p.evaluate(() => document.querySelector('.pane[data-pane=today] canvas').toDataURL('image/png'));
+  save('forest-ground.png', Buffer.from(url.split(',')[1], 'base64'));
+  await p.close();
+}
 await trees('magic-night.png', 'show=magic&see=emberwood-elder&light=night');
 }
 

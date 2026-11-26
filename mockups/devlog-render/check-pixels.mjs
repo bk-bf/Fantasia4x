@@ -1,8 +1,8 @@
 import { chromium } from 'playwright';
 import { writeFileSync } from 'node:fs';
 
-const THUMBS = (process.env.THUMBS || 'split,night,magic').split(',');
-const SOURCES = { 'src/old-glyph.png': 'dev glyph renderer', 'src/new-day.png': 'HUD mockup', 'src/new-night.png': 'HUD mockup', 'src/magic.png': 'big-trees mockup' };
+const THUMBS = (process.env.THUMBS || 'night,night-ai,night-brush,night-block,night-pixel,ember,ember-ai,forest,day,night-inset,number').split(',');
+const SOURCES = { 'src/old-glyph.png': 'dev glyph renderer', 'src/new-day.png': 'HUD mockup', 'src/new-night.png': 'HUD mockup', 'src/magic-night.png': 'big-trees mockup', 'src/forest-ground.png': 'tree-ground mockup' };
 const FONT_PIXEL = { Jersey20: 34, Blackletter: 43 };
 const WRITE = process.argv.includes('--write');
 const here = new URL('.', import.meta.url).pathname;
@@ -25,7 +25,7 @@ for (const id of THUMBS) {
     const SW = 1280, SH = 720, screen = u32(pixels(await load('data:image/png;base64,' + b64)));
     const th = document.querySelector('.th.on'), T = th.getBoundingClientRect();
     const out = [];
-    const strays = [...th.querySelectorAll('img:not(.art), canvas:not(.ov), svg, div:not(.clip):not(.seam)')];
+    const strays = [...th.querySelectorAll('img:not(.art), canvas:not(.ov), svg:not(.arrow), svg.arrow *:not(path), div:not(.clip):not(.seam)')];
     if (strays.length) out.push(`${strays.length} element(s) neither a source sprite, an overlay canvas nor the seam`);
     const scaled = (el, w, h, name) => {
       const r = el.getBoundingClientRect(), kx = r.width / w, ky = r.height / h;
@@ -36,10 +36,18 @@ for (const id of THUMBS) {
       return { k: kx, ox, oy, r };
     };
     const layers = [];
+    for (const el of th.querySelectorAll('*')) { const cs = getComputedStyle(el); if (cs.filter !== 'none' || cs.backdropFilter !== 'none' || cs.mixBlendMode !== 'normal') out.push(`${el.tagName.toLowerCase()}.${el.className.baseVal ?? el.className}: filter ${cs.filter}, backdrop ${cs.backdropFilter}, blend ${cs.mixBlendMode} would change the art`); }
+    for (const s of th.querySelectorAll('svg.arrow')) {
+      const r = s.getBoundingClientRect(), im = await load('data:image/svg+xml;base64,' + btoa(new XMLSerializer().serializeToString(s)));
+      const c = document.createElement('canvas'); c.width = r.width; c.height = r.height; const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+      const a = g.getImageData(0, 0, c.width, c.height).data, W = c.width, H = c.height, mask = new Uint8Array(W * H);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (a[(y * W + x) * 4 + 3]) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < W && Y < H) mask[Y * W + X] = 1; }
+      layers.push({ el: s, name: `vector arrow (${s.dataset.kind})`, vector: mask, w: W, ox: r.left - T.left, oy: r.top - T.top, r });
+    }
     for (const c of th.querySelectorAll('canvas.ov, .seam')) {
       if (c.matches('.seam')) {
         const r = c.getBoundingClientRect(), [cr, cg, cb] = getComputedStyle(c).backgroundColor.match(/\d+/g).map(Number);
-        layers.push({ name: 'seam', solid: (255 << 24 | cb << 16 | cg << 8 | cr) >>> 0, r });
+        layers.push({ el: c, name: 'seam', solid: (255 << 24 | cb << 16 | cg << 8 | cr) >>> 0, r });
         continue;
       }
       if (c.matches('.txt') && +c.dataset.size !== fontPixel[c.dataset.font]) out.push(`text in ${c.dataset.font}: drawn at ${c.dataset.size}px, not its one-font-pixel size ${fontPixel[c.dataset.font]}px, so its pixels land unevenly`);
@@ -48,20 +56,28 @@ for (const id of THUMBS) {
       let soft = 0;
       for (let i = 3; i < d.length; i += 4) if (d[i] !== 0 && d[i] !== 255) soft++;
       if (soft) out.push(`${name}: ${soft} blended (semi-transparent) source px`);
-      if (g) { layers.push({ name, ...g, w: c.width, h: c.height, px: u32(d), alpha: d }); out.push(`ok? ${name} ×${g.k} at ${g.ox},${g.oy}: ${c.width}×${c.height} source px, ${soft} soft`); }
+      if (g) { layers.push({ el: c, name, ...g, w: c.width, h: c.height, px: u32(d), alpha: d }); out.push(`ok? ${name} ×${g.k} at ${g.ox},${g.oy}: ${c.width}×${c.height} source px, ${soft} soft`); }
     }
-    const overlay = (x, y) => {
+    layers.sort((a, b) => a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
+    const overlay = (x, y, under) => {
       for (let i = layers.length - 1; i >= 0; i--) {
         const L = layers[i];
+        if (!(under.compareDocumentPosition(L.el) & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
         if (x < L.r.left || x >= L.r.right || y < L.r.top || y >= L.r.bottom) continue;
         if (L.solid !== undefined) return [L.solid, L];
+        if (L.vector) { if (L.vector[(y - L.oy) * L.w + (x - L.ox)]) return [null, L]; continue; }
         const sx = Math.floor((x - L.ox) / L.k), sy = Math.floor((y - L.oy) / L.k), j = sy * L.w + sx;
         if (L.alpha[j * 4 + 3] === 255) return [L.px[j], L];
       }
       return null;
     };
     const stats = new Map(layers.map(L => [L, { wrong: 0, at: null, n: 0 }]));
+    const clips = [...th.querySelectorAll('.clip')];
+    const inPoly = (pts, x, y) => { let r = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [xi, yi] = pts[i], [xj, yj] = pts[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) r = !r; } return r; };
+    const geo = new Map(clips.map(c => [c, [c.getBoundingClientRect(), c.dataset.poly && JSON.parse(c.dataset.poly)]]));
+    const inClip = (c, x, y) => { const [r, poly] = geo.get(c); if (x < r.left || x >= r.right || y < r.top || y >= r.bottom) return false; return !poly || inPoly(poly, x - r.left + .5, y - r.top + .5); };
     for (const im of th.querySelectorAll('img.art')) {
+      const later = clips.slice(clips.indexOf(im.parentElement) + 1);
       const name = im.getAttribute('src');
       if (!sources[name]) out.push(`${name}: not a known source (${Object.keys(sources).join(', ')})`);
       const g = scaled(im, im.naturalWidth, im.naturalHeight, name);
@@ -70,8 +86,9 @@ for (const id of THUMBS) {
       let checked = 0, wrong = 0, foreign = 0, at = null;
       const x0 = Math.max(0, Math.ceil(clip.left)), x1 = Math.min(SW, Math.floor(clip.right)), y0 = Math.max(0, Math.ceil(clip.top)), y1 = Math.min(SH, Math.floor(clip.bottom));
       for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-        const v = screen[y * SW + x], o = overlay(x, y);
-        if (o) { const st = stats.get(o[1]); st.n++; if (v !== o[0]) { st.wrong++; st.at = st.at || [x, y]; } continue; }
+        if (!inClip(im.parentElement, x, y) || later.some(c => inClip(c, x, y))) continue;
+        const v = screen[y * SW + x], o = overlay(x, y, im.parentElement);
+        if (o) { const st = stats.get(o[1]); st.n++; if (o[0] !== null && v !== o[0]) { st.wrong++; st.at = st.at || [x, y]; } continue; }
         const sx = Math.floor((x - g.ox) / g.k), sy = Math.floor((y - g.oy) / g.k);
         if (sx < 0 || sy < 0 || sx >= W || sy >= im.naturalHeight) continue;
         checked++;
@@ -84,7 +101,7 @@ for (const id of THUMBS) {
     }
     for (const [L, st] of stats) {
       if (st.wrong) out.push(`${L.name}: ${st.wrong} of ${st.n} screen px differ from its ×${L.k ?? 1} grid (antialiased or misplaced), first at ${st.at}`);
-      else out.push(`ok? ${L.name}: ${st.n} screen px exact`);
+      else out.push(`ok? ${L.name}: ${st.n} screen px ${L.vector ? 'vector, skipped (1px fringe)' : 'exact'}`);
     }
     return out;
   }, [shot.toString('base64'), SOURCES, FONT_PIXEL]);
