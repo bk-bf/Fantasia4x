@@ -132,7 +132,7 @@ function audit(now, shown, face) {
   if (sp && sp.arms) {
     for (const key of ['R', 'L']) { const arm = sp.arms[key]; if (Math.abs(len(arm.S, arm.E) - sp.upper) > SPACE_TOL.length || Math.abs(len(arm.E, arm.H) - sp.fore) > SPACE_TOL.length) counts.k++; }
     if (sp.arms.second && len(sp.arms.second.want, sp.arms.second.got) > SPACE_TOL.grip) counts.l++;
-    const inHead = q => !now.pose.covers && len(q, sp.head.at) < sp.head.r - SPACE_TOL.skin, inTorso = q => Math.abs(q[0]) < sp.torso.half - SPACE_TOL.skin && Math.abs(q[1]) < sp.torso.deep - SPACE_TOL.skin && q[2] < -SPACE_TOL.skin && q[2] > -sp.torso.tall;
+    const inHead = q => !now.pose.covers && len(q, sp.head.at) < sp.head.r - SPACE_TOL.skin, about = sp.torso.turned || 0, square = q => [q[0] * Math.cos(about) + q[1] * Math.sin(about), q[1] * Math.cos(about) - q[0] * Math.sin(about)], inTorso = q => { const [x, y] = square(q); return Math.abs(x) < sp.torso.half - SPACE_TOL.skin && Math.abs(y) < sp.torso.deep - SPACE_TOL.skin && q[2] < -SPACE_TOL.skin && q[2] > -sp.torso.tall; };
     const points = [sp.arms.R.H, sp.arms.L.H], inside = [];
     counts.inside = inside;
     if (sp.tool && sp.tool !== 'bow' && sp.arms.aim) {
