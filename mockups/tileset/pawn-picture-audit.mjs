@@ -1,7 +1,7 @@
 export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y'];
 export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing with no hand on it', x: 'held thing against the face', y: 'legs shortened' };
 const HAND_BLOCK = 4, TAPER = { long: 5, thin: 1, wide: 3 }, FIN = { out: 4, above: 1 }, PROFILE = .8, BAND = 2, LEGS = .6, TOUCH = 1;
-const LEG_LAYERS = ['legs', 'far leg', 'near leg'], BROW = 6;
+const LEG_LAYERS = ['legs', 'far leg', 'near leg'], BROW = 6, GRASPED = .2;
 
 const same = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
 const pixels = spr => { const out = []; for (let i = 0; i < spr.c.length; i++) if (spr.c[i]) out.push(i); return out; };
@@ -57,7 +57,7 @@ export function pictured(now, face, ink) {
   }
   const all = box(pixels(now.spr), w);
   if (sp && all && all[3] > sp.groundRow + BAND) { counts.u++; said.push((all[3] - sp.groundRow) + ' px below the foot line'); }
-  for (const l of [...tools.filter(l => l.piece !== 'string'), ...stack.filter(l => l.name === 'load')]) { const px = pixels(l.spr); if (px.length && !touches(px, hands, w)) { counts.w++; said.push((l.name === 'load' ? 'load' : 'tool ' + (l.piece || '')) + ' has no hand at it'); } }
+  for (const l of [...tools.filter(l => l.piece !== 'string'), ...stack.filter(l => l.name === 'load' && !(now.pose.cu !== undefined && now.pose.cu < GRASPED))]) { const px = pixels(l.spr); if (px.length && !touches(px, hands, w)) { counts.w++; said.push((l.name === 'load' ? 'load' : 'tool ' + (l.piece || '')) + ' has no hand at it'); } }
   const head = stack.find(l => l.name === 'head'), pts = now.rigged.pts;
   if (face === 's' && head && pts.mouth && !now.pose.covers && !now.fused) {
     let against = 0;
