@@ -461,10 +461,11 @@ const FOLK_PARTS = (() => {
     return {
       skin: c.skin,
       torso: (face, br) => at(face, br, 0).Torso,
-      arm(face, br, lit, far) {
+      arm(face, br, lit, far, raised) {
         if (face === 's') { const rows = far ? sideArm.far : sideArm.near; return (j, k, len) => j < fromSide ? ' ' : along(rows, j - fromSide, len - fromSide, 2, 2)[k] || ' '; }
         const torso = at(face, br, 0).Torso.rows, rows = lit ? arms.lit : arms.dim;
         return (j, k, len) => {
+          if (raised) return along(rows, j, len, 3, 4)[k] || ' ';
           if (j < from) { const row = torso[j + 1] || ''; return (lit ? row.slice(0, d.aw) : row.slice(-d.aw))[k] || ' '; }
           return along(rows, j - from, len - from, 3, 4)[k] || ' ';
         };
@@ -514,12 +515,10 @@ const FOLK_PARTS = (() => {
     return made;
   }
   function fresh(lk) {
-    const rig = lookRig(lk), sex = lk.sex === 'female' ? 'woman' : 'man', d = dimsOf(lk, rig.o), race = rig.o.race;
-    FOLK[race] = { ...FOLK[race], hw: d.hw, aw: d.aw, pointears: FOLK[race].pointears || (lk.ears ? 1 : 0) };
-    const c = coloursOf(lk, FOLK[race]);
-    FOLK[race].skin = c.skin;
-    const shape = shapeOf(sex, lk.style, d, c, FOLK[race]);
-    return { o: { ...rig.o, shape }, c, folk: FOLK[race], look: { ...lk, body: { ...lk.body, hw: d.hw, aw: d.aw } } };
+    const rig = lookRig(lk), sex = lk.sex === 'female' ? 'woman' : 'man', d = dimsOf(lk, rig.o), race = 'placed:' + lk.id, base = FOLK[rig.o.race];
+    const c = coloursOf(lk, base), folk = FOLK[race] = { ...base, hw: d.hw, aw: d.aw, skin: c.skin };
+    const shape = shapeOf(sex, lk.style, d, c, folk);
+    return { o: { ...rig.o, race, shape }, c, folk, look: { ...lk, body: { ...lk.body, hw: d.hw, aw: d.aw } } };
   }
 
   return { look, layers, sprite, rigged };

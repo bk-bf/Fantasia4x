@@ -232,7 +232,7 @@ const SHEET = (() => {
   }
 
   const cv = (w, h, z) => { const c = document.createElement('canvas'); c.width = w; c.height = h; c.style.width = w * z + 'px'; c.style.height = h * z + 'px'; return c; };
-  let root = null, figs = [], stripKey = '', seen = null, samples = null;
+  let root = null, figs = [], stripKey = '', seen = null, samples = null, cast = null;
   const sampled = () => samples || (samples = HAUL.BULKS.flatMap(b => MOTION_LOAD.dozen(b).map(l => haul('sample-' + l.id, l.name, BEARER[l.hold], l.hold, [1, 0], l.id, { group: 'bulk-' + b, w: 96, h: 104, sample: l.id }))));
   function bulkBlocks() {
     const tally = MOTION_LOAD.tally();
@@ -264,6 +264,8 @@ const SHEET = (() => {
     const extra = g => g === 'Carrying' ? ['<label class="loadbar">Carried <select id="load"></select><output id="loadnote"></output></label>', '<div class="bulks">' + bulkBlocks() + '</div>'] : ['', ''];
     el.innerHTML = '<section id="strip" hidden><header><h2></h2><p></p></header><div class="frames"></div></section>' + GROUPS.map(g => `<section class="grp-s"><h2>${g}</h2>${extra(g)[0]}<div class="cells" data-g="${g}"></div>${extra(g)[1]}</section>`).join('');
     seen = new IntersectionObserver(es => { for (const e of es) e.target._on = e.isIntersecting; }, { rootMargin: '120px' });
+    if (!cast) cast = { pieces: LOOK_STYLE.pieces, seeds: SEEDS };
+    else if (cast.pieces !== LOOK_STYLE.pieces) { cast.pieces = LOOK_STYLE.pieces; SEEDS = cast.seeds; for (const cell of [...CELLS, ...sampled()]) cell.S = null; }
     for (const cell of [...CELLS, ...sampled()]) {
       prep(cell);
       const f = document.createElement('figure'), c = cv(cell.w, cell.h, fit(cell.w)), cap = document.createElement('figcaption'), act = () => cell.sample ? onLoad(cell.sample) : onPick(cell.id);
