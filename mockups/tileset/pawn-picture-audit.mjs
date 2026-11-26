@@ -57,7 +57,8 @@ export function pictured(now, face, ink) {
   }
   const all = box(pixels(now.spr), w);
   if (sp && all && all[3] > sp.groundRow + BAND) { counts.u++; said.push((all[3] - sp.groundRow) + ' px below the foot line'); }
-  for (const l of [...tools.filter(l => l.piece !== 'string'), ...stack.filter(l => l.name === 'load' && !(now.pose.cu !== undefined && now.pose.cu < GRASPED))]) { const px = pixels(l.spr); if (px.length && !touches(px, hands, w)) { counts.w++; said.push((l.name === 'load' ? 'load' : 'tool ' + (l.piece || '')) + ' has no hand at it'); } }
+  const things = [['tool', toolPx], ['arrow', tools.filter(l => l.piece === 'arrow').flatMap(l => pixels(l.spr))], ...stack.filter(l => l.name === 'load' && !(now.pose.cu !== undefined && now.pose.cu < GRASPED)).map(l => ['load', pixels(l.spr)])];
+  for (const [what, px] of things) if (px.length && !touches(px, hands, w)) { counts.w++; said.push(what + ' has no hand at it'); }
   const head = stack.find(l => l.name === 'head'), pts = now.rigged.pts;
   if (face === 's' && head && pts.mouth && !now.pose.covers && !now.fused) {
     let against = 0;
