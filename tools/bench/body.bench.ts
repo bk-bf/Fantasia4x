@@ -6,7 +6,7 @@ import { rollWoundClotting, woundInfectionPressure } from '$lib/game/core/defs/w
 import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
 import { getConditionCurrentStage } from '$lib/game/core/rules/body/conditions';
 import type { Mob, Pawn } from '$lib/game/core/types';
-import { colony, devSave, mobs } from '../work-pins/scenarios';
+import { colony, devSave, mobs200, type WorkPinScenario } from '../work-pins/scenarios';
 import { ROLLING, warmSession } from './session';
 
 type Body = Pawn | Mob;
@@ -16,7 +16,7 @@ const BODY_STATS = ['hunger_rate', 'stamina_recovery_rate', 'blood_clotting'];
 const HOST_PARTS = ['leftWing', 'rightWing', 'tail'];
 
 async function liveBodies(
-  sc: typeof mobs,
+  sc: WorkPinScenario,
   warmTicks: number
 ): Promise<{ bodies: Body[]; turn: number }> {
   const session = await warmSession(sc, warmTicks);
@@ -29,7 +29,7 @@ const builder = pawnStatService as unknown as CapacityBuilder;
 
 for (const [sc, warm] of [
   [colony, 300],
-  [mobs, 300],
+  [mobs200, 300],
   [devSave, 60]
 ] as const) {
   const { bodies, turn } = await liveBodies(sc, warm);

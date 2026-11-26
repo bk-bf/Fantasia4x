@@ -34,7 +34,9 @@ async function compare(headCalls: number, accepted: boolean) {
     printed.push(String(chunk));
     return true;
   });
-  const { report } = await import(new URL('../../../../tools/work-pins/compare.mjs', import.meta.url).href);
+  const { report } = await import(
+    new URL('../../../../tools/work-pins/compare.mjs', import.meta.url).href
+  );
   const passed = report(runDir(100), runDir(headCalls));
   vi.mocked(process.stdout.write).mockRestore();
   return { passed, text: printed.join('') };
@@ -56,5 +58,56 @@ describe('the work pins budget and the perf change accepted label', () => {
 
   it('passes a 3% growth without the label', async () => {
     expect((await compare(103, false)).passed).toBe(true);
+  });
+});
+
+function creatureRun(scenario: string, placed: number, upserts: number) {
+  return {
+    scenario,
+    turn: 10,
+    functions: {
+      step: {
+        name: 'stepHunger',
+        file: 'src/lib/game/services/entity/a.ts',
+        line: 1,
+        count: upserts * 10
+      }
+    },
+    messages: {},
+    counters: { 'mob upserts': upserts },
+    creatures: { family: 'mobs', placed, added: 0, alive: placed }
+  };
+}
+
+function creatureDir(upsertsAt200: number): Map<string, ReturnType<typeof creatureRun>> {
+  return new Map([
+    ['mobs-50', creatureRun('mobs-50', 50, 5000)],
+    ['mobs-200', creatureRun('mobs-200', 200, upsertsAt200)]
+  ]);
+}
+
+describe('the creature pins', () => {
+  it('divides each creature measure by the creatures placed and compares 200 with 50', async () => {
+    const { compareRuns } = await import(
+      new URL('../../../../tools/work-pins/compare.mjs', import.meta.url).href
+    );
+    const { creatures } = compareRuns(creatureDir(20000), creatureDir(20000));
+    const row = (scenario: string, fn: string) =>
+      creatures.rows.find(
+        (r: { scenario: string; fn: string }) => r.scenario === scenario && r.fn === fn
+      );
+    expect(row('mobs-200', 'counter mob upserts per creature').head).toBe(100);
+    expect(row('mobs-200', 'creature calls per creature').head).toBe(1000);
+    expect(row('mobs-200 / mobs-50', 'counter mob upserts per creature').head).toBe(1);
+  });
+
+  it('fails when the cost per creature grows faster than the count', async () => {
+    const { compareRuns } = await import(
+      new URL('../../../../tools/work-pins/compare.mjs', import.meta.url).href
+    );
+    const { over } = compareRuns(creatureDir(20000), creatureDir(24000));
+    expect(over.map((r: { scenario: string; fn: string }) => `${r.scenario} ${r.fn}`)).toContain(
+      'mobs-200 / mobs-50 counter mob upserts per creature'
+    );
   });
 });
