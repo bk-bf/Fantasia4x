@@ -165,12 +165,13 @@ const VIEWS = {
   f: { at: v => [-v[0], SEEN.depth * v[1] - v[2]], depth: v => v[1], seen: v => [-v[0], v[1], v[2]] },
   b: { at: v => [v[0], -SEEN.depth * v[1] - v[2]], depth: v => -v[1], seen: v => [v[0], -v[1], v[2]] },
 };
-function armSolved(S, T, l1, l2, sign) {
+const TOOL_CHUNK = 5;
+function armSolved(S, T, l1, l2, sign, out) {
   let d = sub3(T, S), D = len3(d) || .001;
   const m = clamp(D, Math.abs(l1 - l2) + .01, l1 + l2 - .01);
   d = mul3(d, m / D); D = m;
   const axis = mul3(d, 1 / D), a = (l1 * l1 - l2 * l2 + D * D) / (2 * D), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
-  const pole = [SPACE.pole[0] * sign, SPACE.pole[1], SPACE.pole[2]], off = sub3(pole, mul3(axis, dot3(pole, axis))), n = len3(off) > .001 ? unit3(off) : [sign, 0, 0];
+  const turned = out || SPACE.pole, pole = [turned[0] * sign, turned[1], turned[2]], off = sub3(pole, mul3(axis, dot3(pole, axis))), n = len3(off) > .001 ? unit3(off) : [sign, 0, 0];
   return { S, E: add3(add3(S, mul3(axis, a)), mul3(n, h)), H: add3(S, d) };
 }
 function aimGrounded(aim, handZ, tip, butt, head) {

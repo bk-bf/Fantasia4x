@@ -234,7 +234,7 @@ function rigPawn(o, p) {
   const shownAt = q => { const a = view.at(q); return [origin[0] + a[0], origin[1] + a[1]]; };
   const before = P => Math.abs(P[0] - origin[0]) >= hw + 1 ? SPACE.ahead : P[1] > origin[1] - 1 ? SPACE.before : f.hd + SPACE.jut + 1;
   const spaceOf = (P, sign, F) => { const d = F || before(P); return side ? [sign * J, P[0] - origin[0], origin[1] - P[1]] : back ? [P[0] - origin[0], d, origin[1] - P[1] - SEEN.depth * d] : [origin[0] - P[0], d, origin[1] - P[1] + SEEN.depth * d]; };
-  const solved = (key, target) => armSolved(joints[key], target, L1, L2, key === 'R' ? 1 : -1);
+  const solved = (key, target) => armSolved(joints[key], target, L1, L2, key === 'R' ? 1 : -1, p.elbow);
   const camOf = q => SPACE.cam[face][0] + (view.depth(q) - SPACE.cam[face][1]) / SPACE.cam[face][2], mid3 = (a, b) => mul3(add3(a, b), .5);
   const limbOf = (arm, art) => { const path = [art, shownAt(arm.E), shownAt(arm.H)]; path.rigid = true; return { path, hand: shownAt(arm.H).map(rnd), cams: { upper: camOf(mid3(arm.S, arm.E)), fore: camOf(mid3(arm.E, arm.H)), hand: camOf(arm.H) } }; };
   const bowing = kind === 'bow' && !p.carry, wielded = !p.carry && !!TOOLS[kind] && !bowing, nocked = bowing && p.bow >= 1 && p.arrow > .5, fetched = bowing && !nocked && p.out > 0 ? Math.min(BOW.sag + BOW.nock, p.out) : 0;
@@ -383,8 +383,11 @@ function rigPawn(o, p) {
     holds = { hip: hand, chest: hand, low: hand, shoulder: hand, game: hand, drape: hand };
     if (p.carry) pts.hold = hand;
     else if (wielded) {
-      const seen = toolSeen(view, held3.aim), at = shownAt(held3.from).map(rnd);
-      part('tool', Math.min(limbs[toolSide].cams.hand, held3.second ? limbs[other].cams.hand : 9) - SPACE.held, t => { pts.tip = toolAt(t, kind, at[0], at[1], seen.ang, { fore: seen.fore }); }, { anchor: th, inks: 'shield' });
+      const seen = toolSeen(view, held3.aim), at = shownAt(held3.from).map(rnd), along = [Math.sin(seen.ang * D2R), -Math.cos(seen.ang * D2R)], gripped = Math.min(limbs[toolSide].cams.hand, held3.second ? limbs[other].cams.hand : 9) - SPACE.held;
+      const whole = new Spr(s.w, s.h, s.ax, s.ay), chunks = new Map();
+      pts.tip = toolAt(whole, kind, at[0], at[1], seen.ang, { fore: seen.fore });
+      whole.c.forEach((c, q) => { if (!c) return; const k = Math.floor(((q % whole.w - at[0]) * along[0] + (((q / whole.w) | 0) - at[1]) * along[1]) / seen.fore / TOOL_CHUNK); if (!chunks.has(k)) chunks.set(k, []); chunks.get(k).push(q); });
+      for (const [k, px] of chunks) part('tool', k === 0 || k === -1 ? gripped : Math.min(gripped, camOf(add3(held3.from, mul3(held3.aim, (k + .5) * TOOL_CHUNK))) - SPACE.held), t => { for (const q of px) { t.c[q] = whole.c[q]; t.e[q] = whole.e[q]; } }, { anchor: th, inks: 'shield' });
       if (kind === 'torch' || kind === 'staff') pts.glow = pts.tip;
     } else if (bowing) {
       const at = handsAt[other], bow = { u: view.seen(staveOf(held3.aim, p.cant)), v: view.seen(held3.aim), pull: p.pull || 0, arrow: nocked };
