@@ -45,11 +45,12 @@ export function pictured(now, face, ink) {
       if (out && inward) { counts.r++; said.push(name + ' fins out at the shoulder'); }
     }
   }
+  const shadeRimmed = i => !!now.shade && stack.some(l => l.rim && l.rim !== 'ink' && !l.spr.c[i] && [i - 1, i + 1, i - w, i + w].some(q => l.spr.c[q])) && stack.some(l => l.spr.c[i] && same(shown[i], now.shade(l.spr.c[i])));
   for (let i = 0; i < shown.length; i++) {
     if (!shown[i] || isInk(shown[i])) continue;
     let owner = null;
     for (let k = stack.length - 1; k >= 0 && !owner; k--) if (stack[k].spr.c[i]) owner = stack[k];
-    if (owner && !same(shown[i], owner.spr.c[i]) && !stack.some(l => l.spr.c[i] && same(shown[i], l.spr.c[i]))) counts.s++;
+    if (owner && !same(shown[i], owner.spr.c[i]) && !stack.some(l => l.spr.c[i] && same(shown[i], l.spr.c[i])) && !shadeRimmed(i)) counts.s++;
   }
   const tools = stack.filter(l => l.name === 'tool' || l.name === 'tool butt'), toolPx = tools.filter(l => l.piece !== 'arrow' && l.piece !== 'string').flatMap(l => pixels(l.spr));
   if (face === 's' && sp && sp.tool && toolPx.length) {

@@ -111,7 +111,7 @@ function rigHat(s, o, X, hTop, face, skin, tunic, hd, hh, drape = 2) {
 const WRAP = [P.cloth[2], P.cloth[1]];
 const rimOf = (was, c) => !!(was && c) && c[0] === was[0] * .6 && c[1] === was[1] * .6;
 
-const TURN_MOST = 1.1, REACH = { hip: 3, front: 6 }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3, clasp: [1, 5], underJaw: { game: 3, drape: 1 } }, CLEAR = { ground: 4, shins: 3, hop: 3 }, BEHIND_HEAD = ['game', 'drape'];
+const TURN_MOST = 1.1, REACH = { hip: 3, front: 6, emptyGrip: -3 }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3, clasp: [1, 5], underJaw: { drape: 1 }, pastJaw: { game: 1 } }, CLEAR = { ground: 4, shins: 3, hop: 3 }, BEHIND_HEAD = ['game', 'drape'];
 function rigPawn(o, p) {
   p = p || {};
   let s = new Spr(RG.W, RG.H, RG.CX, RG.BASE);
@@ -224,7 +224,7 @@ function rigPawn(o, p) {
   let held = p.carry ? HELD[resting || (p.cu < REST.raised && !BEHIND_HEAD.includes(p.carry)) ? 'rest' : p.carry][face] : null;
   let holds = null, hand = null, ground = null;
 
-  const chinRow = hTop + f.hh - 1, chin = hTop + f.hh, jaw = shaped ? SUNK.underJaw[p.carry] || 0 : 0, load = p.carry && p.load ? p.load : null, cu = p.cu === undefined ? 1 : p.cu, reached = clamp(p.reach || 0, 0, 1);
+  const chinRow = hTop + f.hh - 1, chin = hTop + f.hh, jaw = shaped ? SUNK.underJaw[p.carry] || 0 : 0, aft = shaped ? SUNK.pastJaw[p.carry] || 0 : 0, load = p.carry && p.load ? p.load : null, cu = p.cu === undefined ? 1 : p.cu, reached = clamp(p.reach || 0, 0, 1);
   const boxAt = at => { const left = at[0] - load[2], top = at[1] - load[3]; return { left, top, right: left + load[0] - 1, bottom: top + load[1] - 1 }; };
   const anchored = (left, bottom) => [left + load[2], bottom - load[1] + 1 + load[3]];
   const between = (a, b, k) => [mix(a[0], b[0], k), mix(a[1], b[1], k)];
@@ -269,6 +269,15 @@ function rigPawn(o, p) {
         tL = add3(tL, mul3(miss, .7)); L = solved('L', tL);
       }
       from = L.H;
+    } else if (p.both && p.aim && !p.carry && !p.L && !o.oneArm) {
+      const along = unit3(p.aim);
+      for (let n = 0; n < 6; n++) {
+        const want = add3(R.H, mul3(along, REACH.emptyGrip));
+        L = solved('L', want);
+        const miss = sub3(L.H, want);
+        if (len3(miss) < .2) break;
+        tR = add3(tR, mul3(miss, .7)); R = solved('R', tR);
+      }
     }
     return { R, L, aim, second, from, shaft: bowing ? unit3(p.shaft || aim) : null };
   };
@@ -291,9 +300,9 @@ function rigPawn(o, p) {
       const inArms = IN_BOTH_ARMS.includes(p.carry), left = sx0 + REACH.hip;
       let bottom = sy + HELD_LOW[p.carry];
       if (inArms && bottom - load[1] + 1 < chin && left <= head[1]) bottom = chin + load[1] - 1;
-      put = between(anchored(ground[0] - REST.edge, base), inArms ? anchored(left, bottom) : load[7] ? [sx0, tTop + 1 + jaw - br] : [sx0 - 1, tTop + SUNK.slung + jaw - br], cu);
+      put = between(anchored(ground[0] - REST.edge, base), inArms ? anchored(left, bottom) : load[7] ? [sx0 - aft, tTop + 1 + jaw - br] : [sx0 - 1 - aft, tTop + SUNK.slung + jaw - br], cu);
       const b = boxAt(put), low = clamp(sy + TOT - 1, b.top, b.bottom);
-      grasp = inArms ? [b.left + (low === b.bottom ? 1 : 0), low] : [b.left + load[4], b.top + load[5] - jaw];
+      grasp = inArms ? [b.left + (low === b.bottom ? 1 : 0), low] : [b.left + load[4] + aft, b.top + load[5] - jaw];
     }
     if (grasp) { const k = resting ? reached : 1; hr = between(hr || [0, TOT], [grasp[0] - near[0], grasp[1] - near[1]], k); htl = between(htl || [0, TOT], [grasp[0] + 1 - far[0], grasp[1] - far[1]], k); }
     const bent = hr && hr[0] < 0 && hr[1] < 0 ? -1 : 1;
@@ -324,7 +333,7 @@ function rigPawn(o, p) {
     armParts('near arm', nearPath, nearPath, true, false, nearCams, false, gripped);
     if (held3) space.arms = { R: held3.R, L: held3.L, aim: held3.aim, second: held3.second, from: held3.from };
     hand = [nh[0], nh[1] + 1];
-    holds = { hip: hand, chest: nh, low: nh, shoulder: [sx0 + 1, tTop + 1 - br], game: [sx0 - 1, tTop + 2 + jaw - br], drape: [sx0 - 1, tTop + 1 + jaw - br] };
+    holds = { hip: hand, chest: nh, low: nh, shoulder: [sx0 + 1, tTop + 1 - br], game: [sx0 - 1 - aft, tTop + 2 + jaw - br], drape: [sx0 - 1, tTop + 1 + jaw - br] };
     if (put) { put = [rnd(put[0] + nh[0] - rnd(grasp[0])), Math.min(rnd(put[1] + nh[1] - rnd(grasp[1])), base - (load[1] - 1 - load[3]))]; hand = put; holds[p.carry] = put; }
     pts.hand = nh; pts.hands = [nh]; pts.mouth = [HX + f.hd + 2, hTop + Math.floor(f.hh * .5) + 3]; pts.head = [HX + (shaped ? 0 : 1), hTop - 3];
     pts.feet = [[cx + fl[0], base - fl[1]], [cx - 1 + fr[0], base - fr[1]]];

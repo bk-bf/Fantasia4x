@@ -190,7 +190,7 @@ for (const anim of anims) {
         if (now.pose.tip && now.pose.face === face) { const tip = tipping(NOW.tipped(now.spr, face === 'f' ? -now.pose.tip : now.pose.tip), NOW.P.ink, false); if (tip.torn || tip.parts) { sum.v++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + kind + ' frame ' + (i + 1) + ': ' + PICTURE_NAMED.v + ', ' + tip.torn + ' edge pixels not inked, ' + tip.parts + ' loose parts'); } }
         if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); arrows.push(null); continue; }
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId, now.seed) : now).spr.c, face), where = kind + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
-        const seen = pictured({ ...now, bowHalf: NOW.BOW.half }, face, NOW.P.ink);
+        const seen = pictured({ ...now, bowHalf: NOW.BOW.half, shade: NOW.shade }, face, NOW.P.ink);
         for (const k of PICTURE_KEYS) got[k] = seen[k];
         if (kind.startsWith('folk-')) for (const k of COSTUMED) got[k] = 0;
         if (noted && seen.said.length) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + seen.said.join('; '));
