@@ -410,7 +410,7 @@ function rigPawn(o, p) {
   const { order, owner } = rigComposite(s, layers), headCam = order.find(l => l.name === 'head').cam;
   s.parts = order.map(({ spr, ...l }) => l); s.owner = owner;
   if (RIG_KEEP.layers) s.layers = order;
-  s.space = { ...space, face, shoulderZ, upper: L1, fore: L2, tool: wielded ? kind : bowing ? 'bow' : null, reach: (TOOL_REACH[kind] || 0) - gripAt, butt: (TOOL_BUTT[kind] || 0) + gripAt, head: { at: [0, SPACE.jut, f.hh / 2 + 1], r: f.hd }, torso: { half: hw, deep: SPACE.chest, tall: f.tl, turned: swung }, hipRow: legTop, groundRow: base };
+  s.space = { ...space, face, shoulderZ, upper: L1, fore: L2, tool: wielded ? kind : bowing ? 'bow' : null, reach: (TOOL_REACH[kind] || 0) - gripAt, butt: (TOOL_BUTT[kind] || 0) + gripAt, head: { at: [0, SPACE.jut, f.hh / 2 + 1], r: f.hd }, torso: { half: hw, deep: SPACE.chest, tall: f.tl, turned: swung }, lostArm: !!o.oneArm, hipRow: legTop, groundRow: base };
   s.front = owner.map(n => n && order[n - 1].cam > headCam ? 1 : 0);
   const bare = p.carry ? { c: s.c.slice(), e: s.e.slice() } : null;
   s.outline();

@@ -6,16 +6,18 @@ import { PICTURE_KEYS, PICTURE_NAMED, pictured, tipping } from './pawn-picture-a
 
 const here = process.env.AUDIT_ROOT || dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2), flag = name => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1]; };
-const imageRef = flag('--image-from'), only = flag('--only'), listed = args.includes('--list'), noted = args.includes('--where'), smooth = args.includes('--smooth'), EACH = smooth ? 3 : 1, TURN = smooth ? 2 : 5;
+const imageRef = flag('--image-from'), only = flag('--only'), listed = args.includes('--list'), noted = args.includes('--where'), smooth = args.includes('--smooth'), folk = args.includes('--folk'), EACH = smooth ? 3 : 1, TURN = smooth ? 2 : 5;
 
 const fromDisk = file => readFileSync(join(here, file), 'utf8');
 const fromGit = ref => file => execFileSync('git', ['-C', here, 'show', ref + ':mockups/tileset/' + file], { maxBuffer: 1 << 30 }).toString();
-function load(read, layered) {
+const WIDE = 1900, COSTUMED = ['d', 's'], FOLK_KINDS = ['marked', 'kirtle', 'maimed', 'winged', 'soldier', 'knight', 'sage'].map(k => 'folk-' + k), EMPTY_HANDS = { tool: null, shield: null }, WITH_AXE = { tool: 'axe', shield: null };
+const FOLK_ROWS = { walk: EMPTY_HANDS, chop: WITH_AXE, heft: EMPTY_HANDS, sit: EMPTY_HANDS, idle: EMPTY_HANDS, guard: EMPTY_HANDS, hit: EMPTY_HANDS, stagger: EMPTY_HANDS, fall: EMPTY_HANDS }, FOLK_LOAD = { heft: 'wild_oats' };
+function load(read, layered, composed) {
   const registry = new Function(read('registry-scripts.js') + '\nreturn REGISTRY_SCRIPTS;')();
-  const motion = read('motion.html').match(/data-then="([^"]+)"/)[1].split(' ').filter(f => !/^motion\.js$|motion-folk|motion-sheet|motion-stage|motion-fell|motion-timeline/.test(f) && !registry.includes(f));
+  const left = composed ? /^motion\.js$/ : /^motion\.js$|motion-folk|motion-sheet|motion-stage|motion-fell|motion-timeline/, motion = read('motion.html').match(/data-then="([^"]+)"/)[1].split(' ').filter(f => !left.test(f) && !registry.includes(f));
   const source = [...registry, ...motion].map(read).join('\n;');
   const data = JSON.parse(read('catalog-data.json'));
-  return new Function('DATA', source + '\nDBX.fromData(DATA); MOTION_LOAD.init(DATA);' + (layered ? 'RIG_KEEP.layers = true;' : '') + '\nreturn { placed: typeof FOLK_PARTS !== "undefined" && !!FOLK_PARTS.rigged && typeof dressedLook === "function", style: typeof LOOK_STYLE === "undefined" ? null : LOOK_STYLE, PAWN_ANIMS, FB_POSES, fbPose, posed, PAWNS, FOLK, TOOLS, SEEN, BOW, rigPawn, fitted, HAUL, MOTION_LOAD, HOLDS, P, mkActor, tipped' + (layered ? ', shade' : '') + ' };')(data.objects);
+  return new Function('DATA', 'innerWidth', source + '\nDBX.fromData(DATA); MOTION_LOAD.init(DATA);' + (composed ? 'MOTION_FOLK.init(FOLK_CAST);' : '') + (layered ? 'RIG_KEEP.layers = true;' : '') + '\nreturn { placed: typeof FOLK_PARTS !== "undefined" && !!FOLK_PARTS.rigged && typeof dressedLook === "function", style: typeof LOOK_STYLE === "undefined" ? null : LOOK_STYLE, PAWN_ANIMS, FB_POSES, fbPose, posed, PAWNS, FOLK, TOOLS, SEEN, BOW, rigPawn, fitted, HAUL, MOTION_LOAD, HOLDS, P, mkActor, tipped' + (layered ? ', shade' : '') + (composed ? ', drawLook' : '') + ' };')(data.objects, WIDE);
 }
 function loadThen(ref) {
   try { return load(fromGit(ref), false); } catch (e) {
@@ -24,7 +26,7 @@ function loadThen(ref) {
     process.exit(2);
   }
 }
-const NOW = load(fromDisk, true), THEN = imageRef ? loadThen(imageRef) : null, PLACED = THEN ? THEN.placed : NOW.placed;
+const NOW = load(fromDisk, true, folk), THEN = imageRef ? loadThen(imageRef) : null, PLACED = THEN ? THEN.placed : NOW.placed;
 for (const G of [NOW, THEN]) if (G && G.style) G.style.pieces = PLACED;
 if (THEN && !PLACED) console.log('image from ' + imageRef + ' draws pawns on the old body, so both builds are audited on the old body');
 
@@ -43,6 +45,7 @@ const quant = (p, a) => JSON.stringify(p, (k, v) => typeof v === 'number' ? (k =
 const PLAYED_WITH = { chop: 'axe', mine: 'pick', hoe: 'hoe', hammer: 'hammer', shoot: 'bow', guardBow: 'bow', readyBow: 'bow', stowBow: 'bow', thrust: 'spear', guardTwo: 'spear', readyTwo: 'spear', stowTwo: 'spear', guard: 'sword', ready: 'sword', stow: 'sword', attack: 'sword', block: 'sword' };
 function frame(G, kind, over, anim, face, u, loadId, seed) {
   const A = G.mkActor('pawn', kind, loadId ? { ...over, tool: null, shield: null } : PLAYED_WITH[anim] && over.tool !== null ? { ...over, tool: PLAYED_WITH[anim] } : over), def = G.PAWN_ANIMS[anim], load = loadId ? G.MOTION_LOAD.get(loadId) : null;
+  const look = kind.startsWith('folk-') ? A.lookOf : null;
   A.lookOf = null;
   if (seed !== undefined) A.seed = seed;
   const c = { face, lvl: 3, t: 0, seed: A.seed, tool: A.o.tool, hold: load ? load.hold : 'chest', o: null };
@@ -51,7 +54,7 @@ function frame(G, kind, over, anim, face, u, loadId, seed) {
   G.fitted(A, pose);
   const layer = pose.carry && load ? G.HAUL.layer(load, pose.carry, c.face, pose.down > .5) : null;
   if (layer) pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0, layer.draped ? 1 : 0];
-  const rigged = G.rigPawn(A.o, JSON.parse(quant(pose, TURN)));
+  const rigged = look ? G.drawLook(look, face, null, JSON.parse(quant(pose, TURN)), A.gear) : G.rigPawn(A.o, JSON.parse(quant(pose, TURN)));
   return { spr: layer && rigged.mask ? G.MOTION_LOAD.put(rigged, layer) : rigged, rigged, pose, seed: A.seed, fused: !!(layer && layer.fused), level: !!(layer && layer.rows), long: !!(load && (load.family === 'long' || load.slim || load.storage === 'shield')) };
 }
 
@@ -142,7 +145,7 @@ function audit(now, shown, face) {
       const front = sp.head.at[1] + sp.head.r, crown = sp.head.at[2] + FACE.up - 3, hidden = points.slice(2).filter(q => face === 'f' ? Math.abs(q[0]) <= FACE.half && q[1] > front && q[2] - NOW.SEEN.depth * (q[1] - front) >= 1 && q[2] - NOW.SEEN.depth * (q[1] - front) <= crown : face === 's' ? q[0] > sp.head.r - 1 && q[1] >= front - FACE.side && q[1] <= front && q[2] >= 1 && q[2] <= crown : false).length;
       if (hidden && !now.pose.covers) { counts.f += hidden; over.set('tool before the face', hidden); counts.over = [...over].map(([name, n]) => name + ' ' + n).join(', '); }
     }
-    points.forEach((q, n) => { if (inHead(q) || inTorso(q)) { counts.p++; inside.push((n === 0 ? 'right hand' : n === 1 ? 'left hand' : 'tool at ' + (-sp.butt + (n - 2) * 2)) + ' in ' + (inHead(q) ? 'head' : 'torso') + ' ' + q.map(v => v.toFixed(1))); } });
+    points.forEach((q, n) => { if (!(n === 1 && sp.lostArm) && (inHead(q) || inTorso(q))) { counts.p++; inside.push((n === 0 ? 'right hand' : n === 1 ? 'left hand' : 'tool at ' + (-sp.butt + (n - 2) * 2)) + ' in ' + (inHead(q) ? 'head' : 'torso') + ' ' + q.map(v => v.toFixed(1))); } });
     for (const key of ['R', 'L']) if (sp.shoulderZ + sp.arms[key].H[2] < -SPACE_TOL.ground) counts.m++;
   }
   if (sp) {
@@ -175,6 +178,7 @@ const standing = (kind, over, face) => { const key = kind + JSON.stringify(over)
 for (const anim of anims) {
   const def = NOW.PAWN_ANIMS[anim], n = (def.n || 6) * EACH, hold = Object.keys(NOW.HOLDS).find(k => NOW.HOLDS[k].includes(anim));
   const runs = hold ? LOADS[hold].map(id => ['woodcutter', {}, id]) : HANDLING.includes(anim) ? Object.values(LOADS).flat().map(id => ['woodcutter', {}, id]) : CAST.map(([k, o]) => [k, o, null]);
+  if (folk && FOLK_ROWS[anim]) runs.push(...FOLK_KINDS.map(k => [k, FOLK_ROWS[anim], FOLK_LOAD[anim] || null]));
   for (const face of FACES) {
     const sum = Object.fromEntries(KEYS.map(k => [k, 0])), share = { tool: [0, 0], load: [0, 0] };
     for (const [kind, over, loadId] of runs) {
@@ -187,6 +191,7 @@ for (const anim of anims) {
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId, now.seed) : now).spr.c, face), where = kind + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
         const seen = pictured({ ...now, bowHalf: NOW.BOW.half }, face, NOW.P.ink);
         for (const k of PICTURE_KEYS) got[k] = seen[k];
+        if (kind.startsWith('folk-')) for (const k of COSTUMED) got[k] = 0;
         if (noted && seen.said.length) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + seen.said.join('; '));
         for (const k of KEYS) if (got[k]) { sum[k] += got[k]; if (noted && 'bcefijklmnp'.includes(k)) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + NAMED[k] + ' ' + got[k] + (k === 'f' ? ' (' + got.over + ')' : k === 'p' ? ' (' + got.inside.join('; ') + ')' : '')); }
         if (got.low > floor) { sum.h++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + (got.low - floor) + ' px below the ground'); }
