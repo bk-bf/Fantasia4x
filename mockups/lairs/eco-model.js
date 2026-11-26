@@ -50,7 +50,7 @@ const ECO = (() => {
   const threatOf = g => variant(g).threat;
   const danger = g => g.k.prey ? (g.k.temper < .6 ? 0 : g.n * threatOf(g) * g.k.temper) : g.n * threatOf(g) * g.k.temper + g.young * g.k.temper;
   const many = (name, n) => { const s = name.toLowerCase(); return n === 1 ? s : /wolf$/.test(s) ? s.slice(0, -1) + 'ves' : /(s|x|ch)$/.test(s) ? s + 'es' : s + 's'; };
-  const PACK_KG = 5, MAST_KG = 1.5, BLOOD = .04, CATCH = .4;
+  const PACK_KG = 5, MAST_KG = 1.5, BLOOD = .04, CATCH = .4, FROG_KG = 6, FROG_BITE = .1, FROG_GROW = .02;
 
   function make(o) {
     KINDS = o.lines;
@@ -148,7 +148,14 @@ const ECO = (() => {
     const reach = k.range * 1.2;
     let meat = 0;
     for (const h of S.groups) if (h.k.prey && h.n > 0 && (k.style === 'scavenge' ? h.k.mass >= 5 : k.style === 'ambush' ? h.k.mass >= 5 && !h.k.calves : k.style === 'trap' ? h.k.mass <= 40 : hunts(g, h)) && Math.hypot(h.x - x, h.y - y) < reach) meat += k.style === 'scavenge' ? h.n * BLOOD : (h.k.calves ? h.young * .35 : h.n) * h.k.mass * (S.rateBy[h.kind] || S.rate || .015) * CATCH * (k.style === 'trap' ? .5 : 1);
+    if (k.frogs) meat += frogsAt(S, x, y, k.range);
     return clamp((meat - rivalsAt(S, g, x, y, reach, false)) / eat + (k.small ? S.small[cellOf(S, x, y)] * .3 : 0), 0, 3);
+  }
+  function frogsAt(S, x, y, range) {
+    let n = 0;
+    const r = Math.ceil(range / CELL), cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+    for (let dy = -r; dy <= r; dy += 2) for (let dx = -r; dx <= r; dx += 2) { const X = cx + dx, Y = cy + dy; if (X >= 0 && Y >= 0 && X < S.C && Y < S.C && dx * dx + dy * dy <= r * r && S.land[Y * S.C + X] === SWAMP) n += 4 * S.small[Y * S.C + X] / .6; }
+    return n * FROG_GROW * FROG_KG;
   }
   function rivalsAt(S, g, x, y, reach, forage) {
     let eat = 0;
@@ -495,6 +502,7 @@ const ECO = (() => {
     if (k.land === FOREST || k.browse) { const m = Math.min(S.mast[j] * MAST[season(S)] * .2, g.n * act / 12 / 6); S.mast[j] = Math.max(0, S.mast[j] - m * .5); g.eaten += m * 6; }
   }
   const around = (S, g) => { const a = S.r() * 6.283, d = S.r() * g.k.range; return { x: clamp(g.lair.x + Math.cos(a) * d, 5, S.N - 5), y: clamp(g.lair.y + Math.sin(a) * d, 5, S.N - 5) }; };
+  const frog = (S, g) => { const at = around(S, g), j = cellOf(S, at.x, at.y); if (S.land[j] !== SWAMP) return; const take = Math.min(S.small[j], FROG_BITE); S.small[j] -= take; g.larder += take * FROG_KG; };
   const nibble = (S, g, gain) => { const j = cellOf(S, g.x, g.y), take = Math.min(S.small[j], .22); S.small[j] -= take; g.larder += take * gain; };
 
   function prowl(S, g, h) {
@@ -552,6 +560,7 @@ const ECO = (() => {
     }
     g.state = 'resting';
     if (k.grounded === S.wx.kind) { g.state = 'grounded'; return; }
+    if (k.frogs && act > .3 && stock < 2) frog(S, g);
     if (g.wait > 0) { g.wait--; return; }
     const drive = clamp(1.6 - stock, 0, 1.6), urge = drive * (.25 + act) + clamp(g.plenty - 1, 0, 2) * .4 * act;
     if (urge < .6) return;

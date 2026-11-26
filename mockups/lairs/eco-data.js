@@ -25,7 +25,7 @@ const ECO_DATA = (() => {
     bear: { rank: 6, rarity: 'rare', share: .03, range: 120, style: 'forage', active: 'day', solo: 1, sleeps: 1, life: 30, social: 'solo', scav: 1, fish: 1, breed: .16 },
     mire_crocodile: { rank: 6, rarity: 'rare', share: .2, range: 110, style: 'ambush', active: 'sun', waits: 'water', solo: 3, sleeps: 1, life: 50, social: 'solo' },
     thornwood_spider: { rank: 3, rarity: 'common', share: .8, style: 'trap', active: 'night', life: 9, social: 'solo' },
-    marsh_viper: { rank: 1, rarity: 'common', style: 'pursuit', active: 'sun', small: 1, sleeps: 1, life: 12, social: 'solo' },
+    marsh_viper: { rank: 1, rarity: 'common', share: .22, style: 'pursuit', active: 'sun', small: 1, frogs: 1, sleeps: 1, life: 12, social: 'solo' },
     harpy: { rank: 2, rarity: 'uncommon', share: .02, style: 'pursuit', active: 'day', small: 2, air: 1, grounded: 'storm', life: 25, social: 'flock' },
     stirge: { rank: 1, rarity: 'common', style: 'scavenge', active: 'dusk', air: 1, life: 4, social: 'swarm' },
     goblin: { rank: 2, rarity: 'common', style: 'raid', active: 'night', life: 30, social: 'tribe' },
@@ -67,7 +67,7 @@ const ECO_DATA = (() => {
         Object.assign(k, {
           style: P.style, lair: site ? site.name : 'Lair', den: DEN[r.lair] || 'den', site: BIOME[top], need, size: P.solo ? [1, Math.min(P.solo, pack[1])] : pack, cap: P.solo || pack[1] * 2 + 2,
           range: P.range || (r.lairRange || 50) * 2.5, rank: P.rank || 0, calf: P.calf || 0, speed: P.air ? 110 : P.style === 'ambush' ? 22 : mass > 50 ? 42 : 62, skill: clamp(.28 + threat / 40, .28, .75), litter: P.litter || [1, Math.max(1, pack[1] - 1)],
-          breed: P.breed || .65, floor: P.style === 'forage' ? .7 : clamp(need * .55, .3, 1.8), share: P.share || SHARE[P.rarity], small: P.small || 0, scav: P.scav || 0, air: P.air || 0, sleeps: P.sleeps || 0, waits: P.waits || null, grounded: P.grounded || null, thief: P.thief || 0, life: P.life || 10, social: P.social || 'pack', fish: P.fish || 0,
+          breed: P.breed || .65, floor: P.style === 'forage' ? .7 : clamp(need * .55, .3, 1.8), share: P.share || SHARE[P.rarity], small: P.small || 0, scav: P.scav || 0, air: P.air || 0, sleeps: P.sleeps || 0, waits: P.waits || null, grounded: P.grounded || null, thief: P.thief || 0, life: P.life || 10, social: P.social || 'pack', fish: P.fish || 0, frogs: P.frogs || 0,
         });
       }
       out[sp] = k;
