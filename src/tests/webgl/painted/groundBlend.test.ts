@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { WorldTile } from '$lib/game/core/types';
 import { Webgl2Device } from '$lib/gpu/webgl2/device';
+import type { GpuTexture } from '$lib/gpu/device';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
 vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
@@ -26,10 +27,10 @@ function tile(over: Partial<WorldTile>): WorldTile {
 
 const painted = {
   tileset,
-  texture: {} as WebGLTexture,
-  light: {} as WebGLTexture,
+  texture: {} as GpuTexture,
+  light: {} as GpuTexture,
   top: null,
-  water: {} as WebGLTexture,
+  water: {} as GpuTexture,
   ground: null,
   texels: () => null,
   cell: () => null
@@ -85,8 +86,8 @@ describe('the blend pass tables', () => {
   it('points each kind at its patch in atlas pixels with its level', () => {
     const { patch, layer } = groundKindTable({
       tileset,
-      texture: {} as WebGLTexture,
-      light: {} as WebGLTexture,
+      texture: {} as GpuTexture,
+      light: {} as GpuTexture,
       top: null,
       water: null,
       ground: null,

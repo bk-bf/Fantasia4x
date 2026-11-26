@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Webgl2Device } from '$lib/gpu/webgl2/device';
+import type { GpuTexture } from '$lib/gpu/device';
 import { GridRenderer } from '$lib/webgl/grid-renderer';
 import { GameGrid } from '$lib/webgl/game-grid';
 import { WebGLRendererCore } from '$lib/webgl/renderer-core';
@@ -271,7 +272,10 @@ describe('the water moving through the painted map', () => {
       createProgram: () => ({ success: true }),
       getProgram: () => ({ program: {} })
     } as unknown as ShaderManager;
-    const blend = GroundBlend.create(gpu, blendShaders, { ...core['painted']!, water: {} })!;
+    const blend = GroundBlend.create(gpu, blendShaders, {
+      ...core['painted']!,
+      water: {} as GpuTexture
+    })!;
     blend.setGrid(core['gameGrid']!);
     Object.assign(core, { groundBlend: blend });
     core['gridRenderer']!.skipBlendedGround = true;

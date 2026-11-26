@@ -1,10 +1,13 @@
-export type GpuBuffer = WebGLBuffer;
-export type GpuTexture = WebGLTexture;
-export type GpuRenderTarget = WebGLFramebuffer;
-export type GpuVertexLayout = WebGLVertexArrayObject;
-export type GpuPipeline = WebGLProgram;
-export type GpuShaderModule = WebGLShader;
-export type GpuUniform = WebGLUniformLocation;
+declare const handle: unique symbol;
+type Handle<K extends string> = { readonly [handle]: K };
+
+export type GpuBuffer = Handle<'buffer'>;
+export type GpuTexture = Handle<'texture'>;
+export type GpuRenderTarget = Handle<'render-target'>;
+export type GpuVertexLayout = Handle<'vertex-layout'>;
+export type GpuPipeline = Handle<'pipeline'>;
+export type GpuShaderModule = Handle<'shader-module'>;
+export type GpuUniform = Handle<'uniform'>;
 
 export type TextureFormat =
   | 'rgba8unorm'

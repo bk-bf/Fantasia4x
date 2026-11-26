@@ -6,7 +6,7 @@ import { CharacterRenderer } from './character-renderer.js';
 import { ALPHA_CUT, GridRenderer } from './grid-renderer.js';
 import { WebGLStateManager } from './webgl-state.js';
 import type { GameGrid } from './game-grid.js';
-import type { GpuDevice } from '../gpu/device.js';
+import type { GpuDevice, GpuTexture } from '../gpu/device.js';
 import type { FontAtlas } from './types.js';
 import { BASE_TILE_PX } from './tile-types.js';
 import { WORK_PINS } from '../workPins/flag.js';
@@ -110,7 +110,7 @@ export class WebGLRendererCore {
   private gridRenderer: GridRenderer | null = null;
 
   private fontAtlas: FontAtlas | null = null;
-  private fontTexture: WebGLTexture | null = null;
+  private fontTexture: GpuTexture | null = null;
 
   private tilesetLoaded = false;
   private painted: LoadedPaintedTileset | null = null;
