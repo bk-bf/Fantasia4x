@@ -217,7 +217,8 @@ function rigPawn(o, p) {
   const drawnLength = path => path.slice(1).reduce((n, q, i) => n + Math.hypot(q[0] - path[i][0], q[1] - path[i][1]), 0);
   const armParts = (name, path, shown, lit, far, cams, lost, more) => {
     const span = path.length === 2 ? spanOf(path) : path.rigid ? drawnLength(path) : 0, k = span > 1 ? TOT / span : 1, col = armCol(lit, far, lost, shown);
-    for (const seg of ['upper', 'fore', 'hand']) part(name + ' ' + seg, cams[seg], t => rigLimb(t, shown, aw, (d, e, v, X) => { const j = rnd(d * k); return j >= SPANS[seg][0] && j < SPANS[seg][1] ? col(d * k, e, v, X) : null; }, null), { limb: name, seg, rim: !far && !(shaped && side), anchor: path[0].map(rnd), path: shown, ...(seg === 'hand' ? more : null) });
+    const zones = { upper: [0, ELBOW - 1], fore: [ELBOW, WRIST - 1], hand: [WRIST, armLen - 1] };
+    for (const seg of ['upper', 'fore', 'hand']) part(name + ' ' + seg, cams[seg], t => path.rigid ? limbDrawn(t, seg, shown.map(q => q.map(rnd)), aw, zones, col) : rigLimb(t, shown, aw, (d, e, v, X) => { const j = rnd(d * k); return j >= SPANS[seg][0] && j < SPANS[seg][1] ? col(d * k, e, v, X) : null; }, null), { limb: name, seg, rim: far || (shaped && side) ? null : path.rigid ? 'ink' : 'shade', lost: !!lost, anchor: path[0].map(rnd), path: shown, ...(seg === 'hand' ? more : null) });
   };
   const resting = p.carry && p.down > .5;
   let held = p.carry ? HELD[resting || (p.cu < REST.raised && !BEHIND_HEAD.includes(p.carry)) ? 'rest' : p.carry][face] : null;

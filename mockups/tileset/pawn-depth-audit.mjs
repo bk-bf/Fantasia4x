@@ -15,7 +15,7 @@ function load(read, layered) {
   const motion = read('motion.html').match(/data-then="([^"]+)"/)[1].split(' ').filter(f => !/^motion\.js$|motion-folk|motion-sheet|motion-stage|motion-fell|motion-timeline/.test(f) && !registry.includes(f));
   const source = [...registry, ...motion].map(read).join('\n;');
   const data = JSON.parse(read('catalog-data.json'));
-  return new Function('DATA', source + '\nDBX.fromData(DATA); MOTION_LOAD.init(DATA);' + (layered ? 'RIG_KEEP.layers = true;' : '') + '\nreturn { placed: typeof FOLK_PARTS !== "undefined" && !!FOLK_PARTS.rigged && typeof dressedLook === "function", style: typeof LOOK_STYLE === "undefined" ? null : LOOK_STYLE, PAWN_ANIMS, FB_POSES, fbPose, posed, PAWNS, FOLK, TOOLS, SEEN, BOW, rigPawn, fitted, HAUL, MOTION_LOAD, HOLDS, P, mkActor' + (layered ? ', shade' : '') + ' };')(data.objects);
+  return new Function('DATA', source + '\nDBX.fromData(DATA); MOTION_LOAD.init(DATA);' + (layered ? 'RIG_KEEP.layers = true;' : '') + '\nreturn { placed: typeof FOLK_PARTS !== "undefined" && !!FOLK_PARTS.rigged && typeof dressedLook === "function", style: typeof LOOK_STYLE === "undefined" ? null : LOOK_STYLE, PAWN_ANIMS, FB_POSES, fbPose, posed, PAWNS, FOLK, TOOLS, SEEN, BOW, rigPawn, fitted, HAUL, MOTION_LOAD, HOLDS, P, mkActor, tipped' + (layered ? ', shade' : '') + ' };')(data.objects);
 }
 function loadThen(ref) {
   try { return load(fromGit(ref), false); } catch (e) {
@@ -182,7 +182,7 @@ for (const anim of anims) {
       const floor = standing(kind, over, face), sizes = [], arrows = [];
       for (let i = 0; i < n; i++) {
         const u = (i + .5) / n, now = frame(NOW, kind, over, anim, face, u, loadId);
-        if (now.pose.tip && now.pose.face === face) { const tip = tipping(now.spr, NOW.P.ink, !!(now.pose.loose && NOW.TOOLS[NOW.mkActor('pawn', kind, over).o.tool])); if (tip.torn || tip.parts) { sum.v++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + kind + ' frame ' + (i + 1) + ': ' + PICTURE_NAMED.v + ', ' + tip.torn + ' edge pixels not inked, ' + tip.parts + ' loose parts'); } }
+        if (now.pose.tip && now.pose.face === face) { const tip = tipping(NOW.tipped(now.spr, face === 'f' ? -now.pose.tip : now.pose.tip), NOW.P.ink, false); if (tip.torn || tip.parts) { sum.v++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + kind + ' frame ' + (i + 1) + ': ' + PICTURE_NAMED.v + ', ' + tip.torn + ' edge pixels not inked, ' + tip.parts + ' loose parts'); } }
         if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); arrows.push(null); continue; }
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId, now.seed) : now).spr.c, face), where = kind + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
         const seen = pictured({ ...now, bowHalf: NOW.BOW.half }, face, NOW.P.ink);

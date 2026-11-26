@@ -32,10 +32,10 @@ export function pictured(now, face, ink) {
   const counts = Object.fromEntries(PICTURE_KEYS.map(k => [k, 0])), shown = now.spr.c, w = now.spr.w, sp = now.rigged.space, said = [];
   const stack = [...now.rigged.layers, ...(now.spr.loadLayer ? [now.spr.loadLayer] : [])].map((l, k) => [l, k]).sort((a, b) => a[0].cam - b[0].cam || a[1] - b[1]).map(x => x[0]);
   const isInk = c => same(c, ink), limbs = new Map(), hands = [];
-  for (const l of stack) if (l.limb) { const px = pixels(l.spr); if (!limbs.has(l.limb)) limbs.set(l.limb, { all: [], hand: [], segs: [], anchor: l.anchor }); const limb = limbs.get(l.limb); limb.all.push(...px); if (l.seg === 'hand') { limb.hand = px; hands.push(...px); } else limb.segs.push([l.seg, px]); }
+  for (const l of stack) if (l.limb) { const px = pixels(l.spr); if (!limbs.has(l.limb)) limbs.set(l.limb, { all: [], hand: [], segs: [], anchor: l.anchor, lost: l.lost }); const limb = limbs.get(l.limb); limb.all.push(...px); if (l.seg === 'hand') { limb.hand = px; hands.push(...px); } else limb.segs.push([l.seg, px]); }
   const centre = now.rigged.pts.torso ? now.rigged.pts.torso[0] : now.spr.ax, half = sp ? sp.torso.half : 6;
   for (const [name, limb] of limbs) {
-    if (!limb.all.length) continue;
+    if (!limb.all.length || limb.lost) continue;
     if (limb.hand.length < HAND_BLOCK) { counts.q++; said.push(name + ' has no hand block'); }
     else if (pieces(limb.all, w) > 1) { counts.q++; said.push(name + ' is in pieces'); }
     for (const [seg, px] of limb.segs) if (tapers(px, w)) { counts.r++; said.push(name + ' ' + seg + ' tapers'); }
