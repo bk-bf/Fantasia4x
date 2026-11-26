@@ -236,7 +236,7 @@ function rigPawn(o, p) {
   const spaceOf = (P, sign, F) => { const d = F || before(P); return side ? [sign * J, P[0] - origin[0], origin[1] - P[1]] : back ? [P[0] - origin[0], d, origin[1] - P[1] - SEEN.depth * d] : [origin[0] - P[0], d, origin[1] - P[1] + SEEN.depth * d]; };
   const solved = (key, target) => armSolved(joints[key], target, L1, L2, key === 'R' ? 1 : -1, p.elbow);
   const camOf = q => SPACE.cam[face][0] + (view.depth(q) - SPACE.cam[face][1]) / SPACE.cam[face][2], mid3 = (a, b) => mul3(add3(a, b), .5);
-  const limbOf = (arm, art) => { const path = [art, shownAt(arm.E), shownAt(arm.H)]; path.rigid = true; return { path, hand: shownAt(arm.H).map(rnd), cams: { upper: camOf(mid3(arm.S, arm.E)), fore: camOf(mid3(arm.E, arm.H)), hand: camOf(arm.H) } }; };
+  const limbOf = (arm, art) => { const path = [art, shownAt(arm.E), shownAt(arm.H)]; path.rigid = true; const before = face === 'f' && arm.H[1] > SPACE.chest ? TOWARD_DEPTH.torso + TOWARD_DEPTH.step : -Infinity; return { path, hand: shownAt(arm.H).map(rnd), cams: { upper: Math.max(before, camOf(mid3(arm.S, arm.E))), fore: Math.max(before + TOWARD_DEPTH.step, camOf(mid3(arm.E, arm.H))), hand: Math.max(before + 2 * TOWARD_DEPTH.step, camOf(arm.H)) } }; };
   const bowing = kind === 'bow' && !p.carry, wielded = !p.carry && !!TOOLS[kind] && !bowing, nocked = bowing && p.bow >= 1 && p.arrow > .5, fetched = bowing && !nocked && p.out > 0 ? Math.min(BOW.sag + BOW.nock, p.out) : 0;
   const aimOf = () => unit3(p.aim || (p.tool === undefined ? TOOL_AIM[kind] || [0, .3, .95] : side ? [0, Math.sin(p.tool * D2R), Math.cos(p.tool * D2R)] : [(back ? 1 : -1) * Math.sin(p.tool * D2R), 0, Math.cos(p.tool * D2R)]));
   const armed = (tR, tL) => {
@@ -405,7 +405,7 @@ function rigPawn(o, p) {
   const { order, owner } = rigComposite(s, layers), headCam = order.find(l => l.name === 'head').cam;
   s.parts = order.map(({ spr, ...l }) => l); s.owner = owner;
   if (RIG_KEEP.layers) s.layers = order;
-  s.space = { ...space, face, shoulderZ, upper: L1, fore: L2, tool: wielded ? kind : bowing ? 'bow' : null, reach: (TOOL_REACH[kind] || 0) - gripAt, butt: (TOOL_BUTT[kind] || 0) + gripAt, head: { at: [0, SPACE.jut, f.hh / 2 + 1], r: f.hd }, torso: { half: hw, deep: 3, tall: f.tl }, hipRow: legTop, groundRow: base };
+  s.space = { ...space, face, shoulderZ, upper: L1, fore: L2, tool: wielded ? kind : bowing ? 'bow' : null, reach: (TOOL_REACH[kind] || 0) - gripAt, butt: (TOOL_BUTT[kind] || 0) + gripAt, head: { at: [0, SPACE.jut, f.hh / 2 + 1], r: f.hd }, torso: { half: hw, deep: SPACE.chest, tall: f.tl }, hipRow: legTop, groundRow: base };
   s.front = owner.map(n => n && order[n - 1].cam > headCam ? 1 : 0);
   const bare = p.carry ? { c: s.c.slice(), e: s.e.slice() } : null;
   s.outline();
