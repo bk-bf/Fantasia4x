@@ -98,7 +98,7 @@ a { color: var(--cool); }
 <body>
 <header id="mock" class="bar">
   <strong>Devlog #1: the repaint</strong>
-  <nav><a href="#title">Title</a><a href="#outline">Outline</a><a href="#script">Script</a><a href="#shorts">Shorts</a><a href="#seo">Evidence</a></nav>
+  <nav><a href="#title">Title</a><a href="script.html">Script</a><a href="#shorts">Shorts</a><a href="#seo">Evidence</a></nav>
   <span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span>
   <p class="mnote">concept mockup · thumbnail view counts and durations are placeholders · competitor view counts are real, read from YouTube search on 2026-11-26</p>
 </header>
@@ -139,45 +139,8 @@ a { color: var(--cool); }
     <div><div class="rt">My Colony Sim Was Ugly. So I Repainted It in 5 Days</div><div class="meta">Fantasia4x · placeholder views · Devlog #1</div></div></div>
 </div>
 
-<h2 id="outline">Long-form outline · ~11:40</h2>
-<p class="lead">Five acts. Every act ends on a reveal so the retention graph has a reason to stay flat.</p>
-<div class="timeline">
-  <div class="beat act"><div class="bt">Act 1 · The confession (0:00–1:50)</div></div>
-  <div class="beat"><div class="tc">0:00</div><div class="ba"><figure><img src="img/glyph-before.png" alt=""><figcaption>dev glyphs</figcaption></figure><figure><img src="img/grass-after.png" alt=""><figcaption>now</figcaption></figure></div><div><div class="bt">Cold open: the wipe</div><div class="bd">Five-second slow wipe, before to after, no music until the seam crosses. Then the hook line (see script).</div></div></div>
-  <div class="beat"><div class="tc">0:20</div><div class="todo">needs recording: dev-branch glyph renderer, 20 s slow pan over the dev-save colony at noon, 48 px tiles, HUD hidden</div><div><div class="bt">What it looked like</div><div class="bd">The glyph map <code>dev</code> still draws by default: one colour per Bitlands glyph, no ground between them.</div></div></div>
-  <div class="beat"><div class="tc">0:55</div><div class="ba"><figure><img src="img/glyph-before.png" alt=""><figcaption>dev glyphs</figcaption></figure><figure><img src="img/map-day.png" alt=""><figcaption>now</figcaption></figure></div><div><div class="bt">The rule I set myself</div><div class="bd">The mockups already looked right; the game didn't. Port the mockup, pixel for pixel, or don't ship it. Every feature in the next 10 minutes was held to a mockup.</div></div></div>
-
-  <div class="beat act"><div class="bt">Act 2 · Ground (1:50–4:10)</div></div>
-  <div class="beat"><div class="tc">1:50</div><div class="todo">needs recording: ground-blend mockup, a dirt/grass edge zoomed ×4, blend toggled off, on, off, on</div><div><div class="bt">Killing the grid</div><div class="bd">Ground drawn through a blend pass so tiles bleed into each other (<code>9086b016</code>, default from <code>66dee6b0</code>). Hold the cut on a dirt/grass edge; the difference is subtle at full frame, obvious zoomed.</div></div></div>
-  <div class="beat"><div class="tc">2:40</div><div class="todo">needs recording: water-shores mockup, one lake edge, shore pass off then on, then a 5 s gust over the water</div><div><div class="bt">Water that isn't a blue square</div><div class="bd">Depth bands, foam, wet sand, rapids and reeds (<code>56ccd47c</code>), one baked 2048 px field, wind gusts and ice. Rivers as lake water pushed downstream (<code>7dbd9499</code>).</div></div></div>
-  <div class="beat"><div class="tc">3:30</div><div class="todo">needs recording: mountain mockup, a mined face with stepped tiers, cutaway toggled as a pawn walks in</div><div><div class="bt">Mountains, take two</div><div class="bd">Fractured peaks shipped, got reverted the same night (<code>de30abee</code>), came back as stepped tiers (<code>556f9def</code>). Opinionated beat: “the first version was clever and wrong.”</div></div></div>
-
-  <div class="beat act"><div class="bt">Act 3 · Light (4:10–6:30)</div></div>
-  <div class="beat"><div class="tc">4:10</div><div class="ba"><figure><img src="img/map-day.png" alt=""><figcaption>13:00</figcaption></figure><figure><img src="img/map-night.png" alt=""><figcaption>23:30</figcaption></figure></div><div><div class="bt">Stepped light, not smooth light</div><div class="bd">Light pass with the mockup's stepped point light, grade and vignette (<code>a022698e</code>). Glow and drop shadows baked into a light atlas beside the colour atlas (<code>1e3b23bb</code>).</div></div></div>
-  <div class="beat"><div class="tc">5:20</div><div class="ba"><figure><img src="img/map-dusk.png" alt=""><figcaption>dusk</figcaption></figure><figure><img src="img/map-night.png" alt=""><figcaption>night</figcaption></figure></div><div><div class="bt">Day cycle timelapse</div><div class="bd">One colony, noon to midnight in 20 seconds. A test holds the light to the mockup's table every quarter hour (<code>1947ea7f</code>): say that out loud, it's the honest flex.</div></div></div>
-
-  <div class="beat act"><div class="bt">Act 4 · Life (6:30–9:00)</div></div>
-  <div class="beat"><div class="tc">6:30</div><div class="ba"><figure><img src="img/trees-summer.webp" alt=""><figcaption>summer</figcaption></figure><figure><img src="img/trees-autumn.webp" alt=""><figcaption>autumn</figcaption></figure></div><div><div class="bt">Wind, gusts and falling leaves</div><div class="bd">Plants bend in travelling gusts (<code>5cf1f385</code>); then they flickered, fixed by leaning in whole art pixels (<code>ec9bc28f</code>). Show the flicker bug, it's the best 6 seconds of the act.</div></div></div>
-  <div class="beat"><div class="tc">7:40</div><div class="ba"><figure><img src="img/forest.png" alt=""><figcaption>big trees</figcaption></figure><figure><img src="img/magic.png" alt=""><figcaption>elder</figcaption></figure></div><div><div class="bt">Big trees and one elder</div><div class="bd">Young/mature trees across seasons, cut away around pawns (<code>73930932</code>); trunk, boughs and leaves split in the wind; the magical elder that sheds flame through its leaves (<code>c8cacec8</code>).</div></div></div>
-
-  <div class="beat act"><div class="bt">Act 5 · How it was made, and what it cost (9:00–11:40)</div></div>
-  <div class="beat"><div class="tc">9:00</div><div class="todo">needs recording: screen capture, HUD mockup page left, game right, same scene, mouse panning both</div><div><div class="bt">Mockup first, then port</div><div class="bd">Every look lived as a browser mockup (ground-blend, grass-layers, light-hex, big-trees, tree-ground) before a line went into the WebGL renderer. Agents did much of the porting, held to tests against the mockup.</div></div></div>
-  <div class="beat"><div class="tc">10:10</div><div class="todo">needs recording: frame-time graph from the perf bench, before and after the fixes, same save and zoom</div><div><div class="bt">The frame-time bill</div><div class="bd">Shadow rescans, shader branches and per-tile tufts all cost frames; fixed by <code>53e344e7</code>, <code>d311fc48</code>, <code>dacae16a</code> and the <code>fix-frame-time-regression</code> branch. Put real numbers on screen or cut the beat.</div></div></div>
-  <div class="beat"><div class="tc">11:00</div><div class="ba one"><figure><img src="img/map-summer.png" alt=""><figcaption>summer</figcaption></figure><div class="todo">needs recording: the same HUD mockup map in winter, once the new snow is finished</div></div><div><div class="bt">Outro + wishlist</div><div class="bd">Summer on the HUD mockup map; the winter half waits for finished snow. One ask, one line, end screen to Devlog #0.</div></div></div>
-</div>
-
-<h2 id="script">TTS script · hook to 2:00</h2>
-<div class="script">
-  <div class="line"><div class="tc">0:00</div><div><div class="vo">(silence; the wipe runs)</div><div class="on"><b>On screen:</b> before → after, seam left to right.</div></div></div>
-  <div class="line"><div class="tc">0:05</div><div><div class="vo">Five days ago my game looked like this. Today it looks like this. Same map, same seed, same colonists. Three hundred and one commits in between, and one of them I'm still embarrassed about.</div></div></div>
-  <div class="line"><div class="tc">0:18</div><div><div class="vo">This is Fantasia, a colony sim. You run a settlement, the world runs itself, and until last week the world was, frankly, a spreadsheet with grass.</div><div class="on"><b>On screen:</b> glyph renderer, slow pan.</div></div></div>
-  <div class="line"><div class="tc">0:32</div><div><div class="vo">Here's the thing nobody tells you about pixel art games: the sprites aren't the problem. My sprites were fine. The problem is everything between the sprites. The ground stops at tile edges. Water is a blue square. Light is a number that changes the brightness. It all looks placed, not grown.</div><div class="on"><b>On screen:</b> zoom on a hard grass/dirt tile edge, freeze, red outline on the grid.</div></div></div>
-  <div class="line"><div class="tc">0:55</div><div><div class="vo">And the annoying part? I already knew what it should look like. I'd built mockups. Little browser pages where the grass blends, the water moves and the night actually feels like night. They looked great. The game didn't.</div><div class="on"><b>On screen:</b> mockup page beside the game, same scene.</div></div></div>
-  <div class="line"><div class="tc">1:15</div><div><div class="vo">So I set one rule. The game has to match the mockup. Not “inspired by”. Match. If a test can't hold the game to the mockup, it doesn't ship.</div><div class="on"><b>On screen:</b> test output, green, the quarter-hour light table.</div></div></div>
-  <div class="line"><div class="tc">1:32</div><div><div class="vo">That rule cost me a mountain range, a whole night of flickering trees and more frame time than I'd like to admit. We'll get to all of it. But first, the ground, because if the ground is wrong, nothing you put on it will ever look right.</div><div class="on"><b>On screen:</b> quick flashes: mountain revert, flicker, frame graph spike. Hard cut to ground.</div></div></div>
-  <div class="line"><div class="tc">1:52</div><div><div class="vo">Tiles are a lie we tell the computer. The player should never see them.</div><div class="on"><b>On screen:</b> blend pass toggles off, on, off, on.</div></div></div>
-</div>
-<p class="lead" style="margin-top:8px">TTS notes: one voice, slightly dry; pause 400 ms before each “before/after” cut; spell “301” as words.</p>
+<h2 id="outline">Outline and script</h2>
+<div class="card"><h3><a href="script.html">The full script, shot list, Shorts backlog and recording list are on script.html</a></h3><p class="lead" style="margin:0">Written from the commit history of <code>test/look-overhaul</code>, with the commit beside every beat.</p></div>
 
 <h2 id="shorts">Shorts · 9:16</h2>
 <div class="shorts">

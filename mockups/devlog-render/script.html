@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasia4x devlog #1 script</title>
+<style>
+@font-face { font-family: VT; src: url(VT323.ttf); }
+@font-face { font-family: Pix; src: url(PixelifySans.ttf); font-weight: 400 700; }
+:root {
+  --bg: #f6f1e6; --card: #fffdf8; --ink: #2a2116; --dim: #6e6250; --edge: #e2d8c3;
+  --accent: #a8640a; --cool: #3d7a2e; --hot: #b23a2a; --chip: #efe6d3;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17120c; --card: #211a12; --ink: #f2e8cc; --dim: #b3a585; --edge: #3a2f20;
+  --accent: #ffc468; --cool: #b0dc80; --hot: #ff8a70; --chip: #2c2318;
+} }
+:root[data-theme="dark"] {
+  --bg: #17120c; --card: #211a12; --ink: #f2e8cc; --dim: #b3a585; --edge: #3a2f20;
+  --accent: #ffc468; --cool: #b0dc80; --hot: #ff8a70; --chip: #2c2318;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, sans-serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+h2 { font: 700 21px/1.2 Pix, sans-serif; margin: 40px 0 12px; }
+h3 { margin: 0 0 6px; font-size: 16px; }
+.lead { color: var(--dim); margin: 0 0 8px; }
+.card { background: var(--card); border: 1px solid var(--edge); border-radius: 10px; padding: 16px; }
+.badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--dim); margin-left: 6px; vertical-align: 2px; white-space: nowrap; }
+.badge.rec { background: var(--accent); color: #1b1300; }
+.badge.rec-need { background: transparent; border: 1px solid var(--hot); color: var(--hot); }
+.titles { margin: 10px 0 0; padding: 0; list-style: none; }
+.titles li { padding: 8px 0; border-top: 1px solid var(--edge); font-size: 14px; }
+.titles li b { color: var(--accent); font-weight: 700; margin-right: 6px; font-size: 12px; }
+a { color: var(--cool); }
+code { background: var(--chip); padding: 0 4px; border-radius: 3px; font-size: 12px; }
+code.h, code.i { font: 15px/1.2 VT, monospace; padding: 1px 5px; white-space: nowrap; }
+code.h a, code.i a { color: var(--accent); text-decoration: none; }
+
+.stills { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); margin-top: 12px; }
+@media (min-width: 860px) { .stills { grid-template-columns: repeat(4, 1fr); } }
+.stills figure { margin: 0; position: relative; }
+.stills img { width: 100%; aspect-ratio: 16/10; object-fit: cover; border-radius: 6px; image-rendering: pixelated; display: block; }
+.stills figcaption { position: absolute; left: 6px; top: 6px; font: 15px/1 VT, monospace; background: rgba(20,14,8,.85); color: #f2e8cc; padding: 3px 6px; border-radius: 3px; }
+.stills figure.pick figcaption { color: #ffc468; }
+
+.sec { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 26px 0 8px; }
+.sec .st { font: 700 16px Pix, sans-serif; color: var(--accent); }
+.sec .len { font: 17px VT, monospace; color: var(--dim); }
+.shots { display: grid; gap: 8px; }
+.shot { display: grid; grid-template-columns: 56px 1fr 1fr; gap: 14px; background: var(--card); border: 1px solid var(--edge); border-radius: 8px; padding: 10px 12px; }
+.shot .tc { font: 18px VT, monospace; color: var(--accent); }
+.shot .vo { font-size: 16px; line-height: 1.55; }
+.shot .vo p { margin: 0 0 8px; }
+.shot .vo p:last-child { margin-bottom: 0; }
+.shot .on { color: var(--dim); font-size: 13px; }
+.shot .on p { margin: 0 0 6px; }
+.shot .on b { color: var(--cool); font-weight: 600; }
+.shot .src { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+.shot .hole { color: var(--hot); font-weight: 600; }
+@media (max-width: 760px) { .shot { grid-template-columns: 46px 1fr; } .shot .on { grid-column: 1 / -1; border-top: 1px dashed var(--edge); padding-top: 8px; } }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+td, th { text-align: left; padding: 8px 6px; border-top: 1px solid var(--edge); vertical-align: top; }
+th { color: var(--dim); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.k { font: 17px VT, monospace; color: var(--accent); white-space: nowrap; }
+.scroll { overflow-x: auto; }
+.cols { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 860px) { .cols { grid-template-columns: repeat(3, 1fr); } }
+.cols ol, .card ol, .card ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
+.cols ol li, .card ol li, .card ul li { margin-bottom: 4px; }
+.hook { font-weight: 600; }
+.sources { font-size: 13px; color: var(--dim); }
+</style>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+</head>
+<body>
+<header id="mock" class="bar">
+  <strong>Devlog #1: the script</strong>
+  <nav><a href="index.html">Thumbnails</a><a href="#title">Title</a><a href="#facts">Facts</a><a href="#script">Script</a><a href="#shorts">Shorts</a><a href="#backlog">Backlog</a><a href="#record">Shots</a><a href="#borrow">Borrowed</a><a href="#open">Open</a></nav>
+  <span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span>
+  <p class="mnote">script draft · every number is from the git history, an issue or a pull request, named beside its beat · timecodes are estimates at 150 words a minute</p>
+</header>
+<main>
+<p class="lead">Devlog #1, written from <code>origin/dev..origin/test/look-overhaul</code> (301 non-merge commits, 21 Nov 06:21 to 26 Nov 11:37, 2026) and the issues those commits cite. “Before” is the glyph renderer <code>dev</code> draws; “after” is composed scenes from the mockups. Narration is a TTS voice, first person. A hash beside a beat is the commit that beat's claim comes from.</p>
+
+<h2 id="title">Title</h2>
+<div class="card">
+  <h3>Pick: “My Colony Sim Was Ugly. I Repainted It in 5 Days With Claude” <span class="badge rec">recommended</span></h3>
+  <p class="lead">It keeps the confession and the time limit from the working title and puts the disclosure where the click happens. 294 of the 301 commits are co-authored by Claude, so a viewer who dislikes that learns it before the click, not in the comments. “Claude” also names the tool people search for, where “AI” reads as image generation. Run D against it if the channel has title testing.</p>
+  <ul class="titles">
+    <li><b>A</b>My Colony Sim Was Ugly. I Repainted It in 5 Days With Claude <span class="badge rec">pick</span></li>
+    <li><b>B</b>301 Commits in 5 Days: Repainting My Colony Sim With AI Agents <span class="badge">with AI</span> — the number carries it; weaker confession, stronger for the agent-workflow audience.</li>
+    <li><b>C</b>I Let Claude Repaint My Ugly Colony Sim. Here's Every Step <span class="badge">with AI</span> — AI is the subject, not a footnote. Highest backlash risk, clearest promise.</li>
+    <li><b>D</b>My Colony Sim Was Ugly. So I Repainted It in 5 Days <span class="badge">without</span> — the working title. Best raw click, but the disclosure then lands at 0:16 on a viewer who did not choose it.</li>
+    <li><b>E</b>This Is What My Game Looked Like 5 Days Ago <span class="badge">without</span> — the cold-open line as the title; good for the first Short.</li>
+    <li><b>F</b>Tiles Are the Problem: A Complete Pixel Art Overhaul in 5 Days <span class="badge">without</span> — technique-first, for search on pixel art rendering.</li>
+  </ul>
+  <p class="lead" style="margin-top:10px">Whatever the title: the disclosure line at 0:16 stays, and the description and a pinned comment repeat it with the scope (code, shaders, the code-drawn art, this narration voice).</p>
+</div>
+
+<h2 id="facts">What the history says</h2>
+<div class="card scroll">
+  <table>
+    <tr><th>Fact</th><th>Value</th><th>Where it comes from</th></tr>
+    <tr><td>Span</td><td class="n">5 days 9 hours</td><td>Painted groundwork on <code>dev</code> from <code class="h">12c07246</code> (21 Nov 02:20) to <code class="h">9659211b</code> (26 Nov 11:37). The branch itself starts at <code class="h">9086b016</code>, 21 Nov 06:21.</td></tr>
+    <tr><td>Commits</td><td class="n">301</td><td><code>git log --no-merges origin/dev..origin/test/look-overhaul</code>. 286 unique patches: some landed twice through combined branches. Plus 113 merges.</td></tr>
+    <tr><td>Per day</td><td class="n">82 · 43 · 115 · 52 · 6 · 3</td><td>21 to 26 Nov, same range, by commit date.</td></tr>
+    <tr><td>Kinds</td><td class="n">148 feat · 82 fix · 24 perf · 20 test</td><td>Commit type prefixes in the range.</td></tr>
+    <tr><td>Co-authored by Claude</td><td class="n">294 of 301</td><td><code>Co-Authored-By</code> trailers: 270 Opus 5.5, 15 Fable 5.2, 9 Sonnet 5.5.</td></tr>
+    <tr><td>Agent sessions</td><td class="n">23 named</td><td>Distinct <code>Claude-Session</code> trailers; the trailer only exists from <code class="h">035f7487</code> (23 Nov 18:17), so the real count is higher.</td></tr>
+    <tr><td>Mockups</td><td class="n">57 of 59</td><td>Commits on <code>mockups/live</code> ahead of <code>dev</code> that carry a Claude trailer. 72 commits in the overhaul name a mockup in their message.</td></tr>
+    <tr><td>Before the overhaul</td><td class="n">3,004 commits</td><td><code>git rev-list --count origin/dev</code>, first commit <code class="h">b18bf4a5</code>, 29 Jun 2025.</td></tr>
+  </table>
+</div>
+
+<h2 id="script">Full script · about 9:40</h2>
+<div class="card scroll">
+  <table>
+    <tr><th>#</th><th>Section</th><th>Starts</th><th>Length</th><th>Job</th></tr>
+    <tr><td class="k">0</td><td>Cold open</td><td class="n">0:00</td><td class="n">0:16</td><td>Old look, hard cut, promise.</td></tr>
+    <tr><td class="k">1</td><td>Disclosure and stakes</td><td class="n">0:16</td><td class="n">0:36</td><td>AI, said plainly; three open loops.</td></tr>
+    <tr><td class="k">2</td><td>The game so far</td><td class="n">0:52</td><td class="n">0:46</td><td>What it is; three moments from 3,000 commits.</td></tr>
+    <tr><td class="k">3</td><td>The loop</td><td class="n">1:38</td><td class="n">1:10</td><td>How the work was actually done.</td></tr>
+    <tr><td class="k">4</td><td>Step 1 · Ground</td><td class="n">2:48</td><td class="n">1:10</td><td>The grid dies.</td></tr>
+    <tr><td class="k">5</td><td>Step 2 · Light</td><td class="n">3:58</td><td class="n">1:02</td><td>Stepped light, a second atlas, an honest gap.</td></tr>
+    <tr><td class="k">6</td><td>Detour · The mountain</td><td class="n">5:00</td><td class="n">0:32</td><td>Pays loop one. Pattern interrupt.</td></tr>
+    <tr><td class="k">7</td><td>Step 3 · Water</td><td class="n">5:32</td><td class="n">0:50</td><td>Depth, shore, wind, rivers.</td></tr>
+    <tr><td class="k">8</td><td>Step 4 · Wind and trees</td><td class="n">6:22</td><td class="n">1:16</td><td>Pays loop two: the flicker.</td></tr>
+    <tr><td class="k">9</td><td>Step 5 · The bill</td><td class="n">7:38</td><td class="n">1:22</td><td>Pays loop three: 244 ms.</td></tr>
+    <tr><td class="k">10</td><td>Outro</td><td class="n">9:00</td><td class="n">0:40</td><td>What is not done; one ask.</td></tr>
+  </table>
+</div>
+
+<div class="stills">
+  <figure><img src="img/glyph-before.png" alt="The dev glyph renderer: a stone house in single-colour glyphs"><figcaption>before · dev glyphs</figcaption></figure>
+  <figure class="pick"><img src="img/map-day.png" alt="HUD mockup colony scene at 13:00"><figcaption>hard cut · A1</figcaption></figure>
+  <figure><img src="img/map-night.png" alt="HUD mockup colony scene at 23:30"><figcaption>light · A4</figcaption></figure>
+  <figure><img src="img/magic.png" alt="Big-trees mockup: a young emberwood beside its elder"><figcaption>elder · A9</figcaption></figure>
+</div>
+<p class="lead" style="margin-top:8px">The hard cut goes to the HUD mockup's colony at 13:00 (A1): it is the one scene with houses, a river, fields, colonists and trees in a single frame, and it answers the “before” shot's stone house with a house. The tree-ground forest (A2) is the second pan.</p>
+
+<div class="sec"><span class="st">0 · Cold open</span><span class="len">0:00–0:16</span></div>
+<div class="shots">
+  <div class="shot"><div class="tc">0:00</div>
+    <div class="vo"><p>This is what my game looked like.</p></div>
+    <div class="on"><p><b>B1.</b> Glyph renderer, close on the stone house. Slow pan left to right, 5 s. No music; room tone only.</p><div class="src"><code class="h">d003267b</code></div></div></div>
+  <div class="shot"><div class="tc">0:05</div>
+    <div class="vo"><p>And this is what it looks like now.</p></div>
+    <div class="on"><p><b>A1.</b> Hard cut on “now”, music in on the cut. HUD mockup colony at 13:00, wind on, slow pan from the river across the houses, 5 s.</p><div class="src"><code class="h">66dee6b0</code></div></div></div>
+  <div class="shot"><div class="tc">0:10</div>
+    <div class="vo"><p>Here is exactly how I achieved this complete graphics overhaul in five days.</p></div>
+    <div class="on"><p><b>A2.</b> Second pan, the tree-ground forest. Counter ticks up from 0 to 301 commits over a 21–26 Nov date bar.</p><div class="src"><code class="h">9086b016</code><code class="h">9659211b</code></div></div></div>
+</div>
+
+<div class="sec"><span class="st">1 · Disclosure and stakes</span><span class="len">0:16–0:52</span></div>
+<div class="shots">
+  <div class="shot"><div class="tc">0:16</div>
+    <div class="vo"><p>One thing first, so nobody feels tricked ten minutes in. I built this with AI. Heavily.</p><p>Two hundred ninety-four of those three hundred and one commits are co-signed by Claude. The code. The shaders. Even the art, because in this game, the art is code.</p></div>
+    <div class="on"><p><b>W3.</b> Terminal: <code>git log</code> of the branch scrolling, every <code>Co-Authored-By: Claude</code> line lit. Big number: 294 / 301.</p><div class="src"><code class="h">9086b016</code><code class="h">d8996be6</code><code class="i">#208</code></div></div></div>
+  <div class="shot"><div class="tc">0:32</div>
+    <div class="vo"><p>If that's a dealbreaker, no hard feelings. This is your exit.</p><p>If you want to see what that workflow really looks like on a real game, stay. Because it includes a mountain range I deleted after four hours. Trees that would not stop flickering. And a single frame that took a quarter of a second.</p></div>
+    <div class="on"><p>Three one-second flashes, each with a small lock icon that opens later: the peaks (A10), the flicker (W7), a red frame graph (W5).</p><div class="src"><code class="h">de30abee</code><code class="i">#410</code><code class="h">d311fc48</code></div></div></div>
+</div>
+
+<div class="sec"><span class="st">2 · The game so far</span><span class="len">0:52–1:38</span></div>
+<div class="shots">
+  <div class="shot"><div class="tc">0:52</div>
+    <div class="vo"><p>The game is Fantasia Four X. A real-time fantasy colony sim, where every culture is procedurally generated.</p><p>I started it in June twenty twenty-five. As menus. A race screen. A building menu.</p></div>
+    <div class="on"><p>Title card over A1. Then the first commit on screen, 29 Jun 2025, with its subject line.</p><div class="src"><code class="h">b18bf4a5</code><code class="h">04c1875a</code><code class="h">6e873e12</code></div></div></div>
+  <div class="shot"><div class="tc">1:06</div>
+    <div class="vo"><p>Then it sat for most of a year. In May twenty twenty-six I came back, and it got a real engine. A WebGL map. Pathfinding in Rust. Day and night, seasons, weather.</p><p>That June alone has one thousand two hundred ninety-two commits, and the first release you could download.</p></div>
+    <div class="on"><p>Commit-per-month bar chart, Jun 2025 to Nov 2026: the flat stretch, then the June 2026 spike. Tag <code>v0.1.0</code>, 25 Jun 2026.</p><div class="src"><code class="h">5446f8e1</code><code class="h">b3243d3d</code><code class="h">c4e62395</code><code class="h">3551f0d6</code></div></div></div>
+  <div class="shot"><div class="tc">1:22</div>
+    <div class="vo"><p>So by last week there were about three thousand commits in there. A whole simulation. And all of it was drawn as glyphs. One colour each, from a free tileset called Bitlands.</p><p>I like that tileset. But my game looked like a terminal with ambitions.</p></div>
+    <div class="on"><p><b>B2.</b> Glyph renderer, wider: colonists working, a field, the map edge. Slow push-in.</p><div class="src"><code class="h">d003267b</code><code class="h">9689a738</code></div></div></div>
+</div>
+
+<div class="sec"><span class="st">3 · The loop</span><span class="len">1:38–2:48</span></div>
+<div class="shots">
+  <div class="shot"><div class="tc">1:38</div>
+    <div class="vo"><p>Here's the workflow. It is the same loop for everything you're about to see.</p><p>One. A mockup. A plain browser page where the look gets designed, with no game attached. I look at it. I leave comments. It changes until I like it.</p></div>
+    <div class="on"><p><b>W1.</b> Screen capture: the big-trees mockup page, controls visible, a comment pinned on a tree. Numbered “1” in the corner.</p><div class="src"><code class="h">55359ed2</code><code class="h">492a6bd0</code></div></div></div>
+  <div class="shot"><div class="tc">1:54</div>
+    <div class="vo"><p>Two. The mockup becomes an issue. A written spec. What it is, and why.</p><p>Three. An agent takes that issue into its own branch and ports the mockup into the real renderer.</p></div>
+    <div class="on"><p><b>W2.</b> Issue #217 scrolling, then the branch list: one branch per issue, 113 merges into the test branch.</p><div class="src"><code class="i">#215</code><code class="i">#216</code><code class="i">#217</code><code class="i">#218</code></div></div></div>
+  <div class="shot"><div class="tc">2:08</div>
+    <div class="vo"><p>And here's the trick that makes it work. Every sprite is a drawing function. So a bake tool runs the mockup's own drawing code and packs the result into an atlas the game reads. Nothing gets redrawn. Nothing drifts.</p></div>
+    <div class="on"><p>Diagram, three boxes with arrows: mockup drawing code → bake → atlas → game. End on the counter: 1,793 sprites.</p><div class="src"><code class="h">04eb8574</code><code class="h">d8996be6</code><code class="h">f61c689e</code></div></div></div>
+  <div class="shot"><div class="tc">2:24</div>
+    <div class="vo"><p>Four. Tests hold the game to the mockup. The light test checks ninety-six times of day, and fails if a colour is more than two levels off.</p><p>Five. Everything merges into one test branch. And I play it. That part is mine. I decide what looks right. And I said no a lot.</p></div>
+    <div class="on"><p><b>W4.</b> Test run going green. Then a quoted line from an issue: “Decision 3: no. It did not look right in the mockup.”</p><div class="src"><code class="h">1947ea7f</code><code class="h">7774572e</code><code class="i">#398</code></div></div></div>
+</div>
+
+<div class="sec"><span class="st">4 · Step 1 · Ground</span><span class="len">2:48–3:58</span></div>
+<div class="shots">
+  <div class="shot"><div class="tc">2:48</div>
+    <div class="vo"><p>Step one. The ground.</p><p>Here's my opinion. In a tile game, the sprites are never the problem. The grid is. Look at the old map. Every tile ends in a hard edge. You can count them.</p></div>
+    <div class="on"><p><b>B3.</b> Glyph renderer, close on a grass and dirt border. Freeze, draw the grid lines over it in red.</p><div class="src"><code class="i">#205</code></div></div></div>
+  <div class="shot"><div class="tc">3:02</div>
+    <div class="vo"><p>So the new ground isn't tiles at all. It's one big sheet over the whole map, and a shader decides, per pixel, what kind of ground that is. It bends the borders, so grass wanders into dirt. It darkens the lip where high ground meets low.</p><p>That was the first commit on the branch.</p></div>
+    <div class="on"><p><b>A3.</b> Tree-ground “grounds” scene: slow pan across four ground kinds meeting at a pond. Commit card: 21 Nov 06:21.</p><div class="src"><code class="h">9086b016</code></div></div></div>
+  <div class="shot"><div class="tc">3:20</div>
+    <div class="vo"><p>And it still looked wrong. Each ground was one small patch, repeating every four tiles. A carpet.</p><p>So on day three, the ground got layers. One shared field that only repeats every sixty-four tiles. Soil underneath. Grass on top, where the field says so. Pebbles, cracks and leaves scattered over it.</p></div>
+    <div class="on"><p>Grass-layers mockup, “today” beside “A”: the carpet, then the layered meadow, same crop. Wipe between them twice.</p><div class="src"><code class="i">#398</code><code class="h">ce707a56</code><code class="h">8b01937c</code></div></div></div>
+  <div class="shot"><div class="tc">3:42</div>
+    <div class="vo"><p>And tufts of grass as real sprites, but only on tiles where grass actually grows. That rule matters. Nothing on the ground may look like something you can harvest. Unless you can.</p></div>
+    <div class="on"><p><b>A2.</b> Tree-ground forest floor at zoom 3: tufts, litter, low plants. Slow drift.</p><div class="src"><code class="h">2570c566</code><code class="i">#398</code></div></div></div>
+</div>
+
+<div class="sec"><span class="st">5 · Step 2 · Light</span><span class="len">3:58–5:00</span></div>
+<div class="shots">
+  <div class="shot"><div class="tc">3:58</div>
+    <div class="vo"><p>Step two. Light.</p><p>The old map got one tint for the hour, the season and the weather. Flat.</p><p>The new light is painted. Every fire is a point light, and its falloff is cut into seven hard steps with a dither pattern. So it looks like pixel art, and not like a flashlight.</p></div>
+    <div class="on"><p><b>B4.</b> Glyph house at night, 3 s. Cut to <b>A5</b>: HUD mockup at 23:30, push in on the campfire until the seven rings read.</p><div class="src"><code class="h">7f33e8f1</code><code class="h">a022698e</code></div></div></div>
+  <div class="shot"><div class="tc">4:18</div>
+    <div class="vo"><p>Day, dusk and night each get their own colour grade.</p><p>And then the part I love. There's a second atlas. Same layout as the colour one, but it stores glow and shadow. So a fire knows it glows. A tree knows where its shadow falls. Walls and rock throw their shadows down and to the right.</p></div>
+    <div class="on"><p><b>A4.</b> Locked camera on the colony, 13:00 to 19:00 to 23:30 in 12 s. Then split screen: colour atlas left, light atlas right, same sprite.</p><div class="src"><code class="h">1e3b23bb</code><code class="h">7f33e8f1</code></div></div></div>
+  <div class="shot"><div class="tc">4:40</div>
+    <div class="vo"><p>Now the honest bit. I put the game next to the mockup at the same hour. And the game looked flatter.</p><p>So now there's a test holding the game to the mockup's numbers, every quarter hour of the day. It's closer. That issue is still open.</p></div>
+    <div class="on"><p>Light-hex mockup page: the table and its contact sheet. Issue #380 header with the green “Open” pill.</p><div class="src"><code class="i">#380</code><code class="h">1947ea7f</code></div></div></div>
+</div>
+
+<div class="sec"><span class="st">6 · Detour · The mountain</span><span class="len">5:00–5:32</span></div>
+<div class="shots">
+  <div class="shot"><div class="tc">5:00</div>
+    <div class="vo"><p>Quick detour. I promised you a mountain range.</p><p>Mountains started as flat tops. On day four, an agent shipped fractured peaks. Gullies, ledges, an eight-stage bake on the graphics card. Maybe the most ambitious thing on the branch.</p></div>
+    <div class="on"><p><b>A10.</b> Mountain-tops mockup: “today” flat top, then direction C, peaks. First lock icon opens.</p><div class="src"><code class="h">150907b5</code><code class="h">fe84587d</code><code class="i">#441</code></div></div></div>
+  <div class="shot"><div class="tc">5:16</div>
+    <div class="vo"><p>I reverted it the same night. Under four hours later.</p><p class="hole">[One sentence from the developer on why. The history only says “superseded”.]</p><p>What replaced it is simpler. Stepped rock tiers, worked out per pixel, in the frame they're drawn. Nothing baked ahead.</p></div>
+    <div class="on"><p>The revert commit on screen, 23:41. Then direction B, tiers, same range, slow pan. Mined cutaway toggled once.</p><div class="src"><code class="h">de30abee</code><code class="h">556f9def</code><code class="i">#445</code></div></div></div>
+</div>
+
+<div class="sec"><span class="st">7 · Step 3 · Water</span><span class="len">5:32–6:22</span></div>
+<div class="shots">
+  <div class="shot"><div class="tc">5:32</div>
+    <div class="vo"><p>Step three. Water.</p><p>Old water was one more glyph. New water has depth. Shallows, open water and rapids, in bands. A foam line within two pixels of land. A wet sand line a little further out. Reeds on a fifth of the riverbank tiles.</p></div>
+    <div class="on"><p><b>B5.</b> Glyph river, 3 s. Cut to <b>A6</b>: the colony's river, zoomed, slow pan downstream along the shore.</p><div class="src"><code class="h">56ccd47c</code><code class="i">#216</code></div></div></div>
+  <div class="shot"><div class="tc">5:52</div>
+    <div class="vo"><p>Then it had to move. So there's a wave field, driven by the wind. Gusts cross a lake in patches. Rain drops rings on it.</p></div>
+    <div class="on"><p><b>A6.</b> Same river, weather switched from clear to windy to rain.</p><div class="src"><code class="h">7d6db953</code><code class="h">1d7ddef2</code><code class="i">#424</code></div></div></div>
+  <div class="shot"><div class="tc">6:04</div>
+    <div class="vo"><p>And rivers? I like this one. A river is just lake water, pushed downstream by a current. Same shader. One extra field that says which way is down.</p></div>
+    <div class="on"><p>Tree-ground “water” scene. Overlay: small arrows along the river course.</p><div class="src"><code class="h">7dbd9499</code><code class="h">4ef5a72e</code></div></div></div>
+</div>
+
+<div class="sec"><span class="st">8 · Step 4 · Wind and trees</span><span class="len">6:22–7:38</span></div>
+<div class="shots">
+  <div class="shot"><div class="tc">6:22</div>
+    <div class="vo"><p>Step four. Wind. This is where it came alive. And where it broke.</p><p>Day three, six in the morning. Plants start bending in the wind. Gusts travel across the map. Leaves fall. More in autumn, none in winter.</p></div>
+    <div class="on"><p><b>A7.</b> Big-trees forest, wind stepped from still to breeze to windy to gale.</p><div class="src"><code class="h">5cf1f385</code><code class="i">#401</code></div></div></div>
+  <div class="shot"><div class="tc">6:38</div>
+    <div class="vo"><p>It looked great in motion. Then I paused the game. Wind set to still. And the trees kept flickering. Thin, one-pixel stripes, on every plant. About two percent of the screen, changing every single frame.</p></div>
+    <div class="on"><p><b>W7.</b> The flicker capture, full screen, then 4× zoom on one tree. Second lock icon opens.</p><div class="src"><code class="i">#410</code></div></div></div>
+  <div class="shot"><div class="tc">6:54</div>
+    <div class="vo"><p>The cause was two shaders disagreeing. One leaned the sprite by a smooth amount. The other rounded that lean to whole art pixels. Between them, columns of pixels flipped back and forth.</p><p>The fix: lean in whole art pixels. Everywhere. At one zoom level that took it from thirty-six thousand changing pixels a frame, down to three.</p></div>
+    <div class="on"><p>Two-line diagram of the lean, smooth against stepped. Then the row from the issue's table: 36,469 → 3.</p><div class="src"><code class="h">ec9bc28f</code><code class="i">#410</code></div></div></div>
+  <div class="shot"><div class="tc">7:14</div>
+    <div class="vo"><p>And once the wind worked, the trees got big. Young and mature versions of every tree, in three seasons. They cut away around a colonist standing behind them. Trunk, boughs and leaves move separately.</p><p>And on about one map in four, one magical tree grows into an elder. The emberwood sheds flame through its leaves.</p></div>
+    <div class="on"><p><b>A8.</b> Cutaway toggled on a colonist behind an oak. Then <b>A9</b>: the emberwood elder at night, slow push-in, flame and motes.</p><div class="src"><code class="h">73930932</code><code class="h">9051efa4</code><code class="h">099cd0f5</code><code class="h">5d74cba9</code><code class="h">c8cacec8</code></div></div></div>
+</div>
+
+<div class="sec"><span class="st">9 · Step 5 · The bill</span><span class="len">7:38–9:00</span></div>
+<div class="shots">
+  <div class="shot"><div class="tc">7:38</div>
+    <div class="vo"><p>Step five. The bill.</p><p>All of this costs frames. And for a while, it cost too many.</p><p>Shadows were being rebuilt for every visible tile, on almost every frame. Now: at most four times a second while the camera stands still.</p></div>
+    <div class="on"><p>A9 keeps running, then freezes and desaturates. Text card: “shadows: every frame → 4 per second”.</p><div class="src"><code class="h">53e344e7</code><code class="h">337cd6b9</code></div></div></div>
+  <div class="shot"><div class="tc">7:56</div>
+    <div class="vo"><p>Lights were being looked up for every light on the map, every frame, even paused. Now: only the lights near the view. That took a paused frame from about five milliseconds of script to under one.</p></div>
+    <div class="on"><p>Text card: “4.95 ms → 0.71 ms”, over the night colony.</p><div class="src"><code class="h">8ff80625</code></div></div></div>
+  <div class="shot"><div class="tc">8:10</div>
+    <div class="vo"><p>Then the big one. Day four. The automated frame check goes red. On the test server, one frame takes two hundred forty-four milliseconds. That's four frames a second.</p><p>That server has no graphics card, so it exaggerates. But it runs the same code.</p></div>
+    <div class="on"><p><b>W5.</b> The red check, then a frame graph with one bar at 244 ms. Third lock icon opens.</p><div class="src"><code class="h">d311fc48</code><code class="h">7687472b</code></div></div></div>
+  <div class="shot"><div class="tc">8:28</div>
+    <div class="vo"><p>And nobody guessed the cause. The agent found it by deleting things. Switch a part off. Measure. Put it back. Terrain: nothing. Creatures: nothing. Lighting: nothing.</p><p>Then one branch of one shader. The painted sprite path. Every old-style pixel was paying for it, and none of them used it.</p></div>
+    <div class="on"><p>Checklist ticking down: terrain, creatures, buildings, items, light, shadow, each “no change”. The last line lights up: “painted sprite branch removed: 244 → 104 ms”.</p><div class="src"><code class="h">d311fc48</code></div></div></div>
+  <div class="shot"><div class="tc">8:48</div>
+    <div class="vo"><p>The fix is one compile switch. Two hundred forty-four milliseconds became eleven.</p></div>
+    <div class="on"><p>The bar drops from 244 to 10.9. Hold one second of silence, then music back.</p><div class="src"><code class="h">d311fc48</code></div></div></div>
+</div>
+
+<div class="sec"><span class="st">10 · Outro</span><span class="len">9:00–9:40</span></div>
+<div class="shots">
+  <div class="shot"><div class="tc">9:00</div>
+    <div class="vo"><p>So. Five days. Ground, light, water, wind. And a frame budget that survived.</p><p>Is it finished? No. Seasons don't turn gradually yet. Colonists aren't animated yet. And all of this still lives on a test branch, where I play it and judge it before it goes anywhere.</p></div>
+    <div class="on"><p><b>A11.</b> Wide pan over the tree-ground map view. Two open issues slide past as small cards.</p><div class="src"><code class="i">#397</code><code class="i">#428</code></div></div></div>
+  <div class="shot"><div class="tc">9:20</div>
+    <div class="vo"><p>But it stopped looking like a terminal.</p><p>If you want to watch a colony sim get built this way, with the commits on screen and the failures left in, subscribe.</p><p class="hole">[Next video’s topic and the one ask: the developer’s call.]</p></div>
+    <div class="on"><p>B1 for one second, then A1 again, the cold open's cut in reverse order. End screen.</p><div class="src"><code class="h">66dee6b0</code></div></div></div>
+</div>
+<p class="lead" style="margin-top:10px">TTS notes: one voice, dry. Numbers are already spelled out. Pause 400 ms before each hard cut and after “This is your exit.” Say “Fantasia Four X”. Words of narration: <span id="wc">about 1,300</span>.</p>
+
+<h2 id="shorts">Shorts cut from the video · 9:16</h2>
+<div class="cols">
+  <div class="card">
+    <h3>1 · “This is what my game looked like” · 25 s <span class="badge rec">first Short</span></h3>
+    <ol><li>0–5 s: B1, the glyph pan, the cold-open line.</li><li>5–12 s: hard cut to A1. “And this is what it looks like now.”</li><li>12–20 s: A2 and A9. “Five days. Three hundred commits. Almost all of them co-signed by an AI.”</li><li>20–25 s: “The whole breakdown is on the channel.”</li></ol>
+    <div class="src" style="margin-top:8px"><code class="h">9086b016</code><code class="h">66dee6b0</code></div>
+  </div>
+  <div class="card">
+    <h3>2 · “My trees would not stop flickering” · 35 s</h3>
+    <ol><li>Open on W7 with no voice for 2 s.</li><li>“Paused. Wind still. And two percent of my screen is changing every frame.”</li><li>The two-shader diagram, one sentence each.</li><li>“Thirty-six thousand flickering pixels. Now three.” End on A7 in a breeze, loopable.</li></ol>
+    <div class="src" style="margin-top:8px"><code class="i">#410</code><code class="h">ec9bc28f</code></div>
+  </div>
+  <div class="card">
+    <h3>3 · “One frame took a quarter of a second” · 40 s</h3>
+    <ol><li>Open on the 244 ms bar. “My game ran at four frames a second on the test server.”</li><li>The delete-and-measure checklist, fast.</li><li>“One shader branch. Every pixel paid for it. None of them used it.”</li><li>Bar drops to 10.9. “One compile switch.”</li></ol>
+    <div class="src" style="margin-top:8px"><code class="h">d311fc48</code></div>
+  </div>
+</div>
+
+<h2 id="backlog">Shorts backlog · standalone</h2>
+<p class="lead">For one or two Shorts a day. “Free” means the stills already sit in a mockup's <code>img/</code> folder or this one's, and the edit is a pan or a wipe. “Record” means a screen capture of a live mockup or of the game. Every “after” picture is a composed scene.</p>
+<div class="card" style="margin-bottom:12px">
+  <h3>First Short on the channel: #1, the before and after</h3>
+  <p class="lead" style="margin:0">It carries the long video's hook, so the Short and the video sell each other, and it has a story in two shots: bad, then good. “Noon to midnight” (#2) is the prettier loop but it has no before, so a new viewer has nothing to compare it to and no reason to look for the video. Post it second, the day after, when the profile already shows where the look came from.</p>
+</div>
+<div class="card scroll">
+  <table>
+    <tr><th>#</th><th>Hook line</th><th>What it shows</th><th>Source</th><th>Effort</th></tr>
+    <tr><td class="k">1</td><td class="hook">This is what my game looked like five days ago.</td><td>Glyph house, hard cut to the colony scene.</td><td><code>img/glyph-before.png</code>, <code>img/map-day.png</code> <code class="h">66dee6b0</code></td><td><span class="badge">free</span> better with B1 and A1</td></tr>
+    <tr><td class="k">2</td><td class="hook">Noon to midnight in one colony.</td><td>The colony at 13:00, 19:00 and 23:30, cross-faded; campfire sound.</td><td><code>img/map-day.png</code>, <code>map-dusk.png</code>, <code>map-night.png</code> <code class="h">7f33e8f1</code></td><td><span class="badge">free</span> timelapse is A4</td></tr>
+    <tr><td class="k">3</td><td class="hook">My fires know that they glow.</td><td>Night colony, then the light buffer on its own: glow rings on black.</td><td>big-trees <code>img/magic-light.webp</code>, <code>img/map-night.png</code> <code class="h">1e3b23bb</code></td><td><span class="badge">free</span></td></tr>
+    <tr><td class="k">4</td><td class="hook">Why my light has exactly seven steps.</td><td>Push in on the campfire until the dithered rings read; count them.</td><td><code>img/map-night.png</code> <code class="h">a022698e</code></td><td><span class="badge">free</span></td></tr>
+    <tr><td class="k">5</td><td class="hook">I deleted a mountain range after four hours.</td><td>Flat top, peaks, then tiers, same range.</td><td>mountain-tops <code>img/today.webp</code>, <code>c.webp</code>, <code>b.webp</code> <code class="h">fe84587d</code><code class="h">de30abee</code><code class="h">556f9def</code></td><td><span class="badge">free</span></td></tr>
+    <tr><td class="k">6</td><td class="hook">Three ways to draw a mountain. Which would you pick?</td><td>Directions A, B and C side by side; the answer in the comments.</td><td>mountain-tops <code>img/a.webp</code>, <code>b.webp</code>, <code>c.webp</code> <code class="h">b0073f69</code></td><td><span class="badge">free</span></td></tr>
+    <tr><td class="k">7</td><td class="hook">Tor, pavement or knoll?</td><td>Three rock outcrop looks on one hillside, as a poll.</td><td>outcrops <code>img/tor.webp</code>, <code>pavement.webp</code>, <code>knoll.webp</code></td><td><span class="badge">free</span></td></tr>
+    <tr><td class="k">8</td><td class="hook">You can count the tiles. That's the problem.</td><td>Blend off beside blend on, same save, same camera.</td><td>ground-blend mockup, both pairs <code class="h">9086b016</code></td><td><span class="badge">free</span></td></tr>
+    <tr><td class="k">9</td><td class="hook">My grass looked like a carpet.</td><td>The four-tile repeat, then the layered meadow.</td><td>grass-layers mockup, “today” and “A” <code class="h">ce707a56</code><code class="i">#398</code></td><td><span class="badge">free</span></td></tr>
+    <tr><td class="k">10</td><td class="hook">Four kinds of ground, zero straight lines.</td><td>Slow pan over four ground kinds meeting at a pond.</td><td>tree-ground <code>img/grounds-summer.webp</code> <code class="h">8b01937c</code></td><td><span class="badge">free</span></td></tr>
+    <tr><td class="k">11</td><td class="hook">Small tree, big tree, elder.</td><td>A young emberwood beside its elder, colonists for scale.</td><td><code>img/magic.png</code> <code class="h">73930932</code><code class="h">5d74cba9</code></td><td><span class="badge">free</span></td></tr>
+    <tr><td class="k">12</td><td class="hook">This tree is on fire. It's fine.</td><td>The emberwood elder at night, flame through the leaves.</td><td>big-trees mockup, A9 <code class="h">c8cacec8</code></td><td><span class="badge rec-need">record</span></td></tr>
+    <tr><td class="k">13</td><td class="hook">Wind, from still to gale.</td><td>One forest patch, four wind strengths, parts moving apart.</td><td>big-trees mockup, A7 <code class="h">099cd0f5</code></td><td><span class="badge rec-need">record</span></td></tr>
+    <tr><td class="k">14</td><td class="hook">My trees get out of the way.</td><td>A colonist walks behind an oak and the crown dithers open.</td><td>big-trees mockup, A8 <code class="h">73930932</code><code class="h">9051efa4</code></td><td><span class="badge rec-need">record</span></td></tr>
+    <tr><td class="k">15</td><td class="hook">My trees would not stop flickering.</td><td>The bug, the cause, the number. Same as cut-down 2.</td><td>W7 <code class="i">#410</code><code class="h">ec9bc28f</code></td><td><span class="badge rec-need">record</span></td></tr>
+    <tr><td class="k">16</td><td class="hook">A river is a lake with a push.</td><td>The colony's river with flow arrows drawn over it.</td><td><code>img/map-day.png</code>, right third <code class="h">7dbd9499</code></td><td><span class="badge">free</span> motion is A6</td></tr>
+    <tr><td class="k">17</td><td class="hook">My game ran at four frames a second.</td><td>The commit message as the script: 244 ms, the checklist, 10.9 ms.</td><td>W5 as text cards <code class="h">d311fc48</code></td><td><span class="badge">free</span></td></tr>
+    <tr><td class="k">18</td><td class="hook">294 of my last 301 commits were written with an AI.</td><td>The log scrolling, then the after scene. The disclosure as its own Short.</td><td>W3, <code>img/map-day.png</code></td><td><span class="badge">free</span></td></tr>
+    <tr><td class="k">19</td><td class="hook">One tree mockup, five versions.</td><td>The big-trees page at each of its commits, same view.</td><td><code>git log origin/mockups/live -- mockups/big-trees</code> <code class="h">55359ed2</code></td><td><span class="badge rec-need">record</span></td></tr>
+    <tr><td class="k">20</td><td class="hook">My colony sim started as two menus.</td><td>The first commit's screens, the glyph map, the painted scene.</td><td><code class="h">b18bf4a5</code>, <code>img/glyph-before.png</code>, <code>img/map-day.png</code></td><td><span class="badge rec-need">record</span> the 2025 build</td></tr>
+  </table>
+</div>
+
+<h2 id="record">Shots to record</h2>
+<p class="lead">All at 1920×1080, 60 fps, pixel-perfect scaling, HUD and mockup controls hidden (backquote hides the mockup pill). Pans are slow: about one tile a second.</p>
+<div class="card scroll">
+  <h3>Before · glyph renderer, <code>origin/dev</code> at <code class="h">8e6ba0d7</code></h3>
+  <p class="lead">Save <code>tools/work-pins/fixtures/dev-save.json.gz</code>, summer, clear, panels hidden, the stone house <code>capture-glyph.mjs</code> builds at tile 257,225, 48 px tiles.</p>
+  <table>
+    <tr><th>#</th><th>Scene</th><th>Camera</th><th>Used at</th></tr>
+    <tr><td class="k">B1</td><td>The stone house, noon.</td><td>Close; pan left to right across the house, 8 s.</td><td>0:00, outro, Short 1</td></tr>
+    <tr><td class="k">B2</td><td>The colony at work, noon, game running at 1×.</td><td>32 px tiles; slow push-in, 10 s.</td><td>1:22</td></tr>
+    <tr><td class="k">B3</td><td>A grass and dirt border near the house, paused.</td><td>Closest zoom; hold 6 s, then freeze.</td><td>2:48</td></tr>
+    <tr><td class="k">B4</td><td>The same house at midnight, hearth and campfire lit.</td><td>As B1, static, 5 s.</td><td>3:58</td></tr>
+    <tr><td class="k">B5</td><td>The nearest river or lake shore.</td><td>48 px tiles; pan along the shore, 5 s.</td><td>5:32</td></tr>
+  </table>
+</div>
+<div class="card scroll" style="margin-top:12px">
+  <h3>After · mockup scenes</h3>
+  <table>
+    <tr><th>#</th><th>Mockup and view</th><th>Camera</th><th>Used at</th></tr>
+    <tr><td class="k">A1</td><td><code>fantasia4x-hud/?strip=0&amp;hour=13&amp;weather=summer_windy</code>, chrome hidden as <code>capture.mjs</code> hides it, motion on.</td><td>Start on the river, pan left across both houses to the autumn trees, 10 s. Also one static 10 s take.</td><td>0:05, 0:52, outro</td></tr>
+    <tr><td class="k">A2</td><td><code>fantasia4x-tree-ground/?show=new&amp;at=forest&amp;season=summer&amp;folk=on</code></td><td>Zoom 2, diagonal pan through the forest, 10 s. Zoom 3, slow drift over the floor, 8 s.</td><td>0:10, 3:42</td></tr>
+    <tr><td class="k">A3</td><td><code>fantasia4x-tree-ground/?show=new&amp;at=grounds&amp;season=summer</code></td><td>Zoom 2, pan across the four ground kinds down to the pond, 10 s.</td><td>3:02</td></tr>
+    <tr><td class="k">A4</td><td>HUD scene, weather clear, hour stepped 13 → 19 → 23.5.</td><td>Locked, full colony, 12 s per pass; one take per hour as well.</td><td>4:18, Short 2</td></tr>
+    <tr><td class="k">A5</td><td>HUD scene, <code>hour=23.5</code>.</td><td>Push in from the full colony to the campfire, 8 s.</td><td>3:58</td></tr>
+    <tr><td class="k">A6</td><td>HUD scene river, weather clear, then <code>summer_windy</code>, then <code>rain</code>; and <code>fantasia4x-tree-ground/?show=new&amp;at=water</code>.</td><td>Close on the shore, pan downstream, 8 s per weather.</td><td>5:32–6:04</td></tr>
+    <tr><td class="k">A7</td><td><code>fantasia4x-big-trees/?show=forest&amp;play=on</code>, <code>wind</code> stepped still, breeze, windy, gale.</td><td>Locked, zoom 2, 5 s per strength.</td><td>6:22, Short 13</td></tr>
+    <tr><td class="k">A8</td><td><code>fantasia4x-big-trees/?show=forest&amp;cut=on</code>, a colonist behind a mature tree; then <code>cut=off</code>.</td><td>Locked, zoom 3, toggle twice.</td><td>7:14, Short 14</td></tr>
+    <tr><td class="k">A9</td><td><code>fantasia4x-big-trees/?show=magic&amp;see=emberwood-elder&amp;light=night&amp;wind=windy&amp;play=on</code>; a day take too.</td><td>Slow push-in from zoom 1 to zoom 3 on the crown, 12 s.</td><td>7:14, 7:38, Short 12</td></tr>
+    <tr><td class="k">A10</td><td><code>fantasia4x-mountain-tops/?at=range&amp;snow=off</code>, <code>show</code> stepped today, c, b; then <code>mined=on</code>.</td><td>Locked, 4 s per look; one pan along the range on b.</td><td>5:00–5:16, Shorts 5 and 6</td></tr>
+    <tr><td class="k">A11</td><td>Tree-ground map view, summer (the scene behind <code>img/map-summer.webp</code>).</td><td>Wide, slow pan from the river east over the meadow, 12 s.</td><td>9:00</td></tr>
+  </table>
+</div>
+<div class="card scroll" style="margin-top:12px">
+  <h3>Screen and graphics</h3>
+  <table>
+    <tr><th>#</th><th>What to capture</th><th>Used at</th></tr>
+    <tr><td class="k">W1</td><td>The big-trees mockup page with its controls and one pinned comment open.</td><td>1:38</td></tr>
+    <tr><td class="k">W2</td><td>Issue #217 on GitHub, scrolled from the title through “Why”; then <code>git branch -r</code> filtered to the look branches.</td><td>1:54</td></tr>
+    <tr><td class="k">W3</td><td>Terminal: <code>git log --no-merges --format='%h %s%n%(trailers:key=Co-Authored-By)' origin/dev..origin/test/look-overhaul</code>, scrolling.</td><td>0:16, Short 18</td></tr>
+    <tr><td class="k">W4</td><td>Terminal: <code>mockupLightTable.test.ts</code> passing.</td><td>2:24</td></tr>
+    <tr><td class="k">W5</td><td>The <code class="h">d311fc48</code> commit message, and a bar graph built from its numbers: 244, 99, 77, 16, then 10.9 ms.</td><td>8:10–8:48, Short 17</td></tr>
+    <tr><td class="k">W6</td><td>The measurement table from the comment on issue #410.</td><td>6:54</td></tr>
+    <tr><td class="k">W7</td><td>The flicker itself: the 6-second capture named in issue #410, or a new one of <code>test/look-overhaul</code> at <code class="h">955193fe</code>, paused, wind still, 16 px tiles.</td><td>0:32, 6:38, Short 15</td></tr>
+  </table>
+</div>
+
+<h2 id="borrow">What this script borrows</h2>
+<div class="card">
+  <ul>
+    <li><b>The result before the introduction.</b> The first 16 seconds are the before, the after and the promise; the game's name arrives at 0:52. Guides on the first 30 seconds agree the cold open is where a video is kept or lost, and that branding goes later. <a href="https://1of10.com/blog/how-to-hook-viewers-in-the-first-30-seconds-of-a-youtube-video">1of10</a>, <a href="https://vidiq.com/blog/post/youtube-intros/">vidIQ</a>, <a href="https://dev.to/coursetoaction/your-video-has-a-cold-start-problem-the-4-part-hook-architecture-from-a-former-youtube-product-lead-3e2o">hook architecture</a></li>
+    <li><b>Three open loops, each closed on time.</b> The mountain, the flicker and the 244 ms frame are named at 0:32 and paid at 5:00, 6:38 and 8:10. A loop left open too long reads as a cheat. <a href="https://outlierkit.com/resources/youtube-hooks-and-retention/">OutlierKit</a></li>
+    <li><b>A re-hook every minute or so.</b> Each step opens on a claim (“the grid is the problem”) and ends on a number or a rule; the mountain detour breaks the step rhythm at the midpoint. <a href="https://outlierkit.com/resources/youtube-hooks-and-retention/">OutlierKit</a></li>
+    <li><b>Problem framing over feature listing.</b> Each step starts from what was wrong with the old picture. The comparable videos on the <a href="index.html#seo">thumbnail page</a> show the same split: “Every Pixel Art Game Has This Problem” and “My Indie Game is Ugly” outperform plain progress titles.</li>
+    <li><b>Disclosure before investment, with its scope.</b> The loudest complaints about AI in games are about timing and burial: a note found late, or hidden in a devlog, reads worse than the use itself. So it is said at 0:16, with what it covers, and the viewer is offered the exit. <a href="https://playday.one/2026/11/10/big-walk-developers-respond-to-ai-controversy/">Big Walk coverage</a>, <a href="https://itch.io/t/5206181/ai-generation-disclosure">itch.io disclosure thread</a></li>
+    <li><b>Show the work that was not delegated.</b> What gets called slop is output nobody checked. The script shows the rejections, the revert, the test that failed and the issue still open. <a href="https://www.tweaktown.com/news/109355/codex-mortis-is-a-100-percent-ai-made-roguelite-bullet-hell-and-its-proving-divisive-as-hell-too/index.html">Codex Mortis reception</a>, <a href="https://www.notebookcheck.net/World-of-ClaudeCraft-AI-builds-MMO-in-2-days-here-s-why-gamers-aren-t-impressed.1327938.0.html">ClaudeCraft reception</a></li>
+    <li><b>No claim bigger than the log.</b> “Made by AI in two days” headlines drew doubt; every number here has a commit beside it and is put on screen. Same sources as above.</li>
+    <li><b>Label the voice.</b> YouTube asks for its altered-content label on realistic synthetic media; a TTS narrator belongs in the description either way. <a href="https://support.google.com/youtube/answer/14328491">YouTube Help</a></li>
+  </ul>
+  <p class="sources" style="margin-top:10px">Limits of this research: the searches returned general retention guides and press coverage of AI-built games, not transcripts of specific devlogs, so nothing here is copied from a named video's script. The view counts on the thumbnail page are the only devlog-specific evidence.</p>
+</div>
+
+<h2 id="open">Open questions</h2>
+<div class="card">
+  <ol>
+    <li><b>Why were the fractured peaks reverted?</b> <code class="h">de30abee</code> and issue #441 say only “superseded by #445”. The detour at 5:16 needs your one sentence.</li>
+    <li><b>How much of the code did you write or edit by hand?</b> The trailers show 294 of 301 commits co-authored; they cannot show the split inside a commit. The script says “co-signed”, not “written by”.</li>
+    <li><b>Where did the art direction come from?</b> The sprites are drawing code. Did any image generator, reference pack or hand-drawn sketch feed it? The disclosure line changes with the answer.</li>
+    <li><b>When were the mockups first designed?</b> They enter the repo on 23 Nov as “the old claude artifacts” (<code class="h">de0a7200</code>). If the HUD and tileset mockups took weeks before 21 Nov, “five days” needs “to port” beside it.</li>
+    <li><b>Do you still have the flicker capture</b> from issue #410 (your game at <code>d78fc4fb</code>)? If not, W7 has to be recorded again.</li>
+    <li><b>What did the five days cost,</b> in hours of yours and in subscription or API spend? Viewers will ask, and one honest number is a strong beat for step five.</li>
+    <li><b>What is the ask at the end?</b> Subscribe only, the GitHub releases page, or a store page; and what the next video is.</li>
+    <li><b>Is the long pause (August 2025 to May 2026) fine to mention,</b> and is “Fantasia Four X” how the name is said aloud?</li>
+  </ol>
+</div>
+</main>
+<script>
+const REPO = 'https://github.com/bk-bf/Fantasia4x/';
+for (const c of document.querySelectorAll('code.h')) c.innerHTML = `<a href="${REPO}commit/${c.textContent}">${c.textContent}</a>`;
+for (const c of document.querySelectorAll('code.i')) c.innerHTML = `<a href="${REPO}issues/${c.textContent.slice(1)}">${c.textContent}</a>`;
+const words = [...document.querySelectorAll('.shot .vo p:not(.hole)')].reduce((n, p) => n + p.textContent.trim().split(/\s+/).length, 0);
+document.getElementById('wc').textContent = words.toLocaleString('en');
+</script>
+</body>
+</html>
