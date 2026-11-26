@@ -13,9 +13,9 @@ import type {
   GpuPipeline,
   GpuTexture,
   GpuUniform,
-  GpuVertexLayout,
-  FilterMode
+  GpuVertexLayout
 } from '../../gpu/device.js';
+import { samplersOf } from '../samplers.js';
 
 const PROGRAM = 'tiers';
 export const TIER_TILE_UNIT = 4;
@@ -70,16 +70,10 @@ const UNIFORMS = [
   'u_rowDepth'
 ] as const;
 
-function texture(gpu: GpuDevice, unit: number, filter: FilterMode): GpuTexture {
+function texture(gpu: GpuDevice, unit: number): GpuTexture {
   const tex = gpu.createTexture()!;
   gpu.setTextureSlot(unit);
   gpu.bindTexture(tex);
-  gpu.setSampler({
-    minFilter: filter,
-    magFilter: filter,
-    addressModeU: 'clamp-to-edge',
-    addressModeV: 'clamp-to-edge'
-  });
   return tex;
 }
 
@@ -117,11 +111,12 @@ export class Tiers {
     this.program = program;
     this.painted = painted;
     this.vao = gpu.createVertexLayout()!;
-    this.tileTex = texture(gpu, TIER_TILE_UNIT, 'nearest');
+    this.tileTex = texture(gpu, TIER_TILE_UNIT);
     gpu.writeTexture({ format: 'rgba16uint', width: 1, height: 1 }, new Uint16Array(4));
-    this.fieldTex = texture(gpu, TIER_FIELD_UNIT, 'linear');
+    this.fieldTex = texture(gpu, TIER_FIELD_UNIT);
+    gpu.bindSampler(TIER_FIELD_UNIT, samplersOf(gpu).linear);
     gpu.writeTexture({ format: 'rgba8unorm', width: 1, height: 1 }, new Uint8Array(4));
-    this.noiseTex = texture(gpu, TIER_NOISE_UNIT, 'nearest');
+    this.noiseTex = texture(gpu, TIER_NOISE_UNIT);
     gpu.writeTexture(
       { format: 'rgba8unorm', width: NOISE_SIZE, height: NOISE_SIZE },
       tierNoiseTexels()

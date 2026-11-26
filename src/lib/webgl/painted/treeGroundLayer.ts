@@ -43,14 +43,6 @@ export class TreeGroundLayer {
     private readonly art: number
   ) {
     this.texture = gpu.createTexture();
-    this.bind();
-    gpu.setSampler({
-      minFilter: 'nearest',
-      magFilter: 'nearest',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge'
-    });
-    gpu.setTextureSlot(0);
   }
 
   get tableRow(): number {

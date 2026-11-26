@@ -19,12 +19,12 @@ import type {
   GpuPipeline,
   GpuTexture,
   GpuUniform,
-  GpuVertexLayout,
-  FilterMode
+  GpuVertexLayout
 } from '../../gpu/device.js';
 import { TREE_UNIT, TreeGroundLayer, withTreeGround } from './treeGroundLayer.js';
 import { treeSoils } from './treeGroundTable.js';
 import type { TreeSoil } from './treeGroundManifest.js';
+import { samplersOf } from '../samplers.js';
 
 const PROGRAM = 'groundBlend';
 const MAX_KINDS = 64;
@@ -186,9 +186,11 @@ export class GroundBlend {
     this.water = water;
     this.field = painted.ground;
     this.artPerBase = painted.tileset.tile / BASE_TILE_PX;
-    this.kindTex = this.makeTexture(KIND_UNIT, 'nearest');
-    this.tideTex = this.makeTexture(TIDE_UNIT, 'linear');
-    this.lightTex = this.makeTexture(LIGHT_UNIT, 'linear');
+    this.kindTex = this.makeTexture(KIND_UNIT);
+    this.tideTex = this.makeTexture(TIDE_UNIT);
+    this.lightTex = this.makeTexture(LIGHT_UNIT);
+    gpu.bindSampler(TIDE_UNIT, samplersOf(gpu).linear);
+    gpu.bindSampler(LIGHT_UNIT, samplersOf(gpu).linear);
     this.ice = new WaterIce(gpu);
     this.rivers = new RiverTextures(gpu);
     this.unitsPerTile = painted.tileset.tile / ART_PER_UNIT;
@@ -288,16 +290,10 @@ export class GroundBlend {
     this.gpu.bindTexture(tex);
   }
 
-  private makeTexture(unit: number, filter: FilterMode): GpuTexture {
+  private makeTexture(unit: number): GpuTexture {
     const gpu = this.gpu;
     const tex = gpu.createTexture()!;
     this.bindOn(unit, tex);
-    gpu.setSampler({
-      minFilter: filter,
-      magFilter: filter,
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge'
-    });
     gpu.setTextureSlot(0);
     return tex;
   }

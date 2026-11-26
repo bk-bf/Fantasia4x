@@ -1,5 +1,6 @@
 import { FLOW_RES, riverField, type RiverInput } from './riverFlow.js';
-import type { GpuDevice, GpuTexture, FilterMode } from '../../gpu/device.js';
+import type { GpuDevice, GpuTexture } from '../../gpu/device.js';
+import { samplersOf } from '../samplers.js';
 
 export const FLOW_UNIT = 14;
 export const STREAM_UNIT = 15;
@@ -42,22 +43,17 @@ export class RiverTextures {
 
   constructor(gpu: GpuDevice) {
     this.gpu = gpu;
-    this.flowTex = this.make(FLOW_UNIT, 'linear');
-    this.streamTex = this.make(STREAM_UNIT, 'nearest');
+    this.flowTex = this.make(FLOW_UNIT);
+    this.streamTex = this.make(STREAM_UNIT);
+    gpu.bindSampler(FLOW_UNIT, samplersOf(gpu).linear);
     this.clear();
   }
 
-  private make(unit: number, filter: FilterMode): GpuTexture {
+  private make(unit: number): GpuTexture {
     const gpu = this.gpu;
     const tex = gpu.createTexture()!;
     gpu.setTextureSlot(unit);
     gpu.bindTexture(tex);
-    gpu.setSampler({
-      minFilter: filter,
-      magFilter: filter,
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge'
-    });
     gpu.setTextureSlot(0);
     return tex;
   }
