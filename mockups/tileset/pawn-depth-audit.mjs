@@ -22,7 +22,7 @@ const CAST = [
   ['woodcutter', {}], ['guard', {}], ['guard', { shield: null }], ['warlord', {}], ['hunter', {}], ['miner', {}], ['smith', {}], ['farmer', {}], ['mage', {}], ['watch', {}],
   ['woodcutter', { tool: null }], ['woodcutter', { oneArm: 1 }], ['woodcutter', { sleeves: 'long' }], ['woodcutter', { oneLeg: 1 }],
 ];
-const LOADS = { hip: ['bone_stock', 'steel_cleaver', 'stone_spear'], chest: ['wild_berries', 'copper_bar'], low: ['granite_block', 'wild_oats'], shoulder: ['pine_log', 'pine_plank'], game: ['deer_carcass', 'boar_carcass'], drape: ['carried_pawn'] };
+const LOADS = { hip: ['bone_stock', 'steel_cleaver', 'stone_spear'], chest: ['wild_berries', 'copper_bar'], low: ['granite_block', 'wild_oats'], shoulder: ['pine_log', 'pine_plank'], game: ['harpy_carcass', 'bullywug_carcass'], drape: ['carried_pawn'] };
 const HANDLING = ['lift', 'drop', 'held'];
 const BODY = ['torso', 'head', 'legs', 'far leg', 'near leg', 'cape', 'pad'];
 const FACES = ['s', 'f', 'b'], NAMES = { s: 'sideways', f: 'toward', b: 'away' };
@@ -41,12 +41,12 @@ function frame(G, kind, over, anim, face, u, loadId) {
   const layer = pose.carry && load ? G.HAUL.layer(load, pose.carry, c.face, pose.down > .5) : null;
   if (layer) pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0, layer.draped ? 1 : 0];
   const rigged = G.rigPawn(A.o, JSON.parse(quant(pose, TURN)));
-  return { spr: layer && rigged.mask ? G.MOTION_LOAD.put(rigged, layer) : rigged, rigged, pose, fused: !!(layer && layer.fused), level: !!(layer && layer.rows), long: !!(load && load.family === 'long') };
+  return { spr: layer && rigged.mask ? G.MOTION_LOAD.put(rigged, layer) : rigged, rigged, pose, fused: !!(layer && layer.fused), level: !!(layer && layer.rows), long: !!(load && (load.family === 'long' || load.slim || load.storage === 'shield')) };
 }
 
 const alike = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
 const shows = (shown, own) => !!shown && !!own && (shown === own || alike(shown, own) || alike(shown, NOW.shade(own)) || alike(shown, NOW.shade(NOW.shade(own))));
-const isBody = l => BODY.includes(l.name), isArm = l => !!l.limb, isTool = l => l.name === 'tool' || l.name === 'tool butt', isLoad = l => l.name === 'load';
+const isBody = l => BODY.includes(l.name), isArm = l => !!l.limb, isTool = l => l.name === 'tool' || l.name === 'tool butt', isArrow = l => isTool(l) && l.piece === 'arrow', isLoad = l => l.name === 'load';
 const sameInk = c => c[0] === NOW.P.ink[0] && c[1] === NOW.P.ink[1] && c[2] === NOW.P.ink[2];
 
 const HELD = l => (isTool(l) || isLoad(l)), SHIELD = l => l.name === 'shield';
@@ -115,7 +115,7 @@ function audit(now, shown, face) {
       if (through) counts.b++;
     }
   }
-  const tool = boxOf(stack.filter(isTool).flatMap(pixelsOf), w), all = boxOf(shown.map((c, i) => c ? i : -1).filter(i => i >= 0), w);
+  const tool = boxOf(stack.filter(l => isTool(l) && !isArrow(l)).flatMap(pixelsOf), w), arrow = boxOf(stack.filter(isArrow).flatMap(pixelsOf), w), all = boxOf(shown.map((c, i) => c ? i : -1).filter(i => i >= 0), w);
   counts.over = [...over].map(([name, n]) => name + ' ' + n).join(', ');
   const sp = now.rigged.space, len = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
   if (sp && sp.arms) {
@@ -128,6 +128,8 @@ function audit(now, shown, face) {
       const at = sp.arms.R.H, aim = sp.arms.aim;
       for (let t = -sp.butt; t <= sp.reach; t += 2) points.push([at[0] + aim[0] * t, at[1] + aim[1] * t, at[2] + aim[2] * t]);
       for (const t of [-sp.butt, sp.reach]) if (sp.shoulderZ + at[2] + aim[2] * t < -SPACE_TOL.ground) counts.m++;
+      const front = sp.head.at[1] + sp.head.r, crown = sp.head.at[2] + FACE.up - 3, hidden = points.slice(2).filter(q => face === 'f' ? Math.abs(q[0]) <= FACE.half && q[1] > front && q[2] - NOW.SEEN.depth * (q[1] - front) >= 1 && q[2] - NOW.SEEN.depth * (q[1] - front) <= crown : face === 's' ? q[0] > sp.head.r - 1 && q[1] >= front - FACE.side && q[1] <= front && q[2] >= 1 && q[2] <= crown : false).length;
+      if (hidden && !now.pose.covers) { counts.f += hidden; over.set('tool before the face', hidden); counts.over = [...over].map(([name, n]) => name + ' ' + n).join(', '); }
     }
     points.forEach((q, n) => { if (inHead(q) || inTorso(q)) { counts.p++; inside.push((n === 0 ? 'right hand' : n === 1 ? 'left hand' : 'tool at ' + (-sp.butt + (n - 2) * 2)) + ' in ' + (inHead(q) ? 'head' : 'torso') + ' ' + q.map(v => v.toFixed(1))); } });
     for (const key of ['R', 'L']) if (sp.shoulderZ + sp.arms[key].H[2] < -SPACE_TOL.ground) counts.m++;
@@ -148,6 +150,7 @@ function audit(now, shown, face) {
   const loadPx = stack.filter(isLoad).flatMap(pixelsOf), loadSeen = loadPx.filter(i => { const got = drawn(i); return got && isLoad(got); }).length;
   counts.halfLoad = loadPx.length ? (loadSeen >= loadPx.length * HALF ? 1 : 0) : null;
   counts.size = tool ? Math.hypot(tool[2] - tool[0] + 1, tool[3] - tool[1] + 1) : 0;
+  counts.arrow = arrow ? Math.hypot(arrow[2] - arrow[0] + 1, arrow[3] - arrow[1] + 1) : 0;
   counts.low = Math.max(0, ...stack.filter(l => !HELD(l) && !SHIELD(l)).map(l => { const b = boxOf(pixelsOf(l), w); return b ? b[3] : 0; }));
   return counts;
 }
@@ -165,21 +168,24 @@ for (const anim of anims) {
     const sum = Object.fromEntries(KEYS.map(k => [k, 0])), share = { tool: [0, 0], load: [0, 0] };
     for (const [kind, over, loadId] of runs) {
       if (over.oneArm && PLAYED_WITH[anim] === 'bow') continue;
-      const floor = standing(kind, over, face), sizes = [];
+      const floor = standing(kind, over, face), sizes = [], arrows = [];
       for (let i = 0; i < n; i++) {
         const u = (i + .5) / n, now = frame(NOW, kind, over, anim, face, u, loadId);
-        if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); continue; }
+        if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); arrows.push(null); continue; }
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId) : now).spr.c, face), where = kind + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
         for (const k of KEYS) if (got[k]) { sum[k] += got[k]; if (noted && 'bcefijklmnp'.includes(k)) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + NAMED[k] + ' ' + got[k] + (k === 'f' ? ' (' + got.over + ')' : k === 'p' ? ' (' + got.inside.join('; ') + ')' : '')); }
         if (got.low > floor) { sum.h++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + (got.low - floor) + ' px below the ground'); }
         const expects = !loadId && !now.pose.carry && now.pose.item !== null && NOW.TOOLS[now.pose.item === undefined ? NOW.mkActor('pawn', kind, over).o.tool : now.pose.item];
         if (expects && !got.size) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': the tool is not drawn'); }
         sizes.push(got.size && !got.hidden ? got.size : null);
+        arrows.push(got.arrow);
         if (got.half !== null) { share.tool[0] += got.half; share.tool[1]++; }
         if (got.halfLoad !== null) { share.load[0] += got.halfLoad; share.load[1]++; }
         frames++;
       }
-      for (let i = 0; i < n; i++) { const a = sizes[i], b = sizes[(i + 1) % n]; if (i + 1 === n && def.once) continue; if (a && b && Math.abs(a - b) > (def.hit ? JUMP.struck : JUMP.held) / (smooth ? 2 : 1) + (smooth ? 1 : 0)) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + kind + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': tool ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }
+      const most = (def.hit ? JUMP.struck : JUMP.held) / (smooth ? 2 : 1) + (smooth ? 1 : 0);
+      for (let i = 0; i < n; i++) { const a = arrows[i], b = arrows[(i + 1) % n]; if (i + 1 === n && def.once) continue; if (a !== null && b !== null && Math.abs(a - b) > most && !(def.hit && !b)) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + kind + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': arrow ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }
+      for (let i = 0; i < n; i++) { const a = sizes[i], b = sizes[(i + 1) % n]; if (i + 1 === n && def.once) continue; if (a && b && Math.abs(a - b) > most) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + kind + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': tool ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }
     }
     for (const k of KEYS) totals[k] += sum[k];
     for (const what of ['tool', 'load']) if (share[what][1]) shares.push(anim.padEnd(12) + NAMES[face].padEnd(9) + what.padEnd(5) + String(Math.round(100 * share[what][0] / share[what][1])).padStart(4) + '% of ' + share[what][1] + ' frames at least half visible');
