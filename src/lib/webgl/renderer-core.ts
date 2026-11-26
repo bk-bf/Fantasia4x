@@ -36,6 +36,7 @@ import {
   type Quad
 } from './drawnSprites.js';
 import { WindClock, type Heading } from './painted/wind.js';
+import type { PaintedSprite, TreeFx } from './painted/manifest.js';
 import { WaveClock, waterStill, type MapMotion, type SeaWeather } from './painted/waves.js';
 import { FLUID_DEFS, FluidClock, WATER_FLUID, type FluidSet } from './painted/fluids.js';
 import { FallingLeaves } from './painted/leaves.js';
@@ -734,6 +735,14 @@ export class WebGLRendererCore {
     this.shaderManager.setUniform('tileRenderer', 'u_cuts', n);
   }
 
+  private fxTree = (x: number, y: number) => {
+    for (const grid of [this.resourceTallOverlayGrid, this.resourceOverlayGrid]) {
+      const s = grid?.getTile(x, y)?.painted;
+      if (s?.fx) return s as PaintedSprite & { fx: TreeFx };
+    }
+    return undefined;
+  };
+
   private leafTree = (x: number, y: number) => {
     for (const grid of [this.resourceTallOverlayGrid, this.resourceOverlayGrid]) {
       const s = grid?.getTile(x, y)?.painted;
@@ -767,6 +776,7 @@ export class WebGLRendererCore {
         },
         season: this.season,
         treeAt: this.leafTree,
+        fxAt: this.fxTree,
         texels: this.painted.texels(),
         light: {
           fieldLit: lightFrame !== null,

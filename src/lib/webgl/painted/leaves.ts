@@ -2,11 +2,13 @@ import vertexSource from '../shaders/leaf.vert.glsl?raw';
 import fragmentSource from '../shaders/leaf.frag.glsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import type { AtlasTexels } from '../drawnSprites.js';
-import type { PaintedSprite } from './manifest.js';
+import type { PaintedSprite, TreeFx } from './manifest.js';
 import { gustAt, WIND_SHAPE, type WindClock } from './wind.js';
+import { BIT_FLOATS, SHAPE, TreeBits } from './treeBits.js';
 
 const PROGRAM = 'fallingLeaf';
-const FLOATS = 5;
+const FLOATS = BIT_FLOATS;
+const MAX_BITS = 1500;
 const SOLID = 1;
 const SHADE = 0.7;
 const PICKS = 8;
@@ -31,6 +33,7 @@ export interface LeafFrame {
   view: LeafView;
   season: string | undefined;
   treeAt: (x: number, y: number) => PaintedSprite | undefined;
+  fxAt: (x: number, y: number) => (PaintedSprite & { fx: TreeFx }) | undefined;
   texels: AtlasTexels | null;
   light: { fieldLit: boolean; ambient: [number, number, number]; tone: [number, number] };
 }
@@ -155,6 +158,11 @@ export class LeafField {
       out[o + 2] = p.tx;
       out[o + 3] = p.ty;
       out[o + 4] = p.z > 0 && Math.floor(this.t * FLUTTER + p.ph) & 1 ? 1 : 0;
+      out[o + 5] = 0;
+      out[o + 6] = 0;
+      out[o + 7] = 0;
+      out[o + 8] = 1;
+      out[o + 9] = SHAPE.leaf;
       n++;
     }
     return n;
@@ -163,7 +171,8 @@ export class LeafField {
 
 export class FallingLeaves {
   readonly field = new LeafField();
-  private readonly data = new Float32Array(L.max * FLOATS);
+  readonly bits = new TreeBits();
+  private readonly data = new Float32Array((L.max + MAX_BITS) * FLOATS);
   private readonly at: Record<string, WebGLUniformLocation | null>;
 
   static create(gl: WebGL2RenderingContext, shaders: ShaderManager): FallingLeaves | null {
@@ -198,14 +207,19 @@ export class FallingLeaves {
     gl.bindVertexArray(vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
     gl.bufferData(gl.ARRAY_BUFFER, this.data.byteLength, gl.DYNAMIC_DRAW);
-    const leaf = gl.getAttribLocation(program, 'a_leaf');
-    const turn = gl.getAttribLocation(program, 'a_turn');
-    gl.enableVertexAttribArray(leaf);
-    gl.vertexAttribPointer(leaf, 4, gl.FLOAT, false, FLOATS * 4, 0);
-    gl.vertexAttribDivisor(leaf, 1);
-    gl.enableVertexAttribArray(turn);
-    gl.vertexAttribPointer(turn, 1, gl.FLOAT, false, FLOATS * 4, 16);
-    gl.vertexAttribDivisor(turn, 1);
+    const attribs: [string, number, number][] = [
+      ['a_leaf', 4, 0],
+      ['a_turn', 1, 4],
+      ['a_rgb', 2, 5],
+      ['a_look', 3, 7]
+    ];
+    for (const [name, size, at] of attribs) {
+      const loc = gl.getAttribLocation(program, name);
+      if (loc < 0) continue;
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, size, gl.FLOAT, false, FLOATS * 4, at * 4);
+      gl.vertexAttribDivisor(loc, 1);
+    }
     gl.bindVertexArray(null);
   }
 
@@ -216,7 +230,14 @@ export class FallingLeaves {
     units: { atlas: number; light: number }
   ): number {
     this.field.step(secs, wind, f);
-    const n = this.field.pack(this.data);
+    this.bits.step(secs, wind, f);
+    let n = this.field.pack(this.data);
+    const bits = this.bits.pack(wind, f);
+    this.data.set(
+      bits.subarray(0, Math.min(bits.length, this.data.length - n * FLOATS)),
+      n * FLOATS
+    );
+    n += Math.min(bits.length, this.data.length - n * FLOATS) / FLOATS;
     if (n === 0) return 0;
     const gl = this.gl;
     const depth = gl.isEnabled(gl.DEPTH_TEST);
