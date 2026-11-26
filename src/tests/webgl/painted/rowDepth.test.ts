@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { Webgl2Device } from '$lib/gpu/webgl2/device';
 import { ALPHA_CUT, GridRenderer, type GridRenderOptions } from '$lib/webgl/grid-renderer';
 import { GameGrid } from '$lib/webgl/game-grid';
 import { ROW_DEPTH_RANGE, WebGLRendererCore } from '$lib/webgl/renderer-core';
@@ -282,7 +283,7 @@ function layeredCore(rowDepth: boolean) {
     gridVersion: 0,
     snowVersion: 0,
     stats: { drawCalls: 0, vertexCount: 0, resourceRebuilds: 0 },
-    webglState: { getContext: () => tracked },
+    webglState: { getDevice: () => new Webgl2Device(tracked) },
     shaderManager: {
       useProgram: () => true,
       setUniform: (_p: string, name: string, value: unknown) => uniforms.set(name, value)

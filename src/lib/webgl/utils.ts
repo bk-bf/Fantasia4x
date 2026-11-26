@@ -1,24 +1,3 @@
-export function isWebGL2Supported(): boolean {
-  try {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl2');
-    return gl !== null;
-  } catch (e) {
-    return false;
-  }
-}
-
-export function getWebGLInfo(gl: WebGL2RenderingContext): Record<string, string> {
-  return {
-    vendor: gl.getParameter(gl.VENDOR) || 'Unknown',
-    renderer: gl.getParameter(gl.RENDERER) || 'Unknown',
-    version: gl.getParameter(gl.VERSION) || 'Unknown',
-    shadingLanguageVersion: gl.getParameter(gl.SHADING_LANGUAGE_VERSION) || 'Unknown',
-    maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE)?.toString() || 'Unknown',
-    maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS)?.toString() || 'Unknown'
-  };
-}
-
 export function createOrthographicMatrix(
   left: number,
   right: number,

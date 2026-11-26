@@ -1,4 +1,5 @@
-import { isWebGL2Supported, checkWebGLError } from './utils.js';
+import { createWebgl2Device, isWebGL2Supported } from '../gpu/webgl2/context.js';
+import type { Webgl2Device } from '../gpu/webgl2/device.js';
 import { crashBreadcrumb } from './crashLog.js';
 import { WORK_PINS } from '../workPins/flag.js';
 import { countGl } from '../workPins/page.js';
@@ -11,7 +12,7 @@ export interface WebGLStateOptions {
 
 export class WebGLStateManager {
   private canvas: HTMLCanvasElement;
-  private gl: WebGL2RenderingContext | null = null;
+  private device: Webgl2Device | null = null;
   private debug: boolean;
   private contextLostHandler: (event: Event) => void;
   private contextRestoredHandler: (event: Event) => void;
@@ -24,7 +25,7 @@ export class WebGLStateManager {
     this.contextRestoredHandler = this.onContextRestored.bind(this);
   }
 
-  async initialize(contextAttributes?: WebGLContextAttributes): Promise<WebGL2RenderingContext> {
+  async initialize(contextAttributes?: WebGLContextAttributes): Promise<Webgl2Device> {
     if (this.debug) {
       console.log('🔄 Starting WebGL2 context initialization...');
     }
@@ -50,12 +51,12 @@ export class WebGLStateManager {
       console.log('📋 Context attributes:', attributes);
     }
 
-    this.gl = this.canvas.getContext('webgl2', attributes);
+    this.device = createWebgl2Device(this.canvas, attributes);
 
-    if (!this.gl) {
+    if (!this.device) {
       throw new Error('Failed to create WebGL2 context');
     }
-    if (WORK_PINS) countGl(this.gl);
+    if (WORK_PINS) countGl(this.device.gl);
 
     this.canvas.addEventListener('webglcontextlost', this.contextLostHandler, false);
     this.canvas.addEventListener('webglcontextrestored', this.contextRestoredHandler, false);
@@ -66,24 +67,24 @@ export class WebGLStateManager {
       console.log('✅ WebGL2 context initialized successfully');
     }
 
-    return this.gl;
+    return this.device;
   }
 
   private configureState(): void {
-    if (!this.gl) return;
+    if (!this.device) return;
 
-    const gl = this.gl;
+    const gpu = this.device;
 
-    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gpu.setViewport(0, 0, this.canvas.width, this.canvas.height);
 
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gpu.setBlending(true);
+    gpu.setBlendFunc('src-alpha', 'one-minus-src-alpha');
 
-    gl.disable(gl.DEPTH_TEST);
+    gpu.setDepthTest(false);
 
-    gl.clearColor(0.173, 0.094, 0.063, 1.0);
+    gpu.setClearColor(0.173, 0.094, 0.063, 1.0);
 
-    checkWebGLError(gl, 'initial WebGL state configuration');
+    gpu.checkError('initial WebGL state configuration');
 
     if (this.debug) {
       console.log('✅ WebGL state configured');
@@ -91,11 +92,11 @@ export class WebGLStateManager {
   }
 
   updateViewport(width: number, height: number): void {
-    if (!this.gl) return;
+    if (!this.device) return;
 
     this.canvas.width = width;
     this.canvas.height = height;
-    this.gl.viewport(0, 0, width, height);
+    this.device.setViewport(0, 0, width, height);
 
     if (this.debug) {
       console.log(`📐 Viewport updated to ${width}x${height}`);
@@ -103,9 +104,8 @@ export class WebGLStateManager {
   }
 
   clear(depth = false): void {
-    if (!this.gl) return;
-    const gl = this.gl;
-    gl.clear(depth ? gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT : gl.COLOR_BUFFER_BIT);
+    if (!this.device) return;
+    this.device.clear({ color: true, depth });
   }
 
   private onContextLost(event: Event): void {
@@ -117,7 +117,7 @@ export class WebGLStateManager {
         `GPU watchdog / OOM'd. Recovery attempted on 'restored'.`
     );
     console.warn('⚠️ WebGL context lost:', reason);
-    this.gl = null;
+    this.device = null;
   }
 
   private async onContextRestored(_event: Event): Promise<void> {
@@ -136,19 +136,19 @@ export class WebGLStateManager {
     }
   }
 
-  getContext(): WebGL2RenderingContext | null {
-    return this.gl;
+  getDevice(): Webgl2Device | null {
+    return this.device;
   }
 
   isReady(): boolean {
-    return this.gl !== null;
+    return this.device !== null;
   }
 
   dispose(): void {
     this.canvas.removeEventListener('webglcontextlost', this.contextLostHandler);
     this.canvas.removeEventListener('webglcontextrestored', this.contextRestoredHandler);
 
-    this.gl = null;
+    this.device = null;
 
     if (this.debug) {
       console.log('🗑️ WebGL state manager disposed');

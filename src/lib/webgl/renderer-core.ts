@@ -6,6 +6,7 @@ import { CharacterRenderer } from './character-renderer.js';
 import { ALPHA_CUT, GridRenderer } from './grid-renderer.js';
 import { WebGLStateManager } from './webgl-state.js';
 import type { GameGrid } from './game-grid.js';
+import type { GpuDevice } from '../gpu/device.js';
 import type { FontAtlas } from './types.js';
 import { BASE_TILE_PX } from './tile-types.js';
 import { WORK_PINS } from '../workPins/flag.js';
@@ -371,32 +372,27 @@ export class WebGLRendererCore {
     this.atlasReloadPending = true;
 
     try {
-      const gl = this.webglState.getContext();
-      if (!gl || !this.gridRenderer) return;
+      const gpu = this.webglState.getDevice();
+      if (!gpu || !this.gridRenderer) return;
 
       const newAtlas = await createSquareCellAtlas(cellSize, this.debug);
 
-      const newTexture = gl.createTexture();
+      const newTexture = gpu.createTexture();
       if (!newTexture) return;
 
-      gl.bindTexture(gl.TEXTURE_2D, newTexture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        newAtlas.atlasWidth,
-        newAtlas.atlasHeight,
-        0,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
+      gpu.bindTexture(newTexture);
+      gpu.setSampler({
+        minFilter: 'nearest',
+        magFilter: 'nearest',
+        addressModeU: 'clamp-to-edge',
+        addressModeV: 'clamp-to-edge'
+      });
+      gpu.writeTexture(
+        { format: 'legacy-rgba', width: newAtlas.atlasWidth, height: newAtlas.atlasHeight },
         newAtlas.texture.data
       );
 
-      if (this.fontTexture) gl.deleteTexture(this.fontTexture);
+      if (this.fontTexture) gpu.destroyTexture(this.fontTexture);
       this.fontTexture = newTexture;
       this.fontAtlas = newAtlas;
       this.gridRenderer.setFontAtlas(newAtlas);
@@ -416,7 +412,8 @@ export class WebGLRendererCore {
     try {
       if (this.debug) console.log('🔄 Initializing WebGL2 renderer...');
 
-      const gl = await this.webglState.initialize({ depth: this.rowDepth });
+      const gpu = await this.webglState.initialize({ depth: this.rowDepth });
+      const gl = gpu.gl;
 
       this.shaderManager = await createTileRendererShaders(gl, this.debug, PAINTED_TILES);
       if (!this.shaderManager) throw new Error('Shader init failed');
@@ -493,8 +490,8 @@ export class WebGLRendererCore {
   }
 
   private render(): void {
-    const gl = this.webglState.getContext();
-    if (!gl || !this.shaderManager || !this.gridRenderer || !this.fontTexture || !this.gameGrid) {
+    const gpu = this.webglState.getDevice();
+    if (!gpu || !this.shaderManager || !this.gridRenderer || !this.fontTexture || !this.gameGrid) {
       return;
     }
 
@@ -553,8 +550,8 @@ export class WebGLRendererCore {
         this.shaderManager.setUniform('tileRenderer', name, value);
     }
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
+    gpu.setTextureSlot(0);
+    gpu.bindTexture(this.fontTexture);
     this.shaderManager.setUniform('tileRenderer', 'u_fontAtlas', 0);
     if (this.fontAtlas) {
       this.shaderManager.setUniform('tileRenderer', 'u_texelSize', [
@@ -563,7 +560,7 @@ export class WebGLRendererCore {
       ]);
     }
     this.tiers?.sync();
-    if (this.painted) this.bindPaintedAtlas(gl, this.painted);
+    if (this.painted) this.bindPaintedAtlas(gpu, this.painted);
     if (this.rowDepth) {
       this.shaderManager.setUniform('tileRenderer', 'u_rowDepth', 1 / ROW_DEPTH_RANGE);
       this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', ALPHA_CUT);
@@ -608,8 +605,8 @@ export class WebGLRendererCore {
       this.resourceTallOverlayGrid ||
       this.snowGrid
     ) {
-      gl.enable(gl.BLEND);
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gpu.setBlending(true);
+      gpu.setBlendFunc('src-alpha', 'one-minus-src-alpha');
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
       const tOverlay = performance.now();
       if (this.snowGrid && passOn('snow')) {
@@ -618,9 +615,9 @@ export class WebGLRendererCore {
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 0);
       }
       if (this.rowDepth) {
-        gl.enable(gl.DEPTH_TEST);
-        gl.depthFunc(gl.LEQUAL);
-        this.drawShadowCast(gl, viewportTilesW, viewportTilesH);
+        gpu.setDepthTest(true);
+        gpu.setDepthCompare('less-equal');
+        this.drawShadowCast(gpu, viewportTilesW, viewportTilesH);
       }
       this.drawGroundRings();
       this.setCutaway(viewportTilesW, viewportTilesH);
@@ -638,13 +635,13 @@ export class WebGLRendererCore {
         if (layer === 'resource' && this.snowGrid && passOn('snow'))
           this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
         if (layer === 'resource' && ROCK_TIERS && this.rowDepth)
-          this.drawTiers(gl, viewportTilesW, viewportTilesH, lightFrame);
+          this.drawTiers(gpu, viewportTilesW, viewportTilesH, lightFrame);
       }
       this.drawLeaves(windSecs, viewportTilesW, viewportTilesH, lightFrame);
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
-      if (this.rowDepth) gl.disable(gl.DEPTH_TEST);
-      gl.disable(gl.BLEND);
+      if (this.rowDepth) gpu.setDepthTest(false);
+      gpu.setBlending(false);
     } else {
       this.stats.overlayMs = 0;
     }
@@ -657,7 +654,7 @@ export class WebGLRendererCore {
   }
 
   private drawTiers(
-    gl: WebGL2RenderingContext,
+    gpu: GpuDevice,
     viewportTilesW: number,
     viewportTilesH: number,
     lightFrame: LightPassFrame | null
@@ -688,8 +685,8 @@ export class WebGLRendererCore {
       snow: this.season === WINTER
     });
     this.shaderManager.useProgram('tileRenderer');
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
+    gpu.setTextureSlot(0);
+    gpu.bindTexture(this.fontTexture);
   }
 
   private lightFrame(
@@ -805,15 +802,11 @@ export class WebGLRendererCore {
     this.shaderManager.useProgram('tileRenderer');
   }
 
-  private drawShadowCast(
-    gl: WebGL2RenderingContext,
-    viewportTilesW: number,
-    viewportTilesH: number
-  ): void {
+  private drawShadowCast(gpu: GpuDevice, viewportTilesW: number, viewportTilesH: number): void {
     if (!this.shadowCast || !this.painted || !this.shaderManager) return;
     const artTile = this.painted.tileset.tile;
-    gl.depthFunc(gl.LESS);
-    gl.blendFunc(gl.ZERO, gl.SRC_COLOR);
+    gpu.setDepthCompare('less');
+    gpu.setBlendFunc('zero', 'src');
     this.stats.drawCalls += this.shadowCast.draw({
       canvas: [this.viewport.width, this.viewport.height],
       viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
@@ -823,8 +816,8 @@ export class WebGLRendererCore {
       view: { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH },
       casters: [this.resourceOverlayGrid, this.buildingOverlayGrid]
     });
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.depthFunc(gl.LEQUAL);
+    gpu.setBlendFunc('src-alpha', 'one-minus-src-alpha');
+    gpu.setDepthCompare('less-equal');
     this.shaderManager.useProgram('tileRenderer');
   }
 
@@ -875,11 +868,11 @@ export class WebGLRendererCore {
     return this.fluidClock.uniforms(this.fluids);
   }
 
-  private bindPaintedAtlas(gl: WebGL2RenderingContext, painted: LoadedPaintedTileset): void {
+  private bindPaintedAtlas(gpu: GpuDevice, painted: LoadedPaintedTileset): void {
     if (!this.shaderManager) return;
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, painted.texture);
-    gl.activeTexture(gl.TEXTURE0);
+    gpu.setTextureSlot(1);
+    gpu.bindTexture(painted.texture);
+    gpu.setTextureSlot(0);
     this.shaderManager.setUniform('tileRenderer', 'u_paintAtlas', 1);
     this.shaderManager.setUniform(
       'tileRenderer',
@@ -890,9 +883,9 @@ export class WebGLRendererCore {
       1 / painted.tileset.atlasW,
       1 / painted.tileset.atlasH
     ]);
-    gl.activeTexture(gl.TEXTURE0 + LIGHT_ATLAS_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, painted.light);
-    gl.activeTexture(gl.TEXTURE0);
+    gpu.setTextureSlot(LIGHT_ATLAS_UNIT);
+    gpu.bindTexture(painted.light);
+    gpu.setTextureSlot(0);
     this.shaderManager.setUniform('tileRenderer', 'u_lightAtlas', LIGHT_ATLAS_UNIT);
     this.shaderManager.setUniform('tileRenderer', 'u_shade', SHADOW_SHADE);
     this.shaderManager.setUniform('tileRenderer', 'u_shadowDepth', SHADOW_DEPTH);
@@ -905,11 +898,11 @@ export class WebGLRendererCore {
       painted.top.snow.x,
       painted.top.snow.y
     ]);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, painted.top.texture);
-    gl.activeTexture(gl.TEXTURE3);
-    gl.bindTexture(gl.TEXTURE_2D, painted.top.veins);
-    gl.activeTexture(gl.TEXTURE0);
+    gpu.setTextureSlot(2);
+    gpu.bindTexture(painted.top.texture);
+    gpu.setTextureSlot(3);
+    gpu.bindTexture(painted.top.veins);
+    gpu.setTextureSlot(0);
     this.shaderManager.setUniform('tileRenderer', 'u_rockTexture', 2);
     this.shaderManager.setUniform('tileRenderer', 'u_veinTexture', 3);
     this.shaderManager.setUniform(
@@ -991,8 +984,8 @@ export class WebGLRendererCore {
   getStats(): RenderStats {
     return { ...this.stats };
   }
-  getContext(): WebGL2RenderingContext | null {
-    return this.webglState.getContext();
+  getDevice(): GpuDevice | null {
+    return this.webglState.getDevice();
   }
   getProjectionMatrix(): Float32Array {
     return this.projectionMatrix;
@@ -1033,10 +1026,10 @@ export class WebGLRendererCore {
     this.leaves = null;
     this.tiers?.dispose();
     this.tiers = null;
-    if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
-    if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.light);
-    if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.texture);
-    if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.veins);
+    if (this.painted) this.webglState.getDevice()?.destroyTexture(this.painted.texture);
+    if (this.painted) this.webglState.getDevice()?.destroyTexture(this.painted.light);
+    if (this.painted?.top) this.webglState.getDevice()?.destroyTexture(this.painted.top.texture);
+    if (this.painted?.top) this.webglState.getDevice()?.destroyTexture(this.painted.top.veins);
     this.painted = null;
     this.webglState.dispose();
     this.gridRenderer = null;

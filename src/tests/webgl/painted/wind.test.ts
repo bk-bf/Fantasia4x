@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { Webgl2Device } from '$lib/gpu/webgl2/device';
 import { GridRenderer } from '$lib/webgl/grid-renderer';
 import { GameGrid } from '$lib/webgl/game-grid';
 import { WebGLRendererCore } from '$lib/webgl/renderer-core';
@@ -168,6 +169,7 @@ function windyCore(
   calls: [string, unknown[]][] = []
 ) {
   const gl = recordingGl(uploads, calls);
+  const gpu = new Webgl2Device(gl);
   const grids = {
     gameGrid: new GameGrid(),
     resourceOverlayGrid: new GameGrid(),
@@ -217,7 +219,7 @@ function windyCore(
     gridVersion: 1,
     snowVersion: 0,
     stats: { drawCalls: 0, vertexCount: 0, resourceRebuilds: 0, terrainRebuilds: 0 },
-    webglState: { getContext: () => gl },
+    webglState: { getDevice: () => gpu },
     shaderManager: {
       useProgram: () => true,
       setUniform: (_p: string, name: string, value: unknown) => uniforms.set(name, value)
@@ -264,7 +266,7 @@ describe('the water moving through the painted map', () => {
     const uploads: Float32Array[] = [];
     const calls: [string, unknown[]][] = [];
     const core = windyCore(uploads, new Map(), calls);
-    const gl = core['webglState'].getContext()!;
+    const gl = core['webglState'].getDevice()!.gl;
     const blendShaders = {
       createProgram: () => ({ success: true }),
       getProgram: () => ({ program: {} })

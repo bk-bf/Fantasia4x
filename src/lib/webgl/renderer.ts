@@ -11,6 +11,7 @@ import type { ShaderManager } from './shaders.js';
 import type { CharacterRenderer } from './character-renderer.js';
 import type { GameGrid } from './game-grid.js';
 import type { FontAtlas } from './types.js';
+import type { GpuDevice } from '../gpu/device.js';
 import { mapWeather, type PointLight, type Rgb } from './painted/lightGrade.js';
 import {
   ambientWind,
@@ -112,8 +113,8 @@ export class WebGLRenderer {
     return this.core.getStats();
   }
 
-  getContext(): WebGL2RenderingContext | null {
-    return this.core.getContext();
+  getDevice(): GpuDevice | null {
+    return this.core.getDevice();
   }
 
   getProjectionMatrix(): Float32Array {
