@@ -111,7 +111,7 @@ function rigHat(s, o, X, hTop, face, skin, tunic, hd, hh, drape = 2) {
 const WRAP = [P.cloth[2], P.cloth[1]];
 const rimOf = (was, c) => !!(was && c) && c[0] === was[0] * .6 && c[1] === was[1] * .6;
 
-const TURN_MOST = 1.1, REACH = { hip: 3, front: 6 }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3 }, CLEAR = { ground: 4, shins: 3, hop: 3 }, BEHIND_HEAD = ['game', 'drape'];
+const TURN_MOST = 1.1, REACH = { hip: 3, front: 6 }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3, clasp: [1, 5] }, CLEAR = { ground: 4, shins: 3, hop: 3 }, BEHIND_HEAD = ['game', 'drape'];
 function rigPawn(o, p) {
   p = p || {};
   let s = new Spr(RG.W, RG.H, RG.CX, RG.BASE);
@@ -348,6 +348,7 @@ function rigPawn(o, p) {
       if (inArms) { grasps = [[middle - out, y], [middle + out, y]]; palms = under ? 'under' : 'around'; }
       else if (heaved) { const row = resting ? y : rnd((b.top + b.bottom) / 2), wide = Math.min(w / 2, hw + 1); grasps = [[middle - wide, row], [middle + wide, row]]; palms = 'around'; }
       else if (load[7]) { grasps = []; grasps[laden] = [b.left + load[4], b.top + load[5]]; palms = 'around'; }
+      else if (p.carry === 'drape' && !back) { grasps = []; grasps[laden] = [rnd(middle) + SUNK.clasp[0], b.bottom - SUNK.clasp[1]]; palms = 'around'; }
       else { grasps = []; grasps[laden] = [clamp(roots[laden][0] + (back ? 2 : -2), b.left + 1, b.right - 1), b.bottom + 1]; palms = 'under'; }
       const k = resting ? reached : 1;
       for (const i of [0, 1]) if (grasps[i]) targets[i] = between(targets[i] || [0, TOT], [grasps[i][0] - roots[i][0], grasps[i][1] - roots[i][1]], k);
