@@ -3,6 +3,7 @@ import { writeFileSync } from 'node:fs';
 
 const THUMBS = (process.env.THUMBS || 'split,night,magic').split(',');
 const SOURCES = { 'src/old-glyph.png': 'dev glyph renderer', 'src/new-day.png': 'HUD mockup', 'src/new-night.png': 'HUD mockup', 'src/magic.png': 'big-trees mockup' };
+const FONT_PIXEL = { Jersey20: 34, Blackletter: 43 };
 const WRITE = process.argv.includes('--write');
 const here = new URL('.', import.meta.url).pathname;
 const URL_BASE = process.env.PAGE || 'http://ubuntuserver:8794/fantasia4x-devlog-render/';
@@ -17,7 +18,7 @@ for (const id of THUMBS) {
   await page.evaluate(async () => { await document.fonts.ready; await Promise.all([...document.querySelectorAll('.th.on img')].map(i => i.decode())); });
   const shot = await page.screenshot({ type: 'png' });
   if (WRITE) writeFileSync(`${here}img/thumb-${id}.png`, shot);
-  const report = await page.evaluate(async ([b64, sources]) => {
+  const report = await page.evaluate(async ([b64, sources, fontPixel]) => {
     const load = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
     const pixels = el => { const c = document.createElement('canvas'); c.width = el.naturalWidth ?? el.width; c.height = el.naturalHeight ?? el.height; const g = c.getContext('2d'); g.drawImage(el, 0, 0); return g.getImageData(0, 0, c.width, c.height).data; };
     const u32 = d => new Uint32Array(d.buffer);
@@ -41,6 +42,7 @@ for (const id of THUMBS) {
         layers.push({ name: 'seam', solid: (255 << 24 | cb << 16 | cg << 8 | cr) >>> 0, r });
         continue;
       }
+      if (c.matches('.txt') && +c.dataset.size !== fontPixel[c.dataset.font]) out.push(`text in ${c.dataset.font}: drawn at ${c.dataset.size}px, not its one-font-pixel size ${fontPixel[c.dataset.font]}px, so its pixels land unevenly`);
       const name = c.classList.contains('txt') ? `text "${JSON.parse(c.dataset.lines).flat().map(s => s[0]).join(' ')}"` : 'arrow';
       const d = pixels(c), g = scaled(c, c.width, c.height, name);
       let soft = 0;
@@ -85,7 +87,7 @@ for (const id of THUMBS) {
       else out.push(`ok? ${L.name}: ${st.n} screen px exact`);
     }
     return out;
-  }, [shot.toString('base64'), SOURCES]);
+  }, [shot.toString('base64'), SOURCES, FONT_PIXEL]);
   const bad = report.filter(l => !l.startsWith('ok?'));
   failed += bad.length;
   console.log(`${bad.length ? 'FAIL' : 'PASS'} ${id}`);
