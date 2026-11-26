@@ -6,7 +6,7 @@ import { serialize } from 'node:v8';
 import { Session } from 'node:inspector/promises';
 import type { Profiler } from 'node:inspector';
 import { pathfinderService } from '$lib/game/services/PathfinderService';
-import { initialState, type WorkPinScenario } from './scenarios';
+import { holdCreatureCount, initialState, type WorkPinScenario } from './scenarios';
 import { functionPins } from './functions.mjs';
 import type { GameState } from '../../src/lib/game/core/types';
 
@@ -138,6 +138,7 @@ export async function runWorkPins(sc: WorkPinScenario): Promise<void> {
   const counters: Record<string, number> = { 'mob upserts': 0 };
   let live = false;
   const scope = installWorkerScope(messages, counters, () => live);
+  const release = sc.creatures ? holdCreatureCount() : () => {};
   vi.useFakeTimers({
     toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date', 'performance'],
     now: 0
@@ -177,6 +178,7 @@ export async function runWorkPins(sc: WorkPinScenario): Promise<void> {
       `[work-pins] ${sc.name}: turn ${turn}, ${Object.keys(functions).length} functions, ${calls} calls${creatures ? `, ${creatures.placed} creatures placed` : ''} → ${file}\n`
     );
   } finally {
+    release();
     vi.useRealTimers();
   }
 }

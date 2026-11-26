@@ -3,17 +3,22 @@ import { rng } from '$lib/game/core/util/rng';
 import { entityService } from '$lib/game/services/EntityService';
 import { rebuildThermalField, thermalAt } from '$lib/game/services/EnvironmentService';
 import type { GameState, Mob } from '$lib/game/core/types';
-import { initialState, type WorkPinScenario } from '../work-pins/scenarios';
+import { holdCreatureCount, initialState, type WorkPinScenario } from '../work-pins/scenarios';
 
 export const ROLLING = { time: 0, iterations: 20, warmupTime: 0, warmupIterations: 4 };
 
 export const MEASURED_TICKS = 180;
 
-export async function warmSession(sc: WorkPinScenario, warmTicks: number): Promise<HeadlessSession> {
+export async function warmSession(
+  sc: WorkPinScenario,
+  warmTicks: number
+): Promise<HeadlessSession> {
+  const release = sc.creatures ? holdCreatureCount() : () => {};
   const session = new HeadlessSession();
   await session.start(initialState(sc));
   for (const cmd of sc.commands ?? []) session.command(cmd);
   session.tick(warmTicks);
+  release();
   return session;
 }
 
