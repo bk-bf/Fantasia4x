@@ -448,7 +448,7 @@ const PROPS = (() => {
     bundles: (s, r, seed) => sheaf(s, CX - 7, B - 6, 14, r.a, seed),
     cloth: (s, r, seed) => bolt(s, CX - 6, B - 5, 12, r.a, seed),
     meat: (s, r) => haunch(s, CX - 1, B - 5, .62, false, r.a, 0),
-    quarry: (s, r) => { const tone = (px, py, nx, ny) => r.a[ny < -.35 ? 4 : ny > .4 ? 2 : 3]; s.rect(CX - 4, B - 2, 1, 3, r.a[2]); s.rect(CX + 2, B - 2, 1, 3, r.a[2]); s.oval(CX, B - 5, 5.6, 2.9, tone); s.oval(CX + 6, B - 3, 2.1, 2, tone); s.set(CX + 5, B - 5, r.a[2]); s.set(CX - 6, B - 6, r.a[4]); }
+    quarry: (s, r) => { const tone = (px, py, nx, ny) => r.a[ny < -.35 ? 4 : ny > .4 ? 2 : 3]; s.rect(CX - 5, B - 2, 1, 3, r.a[2]); s.rect(CX + 1, B - 2, 1, 3, r.a[2]); s.oval(CX - 1, B - 5, 5, 2.9, tone); s.oval(CX + 6, B - 5, 2.7, 2.5, tone); s.set(CX + 7, B - 6, P.ink); s.rect(CX + 5, B - 9, 1, 2, r.a[2]); s.set(CX - 7, B - 7, r.a[4]); s.head = [CX + 6, B - 5, 3]; }
   };
   const SHOULDER_FORMS = ['logs', 'planks'], TURNED_FORMS = ['bars'];
   const END_REST = { logs: 0, planks: 0 };

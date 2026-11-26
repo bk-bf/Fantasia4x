@@ -41,7 +41,7 @@ const HOLD = {
   hip: { gait: 'light', swing: 1, side: { hr: [3, 7], lean: 1 }, folk: { hr: [5.5, 7.5] }, fb: { hr: [1, 8] } },
   chest: { gait: 'bulky', side: { hr: [6, 7], hl: [7, 6.5], lean: -1 }, fb: { hl: [2.6, 8], hr: [-2.6, 8], fore: ['hl', 'hr'] }, beside: 8 },
   low: { gait: 'heavy', sink: .9, side: { hr: [6.5, 7.5], hl: [7.5, 7], lean: -1.6 }, fb: { hl: [1, 9], hr: [-1, 9], fore: ['hl', 'hr'] }, beside: 9 },
-  shoulder: { gait: 'shouldered', tilt: 1, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 1.4 }, fb: { hl: [-5.5, -4], wing: 1, lean: 1.5, hd: [1, 0], elbow: ELBOW_OUT } },
+  shoulder: { gait: 'shouldered', tilt: 1, free: 1, side: { hr: [4, 2], hl: [7, 2], lean: 1.4 }, fb: { hl: [-5.5, -4], wing: 1, lean: 1.5, hd: [1, 0], elbow: ELBOW_OUT } },
   game: { gait: 'heavy', sink: .9, free: 1, side: { hr: [3, -4], hl: [5, -3], lean: 2.4, hd: [1, 1], tilt: 5 }, fb: { hl: [-5.5, -4], wing: 1, lean: 1.5, hd: [1, 1] } },
   drape: { gait: 'heavy', sink: .4, free: 1, side: { hr: [5, 3.5], hl: [6, 4], lean: 1.8 }, folk: { hr: [4, 7.5], hl: [5, 8] }, fb: { hl: [4, 4], crook: ['hl'], fore: ['hl'] } },
 };
@@ -62,6 +62,7 @@ function carried(hold, u, c, go) {
   if (h.beside && !side && c.wide) { const out = clamp(BESIDE.shoulder - c.wide / 2 + BESIDE.wrap, -BESIDE.reach, BESIDE.shoulder); p.hl = [out, h.beside]; p.hr = [-out, h.beside]; }
   if (h.swing) p.hl = side ? [go * a * 5, 10 - go * Math.abs(a) * 1.2] : [0, HANGS_AHEAD + go * a * .6];
   if (h.free && !side) p.hr = [0, HANGS_AHEAD - go * a * .6];
+  if (c.across && !side) { p.lean = 0; p.hd = [0, 1]; delete p.wing; }
   if (h.tilt && push && side) p.tilt = sn(u * 2 + .1);
   if (go && g.heave && side) p.lean += cs(u * 2) * g.heave;
   if (go && g.sway && !side) p.lean = (p.lean || 0) + sn(u) * g.sway;
@@ -189,7 +190,7 @@ const PAWN_ANIMS = {
   } },
   cry: { label: 'Crying', group: 'Needs', dur: 1.2, n: 6, pose(u, c) {
     const b = Math.floor(u * 6) & 1;
-    return { face: 'f', covers: 1, item: null, hd: [0, 2], hl: [5, -2 - b * .5], hr: [-5, -2 - b * .5], by: 1 + b * .6, blink: 1 };
+    return { face: 'f', covers: 1, item: null, hd: [0, 2], hl: [4, -2 - b * .5], hr: [-4, -2 - b * .5], by: 1 + b * .6, blink: 1 };
   } },
   talk: { label: 'Talking', group: 'Social', dur: 2.6, n: 8, pose(u, c) {
     const m = Math.floor(u * 10) & 1;

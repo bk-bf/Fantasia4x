@@ -149,7 +149,7 @@ function quadSlung(kind, back) {
   s.hold = [QG.CX, QG.GY - dangle + 1];
   return s;
 }
-const DRAPED = { legs: 3, held: 5, across: 12, hangs: 8, chest: 4, sunk: 2, rise: 5 };
+const DRAPED = { legs: 3, held: 5, across: 12, hangs: 8, chest: 4, sunk: 2, rise: 5, head: 3 };
 function quadLimp(kind) {
   const o = BEASTS[kind].o, whole = rigQuad(kind, { by: o.leg - DRAPED.legs, head: [3, Math.min(o.Hb * 1.7, DRAPED.hangs)], blink: 1, ear: -1, tail: { a: 40 } });
   let x0 = whole.w, y0 = whole.h, x1 = -1, y1 = -1;
@@ -171,7 +171,7 @@ function quadDraped(kind, half) {
       if (round <= 1 && (Y < rise || Math.abs(dx) < DRAPED.chest)) { bent.c[Y * bent.w + cx + dx] = limp.c[q]; bent.e[Y * bent.w + cx + dx] = limp.e[q]; }
     }
     hung(hind, cx - DRAPED.chest - belly); hung(front, cx + DRAPED.chest + belly - last);
-    bent.hold = [cx, rise + DRAPED.sunk]; bent.grasp = [cx + DRAPED.chest + belly - front.grasp[0], rise + front.grasp[1]]; bent.long = limp.w; bent.droops = Math.max(hind.h, front.h);
+    bent.hold = [cx, rise + DRAPED.sunk]; bent.grasp = [cx + DRAPED.chest + belly - front.grasp[0], rise + front.grasp[1]]; bent.long = limp.w; bent.droops = Math.max(hind.h, front.h); bent.head = [cx + DRAPED.chest + belly - (last >> 1), rise + front.h - 1 - DRAPED.head, DRAPED.head];
     return bent;
   }
   const front = half === 'front', long = front ? limp.w - mid : mid, s = new Spr(limp.h, long, 0, 0), across = y => front ? y : limp.h - 1 - y;

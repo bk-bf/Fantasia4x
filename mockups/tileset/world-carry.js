@@ -9,10 +9,10 @@ const HAUL = (() => {
   const HEAVY_HOLD = { logs: 'shoulder', planks: 'shoulder', body: 'drape', meat: 'game' };
   const HOLD_OF_BULK = { light: () => 'hip', bulky: () => 'chest', heavy: storage => HEAVY_HOLD[storage] || 'low' }, IN_HAND = ['hip', 'chest', 'low'], FITS = { wide: 18, tall: 15, slim: 10 }, BY_GRIP = ['shield'], SHOULDERED_MOST = { kg: 45, droops: 16 };
   const LIMP = { pile: ['meat', 'hides'], long: [], worn: [] };
-  const SAG = { hip: 0, chest: 2, low: 2, shoulder: 0, game: 4, drape: 0, draped: 0 };
+  const SAG = { hip: 0, chest: 2, low: 2, shoulder: 0, game: 4, drape: 5, bent: 0, yoked: 6 };
   const ON_SHOULDER = ['shoulder', 'game', 'drape'];
   const FUSED = ['shoulder'];
-  const END_SOURCES = [['map-carry-toward', 'map-carry-away'], ['map-carry-end', 'map-carry-end']];
+  const END_SOURCES = [['map-carry-end', 'map-carry-end']];
   const WORN_SOURCES = ['map-carry', 'map-ground', 'map-pile-1', 'map', '0'];
   const SEEN_ROWS = { least: 4, most: 14, behind: 2 }, BELLY = { filled: .45, front: [.55, .82], held: 2 };
   const STANCES = { one: { carry: 'tuck', draw: 'ready', ready: 'guard', stow: 'stow' }, two: { carry: 'tuck', draw: 'readyTwo', ready: 'guardTwo', stow: 'stowTwo' }, bow: { carry: 'tuck', draw: 'readyBow', ready: 'guardBow', stow: 'stowBow' } };
@@ -40,7 +40,7 @@ const HAUL = (() => {
     const has = v => DBX.byId.has('item/' + o.id + '/' + v);
     const [toward, away] = END_SOURCES.find(pair => has(pair[0])) || [];
     if (k.long) return { side: 'map-lie', upright: 'map-lean', headUp: PROPS.headUp(k.long, o.id) };
-    if (o.sub === 'Carcass') return { side: has('map-carry-draped') ? 'map-carry-draped' : has(SLUNG_OVER) ? SLUNG_OVER : '0', held: has('map-carry-held') ? 'map-carry-held' : null, toward, away, draped: has('map-carry-draped') };
+    if (o.sub === 'Carcass') { const side = has(SLUNG_OVER) ? SLUNG_OVER : 'map-carry-draped'; return { side, held: has('map-carry-held') ? 'map-carry-held' : side }; }
     if (k.pile && PROPS.TURNED.includes(k.pile)) return { side: 'map-carry-end', toward: 'map-carry', away: 'map-carry', turned: true };
     if (k.pile) return { side: PROPS.CARRIED.includes(k.pile) ? 'map-carry' : 'map-pile-1', toward, away };
     return { side: WORN_SOURCES.find(has), folded: has(FOLDED) ? FOLDED : null, toward, away };
@@ -51,9 +51,9 @@ const HAUL = (() => {
   }
   function of(o) {
     const k = RULES.classify(o), bulk = bulkOf(o), family = familyOf(k), storage = storageOf(k);
-    const source = sourceOf(o, k), slungOver = source.side === SLUNG_OVER, hold = slungOver ? 'drape' : HOLD_OF_BULK[bulk](storage), slung = hold === 'game' && source.draped ? DBX.built(DBX.byId.get('item/' + o.id + '/map-carry-draped')) : null;
-    const tooLarge = hold === 'game' && ((o.raw.weightKg || 0) > SHOULDERED_MOST.kg || (slung && slung.droops > SHOULDERED_MOST.droops));
-    const load = { id: o.id, name: o.name, bulk, hold, tooLarge, storage, family, source, limp: !slungOver && LIMP[family].includes(storage), stance: stanceOf(o, k) };
+    const source = sourceOf(o, k), slungOver = source.side === SLUNG_OVER, hold = slungOver ? 'drape' : HOLD_OF_BULK[bulk](storage), figure = o.sub === 'Carcass' || storage === 'body', slung = hold === 'game' ? DBX.built(DBX.byId.get('item/' + o.id + '/' + source.side)) : null;
+    const tooLarge = hold === 'game' && ((o.raw.weightKg || 0) > SHOULDERED_MOST.kg || (slung.droops || 0) > SHOULDERED_MOST.droops);
+    const load = { id: o.id, name: o.name, bulk, hold, tooLarge, storage, family, source, figure, limp: figure || LIMP[family].includes(storage), stance: stanceOf(o, k) };
     if (slungOver && !source.lying) source.lying = '0';
     if (IN_HAND.includes(hold) && family !== 'long' && !BY_GRIP.includes(storage)) {
       const shown = ['s', 'f', 'b'].map(face => layer(load, hold, face).spr);
@@ -74,6 +74,8 @@ const HAUL = (() => {
     for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) { const i = (y0 + y) * src.w + x0 + x; s.c[y * s.w + x] = src.c[i]; s.e[y * s.w + x] = src.e[i]; }
     if (src.hold) s.hold = [src.hold[0] - x0, src.hold[1] - y0];
     if (src.grasp) s.grasp = [src.grasp[0] - x0, src.grasp[1] - y0];
+    if (src.head) s.head = [src.head[0] - x0, src.head[1] - y0, src.head[2]];
+    if (src.droops) s.droops = src.droops;
     CROPS.set(key, s);
     return s;
   }
@@ -146,24 +148,24 @@ const HAUL = (() => {
     const src = load.source, folk = handPlaced();
     if (resting) { const along = (hold === 'shoulder' || src.turned) && face !== 's' && (face === 'f' ? src.toward : src.away), lying = along || src.lying || src.side, spr = cropped(load.id, lying); return { key: load.id + '/' + lying + '/rest', sprite: 'item/' + load.id + '/' + lying, spr, grip: [face === 's' ? REST.edge : spr.w >> 1, along && face === 'f' && !src.turned ? 0 : spr.h - 1], hand: hiltAt(spr, 1), sag: 0 }; }
     const upright = hold === 'hip' && face !== 's' && src.upright, ended = (ON_SHOULDER.includes(hold) || src.turned) && face !== 's' && (face === 'f' ? src.toward : src.away);
-    const variant = upright || (IN_HAND.includes(hold) && src.held) || ended || (folk && src.folded) || (folk && DRAWN_ALONE.includes(load.id) && '0') || src.side, whole = folk && variant === '0' && DRAWN_ALONE.includes(load.id) ? laidAlong(load.id, cropped(load.id, variant)) : cropped(load.id, variant), headDown = (face === 'f') === !!src.headUp;
-    const across = whole.w > whole.h && (face === 's' ? IN_BOTH_ARMS.includes(hold) && HELD_ACROSS.includes(load.storage) && !(folk && LENGTHWISE.includes(load.storage)) : hold === 'hip' && !!load.slim), spr = across ? endOn(load.id + '/' + variant, whole) : whole;
-    const out = { key: load.id + '/' + variant + (across ? '/end' : ''), sprite: 'item/' + load.id + '/' + variant, spr, grip: spr.hold || GRIPS[hold](spr, load.storage), sag: load.limp && !ended ? SAG[hold] : 0 };
+    const variant = upright || (IN_HAND.includes(hold) && src.held) || ended || src.side, whole = cropped(load.id, variant), headDown = (face === 'f') === !!src.headUp;
+    const across = whole.w > whole.h && (face === 's' ? IN_BOTH_ARMS.includes(hold) && HELD_ACROSS.includes(load.storage) : hold === 'hip' && !!load.slim), spr = across ? endOn(load.id + '/' + variant, whole) : whole;
+    const yoked = !!load.figure && ON_SHOULDER.includes(hold) && face !== 's', bent = !!spr.droops;
+    const out = { key: load.id + '/' + variant + (across ? '/end' : '') + (yoked ? '/yoked' : ''), sprite: 'item/' + load.id + '/' + variant, spr, grip: spr.hold || GRIPS[hold](spr), sag: load.limp && !ended ? SAG[bent ? 'bent' : yoked ? 'yoked' : hold] : 0 };
     if (upright) {
       const seen = face === 'b' ? Math.min(spr.h, SEEN_ROWS.least) : Math.min(spr.h, SEEN_ROWS.most, Math.max(SEEN_ROWS.least, Math.round(spr.h * SEEN.depth))), rows = face === 'f' ? [spr.h - seen, spr.h] : [0, seen], held = face === 'f' ? rows[0] + SEEN_ROWS.behind : rows[1] - 1 - SEEN_ROWS.behind;
       Object.assign(out, { key: out.key + (headDown ? '/upside' : '') + '/' + rows, upside: headDown, rows, grip: shaftAt(spr, held, headDown) });
     }
     if (FUSED.includes(hold) && face === 's') out.fused = true;
-    if (src.draped && hold === 'game') out.draped = true;
+    if (bent && hold === 'game') out.draped = true;
+    if (yoked) out.yoked = true;
     if (hold === 'game' && face === 's' && !spr.hold) Object.assign(out, slung(spr));
     if (spr.grasp) out.hand = spr.grasp;
-    if (src.draped && face === 's' && hold === 'game') out.sag = SAG.draped;
-    if (folk && face === 's' && IN_BOTH_ARMS.includes(hold) && load.family !== 'long' && !spr.hold && !ended) Object.assign(out, { grip: [out.grip[0], spr.h] }, variant === src.held ? { hand: underside(spr), under: true } : null);
     if (hold === 'hip' && face === 's' && load.family === 'long' && !spr.hold) { const x = Math.round(spr.w * (POLES.includes(load.storage) ? HANDLE.pole : HANDLE.haft)); out.grip = hiltAt(spr, x); }
     return out;
   }
-  const span = (load, hold, face) => { const lying = layer(load, hold, face, true).spr; return { wide: layer(load, hold, face).spr.w, tall: lying.h }; };
-  const flags = l => Object.fromEntries(['sag', 'upside', 'rows', 'fused'].filter(k => l[k]).map(k => [k, l[k]]));
+  const span = (load, hold, face) => { const lying = layer(load, hold, face, true).spr, held = layer(load, hold, face); return { wide: held.spr.w, tall: lying.h, across: !!held.yoked }; };
+  const flags = l => Object.fromEntries(['sag', 'upside', 'rows', 'fused', 'yoked'].filter(k => l[k]).map(k => [k, l[k]]));
   function ported(load) {
     const side = layer(load, load.hold, 's'), row = { bulk: load.bulk, hold: load.hold, sprite: side.sprite, grip: side.grip, ...flags(side) };
     for (const [face, name] of [['f', 'toward'], ['b', 'away']]) { const l = layer(load, load.hold, face); if (l.key !== side.key) row[name] = { sprite: l.sprite, grip: l.grip, ...flags(l) }; }

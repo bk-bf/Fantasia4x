@@ -156,9 +156,9 @@ const HELD = {
   hip: { s: { at: .95, palm: 'around' }, f: { at: 2.95, palm: 'around' }, b: { at: -3.05, palm: 'around' } },
   chest: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'around' }, b: { at: -6, palm: 'around' } },
   low: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'under' }, b: { at: -6, palm: 'under' } },
-  shoulder: { s: { at: .95, palm: 'around' }, f: { at: 7, palm: 'under' }, b: { at: 7, palm: 'under' } },
-  game: { s: { at: .2, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: .25, palm: 'around' } },
-  drape: { s: { at: .25, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: .25, palm: 'around' } },
+  shoulder: { s: { at: .28, palm: 'under' }, f: { at: 7, palm: 'under' }, b: { at: 7, palm: 'under' } },
+  game: { s: { at: .2, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: .35, palm: 'around' } },
+  drape: { s: { at: .25, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: .35, palm: 'around' } },
   rest: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'under' }, b: { at: -6, palm: 'under' } },
 };
 const REST = { toes: 4, along: 5, edge: 2, raised: .7, sunk: 2 };
@@ -207,13 +207,14 @@ function aimSeen(aim, hand, tip, face) {
 const FOOT_LINE = { band: -1.5, step: .03, turns: 67, under: 1, lifts: 3 };
 function toolSeen(view, aim) {
   const v = view.at(aim);
-  return { ang: Math.atan2(v[0], -v[1]) / D2R, fore: Math.max(SPACE.least, Math.hypot(v[0], v[1])) };
+  return { ang: Math.atan2(v[0], -v[1]) / D2R, fore: Math.hypot(v[0], v[1]) < SPACE.least ? SPACE.least : 1 };
 }
 function staveOf(aim, cant) {
   const up = [0, 0, 1], off = sub3(up, mul3(aim, dot3(up, aim))), u = len3(off) > .2 ? unit3(off) : unit3(sub3([0, 1, 0], mul3(aim, aim[1]))), c = (cant || 0) * D2R;
   return add3(mul3(u, Math.cos(c)), mul3(cross3(aim, u), Math.sin(c)));
 }
 const TOOL_REACH = { axe: 24, pick: 23, hoe: 23, hammer: 17, sword: 21, spear: 34, club: 20, torch: 12, staff: 30, ladle: 11, cup: 3, bread: 2 };
+const WIDE_GRIP = { axe: [2, -6], pick: [2, -6], hoe: [-4, -6] }, gripsOf = (kind, face) => (face !== 's' && WIDE_GRIP[kind]) || TWO_HANDED[kind];
 const TWO_HANDED = { axe: [0, -3], pick: [0, -3], hoe: [-8, -2], spear: [5, -13], staff: [5, -13] }, TOOL_HEAD = { axe: 7, pick: 8, hoe: 6, hammer: 4, club: 4, staff: 3 };
 const TOOL_AIM = { sword: [0, .9, -.44], club: [0, .9, -.44], hammer: [0, .9, -.44], axe: [0, .9, -.44], pick: [0, .9, -.44], spear: [0, 1, .04], staff: [0, 1, .04], hoe: [0, 1, .04], torch: [0, .35, .94], ladle: [0, .3, -.95], cup: [0, 0, 1], bread: [0, 1, 0] };
 const STRUCK = { reach: 1.5 };

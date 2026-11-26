@@ -19,12 +19,23 @@
   }
   const CARCASS_RIG = { deer: 'deer', elk: 'elk', wolf: 'wolf', great_wolf: 'wolf', dire_wolf: 'direwolf', worg: 'worg', jackal: 'jackal', bear: 'bear', great_bear: 'bear', cave_bear: 'cavebear', boar: 'boar', great_boar: 'boar', direboar: 'boar', aurochs: 'ox', mountain_goat: 'bighorn', woolly_mammoth: 'mammoth', sabretooth: 'sabre', owlbear: 'owlbear', hippogriff: 'hippogriff', mire_crocodile: 'lurker' };
   const CARCASS_FOLK = { goblin: 'goblin', orc_reaver: 'orc', gnoll_marauder: 'gnoll', kobold_skulker: 'kobold', pawn: 'human' };
+  const POOLED = c => c[0] >= 60 && c[0] <= 120 && c[1] < c[0] / 3 && c[2] < c[0] / 3, HEAD_ROUND = 3;
+  function bloodless(icon) {
+    const s = new Spr(icon.w, icon.h, icon.ax, icon.ay), pool = [];
+    for (let i = 0; i < icon.c.length; i++) { const c = icon.c[i]; if (c && c !== P.ink && POOLED(c)) pool.push(i % icon.w); else if (c) { s.c[i] = c; s.e[i] = icon.e[i]; } }
+    for (let i = 0; i < s.c.length; i++) if (s.c[i] === P.ink && ![i - 1, i + 1, i - s.w, i + s.w].some(q => s.c[q] && s.c[q] !== P.ink)) s.c[i] = null;
+    const x = pool.length ? Math.round(pool.reduce((a, b) => a + b, 0) / pool.length) : HEAD_ROUND, rows = [];
+    for (let y = 0; y < s.h; y++) if (s.c[y * s.w + x]) rows.push(y);
+    s.head = [x, rows.length ? rows[rows.length >> 1] : s.h >> 1, HEAD_ROUND];
+    return s;
+  }
   function carcassForms(o) {
     const creature = o.id.replace(/_carcass$/, ''), beast = CARCASS_RIG[creature], race = CARCASS_FOLK[creature];
-    if (beast) return [['map-carry-draped', () => quadDraped(beast)], ['map-carry-toward', () => quadDraped(beast, 'front')], ['map-carry-away', () => quadDraped(beast, 'hind')]];
-    if (race) return [['map-carry-slung', () => rigPawnSlung({ race }, 's')], ['map-carry-toward', () => rigPawnSlung({ race }, 'f')], ['map-carry-away', () => rigPawnSlung({ race }, 'b')]];
+    if (beast) return [['map-carry-draped', () => quadDraped(beast)]];
+    const whole = () => bloodless(X.built(X.byId.get('item/' + o.id + '/0')));
+    if (race) return [['map-carry-slung', whole]];
     const toned = () => ({ a: PROPS.rampOf(toneOf(X.bake(X.byId.get('item/' + o.id + '/0')))) });
-    return [['map-carry-end', () => PROPS.carriedEnd('meat', toned(), X.bake(X.byId.get('item/' + o.id + '/0')).h)], ['map-carry-held', () => PROPS.carried('quarry', toned(), 1)]];
+    return [['map-carry-draped', whole], ['map-carry-held', () => PROPS.carried('quarry', toned(), 1)]];
   }
   const HARD = ['mail', 'plate'];
   const soft = o => { const a = o.raw && o.raw.armorProperties; return !!a && !HARD.includes(a.armorLayer) && o.raw.category !== 'metal'; };
