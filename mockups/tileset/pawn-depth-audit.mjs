@@ -62,12 +62,12 @@ const sameInk = c => c[0] === NOW.P.ink[0] && c[1] === NOW.P.ink[1] && c[2] === 
 
 const HELD = l => (isTool(l) || isLoad(l)), SHIELD = l => l.name === 'shield';
 const SPACE_TOL = { length: .05, grip: 1.2, skin: 1.2, ground: .6 }, CARRYING = { wide: 18, tall: 15, belowHip: 2, aboveGround: 3 };
-const REACH = 2, JUMP = { held: 8, struck: 16 }, HIDDEN = .6, HALF = .5, FACE = { up: 6, half: 3, side: 6 };
+const REACH = 2, JUMP = { held: 8, struck: 16 }, HIDDEN = .6, HALF = .5, FACE = { up: 6, half: 3, side: 6, nose: 1 };
 const pixelsOf = l => { const out = []; for (let i = 0; i < l.spr.c.length; i++) if (l.spr.c[i]) out.push(i); return out; };
 const boxOf = (px, w) => { let x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1; for (const i of px) { const x = i % w, y = (i / w) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } return px.length ? [x0, y0, x1, y1] : null; };
 const middle = (px, w) => { let x = 0, y = 0; for (const i of px) { x += i % w; y += (i / w) | 0; } return [x / px.length, y / px.length]; };
 const near = (pt, px, w, r) => px.some(i => Math.abs(i % w - pt[0]) <= r + .5 && Math.abs(((i / w) | 0) - pt[1]) <= r + .5);
-const faceOf = (pts, face) => face === 'f' ? [pts.mouth[0] - FACE.half, pts.mouth[1] - FACE.up, pts.mouth[0] + FACE.half, pts.chin] : face === 's' ? [pts.mouth[0] - FACE.side, pts.mouth[1] - FACE.up, pts.mouth[0] - 1, pts.chin] : [0, 0, 1e9, pts.chin];
+const faceOf = (pts, face) => face === 'f' ? [pts.mouth[0] - FACE.half, pts.mouth[1] - FACE.up, pts.mouth[0] + FACE.half, pts.chin] : face === 's' ? [pts.mouth[0] - FACE.side, pts.mouth[1] - FACE.up, pts.mouth[0] + FACE.nose, pts.chin] : [0, 0, 1e9, pts.chin];
 const shieldShows = (l, w) => { if (l.shows) return l.shows; const px = pixelsOf(l), b = boxOf(px, w); if (!b) return null; return b[2] - b[0] < 7 ? 'edge' : px.some(i => alike(l.spr.c[i], NOW.P.cloth[4])) ? 'front' : 'inside'; };
 const SHIELD_SIDE = { f: 'front', b: 'inside', s: 'edge' }, SLUNG_SIDE = { f: 'inside', b: 'front' };
 
