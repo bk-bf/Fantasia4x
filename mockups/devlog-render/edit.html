@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Devlog thumbnail editor</title>
+<link rel="stylesheet" href="thumb.css">
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--m-bg); color: var(--m-ink); font: 12px/16px system-ui, sans-serif; }
+#mock select { flex: none; }
+#mock output { min-width: 0; color: var(--m-dim); }
+main { display: flex; flex-wrap: wrap; gap: 12px; padding: 12px; align-items: flex-start; }
+#stage { position: relative; width: 1280px; height: 720px; flex: none; touch-action: none; outline: 1px solid var(--m-line); }
+#stage.grab { cursor: grabbing; }
+#hd { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; pointer-events: none; overflow: visible; }
+#ink { position: absolute; z-index: 2; margin: 0; padding: 0; border: 1px dashed var(--m-hot); background: rgb(0 0 0 / .55); resize: none; overflow: hidden; white-space: pre; outline: none; }
+aside { width: 216px; flex: none; display: flex; flex-direction: column; gap: 10px; }
+#preview { display: block; width: 168px; aspect-ratio: 16/9; border-radius: 6px; background: #000; }
+.box { border: 1px solid var(--m-line); background: var(--m-field); }
+#layers button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--m-line); background: none; color: var(--m-text); font: inherit; padding: 4px 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#layers button:last-child { border-bottom: 0; }
+#layers button.on { background: var(--m-hot); color: var(--m-on); }
+#layers button:hover:not(.on) { color: var(--m-ink); }
+#props { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+#props:empty { display: none; }
+#props .r { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+#props .r > span:first-child { color: var(--m-dim); min-width: 44px; }
+#props button { font: inherit; border: 1px solid var(--m-edge); background: none; color: var(--m-text); padding: 0 7px; min-height: 20px; cursor: pointer; }
+#props button.on { background: var(--m-hot); border-color: var(--m-hot); color: var(--m-on); }
+#props button:hover:not(.on) { border-color: var(--m-hot); color: var(--m-ink); }
+#props input[type=text], #props select { font: inherit; color: var(--m-ink); background: var(--m-bg); border: 1px solid var(--m-edge); padding: 1px 4px; min-width: 0; }
+#props input[type=text] { flex: 1; }
+#props select { flex: 1; }
+#props input[type=color] { width: 26px; height: 20px; padding: 0; border: 1px solid var(--m-edge); background: none; }
+#props output { font-variant-numeric: tabular-nums; min-width: 22px; text-align: center; }
+#props .xy { color: var(--m-dim); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<header id="mock" class="bar">
+  <strong>Thumbnail editor</strong>
+  <select id="variant" aria-label="Variant"></select>
+  <span class="grp"><button id="undo">Undo</button><button id="redo">Redo</button><button id="reset">Reset</button></span>
+  <span class="grp"><button id="png">Download PNG</button><button id="save">Save</button></span>
+  <output id="status"></output>
+  <nav><a href="index.html#title">Devlog</a></nav>
+  <span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span>
+</header>
+<main>
+  <div id="stage"><section class="th on" id="th"></section><svg id="hd" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <aside>
+    <img id="preview" alt="168 px preview">
+    <div id="layers" class="box"></div>
+    <div id="props" class="box"></div>
+  </aside>
+</main>
+<script src="thumb-render.js"></script>
+<script src="edit.js"></script>
+</body>
+</html>

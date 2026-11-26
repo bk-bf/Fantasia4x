@@ -3,17 +3,8 @@
 <head>
 <meta charset="utf-8">
 <title>Devlog thumbnails</title>
-<style>
-@font-face { font-family: Jersey20; src: url(Jersey20-Regular.ttf); }
-@font-face { font-family: Blackletter; src: url(jacquard24-400.woff2) format("woff2"); }
-html, body { margin: 0; background: #000; }
-.th { position: relative; width: 1280px; height: 720px; overflow: hidden; background: #000; display: none; }
-.th.on { display: block; }
-.clip { position: absolute; top: 0; height: 720px; overflow: hidden; }
-.art { position: absolute; image-rendering: pixelated; transform-origin: 0 0; max-width: none; }
-.seam { position: absolute; top: 0; height: 720px; width: 8px; left: 636px; background: #ffc468; }
-.ov { position: absolute; image-rendering: pixelated; }
-</style>
+<link rel="stylesheet" href="thumb.css">
+<style>html, body { margin: 0; background: #000; }</style>
 </head>
 <body>
 <section class="th" id="night">
@@ -102,97 +93,21 @@ html, body { margin: 0; background: #000; }
   <div class="clip" style="left:0px;width:1280px"><img class="art" src="src/ground-autumn.png" style="left:-1760px;top:-840px;width:4096px;height:2816px" alt=""></div>
   <canvas class="ov txt" data-font="Jersey20" data-size="34" data-k="8" data-x="40" data-bottom="24" data-lh="28" data-lines='[[["5","#ffc468"]],[["DAYS","#ffffff"]]]'></canvas>
 </section>
+<script src="thumb-render.js"></script>
 <script>
-const id = new URLSearchParams(location.search).get('t') || 'night';
-document.getElementById(id).classList.add('on');
-const NS = 'http://www.w3.org/2000/svg';
-const P = s => s.split(',').map(Number);
-function arrowShape(kind, a, b, via) {
-  if (kind === 'block') {
-    const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, nx = -uy, ny = ux, hl = 110, sw = 24, hw = 70, bx = b[0] - ux * hl, by = b[1] - uy * hl;
-    return [[a[0] + nx * sw * .3, a[1] + ny * sw * .3], [bx + nx * sw, by + ny * sw], [bx + nx * hw, by + ny * hw], b, [bx - nx * hw, by - ny * hw], [bx - nx * sw, by - ny * sw], [a[0] - nx * sw * .3, a[1] - ny * sw * .3]];
-  }
-  const q = t => [(1 - t) ** 2 * a[0] + 2 * (1 - t) * t * via[0] + t * t * b[0], (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * via[1] + t * t * b[1]];
-  const te = .76, N = 40, L = [], R = [];
-  for (let i = 0; i <= N; i++) {
-    const t = te * i / N, p = q(t), p2 = q(t + .001), dx = p2[0] - p[0], dy = p2[1] - p[1], d = Math.hypot(dx, dy), w = 3 + 21 * Math.pow(i / N, .7);
-    L.push([p[0] - dy / d * w, p[1] + dx / d * w]); R.push([p[0] + dy / d * w, p[1] - dx / d * w]);
-  }
-  const B = q(te), dx = b[0] - B[0], dy = b[1] - B[1], d = Math.hypot(dx, dy), hw = 58;
-  return [...L, [B[0] - dy / d * hw, B[1] + dx / d * hw], b, [B[0] + dy / d * hw, B[1] - dx / d * hw], ...R.reverse()];
-}
-for (const s of document.querySelectorAll('.th.on svg.arrow')) {
-  const d = s.dataset, pts = arrowShape(d.kind, P(d.from), P(d.to), d.via && P(d.via)), path = 'M' + pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join('L') + 'Z';
-  s.setAttribute('width', 1280); s.setAttribute('height', 720); s.setAttribute('viewBox', '0 0 1280 720');
-  Object.assign(s.style, { position: 'absolute', left: 0, top: 0 });
-  const fill = d.kind === 'block' ? '#ffffff' : '#ffc468';
-  s.innerHTML = `<path d="${path}" transform="translate(10 12)" fill="#140c06" stroke="#140c06" stroke-width="16" stroke-linejoin="round" opacity=".6"/><path d="${path}" fill="${fill}" stroke="#140c06" stroke-width="14" stroke-linejoin="round" paint-order="stroke"/>`;
-}
-for (const c of document.querySelectorAll('.th.on canvas.parrow')) {
-  const k = +c.dataset.k, W = 1280 / k, H = 720 / k, a = P(c.dataset.from), b = P(c.dataset.to);
-  const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, nx = -uy, ny = ux, hl = 12, sw = 2.6, hw = 8, bx = b[0] - ux * hl, by = b[1] - uy * hl;
-  const poly = [[a[0] + nx * .6, a[1] + ny * .6], [bx + nx * sw, by + ny * sw], [bx + nx * hw, by + ny * hw], b, [bx - nx * hw, by - ny * hw], [bx - nx * sw, by - ny * sw], [a[0] - nx * .6, a[1] - ny * .6]];
-  const inside = (x, y) => { let r = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) r = !r; } return r; };
-  const ink = new Uint8Array(W * H);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (inside(x + .5, y + .5)) ink[y * W + x] = 1;
-  const at = (x, y) => x >= 0 && y >= 0 && x < W && y < H && ink[y * W + x];
-  c.width = W; c.height = H;
-  const g = c.getContext('2d'), img = g.createImageData(W, H);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    let rgb = null;
-    if (at(x, y)) rgb = at(x - 1, y - 1) ? [255, 196, 104] : [255, 232, 176];
-    else if ([[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [1, -1], [-1, 1]].some(([ox, oy]) => at(x + ox, y + oy))) rgb = [20, 12, 6];
-    else if (at(x - 2, y - 2) || at(x - 1, y - 2) || at(x - 2, y - 1)) rgb = [20, 12, 6];
-    if (rgb) img.data.set([...rgb, 255], (y * W + x) * 4);
-  }
-  g.putImageData(img, 0, 0);
-  Object.assign(c.style, { left: 0, top: 0, width: '1280px', height: '720px' });
-}
-
-const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-async function text(c) {
-  const d = c.dataset, size = +d.size, k = +d.k, lh = +(d.lh || size), lines = JSON.parse(d.lines);
-  await document.fonts.load(`${size}px ${d.font}`);
-  const m = document.createElement('canvas').getContext('2d');
-  m.font = `${size}px ${d.font}`;
-  const widths = lines.map(l => l.reduce((w, [t]) => w + Math.ceil(m.measureText(t).width), 0));
-  const pad = 2, W = Math.max(...widths) + pad * 2 + 1, H = lines.length * lh + Math.ceil(size * .4) + pad * 2 + 1;
-  const ink = new Int32Array(W * H).fill(-1), cols = [];
-  lines.forEach((l, li) => {
-    let x = pad;
-    for (const [t, col] of l) {
-      const s = document.createElement('canvas'); s.width = W; s.height = H;
-      const g = s.getContext('2d'); g.font = `${size}px ${d.font}`; g.textBaseline = 'top'; g.fillStyle = '#fff';
-      g.fillText(t, x, pad + li * lh);
-      const a = g.getImageData(0, 0, W, H).data, ci = cols.push(hex(col)) - 1;
-      for (let i = 0; i < W * H; i++) if (a[i * 4 + 3] >= 128) ink[i] = ci;
-      x += Math.ceil(m.measureText(t).width);
-    }
-  });
-  const edge = new Uint8Array(W * H);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    if (ink[y * W + x] >= 0) continue;
-    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      const nx = x - dx, ny = y - dy;
-      if (nx >= 0 && ny >= 0 && nx < W && ny < H && ink[ny * W + nx] >= 0) { edge[y * W + x] = 1; break; }
-    }
-  }
-  const shade = new Uint8Array(W * H);
-  for (let y = 1; y < H; y++) for (let x = 1; x < W; x++) if (ink[y * W + x] < 0 && !edge[y * W + x] && (edge[(y - 1) * W + x - 1] || ink[(y - 1) * W + x - 1] >= 0)) shade[y * W + x] = 1;
-  c.width = W; c.height = H;
-  const g = c.getContext('2d'), img = g.createImageData(W, H);
-  for (let i = 0; i < W * H; i++) {
-    const rgb = ink[i] >= 0 ? cols[ink[i]] : edge[i] || shade[i] ? [0, 0, 0] : null;
-    if (rgb) img.data.set([...rgb, 255], i * 4);
-  }
-  g.putImageData(img, 0, 0);
-  Object.assign(c.style, { width: W * k + 'px', height: H * k + 'px' });
-  const T = 720, L = 1280;
-  c.style.left = (d.right ? L - +d.right - W * k : +d.x) - ((d.right ? L - +d.right - W * k : +d.x) % k) + 'px';
-  const top = d.bottom ? T - +d.bottom - H * k : +d.y;
-  c.style.top = top - (top % k) + 'px';
-}
-window.thumbReady = Promise.all([...document.querySelectorAll('.th.on canvas.txt')].map(text)).then(() => document.body.dataset.ready = '1');
+(async () => {
+  const q = new URLSearchParams(location.search);
+  let id = q.get('t') || q.get('v') || 'night';
+  let L = null;
+  if (q.get('layout')) { L = JSON.parse(q.get('layout')); id = L.v || id; }
+  else if (!q.has('orig')) { try { const r = await fetch(`layouts/${id}.json`, { cache: 'no-store' }); if (r.ok) L = await r.json(); } catch {} }
+  const sec = document.getElementById(id);
+  L = L || await Thumb.parse(sec);
+  sec.classList.add('on');
+  await Thumb.render(L, sec);
+  await Promise.all([...sec.querySelectorAll('img')].map(i => i.decode().catch(() => {})));
+  document.body.dataset.ready = '1';
+})();
 </script>
 </body>
 </html>

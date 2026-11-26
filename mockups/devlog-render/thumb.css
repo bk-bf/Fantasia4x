@@ -1,0 +1,8 @@
+@font-face { font-family: Jersey20; src: url(Jersey20-Regular.ttf); }
+@font-face { font-family: Blackletter; src: url(jacquard24-400.woff2) format("woff2"); }
+.th { position: relative; width: 1280px; height: 720px; overflow: hidden; background: #000; display: none; }
+.th.on { display: block; }
+.th .clip { position: absolute; top: 0; height: 720px; overflow: hidden; }
+.th .art { position: absolute; image-rendering: pixelated; transform-origin: 0 0; max-width: none; }
+.th .seam { position: absolute; top: 0; height: 720px; width: 8px; left: 636px; background: #ffc468; }
+.th .ov { position: absolute; image-rendering: pixelated; }
