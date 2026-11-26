@@ -490,8 +490,8 @@ const ECO = (() => {
     const there = g.goal && Math.hypot(g.goal.x - g.x, g.goal.y - g.y) <= 6;
     if (!g.goal || (there && (S.grass[i] < S.K[i] * .35 || S.land[i] === WATER))) g.goal = pasture(S, g, g.home, k.roam);
     else if (!there) move(S, g, g.goal, sp);
-    const j = cellOf(S, g.x, g.y), want = g.n * k.eats * act / 12 / HEAD_DAYS * (1.15 + g.lean * .2 + (g.cond < .6 ? .3 : 0)), got = Math.min(want, Math.max(0, S.grass[j] - S.K[j] * .08) * (season(S) === 3 ? 1 - .75 * (S.snow || 0) * (k.cold ? .25 : 1) : 1) + (season(S) === 3 && S.land[j] === FOREST ? want * .35 : 0));
-    S.grass[j] -= got; g.eaten += got * HEAD_DAYS;
+    const j = cellOf(S, g.x, g.y), want = g.n * k.eats * act / 12 / HEAD_DAYS * (1.15 + g.lean * .2 + (g.cond < .6 ? .3 : 0)), got = Math.min(want, Math.max(0, S.grass[j] - S.K[j] * .08) * (season(S) === 3 ? 1 - .75 * (S.snow || 0) * (k.cold ? .25 : 1) : 1)), twigs = season(S) === 3 && S.land[j] === FOREST ? Math.min(want - got, want * .35) : 0;
+    S.grass[j] -= got; g.eaten += (got + twigs) * HEAD_DAYS;
     if (k.land === FOREST || k.browse) { const m = Math.min(S.mast[j] * MAST[season(S)] * .2, g.n * act / 12 / 6); S.mast[j] = Math.max(0, S.mast[j] - m * .5); g.eaten += m * 6; }
   }
   const around = (S, g) => { const a = S.r() * 6.283, d = S.r() * g.k.range; return { x: clamp(g.lair.x + Math.cos(a) * d, 5, S.N - 5), y: clamp(g.lair.y + Math.sin(a) * d, 5, S.N - 5) }; };
