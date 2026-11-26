@@ -24,7 +24,7 @@ const { tileset } = buildTileset(parseManifest(raw));
 const ground = tileset.ground!;
 const GRASS = [...ground.grass];
 const TUFTED = [...ground.kinds].filter(([, k]) => k.tufts).map(([id]) => id);
-const ROW_FLOATS = 31;
+const ROW_FLOATS = 32;
 
 beforeAll(() => setPaintedTileset(tileset));
 
