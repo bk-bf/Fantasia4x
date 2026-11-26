@@ -9,7 +9,7 @@ export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const UNIT = `f4x-gpu-compositor-${process.pid}`;
 const instances = () => JSON.parse(execFileSync('hyprctl', ['instances', '-j'], { encoding: 'utf8' }));
 
-async function startCompositor(log) {
+export async function startCompositor(log) {
   const sessionEnv = Object.fromEntries(
     execFileSync('systemctl', ['--user', 'show-environment'], { encoding: 'utf8' }).trim().split('\n').map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)])
   );
@@ -40,7 +40,7 @@ async function startCompositor(log) {
 
 const SERVED_SAVE = 'f4x-bench-save.json';
 
-function patchChromium(chromium, { chrome, socket, cleanEnv, query, servedSave, args }) {
+export function patchChromium(chromium, { chrome, socket, cleanEnv, query, servedSave, args }) {
   const origLaunch = chromium.launch.bind(chromium);
   chromium.launch = async (o) => {
     const browser = await origLaunch({
