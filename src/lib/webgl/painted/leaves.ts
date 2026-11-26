@@ -6,6 +6,7 @@ import type { PaintedSprite, TreeFx } from './manifest.js';
 import { gustAt, WIND_SHAPE, type WindClock } from './wind.js';
 import { BIT_FLOATS, SHAPE, TreeBits } from './treeBits.js';
 import {
+  BufferUsage,
   FLOAT32_FORMATS,
   type GpuDevice,
   type GpuPipeline,
@@ -195,7 +196,10 @@ export class FallingLeaves {
     private readonly gpu: GpuDevice,
     private readonly program: GpuPipeline,
     private readonly vao = gpu.createVertexLayout()!,
-    private readonly vbo = gpu.createBuffer()!
+    private readonly vbo = gpu.createBuffer({
+      size: (L.max + MAX_BITS) * FLOATS * 4,
+      usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
+    })
   ) {
     const names = [
       'u_canvas',
@@ -212,7 +216,6 @@ export class FallingLeaves {
     this.at = Object.fromEntries(names.map((n) => [n, gpu.uniform(program, n)]));
     gpu.setVertexLayout(vao);
     gpu.setVertexBuffer(vbo);
-    gpu.writeBuffer(this.data.byteLength, 'dynamic');
     const attribs: [string, number, number][] = [
       ['a_leaf', 4, 0],
       ['a_turn', 1, 4],
@@ -254,7 +257,7 @@ export class FallingLeaves {
     gpu.setPipeline(this.program);
     gpu.setVertexLayout(this.vao);
     gpu.setVertexBuffer(this.vbo);
-    gpu.writeSubBuffer(0, this.data, 0, n * FLOATS);
+    gpu.queue.writeBuffer(this.vbo, 0, this.data, 0, n * FLOATS);
     gpu.setVec2fv(this.at.u_canvas, f.canvas);
     gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
     gpu.setVec2fv(this.at.u_zoom, f.zoom);

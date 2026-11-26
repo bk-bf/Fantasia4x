@@ -36,8 +36,11 @@ export function addFrameTotals(stats: FrameStats): void {
   totals.vertexCount += stats.vertexCount;
 }
 
-function dataBytes(data: unknown): number {
-  return ArrayBuffer.isView(data) || data instanceof ArrayBuffer ? data.byteLength : 0;
+function dataBytes(data: unknown, offset?: unknown, length?: unknown): number {
+  if (!ArrayBuffer.isView(data)) return data instanceof ArrayBuffer ? data.byteLength : 0;
+  const per = 'BYTES_PER_ELEMENT' in data ? Number(data.BYTES_PER_ELEMENT) : 1;
+  if (typeof length === 'number' && length > 0) return length * per;
+  return data.byteLength - (typeof offset === 'number' ? offset * per : 0);
 }
 
 function pixelBytes(pixels: unknown, width?: unknown, height?: unknown): number {
@@ -69,12 +72,8 @@ export function countGl(gl: WebGL2RenderingContext): void {
   let viewportArea = gl.drawingBufferWidth * gl.drawingBufferHeight;
   let program: unknown = null;
   let bound: WebGLTexture | null = null;
-  wrapGl(
-    gl,
-    'bufferData',
-    (a) => (totals.bufferUploadBytes += typeof a[1] === 'number' ? a[1] : dataBytes(a[1]))
-  );
-  wrapGl(gl, 'bufferSubData', (a) => (totals.bufferUploadBytes += dataBytes(a[2])));
+  wrapGl(gl, 'bufferData', (a) => (totals.bufferUploadBytes += dataBytes(a[1], a[3], a[4])));
+  wrapGl(gl, 'bufferSubData', (a) => (totals.bufferUploadBytes += dataBytes(a[2], a[3], a[4])));
   wrapGl(gl, 'texSubImage2D', (a) => {
     totals.textureUploadBytes += a.length >= 9 ? pixelBytes(a[8], a[4], a[5]) : pixelBytes(a[6]);
   });

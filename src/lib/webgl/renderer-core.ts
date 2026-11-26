@@ -475,6 +475,7 @@ export class WebGLRendererCore {
     this.stats.drawCalls = 0;
     this.stats.vertexCount = 0;
     this.stats.resourceRebuilds = 0;
+    this.gridRenderer?.beginFrame();
     this.webglState.clear(this.rowDepth);
   }
 

@@ -57,6 +57,7 @@ function recordingGl(uploads: Float32Array[] = []) {
       return (...args: unknown[]) => {
         calls.push([key, ...args]);
         if (key === 'bufferData' && args[1] instanceof Float32Array) uploads.push(args[1]);
+        if (key === 'bufferSubData' && args[2] instanceof Float32Array) uploads.push(args[2]);
         return {};
       };
     }
@@ -161,8 +162,15 @@ describe('the row each quad carries for the depth test', () => {
   });
 
   it('points the row and vein attributes past the glyph floats only when the depth test is on', () => {
-    const on = gridRenderer(true).calls.filter((c) => c[0] === 'vertexAttribPointer');
-    const off = gridRenderer(false).calls.filter((c) => c[0] === 'vertexAttribPointer');
+    const pointers = (rowDepth: boolean) => {
+      const { r, calls } = gridRenderer(rowDepth);
+      const grid = new GameGrid();
+      grid.setTile(1, 2, tiles[0]);
+      r.renderGrid(grid, { ...options, renderAllTiles: true });
+      return calls.filter((c) => c[0] === 'vertexAttribPointer');
+    };
+    const on = pointers(true);
+    const off = pointers(false);
     expect(on.find((c) => c[1] === 9)).toEqual([
       'vertexAttribPointer',
       9,

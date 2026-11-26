@@ -1,6 +1,6 @@
 import type {
   BlendFactor,
-  BufferUsage,
+  BufferDescriptor,
   ClearDescriptor,
   CompareFunction,
   StencilState,
@@ -25,13 +25,13 @@ import type {
 import {
   addressMode,
   blendFactor,
-  bufferUsage,
   compareFunction,
   filterMode,
   topology,
   vertexComponents
 } from './formats.js';
 import { createRenderPipeline } from './pipeline.js';
+import { Webgl2Buffers } from './buffers.js';
 import { Webgl2Textures } from './textures.js';
 
 const raw = <T>(h: unknown): T => h as T;
@@ -63,12 +63,17 @@ export class Webgl2Device implements GpuDevice {
   readonly backend = 'webgl2' as const;
 
   private readonly textures: Webgl2Textures;
+  private readonly buffers: Webgl2Buffers;
   readonly queue: GpuQueue;
 
   constructor(private readonly gl: WebGL2RenderingContext) {
     const textures = new Webgl2Textures(gl);
+    const buffers = new Webgl2Buffers(gl);
     this.textures = textures;
+    this.buffers = buffers;
     this.queue = {
+      writeBuffer: (buffer, offset, data, dataOffset, size) =>
+        buffers.write(buffer, offset, data, dataOffset, size),
       writeTexture: (dst, data, layout, size) =>
         textures.write(dst.texture, dst.origin ?? { x: 0, y: 0 }, data, layout.bytesPerRow, size),
       copyExternalImageToTexture: (src, dst) => textures.copyImage(src.source, dst.texture)
@@ -162,28 +167,16 @@ export class Webgl2Device implements GpuDevice {
     this.gl.uniformMatrix4fv(raw<WebGLUniformLocation>(u), false, v);
   }
 
-  createBuffer(): GpuBuffer {
-    return this.gl.createBuffer() as unknown as GpuBuffer;
+  createBuffer(desc: BufferDescriptor): GpuBuffer {
+    return this.buffers.create(desc);
   }
 
   destroyBuffer(buffer: GpuBuffer | null): void {
-    this.gl.deleteBuffer(raw<WebGLBuffer>(buffer));
+    if (buffer) this.buffers.destroy(buffer);
   }
 
   setVertexBuffer(buffer: GpuBuffer | null): void {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, raw<WebGLBuffer>(buffer));
-  }
-
-  writeBuffer(data: AllowSharedBufferSource | number, usage: BufferUsage): void {
-    const gl = this.gl;
-    if (typeof data === 'number') gl.bufferData(gl.ARRAY_BUFFER, data, bufferUsage(gl, usage));
-    else gl.bufferData(gl.ARRAY_BUFFER, data, bufferUsage(gl, usage));
-  }
-
-  writeSubBuffer(offset: number, data: ArrayBufferView, srcOffset?: number, length?: number): void {
-    const gl = this.gl;
-    if (srcOffset === undefined) gl.bufferSubData(gl.ARRAY_BUFFER, offset, data);
-    else gl.bufferSubData(gl.ARRAY_BUFFER, offset, data, srcOffset, length);
   }
 
   createVertexLayout(): GpuVertexLayout {
