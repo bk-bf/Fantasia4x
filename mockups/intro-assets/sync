@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+host=${F4X_HOST:-ubuntu}
+dir=$HOME/Pictures/fantasia4x-intro
+tools=Documents/Projects/Fantasia4x/.worktrees/mockups-live/mockups/intro-assets
+teaser=mockups/fantasia4x-devlog1-teaser
+mkdir -p "$dir/export" "$dir/work"
+case "${1:-}" in
+  --push)
+    shopt -s nullglob
+    files=("$dir"/export/*.png)
+    [ ${#files[@]} -gt 0 ] || { echo "no PNGs in $dir/export" >&2; exit 1; }
+    ssh "$host" "test -d ~/$teaser" || { echo "$host:~/$teaser does not exist yet" >&2; exit 1; }
+    ssh "$host" "mkdir -p ~/$teaser/img"
+    rsync -av "${files[@]}" "$host:$teaser/img/"
+    echo "pushed ${#files[@]} PNG(s) to $host:~/$teaser/img/"
+    ;;
+  ''|--render)
+    ssh "$host" "~/$tools/stage.sh ${1:-}"
+    rsync -a --delete --exclude=tools "$host:.cache/fantasia4x-intro/" "$dir/assets/"
+    rsync -a "$host:.cache/fantasia4x-intro/tools/sync" "$dir/sync"
+    chmod 755 "$dir/sync"
+    echo "assets in $dir/assets"
+    ;;
+  *) echo "usage: sync [--render | --push]" >&2; exit 2 ;;
+esac
