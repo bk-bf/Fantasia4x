@@ -201,7 +201,7 @@ const PAWN_ANIMS = {
   } },
   attack: { label: 'Striking', group: 'Combat', dur: .85, n: 8, hit: [.48, 'blow'], pose(u, c) {
     const x = c.lvl > 2 ? 1 : 0;
-    return keyed(u, { face: 's', over: 1, hr: [7, 3], tool: 42, hl: [6, 3], lean: 1, by: 1, bx: 0, fl: [-3, 0], fr: [3, 0], hd: [0, 0] }, [[0, {}], [.14, { hr: [1, 2], tool: 5 }], [.3, { hr: [-6, -5], tool: -50 - x * 25, lean: -1.5 - x, bx: -1 - x, hd: [-x, 0] }, 'o'], [.36, { hr: [-6, -5], tool: -54 - x * 25, lean: -1.5 - x, bx: -1 - x }], [.43, { hr: [1, 1], tool: 10 }], [.48, { hr: [9, 0], tool: 95, lean: 3 + x, bx: 2 + x, fr: [6, 0], hd: [1, 0] }, 'i'], [.62, { hr: [7, 5], tool: 140 + x * 12, lean: 3, bx: 2, fr: [6, 0] }], [1, {}]]);
+    return keyed(u, { face: 's', over: 1, hr: [7, 3], tool: 42, hl: [6, 3], lean: 1, by: 1, bx: 0, fl: [-3, 0], fr: [3, 0], hd: [0, 0] }, [[0, {}], [.14, { hr: [1, 2], tool: 5 }], [.3, { hr: [-6, -5], tool: -50 - x * 25, lean: -1.5 - x, bx: -1 - x, hd: [-x, 0] }, 'o'], [.36, { hr: [-6, -5], tool: -54 - x * 25, lean: -1.5 - x, bx: -1 - x, hd: [-x, 0] }], [.43, { hr: [1, 1], tool: 10 }], [.48, { hr: [9, 0], tool: 95, lean: 3 + x, bx: 2 + x, fr: [6, 0], hd: [1, 0] }, 'i'], [.62, { hr: [7, 5], tool: 140 + x * 12, lean: 3, bx: 2, fr: [6, 0] }], [1, {}]]);
   } },
   thrust: { label: 'Spear thrust', group: 'Combat', dur: .8, n: 7, hit: [.45, 'blow'], pose(u, c) {
     const x = c.lvl > 2 ? 1 : 0;

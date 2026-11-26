@@ -121,13 +121,16 @@ const TOOLS = {
   cup: { hold: 0, tip: [3, 0], f(l, b) { return l >= -1 && l <= 3 && b >= -1 && b <= 2 ? P.wood[l === 3 ? 5 : b === 2 ? 2 : 4] : null; } },
   bread: { hold: 0, tip: [2, 0], f(l, b) { return l >= -1 && l <= 2 && b >= -2 && b <= 3 ? P.thatch[l === 2 ? 5 : b === 3 || l === -1 ? 2 : 4] : null; } },
 };
+const FORE_FILLS = .5;
 function toolAt(s, kind, gx, gy, ang, o) {
   const T = TOOLS[kind];
   if (!T) return null;
   o = o || {};
   const fore = o.fore || 1, a = (ang === undefined ? T.hold : ang) * D2R, ux = Math.sin(a), uy = -Math.cos(a), vx = Math.cos(a), vy = Math.sin(a), R = 38, m = o.mirror ? -1 : 1;
   for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
-    const c = T.f(rnd((m * dx * ux + dy * uy) / fore), rnd(m * dx * vx + dy * vy + .5), o);
+    const along = m * dx * ux + dy * uy, l = rnd(along / fore), b = rnd(m * dx * vx + dy * vy + .5);
+    let c = T.f(l, b, o);
+    for (let k = 1; !c && fore < FORE_FILLS && k * fore <= 1; k++) for (const q of [l + k, l - k]) if (!c && Math.abs(q * fore - along) <= .5) c = T.f(q, b, o);
     if (c) s.set(gx + dx, gy + dy, c, kind === 'staff' && P.mana.includes(c) ? 255 : 0);
   }
   return [gx + m * (ux * T.tip[0] * fore + vx * T.tip[1]), gy + uy * T.tip[0] * fore + vy * T.tip[1]];
@@ -197,7 +200,7 @@ function aimSeen(aim, hand, tip, face) {
   }
   return v;
 }
-const FOOT_LINE = { band: -1.5, step: .03, turns: 67 };
+const FOOT_LINE = { band: -1.5, step: .03, turns: 67, under: 1, lifts: 3 };
 function toolSeen(view, aim) {
   const v = view.at(aim);
   return { ang: Math.atan2(v[0], -v[1]) / D2R, fore: Math.max(SPACE.least, Math.hypot(v[0], v[1])) };

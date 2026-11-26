@@ -245,14 +245,19 @@ function rigPawn(o, p) {
     const far = TOOL_REACH[kind] || 1, butt = TOOL_BUTT[kind] || 1, head = TOOL_HEAD[kind] || 1;
     if (wielded) {
       const raw = aimOf(), paired = p.both && TWO_HANDED[kind] ? TWO_HANDED[kind] : null, grips = [p.grip === undefined ? (paired ? paired[0] : 0) : p.grip, ...(paired ? [paired[1]] : [])], aimed = () => aimSeen(aimGrounded(raw, shoulderZ + R.H[2], far - grips[0], butt + grips[0], head), [R.H[0], R.H[1], shoulderZ + R.H[2]], far - grips[0] + head, face);
+      const paired3 = () => {
+        if (grips.length > 1 && !o.oneArm) for (let n = 0; n < 6; n++) {
+          const want = add3(R.H, mul3(aim, grips[1]));
+          L = solved('L', want); second = { want, got: L.H };
+          const miss = sub3(L.H, want);
+          if (len3(miss) < .2) break;
+          tR = add3(tR, mul3(miss, .7)); R = solved('R', tR); aim = aimed();
+        }
+      };
+      const sunkRows = () => { const seen = toolSeen(view, aim), at = shownAt(sub3(R.H, mul3(aim, grips[0]))).map(rnd), t = new Spr(s.w, s.h, s.ax, s.ay); toolAt(t, kind, at[0], at[1], seen.ang, { fore: seen.fore }); for (let q = t.c.length - 1; q >= 0; q--) if (t.c[q]) return ((q / t.w) | 0) - base - FOOT_LINE.under; return 0; };
       aim = aimed();
-      if (grips.length > 1 && !o.oneArm) for (let n = 0; n < 6; n++) {
-        const want = add3(R.H, mul3(aim, grips[1]));
-        L = solved('L', want); second = { want, got: L.H };
-        const miss = sub3(L.H, want);
-        if (len3(miss) < .2) break;
-        tR = add3(tR, mul3(miss, .7)); R = solved('R', tR); aim = aimed();
-      }
+      paired3();
+      if (face !== 's') for (let n = 0; n < FOOT_LINE.lifts; n++) { const sunk = sunkRows(); if (sunk <= 0) break; tR = add3(tR, [0, 0, sunk]); R = solved('R', tR); if (second) { const want = add3(R.H, mul3(aim, grips[1])); L = solved('L', want); second = { want, got: L.H }; } }
       from = sub3(R.H, mul3(aim, grips[0]));
     } else if (bowing) {
       aim = unit3(p.aim || (p.bow >= 1 ? [0, 1, 0] : [-.2, 0, .98]));
