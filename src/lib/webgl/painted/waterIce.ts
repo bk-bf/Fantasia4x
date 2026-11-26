@@ -1,5 +1,6 @@
 import type { GameGrid } from '../game-grid.js';
 import type { GpuDevice, GpuTexture } from '../../gpu/device.js';
+import { samplersOf } from '../samplers.js';
 
 export const ICE_UNIT = 13;
 const FULL = 255;
@@ -37,12 +38,7 @@ export class WaterIce {
     this.gpu = gpu;
     this.tex = gpu.createTexture()!;
     this.bind();
-    gpu.setSampler({
-      minFilter: 'linear',
-      magFilter: 'linear',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge'
-    });
+    gpu.bindSampler(ICE_UNIT, samplersOf(gpu).linear);
     gpu.setTextureSlot(0);
   }
 

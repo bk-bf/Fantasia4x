@@ -90,12 +90,6 @@ export class PaintedLightPass {
     gpu.setTextureSlot(LIGHT_FIELD_UNIT);
     gpu.bindTexture(this.field);
     gpu.writeTexture({ format: 'rgba8unorm', width: w, height: h }, null);
-    gpu.setSampler({
-      minFilter: 'nearest',
-      magFilter: 'nearest',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge'
-    });
     gpu.attachColorTexture(this.target, this.field);
     gpu.setTextureSlot(0);
     this.fieldSize = [w, h];

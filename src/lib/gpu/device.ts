@@ -8,6 +8,7 @@ export type GpuVertexLayout = Handle<'vertex-layout'>;
 export type GpuPipeline = Handle<'pipeline'>;
 export type GpuShaderModule = Handle<'shader-module'>;
 export type GpuUniform = Handle<'uniform'>;
+export type GpuSampler = Handle<'sampler'>;
 
 export type TextureFormat =
   | 'rgba8unorm'
@@ -22,10 +23,10 @@ export type FilterMode = 'nearest' | 'linear';
 export type AddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
 
 export interface SamplerDescriptor {
-  minFilter?: FilterMode;
-  magFilter?: FilterMode;
-  addressModeU?: AddressMode;
-  addressModeV?: AddressMode;
+  minFilter: FilterMode;
+  magFilter: FilterMode;
+  addressModeU: AddressMode;
+  addressModeV: AddressMode;
 }
 
 export interface TextureExtent {
@@ -149,7 +150,8 @@ export interface GpuDevice {
   destroyTexture(texture: GpuTexture | null): void;
   setTextureSlot(slot: number): void;
   bindTexture(texture: GpuTexture | null): void;
-  setSampler(desc: SamplerDescriptor): void;
+  createSampler(desc: SamplerDescriptor): GpuSampler;
+  bindSampler(slot: number, sampler: GpuSampler | null): void;
   writeTexture(extent: TextureExtent, data: TextureData): void;
   writeTextureImage(format: TextureFormat, source: TexImageSource): void;
   writeSubTexture(region: TextureRegion, data: ArrayBufferView): void;

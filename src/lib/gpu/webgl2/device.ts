@@ -9,6 +9,7 @@ import type {
   GpuLimits,
   GpuPipeline,
   GpuRenderTarget,
+  GpuSampler,
   GpuShaderModule,
   GpuTexture,
   GpuUniform,
@@ -63,7 +64,12 @@ const STENCIL_MASK = 0xff;
 export class Webgl2Device implements GpuDevice {
   readonly backend = 'webgl2' as const;
 
-  constructor(private readonly gl: WebGL2RenderingContext) {}
+  private slot = 0;
+  private readonly scratchSlot: number;
+
+  constructor(private readonly gl: WebGL2RenderingContext) {
+    this.scratchSlot = (Number(gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)) || 32) - 1;
+  }
 
   static rawContextForInstrumentation(device: Webgl2Device): WebGL2RenderingContext {
     return device.gl;
@@ -203,7 +209,17 @@ export class Webgl2Device implements GpuDevice {
   }
 
   createTexture(): GpuTexture {
-    return this.gl.createTexture() as unknown as GpuTexture;
+    const gl = this.gl;
+    const texture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + this.scratchSlot);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, 0);
+    gl.activeTexture(gl.TEXTURE0 + this.slot);
+    return texture as unknown as GpuTexture;
   }
 
   destroyTexture(texture: GpuTexture | null): void {
@@ -211,6 +227,7 @@ export class Webgl2Device implements GpuDevice {
   }
 
   setTextureSlot(slot: number): void {
+    this.slot = slot;
     this.gl.activeTexture(this.gl.TEXTURE0 + slot);
   }
 
@@ -218,16 +235,18 @@ export class Webgl2Device implements GpuDevice {
     this.gl.bindTexture(this.gl.TEXTURE_2D, raw<WebGLTexture>(texture));
   }
 
-  setSampler(desc: SamplerDescriptor): void {
+  createSampler(desc: SamplerDescriptor): GpuSampler {
     const gl = this.gl;
-    if (desc.minFilter)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filterMode(gl, desc.minFilter));
-    if (desc.magFilter)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filterMode(gl, desc.magFilter));
-    if (desc.addressModeU)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, addressMode(gl, desc.addressModeU));
-    if (desc.addressModeV)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, addressMode(gl, desc.addressModeV));
+    const sampler = gl.createSampler();
+    gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, filterMode(gl, desc.minFilter));
+    gl.samplerParameteri(sampler, gl.TEXTURE_MAG_FILTER, filterMode(gl, desc.magFilter));
+    gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, addressMode(gl, desc.addressModeU));
+    gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, addressMode(gl, desc.addressModeV));
+    return sampler as unknown as GpuSampler;
+  }
+
+  bindSampler(slot: number, sampler: GpuSampler | null): void {
+    this.gl.bindSampler(slot, raw<WebGLSampler | null>(sampler));
   }
 
   writeTexture(extent: TextureExtent, data: TextureData): void {

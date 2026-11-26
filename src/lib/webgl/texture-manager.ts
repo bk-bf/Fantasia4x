@@ -1,11 +1,5 @@
 import type { FontAtlas } from './types.js';
-import type { AddressMode, GpuDevice, GpuTexture, TextureFormat } from '../gpu/device.js';
-
-export interface TextureOptions {
-  filtering?: 'nearest' | 'linear';
-  wrapping?: 'clamp' | 'repeat' | 'mirror';
-  flipY?: boolean;
-}
+import type { GpuDevice, GpuTexture, TextureFormat } from '../gpu/device.js';
 
 export interface TextureInfo {
   texture: GpuTexture;
@@ -31,7 +25,7 @@ export class TextureManager {
     }
   }
 
-  createFontAtlasTexture(atlas: FontAtlas, options: TextureOptions = {}): GpuTexture | null {
+  createFontAtlasTexture(atlas: FontAtlas): GpuTexture | null {
     const textureId = `font-atlas-${atlas.fontFamily}-${atlas.fontSize}`;
 
     if (this.debug) {
@@ -55,17 +49,6 @@ export class TextureManager {
 
     try {
       gpu.bindTexture(texture);
-
-      const filtering = options.filtering || 'nearest';
-      const wrapping = options.wrapping || 'clamp';
-
-      const wrapMode = this.getWrapMode(wrapping);
-      gpu.setSampler({
-        minFilter: filtering,
-        magFilter: filtering,
-        addressModeU: wrapMode,
-        addressModeV: wrapMode
-      });
 
       const format: TextureFormat = 'rgba8unorm';
 
@@ -93,9 +76,7 @@ export class TextureManager {
       if (this.debug) {
         console.log(`✅ Font atlas texture created: ${textureId}`, {
           dimensions: `${atlas.atlasWidth}x${atlas.atlasHeight}`,
-          memory: `${(memoryUsage / 1024).toFixed(1)}KB`,
-          filtering,
-          wrapping
+          memory: `${(memoryUsage / 1024).toFixed(1)}KB`
         });
       }
 
@@ -119,18 +100,6 @@ export class TextureManager {
 
     if (this.debug) {
       console.log('🧹 TextureManager disposed');
-    }
-  }
-
-  private getWrapMode(wrapping: string): AddressMode {
-    switch (wrapping) {
-      case 'repeat':
-        return 'repeat';
-      case 'mirror':
-        return 'mirror-repeat';
-      case 'clamp':
-      default:
-        return 'clamp-to-edge';
     }
   }
 

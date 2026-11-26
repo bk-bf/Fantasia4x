@@ -149,12 +149,6 @@ export class PaintedShadowCast {
     gpu.setUnpackAlignment(1);
     gpu.writeTexture({ format: 'r8unorm', width: rect.w, height: rect.h }, this.heights);
     gpu.setUnpackAlignment(4);
-    gpu.setSampler({
-      minFilter: 'nearest',
-      magFilter: 'nearest',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge'
-    });
     gpu.setTextureSlot(0);
   }
 

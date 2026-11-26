@@ -2,6 +2,7 @@ import { createOrthographicMatrix, PerformanceTimer } from './utils.js';
 import { ShaderManager, createTileRendererShaders } from './shaders.js';
 import { createSquareCellAtlas, loadBitlandsAtlas } from './font-atlas.js';
 import { TextureManager } from './texture-manager.js';
+import { samplersOf } from './samplers.js';
 import { ALPHA_CUT, GridRenderer } from './grid-renderer.js';
 import { WebGLStateManager } from './webgl-state.js';
 import type { GameGrid } from './game-grid.js';
@@ -388,12 +389,6 @@ export class WebGLRendererCore {
       if (!newTexture) return;
 
       gpu.bindTexture(newTexture);
-      gpu.setSampler({
-        minFilter: 'nearest',
-        magFilter: 'nearest',
-        addressModeU: 'clamp-to-edge',
-        addressModeV: 'clamp-to-edge'
-      });
       gpu.writeTexture(
         { format: 'rgba8unorm', width: newAtlas.atlasWidth, height: newAtlas.atlasHeight },
         newAtlas.texture.data
@@ -436,11 +431,9 @@ export class WebGLRendererCore {
       }
 
       this.textureManager = new TextureManager(gpu, this.debug);
-      this.fontTexture = this.textureManager.createFontAtlasTexture(this.fontAtlas, {
-        filtering: 'nearest',
-        wrapping: 'clamp',
-        flipY: false
-      });
+      this.fontTexture = this.textureManager.createFontAtlasTexture(this.fontAtlas);
+      const { nearest } = samplersOf(gpu);
+      for (const unit of [0, 1, LIGHT_ATLAS_UNIT]) gpu.bindSampler(unit, nearest);
       if (!this.fontTexture) throw new Error('Font texture creation failed');
 
       this.gridRenderer = new GridRenderer(
