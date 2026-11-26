@@ -1,6 +1,6 @@
 'use strict';
 const MOTION_LOAD = (() => {
-  const RIM = .6, DOZEN = 12, TILT_SPAN = 14, LOADS = new Map();
+  const DOZEN = 12, TILT_SPAN = 14, LOADS = new Map();
   const NOTES = { light: 'one hand at the hip, the usual walk', bulky: 'both arms in front, a shorter stride', heavy: 'slow and strained, on one shoulder or low in front' };
   const empty = (spr, i, j) => i < 0 || j < 0 || i >= spr.w || j >= spr.h || !spr.c[j * spr.w + i];
   const edged = (spr, i, j) => spr.c[j * spr.w + i] === P.ink && (empty(spr, i - 1, j) || empty(spr, i + 1, j) || empty(spr, i, j - 1) || empty(spr, i, j + 1));
@@ -20,8 +20,6 @@ const MOTION_LOAD = (() => {
         s.c[q] = c; s.e[q] = spr.e[row * spr.w + i]; placed.push(q);
       }
     }
-    const rimmed = n => mask[n] === 1 && under.c[n] !== P.ink;
-    if (layer.fused) for (const q of placed) if (s.c[q] !== P.ink && [q - 1, q + 1, q - s.w, q + s.w].some(rimmed)) s.c[q] = dark(s.c[q], RIM);
     Object.assign(s, { parts: pawn.parts, owner: pawn.owner, layers: pawn.layers, loadCam: pawn.loadCam });
     if (pawn.layers) s.loadLayer = { name: 'load', cam: pawn.loadCam, spr: whole };
     const lined = layer.fused ? s.outline() : s;

@@ -111,7 +111,7 @@ function rigHat(s, o, X, hTop, face, skin, tunic, hd, hh, drape = 2) {
 const WRAP = [P.cloth[2], P.cloth[1]];
 const rimOf = (was, c) => !!(was && c) && c[0] === was[0] * .6 && c[1] === was[1] * .6;
 
-const REACH = { hip: 3, front: 6 }, SUNK = { log: 2, game: 8, behind: .34, slung: 7, aside: 2.2, oneHand: .3 }, CLEAR = { ground: 4, shins: 3 }, BEHIND_HEAD = ['game', 'drape'];
+const REACH = { hip: 3, front: 6 }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3 }, CLEAR = { ground: 4, shins: 3 }, BEHIND_HEAD = ['game', 'drape'];
 function rigPawn(o, p) {
   p = p || {};
   let s = new Spr(RG.W, RG.H, RG.CX, RG.BASE);
@@ -218,7 +218,7 @@ function rigPawn(o, p) {
   const armParts = (name, path, shown, lit, far, cams, lost, more) => {
     const span = path.length === 2 ? spanOf(path) : path.rigid ? drawnLength(path) : 0, k = span > 1 ? TOT / span : 1, col = armCol(lit, far, lost, shown);
     const zones = { upper: [0, ELBOW - 1], fore: [ELBOW, WRIST - 1], hand: [WRIST, armLen - 1] };
-    for (const seg of ['upper', 'fore', 'hand']) part(name + ' ' + seg, cams[seg], t => path.rigid ? limbDrawn(t, seg, shown.map(q => q.map(rnd)), aw, zones, col) : rigLimb(t, shown, aw, (d, e, v, X) => { const j = rnd(d * k); return j >= SPANS[seg][0] && j < SPANS[seg][1] ? col(d * k, e, v, X) : null; }, null), { limb: name, seg, rim: far || (shaped && side) ? null : path.rigid ? 'ink' : 'shade', lost: !!lost, anchor: path[0].map(rnd), path: shown, ...(seg === 'hand' ? more : null) });
+    for (const seg of ['upper', 'fore', 'hand']) part(name + ' ' + seg, cams[seg], t => path.rigid ? limbDrawn(t, seg, shown.map(q => q.map(rnd)), aw, zones, col) : rigLimb(t, shown, aw, (d, e, v, X) => { const j = rnd(d * k); return j >= SPANS[seg][0] && j < SPANS[seg][1] ? col(d * k, e, v, X) : null; }, null), { limb: name, seg, rim: far || !path.rigid || (shaped && side) ? null : 'ink', lost: !!lost, anchor: path[0].map(rnd), path: shown, ...(seg === 'hand' ? more : null) });
   };
   const resting = p.carry && p.down > .5;
   let held = p.carry ? HELD[resting || (p.cu < REST.raised && !BEHIND_HEAD.includes(p.carry)) ? 'rest' : p.carry][face] : null;

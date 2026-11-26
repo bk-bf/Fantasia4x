@@ -1,7 +1,7 @@
 export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y'];
 export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing with no hand on it', x: 'held thing against the face', y: 'legs shortened' };
 const HAND_BLOCK = 4, TAPER = { long: 5, thin: 1, wide: 3 }, FIN = { out: 4, above: 1 }, PROFILE = .8, BAND = 2, LEGS = .6, TOUCH = 1;
-const LEG_LAYERS = ['legs', 'far leg', 'near leg'], BROW = 6, GRASPED = .2;
+const LEG_LAYERS = ['legs', 'far leg', 'near leg'], BROW = 6, FRONT = 5, GRASPED = .2;
 
 const same = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
 const pixels = spr => { const out = []; for (let i = 0; i < spr.c.length; i++) if (spr.c[i]) out.push(i); return out; };
@@ -44,7 +44,7 @@ export function pictured(now, face, ink) {
       if (out && inward) { counts.r++; said.push(name + ' fins out at the shoulder'); }
     }
   }
-  for (let i = 0; i < shown.length && !now.fused; i++) {
+  for (let i = 0; i < shown.length; i++) {
     if (!shown[i] || isInk(shown[i])) continue;
     let owner = null;
     for (let k = stack.length - 1; k >= 0 && !owner; k--) if (stack[k].spr.c[i]) owner = stack[k];
@@ -62,7 +62,7 @@ export function pictured(now, face, ink) {
   const head = stack.find(l => l.name === 'head'), pts = now.rigged.pts;
   if (face === 's' && head && pts.mouth && !now.pose.covers && !now.fused) {
     let against = 0;
-    for (const l of [...tools.filter(l => l.piece !== 'string' && l.piece !== 'arrow'), ...stack.filter(k => k.name === 'load')]) for (const i of pixels(l.spr)) { const y = (i / w) | 0; if (y < pts.mouth[1] - BROW || y > pts.chin || !shown[i] || !same(shown[i], l.spr.c[i])) continue; if ([i - 1, i + 1, i - w, i + w, i].some(q => head.spr.c[q])) against++; }
+    for (const l of [...tools.filter(l => l.piece !== 'string' && l.piece !== 'arrow'), ...stack.filter(k => k.name === 'load' && !(now.pose.cu < 1))]) for (const i of pixels(l.spr)) { const y = (i / w) | 0; if (y < pts.mouth[1] - BROW || y > pts.chin || !shown[i] || !same(shown[i], l.spr.c[i])) continue; if ([i - 1, i + 1, i - w, i + w, i].some(q => head.spr.c[q] && q % w >= pts.mouth[0] - FRONT)) against++; }
     if (against) { counts.x += against; said.push(against + ' px of a held thing against the face'); }
   }
   if (sp && !now.pose.sit && !now.pose.kneel) {
