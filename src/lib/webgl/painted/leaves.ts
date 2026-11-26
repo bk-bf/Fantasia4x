@@ -6,12 +6,15 @@ import type { PaintedSprite, TreeFx } from './manifest.js';
 import { gustAt, WIND_SHAPE, type WindClock } from './wind.js';
 import { BIT_FLOATS, SHAPE, TreeBits } from './treeBits.js';
 import {
+  ALPHA_BLEND,
   BufferUsage,
   FLOAT32_FORMATS,
   type GpuDevice,
-  type GpuPipeline,
-  type GpuUniform
+  type GpuRenderPipeline,
+  type GpuUniform,
+  type VertexBufferLayout
 } from '../../gpu/device.js';
+import { canvasPipeline } from '../canvasPipeline.js';
 
 const PROGRAM = 'fallingLeaf';
 const FLOATS = BIT_FLOATS;
@@ -176,6 +179,23 @@ export class LeafField {
   }
 }
 
+const LEAF_ATTRIBUTES: [string, number, number][] = [
+  ['a_leaf', 4, 0],
+  ['a_turn', 1, 4],
+  ['a_rgb', 2, 5],
+  ['a_look', 3, 7]
+];
+
+const LEAF_LAYOUT: VertexBufferLayout = {
+  arrayStride: FLOATS * 4,
+  stepMode: 'instance',
+  attributes: LEAF_ATTRIBUTES.map(([, size, at], shaderLocation) => ({
+    shaderLocation,
+    format: FLOAT32_FORMATS[size - 1],
+    offset: at * 4
+  }))
+};
+
 export class FallingLeaves {
   readonly field = new LeafField();
   readonly bits = new TreeBits();
@@ -183,8 +203,18 @@ export class FallingLeaves {
   private readonly at: Record<string, GpuUniform | null>;
 
   static create(gpu: GpuDevice, shaders: ShaderManager): FallingLeaves | null {
-    const made = shaders.createProgram(PROGRAM, vertexSource, fragmentSource);
-    const program = shaders.getProgram(PROGRAM)?.program;
+    const made = shaders.createPipeline(
+      PROGRAM,
+      canvasPipeline(gpu, {
+        vertex: vertexSource,
+        fragment: fragmentSource,
+        attributes: Object.fromEntries(LEAF_ATTRIBUTES.map(([name], i) => [name, i])),
+        buffers: [LEAF_LAYOUT],
+        topology: 'triangle-strip',
+        blend: ALPHA_BLEND
+      })
+    );
+    const program = made.pipeline;
     if (!made.success || !program) {
       console.warn('[falling leaves] off:', made.error);
       return null;
@@ -194,8 +224,7 @@ export class FallingLeaves {
 
   private constructor(
     private readonly gpu: GpuDevice,
-    private readonly program: GpuPipeline,
-    private readonly vao = gpu.createVertexLayout()!,
+    private readonly program: GpuRenderPipeline,
     private readonly vbo = gpu.createBuffer({
       size: (L.max + MAX_BITS) * FLOATS * 4,
       usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
@@ -214,25 +243,6 @@ export class FallingLeaves {
       'u_shade'
     ];
     this.at = Object.fromEntries(names.map((n) => [n, gpu.uniform(program, n)]));
-    gpu.setVertexLayout(vao);
-    gpu.setVertexBuffer(vbo);
-    const attribs: [string, number, number][] = [
-      ['a_leaf', 4, 0],
-      ['a_turn', 1, 4],
-      ['a_rgb', 2, 5],
-      ['a_look', 3, 7]
-    ];
-    for (const [name, size, at] of attribs) {
-      const loc = gpu.attribute(program, name);
-      if (loc < 0) continue;
-      gpu.vertexAttribute(loc, {
-        format: FLOAT32_FORMATS[size - 1],
-        stride: FLOATS * 4,
-        offset: at * 4,
-        stepMode: 'instance'
-      });
-    }
-    gpu.setVertexLayout(null);
   }
 
   draw(
@@ -252,11 +262,8 @@ export class FallingLeaves {
     n += Math.min(bits.length, this.data.length - n * FLOATS) / FLOATS;
     if (n === 0) return 0;
     const gpu = this.gpu;
-    const depth = gpu.depthTestEnabled();
-    gpu.setDepthTest(false);
     gpu.setPipeline(this.program);
-    gpu.setVertexLayout(this.vao);
-    gpu.setVertexBuffer(this.vbo);
+    gpu.setVertexBuffer(0, this.vbo);
     gpu.queue.writeBuffer(this.vbo, 0, this.data, 0, n * FLOATS);
     gpu.setVec2fv(this.at.u_canvas, f.canvas);
     gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
@@ -268,14 +275,11 @@ export class FallingLeaves {
     gpu.setVec3fv(this.at.u_ambient, f.light.ambient);
     gpu.setVec2fv(this.at.u_tone, f.light.tone);
     gpu.setF32(this.at.u_shade, SHADE);
-    gpu.drawInstanced('triangle-strip', 4, n);
-    gpu.setVertexLayout(null);
-    if (depth) gpu.setDepthTest(true);
+    gpu.draw(4, n);
     return 1;
   }
 
   dispose(): void {
     this.gpu.destroyBuffer(this.vbo);
-    this.gpu.destroyVertexLayout(this.vao);
   }
 }

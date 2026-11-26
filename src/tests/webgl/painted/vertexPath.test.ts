@@ -21,7 +21,7 @@ const noopGl = new Proxy(
   { get: (_t, key) => (typeof key === 'string' && /^[A-Z_0-9]+$/.test(key) ? 0 : () => ({})) }
 ) as unknown as WebGL2RenderingContext;
 
-const shaders = { getAttributeLocation: () => -1 } as unknown as ShaderManager;
+const shaders = {} as unknown as ShaderManager;
 
 const atlas = {
   characters: new Map([
@@ -51,7 +51,12 @@ const lit: GridRenderOptions = {
 const rgb = (r: number, g: number, b: number) => ({ r, g, b });
 
 const glyphTiles: TileData[] = [
-  { char: 'A', foreground: rgb(0.9, 0.5, 0.1), background: rgb(0.1, 0.2, 0.3), position: { x: 0, y: 0 } },
+  {
+    char: 'A',
+    foreground: rgb(0.9, 0.5, 0.1),
+    background: rgb(0.1, 0.2, 0.3),
+    position: { x: 0, y: 0 }
+  },
   {
     char: 'B',
     foreground: rgb(0.2, 0.4, 0.6),
@@ -65,9 +70,27 @@ const glyphTiles: TileData[] = [
     scale: 1.5
   },
   { char: ' ', foreground: rgb(1, 1, 1), background: rgb(0.5, 0.5, 0.5), position: { x: 4, y: 4 } },
-  { char: 'A', foreground: rgb(1, 0, 0), background: rgb(0, 1, 0), position: { x: 1, y: 7 }, rotation: 180, scale: 0.5 },
-  { char: 'B', foreground: rgb(0, 0, 1), background: rgb(1, 0, 1), position: { x: 6, y: 2 }, rotation: 270 },
-  { char: 'Z', foreground: rgb(0.3, 0.3, 0.3), background: rgb(0.7, 0.7, 0.7), position: { x: 3, y: 3 } }
+  {
+    char: 'A',
+    foreground: rgb(1, 0, 0),
+    background: rgb(0, 1, 0),
+    position: { x: 1, y: 7 },
+    rotation: 180,
+    scale: 0.5
+  },
+  {
+    char: 'B',
+    foreground: rgb(0, 0, 1),
+    background: rgb(1, 0, 1),
+    position: { x: 6, y: 2 },
+    rotation: 270
+  },
+  {
+    char: 'Z',
+    foreground: rgb(0.3, 0.3, 0.3),
+    background: rgb(0.7, 0.7, 0.7),
+    position: { x: 3, y: 3 }
+  }
 ];
 
 function vertexData(tiles: TileData[], opts: GridRenderOptions): Float32Array {
@@ -120,7 +143,11 @@ describe('the vertex buffer the tile shader reads', () => {
 
   it('leaves the glyph tiles beside a colour sprite byte for byte as they were', () => {
     const variant = tileset.lookup.get('resource')!.get('oak_tree')![0];
-    const painted: TileData = { ...glyphTiles[0], position: { x: 8, y: 8 }, painted: spriteAt(variant, 8, 8) };
+    const painted: TileData = {
+      ...glyphTiles[0],
+      position: { x: 8, y: 8 },
+      painted: spriteAt(variant, 8, 8)
+    };
     const mixed = vertexData([...glyphTiles, painted], options);
     const alone = vertexData(glyphTiles, options);
     expect(mixed.subarray(0, alone.length)).toEqual(alone);

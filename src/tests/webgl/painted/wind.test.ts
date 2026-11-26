@@ -8,7 +8,8 @@ import { GameGrid } from '$lib/webgl/game-grid';
 import { WebGLRendererCore } from '$lib/webgl/renderer-core';
 import type { TileData } from '$lib/webgl/tile-types';
 import type { FontAtlas } from '$lib/webgl/types';
-import type { ShaderManager } from '$lib/webgl/shaders';
+import { ShaderManager } from '$lib/webgl/shaders';
+import { tileShaders } from '../tileShaders';
 import {
   buildTileset,
   parseManifest,
@@ -80,18 +81,13 @@ function recordingGl(uploads: Float32Array[], calls: [string, unknown[]][] = [])
   }) as unknown as WebGL2RenderingContext;
 }
 
-const shaders = {
-  getAttributeLocation: () => 1,
-  useProgram: () => true,
-  setUniform: () => true
-} as unknown as ShaderManager;
-
 afterEach(() => vi.restoreAllMocks());
 
 describe('wind in the vertex data', () => {
   it('writes each sprite its own sway after the vein, and none for a still or lying one', () => {
     const uploads: Float32Array[] = [];
-    const r = new GridRenderer(new Webgl2Device(recordingGl(uploads)), shaders, atlas, false, true);
+    const gpu = new Webgl2Device(recordingGl(uploads));
+    const r = new GridRenderer(gpu, tileShaders(gpu, true), atlas, false, true);
     const quads = [
       tile(1, 1, pine),
       tile(2, 1, { ...pine, sway: undefined }),
@@ -163,6 +159,7 @@ function windyCore(
 ) {
   const gl = recordingGl(uploads, calls);
   const gpu = new Webgl2Device(gl);
+  const shaders = tileShaders(gpu, true);
   const grids = {
     gameGrid: new GameGrid(),
     resourceOverlayGrid: new GameGrid(),
@@ -213,10 +210,9 @@ function windyCore(
     snowVersion: 0,
     stats: { drawCalls: 0, vertexCount: 0, resourceRebuilds: 0, terrainRebuilds: 0 },
     webglState: { getDevice: () => gpu },
-    shaderManager: {
-      useProgram: () => true,
+    shaderManager: Object.assign(shaders, {
       setUniform: (_p: string, name: string, value: unknown) => uniforms.set(name, value)
-    },
+    }),
     gridRenderer: new GridRenderer(gpu, shaders, atlas, false, true)
   });
   return core;
@@ -260,11 +256,7 @@ describe('the water moving through the painted map', () => {
     const calls: [string, unknown[]][] = [];
     const core = windyCore(uploads, new Map(), calls);
     const gpu = core['webglState'].getDevice()!;
-    const blendShaders = {
-      createProgram: () => ({ success: true }),
-      getProgram: () => ({ program: {} })
-    } as unknown as ShaderManager;
-    const blend = GroundBlend.create(gpu, blendShaders, {
+    const blend = GroundBlend.create(gpu, new ShaderManager(gpu), {
       ...core['painted']!,
       water: {} as GpuTexture
     })!;

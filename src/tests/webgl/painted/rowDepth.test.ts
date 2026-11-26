@@ -7,7 +7,8 @@ import { GameGrid } from '$lib/webgl/game-grid';
 import { ROW_DEPTH_RANGE, WebGLRendererCore } from '$lib/webgl/renderer-core';
 import type { TileData } from '$lib/webgl/tile-types';
 import type { FontAtlas } from '$lib/webgl/types';
-import type { ShaderManager } from '$lib/webgl/shaders';
+import { TILE_ATTRIBUTES, TILE_PIPELINE, tilePipelines } from '$lib/webgl/tilePipelines';
+import { tileShaders } from '../tileShaders';
 import { buildTileset, parseManifest, spriteAt } from '$lib/webgl/painted/manifest';
 import { SHADOW_DEPTH } from '$lib/webgl/painted/shadowCast';
 import { WindClock } from '$lib/webgl/painted/wind';
@@ -67,22 +68,8 @@ function recordingGl(uploads: Float32Array[] = []) {
 
 function gridRenderer(rowDepth: boolean, uploads?: Float32Array[]) {
   const { gl, calls } = recordingGl(uploads);
-  const shaders = {
-    getAttributeLocation: (_p: string, name: string) =>
-      name === 'a_row'
-        ? 9
-        : name === 'a_vein'
-          ? 10
-          : name === 'a_veinNear'
-            ? 11
-            : name === 'a_sway'
-              ? 12
-              : name === 'a_tree'
-                ? 13
-                : 1,
-    useProgram: () => true
-  } as unknown as ShaderManager;
-  const r = new GridRenderer(new Webgl2Device(gl), shaders, atlas, false, rowDepth);
+  const gpu = new Webgl2Device(gl);
+  const r = new GridRenderer(gpu, tileShaders(gpu, rowDepth), atlas, false, rowDepth);
   return { r, calls };
 }
 
@@ -171,54 +158,56 @@ describe('the row each quad carries for the depth test', () => {
     };
     const on = pointers(true);
     const off = pointers(false);
-    expect(on.find((c) => c[1] === 9)).toEqual([
+    const at = (name: string) => on.find((c) => c[1] === TILE_ATTRIBUTES[name]);
+    expect(at('a_row')).toEqual([
       'vertexAttribPointer',
-      9,
+      TILE_ATTRIBUTES.a_row,
       1,
       0x1406,
       false,
       128,
       96
     ]);
-    expect(on.find((c) => c[1] === 10)).toEqual([
+    expect(at('a_vein')).toEqual([
       'vertexAttribPointer',
-      10,
+      TILE_ATTRIBUTES.a_vein,
       4,
       0x1406,
       false,
       128,
       100
     ]);
-    expect(on.find((c) => c[1] === 11)).toEqual([
+    expect(at('a_veinNear')).toEqual([
       'vertexAttribPointer',
-      11,
+      TILE_ATTRIBUTES.a_veinNear,
       1,
       0x1406,
       false,
       128,
       116
     ]);
-    expect(on.find((c) => c[1] === 12)).toEqual([
+    expect(at('a_sway')).toEqual([
       'vertexAttribPointer',
-      12,
+      TILE_ATTRIBUTES.a_sway,
       1,
       0x1406,
       false,
       128,
       120
     ]);
-    expect(on.find((c) => c[1] === 13)).toEqual([
+    expect(at('a_tree')).toEqual([
       'vertexAttribPointer',
-      13,
+      TILE_ATTRIBUTES.a_tree,
       1,
       0x1406,
       false,
       128,
       124
     ]);
-    expect(off.every((c) => c[5] === 96 && ![9, 10, 11, 12, 13].includes(c[1] as number))).toBe(
-      true
+    const rowLocations = ['a_row', 'a_vein', 'a_veinNear', 'a_sway', 'a_tree'].map(
+      (n) => TILE_ATTRIBUTES[n]
     );
+    expect(off.every((c) => c[5] === 96 && !rowLocations.includes(c[1] as number))).toBe(true);
   });
 
   it('writes the vein, its tile and its same-ore neighbours after the row, and -1 where there is none', () => {
@@ -246,8 +235,7 @@ describe('the row each quad carries for the depth test', () => {
 function layeredCore(rowDepth: boolean) {
   const { gl, calls } = recordingGl();
   const uniforms = new Map<string, unknown>();
-  const draws: { layer: string; depth: boolean; shadows: boolean }[] = [];
-  let depthOn = false;
+  const draws: { layer: string; pipeline: string; shadows: boolean }[] = [];
   const grids = {
     gameGrid: new GameGrid(),
     snowGrid: new GameGrid(),
@@ -260,13 +248,6 @@ function layeredCore(rowDepth: boolean) {
   const names = new Map<GameGrid, string>(
     Object.entries(grids).map(([k, g]) => [g, k] as [GameGrid, string])
   );
-  const tracked = new Proxy(gl, {
-    get: (target, key) => {
-      if (key === 'enable') return (cap: number) => cap === DEPTH_TEST && (depthOn = true);
-      if (key === 'disable') return (cap: number) => cap === DEPTH_TEST && (depthOn = false);
-      return (target as unknown as Record<string | symbol, unknown>)[key];
-    }
-  });
   const core = Object.create(WebGLRendererCore.prototype) as WebGLRendererCore;
   Object.assign(core, {
     ...grids,
@@ -290,7 +271,7 @@ function layeredCore(rowDepth: boolean) {
     gridVersion: 0,
     snowVersion: 0,
     stats: { drawCalls: 0, vertexCount: 0, resourceRebuilds: 0 },
-    webglState: { getDevice: () => new Webgl2Device(tracked) },
+    webglState: { getDevice: () => new Webgl2Device(gl) },
     shaderManager: {
       useProgram: () => true,
       setUniform: (_p: string, name: string, value: unknown) => uniforms.set(name, value)
@@ -301,7 +282,7 @@ function layeredCore(rowDepth: boolean) {
         const layer = names.get(grid)!;
         draws.push({
           layer: uniforms.get('u_bgOnly') === 1 ? `${layer} wash` : layer,
-          depth: depthOn,
+          pipeline: opts.pipeline ?? 'terrain',
           shadows: opts.rowPasses === true
         });
         return { tilesRendered: 0 };
@@ -309,30 +290,46 @@ function layeredCore(rowDepth: boolean) {
     }
   });
   core['render']();
-  return { draws, uniforms, calls, depthOn: () => depthOn };
+  return { draws, uniforms, calls };
 }
 
 describe('the layers the depth test orders', () => {
   it('leaves the ground and the snow wash out of it and draws every standing layer through it', () => {
-    const { draws, uniforms, depthOn } = layeredCore(true);
+    const { draws, uniforms } = layeredCore(true);
     expect(draws).toEqual([
-      { layer: 'gameGrid', depth: false, shadows: false },
-      { layer: 'snowGrid wash', depth: false, shadows: false },
-      { layer: 'resourceOverlayGrid', depth: true, shadows: true },
-      { layer: 'snowGrid', depth: true, shadows: true },
-      { layer: 'buildingOverlayGrid', depth: true, shadows: true },
-      { layer: 'itemOverlayGrid', depth: true, shadows: true },
-      { layer: 'overlayGrid', depth: true, shadows: true },
-      { layer: 'resourceTallOverlayGrid', depth: true, shadows: true }
+      { layer: 'gameGrid', pipeline: 'terrain', shadows: false },
+      { layer: 'snowGrid wash', pipeline: 'flat', shadows: false },
+      { layer: 'resourceOverlayGrid', pipeline: 'overlay', shadows: true },
+      { layer: 'snowGrid', pipeline: 'overlay', shadows: true },
+      { layer: 'buildingOverlayGrid', pipeline: 'overlay', shadows: true },
+      { layer: 'itemOverlayGrid', pipeline: 'overlay', shadows: true },
+      { layer: 'overlayGrid', pipeline: 'overlay', shadows: true },
+      { layer: 'resourceTallOverlayGrid', pipeline: 'overlay', shadows: true }
     ]);
     expect(uniforms.get('u_rowDepth')).toBe(1 / ROW_DEPTH_RANGE);
     expect(uniforms.get('u_alphaCut')).toBe(ALPHA_CUT);
-    expect(depthOn()).toBe(false);
+  });
+
+  it('tests depth only in the overlay and shadow pipelines, and only with the painted flag on', () => {
+    const depth = (rowDepth: boolean) =>
+      Object.fromEntries(
+        tilePipelines({ vertex: '', fragment: '' }, 'rgba8unorm', rowDepth).map(([name, d]) => [
+          name,
+          d.depthStencil?.depthCompare ?? 'none'
+        ])
+      );
+    expect(depth(true)).toEqual({
+      [TILE_PIPELINE.terrain]: 'always',
+      [TILE_PIPELINE.flat]: 'always',
+      [TILE_PIPELINE.overlay]: 'less-equal',
+      [TILE_PIPELINE.shadow]: 'less'
+    });
+    expect(Object.values(depth(false))).toEqual(['none', 'none', 'none', 'none']);
   });
 
   it('touches no depth state and sets no depth uniform with the painted flag off', () => {
     const { draws, uniforms, calls } = layeredCore(false);
-    expect(draws.every((d) => !d.depth && !d.shadows)).toBe(true);
+    expect(draws.every((d) => !d.shadows)).toBe(true);
     expect(uniforms.has('u_rowDepth')).toBe(false);
     expect(uniforms.has('u_alphaCut')).toBe(false);
     expect(uniforms.has('u_shadowPass')).toBe(false);
@@ -360,24 +357,24 @@ function passesOf(chunked: boolean, rowPasses: boolean): Pass[] {
   const recorded = new Proxy(gl, {
     get: (target, key) => {
       if (key === 'depthFunc') return (f: number) => (depthFunc = f);
-      if (key === 'blendFunc')
+      if (key === 'blendFuncSeparate')
         return (a: number, b: number) => (blend = `${names.get(a)},${names.get(b)}`);
       if (key === 'drawArrays')
         return () => passes.push({ shadow: uniforms.u_shadowPass === 1, depthFunc, blend });
       return (target as unknown as Record<string | symbol, unknown>)[key];
     }
   });
-  const shaders = {
-    getAttributeLocation: () => 1,
-    useProgram: () => true,
+  const gpu = new Webgl2Device(recorded);
+  const shaders = Object.assign(tileShaders(gpu, true), {
     setUniform: (_p: string, name: string, value: number) => (uniforms[name] = value)
-  } as unknown as ShaderManager;
-  const r = new GridRenderer(new Webgl2Device(recorded), shaders, atlas, false, true);
+  });
+  const r = new GridRenderer(gpu, shaders, atlas, false, true);
   const grid = new GameGrid();
   grid.setTile(4, 6, tiles[2]);
   r.renderGrid(grid, {
     ...options,
     rowPasses,
+    pipeline: 'overlay',
     renderAllTiles: true,
     ...(chunked ? { cacheVersion: 1, chunkLayer: 'resource' as const } : {})
   });

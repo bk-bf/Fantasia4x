@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { WorldTile } from '$lib/game/core/types';
 import { Webgl2Device } from '$lib/gpu/webgl2/device';
+import { ShaderManager } from '$lib/webgl/shaders';
 import type { GpuTexture } from '$lib/gpu/device';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
@@ -132,11 +133,8 @@ describe('the blend pass tables', () => {
 describe('the water clock', () => {
   it('reaches the shader as one uniform and uploads nothing', () => {
     const calls: [string, unknown[]][] = [];
-    const shaders = {
-      createProgram: () => ({ success: true }),
-      getProgram: () => ({ program: {} })
-    } as unknown as Parameters<typeof GroundBlend.create>[1];
-    const blend = GroundBlend.create(new Webgl2Device(recordingGl(calls)), shaders, painted)!;
+    const gpu = new Webgl2Device(recordingGl(calls));
+    const blend = GroundBlend.create(gpu, new ShaderManager(gpu), painted)!;
     const grid = new GameGrid();
     for (let x = 0; x < 4; x++) applyTileToGrid(grid, tile({ x, y: 0 }), []);
     blend.setGrid(grid);
@@ -156,7 +154,9 @@ describe('the water clock', () => {
     expect(blend.draw(frame(0))).toBe(true);
     calls.length = 0;
     expect(blend.draw(frame(1.25))).toBe(true);
-    expect(calls.filter(([name]) => /^(tex(Sub)?Image2D|bufferData)$/.test(name))).toEqual([]);
+    expect(calls.filter(([name]) => /^(tex(Sub)?Image2D|buffer(Sub)?Data)$/.test(name))).toEqual(
+      []
+    );
     expect(calls).toContainEqual(['uniform1f', ['u_waterTime', 1.25]]);
   });
 });
@@ -164,11 +164,8 @@ describe('the water clock', () => {
 describe('the wave water switch', () => {
   it('draws the wave water from its sea uniform and uploads nothing per frame', () => {
     const calls: [string, unknown[]][] = [];
-    const shaders = {
-      createProgram: () => ({ success: true }),
-      getProgram: () => ({ program: {} })
-    } as unknown as Parameters<typeof GroundBlend.create>[1];
-    const blend = GroundBlend.create(new Webgl2Device(recordingGl(calls)), shaders, painted)!;
+    const gpu = new Webgl2Device(recordingGl(calls));
+    const blend = GroundBlend.create(gpu, new ShaderManager(gpu), painted)!;
     const grid = new GameGrid();
     for (let x = 0; x < 4; x++)
       applyTileToGrid(grid, tile({ x, y: 0, subType: x < 2 ? 'grass' : 'water' }), []);
@@ -192,7 +189,9 @@ describe('the wave water switch', () => {
     calls.length = 0;
     const sea = new Float32Array(52).fill(0.5);
     blend.draw(frame(sea));
-    expect(calls.filter(([name]) => /^(tex(Sub)?Image2D|bufferData)$/.test(name))).toEqual([]);
+    expect(calls.filter(([name]) => /^(tex(Sub)?Image2D|buffer(Sub)?Data)$/.test(name))).toEqual(
+      []
+    );
     expect(calls).toContainEqual(['uniform1i', ['u_waterStyle', 1]]);
     expect(calls).toContainEqual(['uniform4fv', ['u_sea[0]', sea]]);
     calls.length = 0;

@@ -1,36 +1,26 @@
 import type {
-  BlendFactor,
   BufferDescriptor,
   ClearDescriptor,
-  CompareFunction,
   StencilState,
   GpuBuffer,
   GpuDevice,
   GpuLimits,
   GpuQueue,
-  GpuPipeline,
+  GpuRenderPipeline,
   GpuRenderTarget,
   GpuSampler,
   GpuShaderModule,
   GpuTexture,
   GpuUniform,
-  GpuVertexLayout,
-  PrimitiveTopology,
   RenderPipelineDescriptor,
   RenderPipelineResult,
   SamplerDescriptor,
-  TextureDescriptor,
-  VertexAttribute
+  TextureDescriptor
 } from '../device.js';
-import {
-  addressMode,
-  blendFactor,
-  compareFunction,
-  filterMode,
-  topology,
-  vertexComponents
-} from './formats.js';
-import { createRenderPipeline } from './pipeline.js';
+import { addressMode, filterMode } from './formats.js';
+import { Webgl2Pipelines, type Webgl2Pipeline, type Webgl2Uniform } from './pipeline.js';
+import { Webgl2State } from './state.js';
+import { Webgl2VertexArrays } from './vertexArrays.js';
 import { Webgl2Buffers } from './buffers.js';
 import { Webgl2Textures } from './textures.js';
 
@@ -61,9 +51,15 @@ const STENCIL_MASK = 0xff;
 
 export class Webgl2Device implements GpuDevice {
   readonly backend = 'webgl2' as const;
+  readonly canvasFormat = 'rgba8unorm' as const;
+  readonly canvasDepthFormat: 'depth24plus' | null;
 
   private readonly textures: Webgl2Textures;
   private readonly buffers: Webgl2Buffers;
+  private readonly pipelines: Webgl2Pipelines;
+  private readonly state: Webgl2State;
+  private readonly vertexArrays: Webgl2VertexArrays;
+  private pipeline: Webgl2Pipeline | null = null;
   readonly queue: GpuQueue;
 
   constructor(private readonly gl: WebGL2RenderingContext) {
@@ -71,6 +67,10 @@ export class Webgl2Device implements GpuDevice {
     const buffers = new Webgl2Buffers(gl);
     this.textures = textures;
     this.buffers = buffers;
+    this.canvasDepthFormat = gl.getContextAttributes()?.depth === true ? 'depth24plus' : null;
+    this.pipelines = new Webgl2Pipelines(gl);
+    this.state = new Webgl2State(gl);
+    this.vertexArrays = new Webgl2VertexArrays(gl);
     this.queue = {
       writeBuffer: (buffer, offset, data, dataOffset, size) =>
         buffers.write(buffer, offset, data, dataOffset, size),
@@ -104,67 +104,73 @@ export class Webgl2Device implements GpuDevice {
   }
 
   createRenderPipeline(desc: RenderPipelineDescriptor): RenderPipelineResult {
-    return createRenderPipeline(this.gl, desc);
+    return this.pipelines.create(desc);
   }
 
-  destroyPipeline(pipeline: GpuPipeline): void {
-    this.gl.deleteProgram(raw<WebGLProgram>(pipeline));
+  destroyRenderPipeline(pipeline: GpuRenderPipeline): void {
+    if (this.pipeline === (pipeline as unknown)) this.pipeline = null;
+    this.pipelines.destroy(pipeline);
   }
 
   destroyShaderModule(module: GpuShaderModule): void {
     this.gl.deleteShader(raw<WebGLShader>(module));
   }
 
-  uniform(pipeline: GpuPipeline, name: string): GpuUniform | null {
-    return this.gl.getUniformLocation(
-      raw<WebGLProgram>(pipeline),
-      name
-    ) as unknown as GpuUniform | null;
+  uniform(pipeline: GpuRenderPipeline, name: string): GpuUniform | null {
+    const program = this.pipelines.get(pipeline).program;
+    const location = this.gl.getUniformLocation(program, name);
+    if (location === null) return null;
+    const uniform: Webgl2Uniform = { program, location };
+    return uniform as unknown as GpuUniform;
   }
 
-  attribute(pipeline: GpuPipeline, name: string): number {
-    return this.gl.getAttribLocation(raw<WebGLProgram>(pipeline), name);
+  setPipeline(pipeline: GpuRenderPipeline): void {
+    this.pipeline = this.pipelines.get(pipeline);
+    this.state.apply(this.pipeline);
   }
 
-  setPipeline(pipeline: GpuPipeline | null): void {
-    this.gl.useProgram(raw<WebGLProgram>(pipeline));
+  private at(u: GpuUniform | null): WebGLUniformLocation | null {
+    if (!u) return null;
+    const { program, location } = raw<Webgl2Uniform>(u);
+    this.state.use(program);
+    return location;
   }
 
   setF32(u: GpuUniform | null, x: number): void {
-    this.gl.uniform1f(raw<WebGLUniformLocation>(u), x);
+    this.gl.uniform1f(this.at(u), x);
   }
 
   setI32(u: GpuUniform | null, x: number): void {
-    this.gl.uniform1i(raw<WebGLUniformLocation>(u), x);
+    this.gl.uniform1i(this.at(u), x);
   }
 
   setVec2f(u: GpuUniform | null, x: number, y: number): void {
-    this.gl.uniform2f(raw<WebGLUniformLocation>(u), x, y);
+    this.gl.uniform2f(this.at(u), x, y);
   }
 
   setVec2i(u: GpuUniform | null, x: number, y: number): void {
-    this.gl.uniform2i(raw<WebGLUniformLocation>(u), x, y);
+    this.gl.uniform2i(this.at(u), x, y);
   }
 
   setVec4f(u: GpuUniform | null, x: number, y: number, z: number, w: number): void {
-    this.gl.uniform4f(raw<WebGLUniformLocation>(u), x, y, z, w);
+    this.gl.uniform4f(this.at(u), x, y, z, w);
   }
 
   setVec2fv(u: GpuUniform | null, v: Iterable<number>): void {
-    this.gl.uniform2fv(raw<WebGLUniformLocation>(u), v);
+    this.gl.uniform2fv(this.at(u), v);
   }
 
   setVec3fv(u: GpuUniform | null, v: Iterable<number>): void {
-    this.gl.uniform3fv(raw<WebGLUniformLocation>(u), v);
+    this.gl.uniform3fv(this.at(u), v);
   }
 
   setVec4fv(u: GpuUniform | null, v: Iterable<number>, offset?: number, length?: number): void {
-    if (offset === undefined) this.gl.uniform4fv(raw<WebGLUniformLocation>(u), v);
-    else this.gl.uniform4fv(raw<WebGLUniformLocation>(u), v, offset, length);
+    if (offset === undefined) this.gl.uniform4fv(this.at(u), v);
+    else this.gl.uniform4fv(this.at(u), v, offset, length);
   }
 
   setMat4fv(u: GpuUniform | null, v: Iterable<number>): void {
-    this.gl.uniformMatrix4fv(raw<WebGLUniformLocation>(u), false, v);
+    this.gl.uniformMatrix4fv(this.at(u), false, v);
   }
 
   createBuffer(desc: BufferDescriptor): GpuBuffer {
@@ -172,37 +178,13 @@ export class Webgl2Device implements GpuDevice {
   }
 
   destroyBuffer(buffer: GpuBuffer | null): void {
-    if (buffer) this.buffers.destroy(buffer);
+    if (!buffer) return;
+    this.vertexArrays.forget(raw<WebGLBuffer>(buffer));
+    this.buffers.destroy(buffer);
   }
 
-  setVertexBuffer(buffer: GpuBuffer | null): void {
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, raw<WebGLBuffer>(buffer));
-  }
-
-  createVertexLayout(): GpuVertexLayout {
-    return this.gl.createVertexArray() as unknown as GpuVertexLayout;
-  }
-
-  destroyVertexLayout(layout: GpuVertexLayout | null): void {
-    this.gl.deleteVertexArray(raw<WebGLVertexArrayObject>(layout));
-  }
-
-  setVertexLayout(layout: GpuVertexLayout | null): void {
-    this.gl.bindVertexArray(raw<WebGLVertexArrayObject>(layout));
-  }
-
-  vertexAttribute(location: number, a: VertexAttribute): void {
-    const gl = this.gl;
-    gl.enableVertexAttribArray(location);
-    gl.vertexAttribPointer(
-      location,
-      vertexComponents(a.format),
-      gl.FLOAT,
-      false,
-      a.stride,
-      a.offset
-    );
-    if (a.stepMode === 'instance') gl.vertexAttribDivisor(location, 1);
+  setVertexBuffer(slot: number, buffer: GpuBuffer, offset = 0): void {
+    this.vertexArrays.set(slot, raw<WebGLBuffer>(buffer), offset);
   }
 
   createTexture(desc: TextureDescriptor): GpuTexture {
@@ -282,44 +264,6 @@ export class Webgl2Device implements GpuDevice {
     this.gl.viewport(x, y, width, height);
   }
 
-  setBlending(on: boolean): void {
-    if (on) this.gl.enable(this.gl.BLEND);
-    else this.gl.disable(this.gl.BLEND);
-  }
-
-  setBlendFunc(src: BlendFactor, dst: BlendFactor): void {
-    const gl = this.gl;
-    gl.blendFunc(blendFactor(gl, src), blendFactor(gl, dst));
-  }
-
-  setBlendFuncSeparate(
-    srcColor: BlendFactor,
-    dstColor: BlendFactor,
-    srcAlpha: BlendFactor,
-    dstAlpha: BlendFactor
-  ): void {
-    const gl = this.gl;
-    gl.blendFuncSeparate(
-      blendFactor(gl, srcColor),
-      blendFactor(gl, dstColor),
-      blendFactor(gl, srcAlpha),
-      blendFactor(gl, dstAlpha)
-    );
-  }
-
-  setDepthTest(on: boolean): void {
-    if (on) this.gl.enable(this.gl.DEPTH_TEST);
-    else this.gl.disable(this.gl.DEPTH_TEST);
-  }
-
-  depthTestEnabled(): boolean {
-    return this.gl.isEnabled(this.gl.DEPTH_TEST);
-  }
-
-  setDepthCompare(compare: CompareFunction): void {
-    this.gl.depthFunc(compareFunction(this.gl, compare));
-  }
-
   setStencil(state: StencilState | null): void {
     const gl = this.gl;
     if (!state) {
@@ -335,16 +279,13 @@ export class Webgl2Device implements GpuDevice {
     gl.stencilOp(gl.KEEP, gl.KEEP, state.write ? gl.REPLACE : gl.KEEP);
   }
 
-  draw(t: PrimitiveTopology, vertexCount: number, firstVertex = 0): void {
-    this.gl.drawArrays(topology(this.gl, t), firstVertex, vertexCount);
-  }
-
-  drawInstanced(
-    t: PrimitiveTopology,
-    vertexCount: number,
-    instanceCount: number,
-    firstVertex = 0
-  ): void {
-    this.gl.drawArraysInstanced(topology(this.gl, t), firstVertex, vertexCount, instanceCount);
+  draw(vertexCount: number, instanceCount?: number, firstVertex = 0, firstInstance = 0): void {
+    const p = this.pipeline;
+    if (!p) throw new Error('draw: no pipeline set');
+    if (firstInstance !== 0) throw new Error('draw: WebGL2 has no base instance');
+    this.state.use(p.program);
+    this.vertexArrays.bind(p);
+    if (instanceCount === undefined) this.gl.drawArrays(p.topology, firstVertex, vertexCount);
+    else this.gl.drawArraysInstanced(p.topology, firstVertex, vertexCount, instanceCount);
   }
 }

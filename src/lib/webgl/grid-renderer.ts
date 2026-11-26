@@ -5,21 +5,19 @@ import type { FontAtlas } from './types.js';
 import { tileQuad } from './drawnSprites.js';
 import { tuftTiles } from './painted/tufts.js';
 import { VertexArena } from './vertexArena.js';
+import { BufferUsage, type GpuBuffer, type GpuDevice } from '../gpu/device.js';
 import {
-  BufferUsage,
-  FLOAT32_FORMATS,
-  type GpuBuffer,
-  type GpuDevice,
-  type GpuVertexLayout
-} from '../gpu/device.js';
+  GLYPH_VERTEX_FLOATS,
+  ROW_VERTEX_FLOATS,
+  TILE_PIPELINE,
+  type TilePipeline
+} from './tilePipelines.js';
 
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
 const ZERO_LIGHT: [number, number, number] = [0, 0, 0];
 const NO_OUTLINE = [0, 0, 0];
 const PAINTED_UV_SHIFT = 2;
 const corners = [0, 0, 0, 0];
-const GLYPH_VERTEX_FLOATS = 24;
-const ROW_VERTEX_FLOATS = 32;
 const NO_VEIN = { x: -1, y: -1, near: 0 };
 export { ALPHA_CUT } from './drawnSprites.js';
 
@@ -39,6 +37,7 @@ export interface GridRenderOptions {
   chunkLayer?: 'terrain' | 'resource' | 'resourceTall' | 'snow' | 'decor';
   pointLightActive?: boolean;
   rowPasses?: boolean;
+  pipeline?: TilePipeline;
 }
 
 export interface GridRenderStats {
@@ -49,7 +48,6 @@ export interface GridRenderStats {
 }
 
 interface TerrainChunk {
-  vao: GpuVertexLayout | null;
   vbo: GpuBuffer | null;
   size: number;
   count: number;
@@ -72,9 +70,7 @@ export class GridRenderer {
   private vertexFloats: number;
   private drawnChunks: TerrainChunk[] = [];
 
-  private gridVAO: GpuVertexLayout | null = null;
   private arena: VertexArena | null = null;
-  private arenaVersion = -1;
   private currentVertexCount: number = 0;
 
   private static readonly CHUNK_SIZE = 32;
@@ -158,7 +154,7 @@ export class GridRenderer {
 
     if (visibleTiles.length > 0) {
       const vertexData = this.generateBatchVertexData(visibleTiles, options);
-      this.uploadAndDraw(vertexData, options.rowPasses === true);
+      this.uploadAndDraw(vertexData, options.rowPasses === true, options.pipeline);
     } else {
       this.currentVertexCount = 0;
     }
@@ -219,7 +215,8 @@ export class GridRenderer {
     const maxCX = Math.floor((minTX + options.viewportWidth) / CS) + m;
     const maxCY = Math.floor((minTY + options.viewportHeight) / CS) + m;
 
-    if (!this.shaderManager.useProgram('tileRenderer')) {
+    const pipeline = options.pipeline ?? 'terrain';
+    if (!this.shaderManager.useProgram(TILE_PIPELINE[pipeline])) {
       console.error('❌ Failed to use tile renderer shader');
       return 0;
     }
@@ -248,7 +245,7 @@ export class GridRenderer {
       }
     }
 
-    if (options.rowPasses) this.drawShadows(() => this.redrawChunks());
+    if (options.rowPasses) this.drawShadows(pipeline, () => this.redrawChunks());
     this.warmOneChunk(grid, options, cacheVersion, lightVersion, chunks, dirtyMap);
     this.currentVertexCount = drawnVerts;
     return drawnVerts / 6;
@@ -277,11 +274,10 @@ export class GridRenderer {
       chunk = this.buildChunk(grid, options, cx, cy, version, lightVersion, dirtyStamp, chunks);
       if (!chunk) return 0;
     }
-    if (chunk.count > 0 && chunk.vao) {
+    if (chunk.count > 0 && chunk.vbo) {
       const gpu = this.gpu;
-      gpu.setVertexLayout(chunk.vao);
-      gpu.draw('triangle-list', chunk.count);
-      gpu.setVertexLayout(null);
+      gpu.setVertexBuffer(0, chunk.vbo);
+      gpu.draw(chunk.count);
       this.drawnChunks.push(chunk);
       return chunk.count;
     }
@@ -313,7 +309,6 @@ export class GridRenderer {
             : region;
     if (!chunk) {
       chunk = {
-        vao: null,
         vbo: null,
         size: 0,
         count: 0,
@@ -327,7 +322,6 @@ export class GridRenderer {
       chunk.count = 0;
     } else {
       const data = this.generateBatchVertexData(tiles, options);
-      chunk.vao ??= gpu.createVertexLayout();
       if (!chunk.vbo || chunk.size < data.byteLength) {
         gpu.destroyBuffer(chunk.vbo);
         chunk.vbo = gpu.createBuffer({
@@ -335,7 +329,6 @@ export class GridRenderer {
           usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
         });
         chunk.size = data.byteLength;
-        this.setupGridAttribs(chunk.vao, chunk.vbo);
       }
       gpu.queue.writeBuffer(chunk.vbo, 0, data);
       chunk.count = data.length / this.vertexFloats;
@@ -388,25 +381,26 @@ export class GridRenderer {
   private redrawChunks(): void {
     const gpu = this.gpu;
     for (const chunk of this.drawnChunks) {
-      gpu.setVertexLayout(chunk.vao);
-      gpu.draw('triangle-list', chunk.count);
+      if (!chunk.vbo) continue;
+      gpu.setVertexBuffer(0, chunk.vbo);
+      gpu.draw(chunk.count);
     }
-    gpu.setVertexLayout(null);
   }
 
-  private drawShadows(draw: () => void): void {
-    const gpu = this.gpu;
-    gpu.setDepthCompare('less');
-    gpu.setBlendFunc('zero', 'src');
+  private drawShadows(back: TilePipeline, draw: () => void): void {
+    this.shaderManager.useProgram(TILE_PIPELINE.shadow);
     this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 1);
     draw();
     this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 0);
-    gpu.setBlendFunc('src-alpha', 'one-minus-src-alpha');
-    gpu.setDepthCompare('less-equal');
+    this.shaderManager.useProgram(TILE_PIPELINE[back]);
   }
 
-  private uploadAndDraw(vertexData: Float32Array, rowPasses = false): void {
-    if (!this.gridVAO || !this.arena) {
+  private uploadAndDraw(
+    vertexData: Float32Array,
+    rowPasses = false,
+    pipeline: TilePipeline = 'terrain'
+  ): void {
+    if (!this.arena) {
       console.error('❌ Grid rendering resources not initialized');
       return;
     }
@@ -415,23 +409,17 @@ export class GridRenderer {
     const gpu = this.gpu;
 
     const first = this.arena.push(vertexData);
-    if (this.arenaVersion !== this.arena.version) {
-      this.arenaVersion = this.arena.version;
-      this.setupGridAttribs(this.gridVAO, this.arena.buffer!);
-    }
 
-    if (!this.shaderManager.useProgram('tileRenderer')) {
+    if (!this.shaderManager.useProgram(TILE_PIPELINE[pipeline])) {
       console.error('❌ Failed to use tile renderer shader');
       return;
     }
 
-    gpu.setVertexLayout(this.gridVAO);
+    gpu.setVertexBuffer(0, this.arena.buffer!);
 
     const vertexCount = vertexData.length / this.vertexFloats;
-    gpu.draw('triangle-list', vertexCount, first);
-    if (rowPasses) this.drawShadows(() => gpu.draw('triangle-list', vertexCount, first));
-
-    gpu.setVertexLayout(null);
+    gpu.draw(vertexCount, undefined, first);
+    if (rowPasses) this.drawShadows(pipeline, () => gpu.draw(vertexCount, undefined, first));
 
     this.currentVertexCount = vertexCount;
 
@@ -739,45 +727,11 @@ export class GridRenderer {
   private initializeGridRendering(): void {
     const gpu = this.gpu;
 
-    this.gridVAO = gpu.createVertexLayout();
     this.arena = new VertexArena(gpu, this.vertexFloats * 4);
-    if (!this.gridVAO) throw new Error('Failed to create grid VAO');
 
     if (this.debug) {
       console.log('✅ Grid rendering resources initialized');
     }
-  }
-
-  private setupGridAttribs(vao: GpuVertexLayout, vbo: GpuBuffer): void {
-    const gpu = this.gpu;
-    gpu.setVertexLayout(vao);
-    gpu.setVertexBuffer(vbo);
-    const stride = this.vertexFloats * 4;
-    const attribs: [string, number, number][] = [
-      ['a_position', 2, 0],
-      ['a_texCoord', 2, 2],
-      ['a_foreground', 3, 4],
-      ['a_background', 4, 7],
-      ['a_detail', 3, 11],
-      ['a_outline', 3, 14],
-      ['a_uvBounds', 4, 17],
-      ['a_light', 3, 21]
-    ];
-    if (this.vertexFloats === ROW_VERTEX_FLOATS)
-      attribs.push(
-        ['a_row', 1, GLYPH_VERTEX_FLOATS],
-        ['a_vein', 4, GLYPH_VERTEX_FLOATS + 1],
-        ['a_veinNear', 1, GLYPH_VERTEX_FLOATS + 5],
-        ['a_sway', 1, GLYPH_VERTEX_FLOATS + 6],
-        ['a_tree', 1, GLYPH_VERTEX_FLOATS + 7]
-      );
-    for (const [name, size, offset] of attribs) {
-      const loc = this.shaderManager.getAttributeLocation('tileRenderer', name);
-      if (loc >= 0) {
-        gpu.vertexAttribute(loc, { format: FLOAT32_FORMATS[size - 1], stride, offset: offset * 4 });
-      }
-    }
-    gpu.setVertexLayout(null);
   }
 
   private estimateCulledTiles(grid: GameGrid, viewport: Viewport): number {
@@ -801,16 +755,8 @@ export class GridRenderer {
     this.arena?.destroy();
     this.arena = null;
 
-    if (this.gridVAO) {
-      gpu.destroyVertexLayout(this.gridVAO);
-      this.gridVAO = null;
-    }
-
     for (const chunks of [this.terrainChunks, this.decorChunks]) {
-      for (const chunk of chunks.values()) {
-        if (chunk.vbo) gpu.destroyBuffer(chunk.vbo);
-        if (chunk.vao) gpu.destroyVertexLayout(chunk.vao);
-      }
+      for (const chunk of chunks.values()) if (chunk.vbo) gpu.destroyBuffer(chunk.vbo);
       chunks.clear();
     }
 

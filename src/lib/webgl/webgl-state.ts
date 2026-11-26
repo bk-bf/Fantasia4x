@@ -79,11 +79,6 @@ export class WebGLStateManager {
 
     gpu.setViewport(0, 0, this.canvas.width, this.canvas.height);
 
-    gpu.setBlending(true);
-    gpu.setBlendFunc('src-alpha', 'one-minus-src-alpha');
-
-    gpu.setDepthTest(false);
-
     gpu.setClearColor(0.173, 0.094, 0.063, 1.0);
 
     gpu.checkError('initial WebGL state configuration');

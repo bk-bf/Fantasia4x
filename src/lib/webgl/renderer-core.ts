@@ -595,8 +595,6 @@ export class WebGLRendererCore {
       this.resourceTallOverlayGrid ||
       this.snowGrid
     ) {
-      gpu.setBlending(true);
-      gpu.setBlendFunc('src-alpha', 'one-minus-src-alpha');
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
       const tOverlay = performance.now();
       if (this.snowGrid && passOn('snow')) {
@@ -605,11 +603,7 @@ export class WebGLRendererCore {
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 0);
       }
       this.drawTreeGround(gpu, flicker, lightTime, lightFrame, viewportTilesW, viewportTilesH);
-      if (this.rowDepth) {
-        gpu.setDepthTest(true);
-        gpu.setDepthCompare('less-equal');
-        this.drawShadowCast(gpu, viewportTilesW, viewportTilesH);
-      }
+      if (this.rowDepth) this.drawShadowCast(viewportTilesW, viewportTilesH);
       this.drawGroundRings();
       this.setCutaway(viewportTilesW, viewportTilesH);
       for (const layer of SPRITE_LAYERS) {
@@ -631,8 +625,6 @@ export class WebGLRendererCore {
       this.drawLeaves(windSecs, viewportTilesW, viewportTilesH, lightFrame);
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
-      if (this.rowDepth) gpu.setDepthTest(false);
-      gpu.setBlending(false);
     } else {
       this.stats.overlayMs = 0;
     }
@@ -675,7 +667,6 @@ export class WebGLRendererCore {
       rowDepth: 1 / ROW_DEPTH_RANGE,
       snow: this.season === WINTER
     });
-    this.shaderManager.useProgram('tileRenderer');
     gpu.setTextureSlot(0);
     gpu.bindTexture(this.fontTexture);
   }
@@ -780,7 +771,6 @@ export class WebGLRendererCore {
       },
       { atlas: 1, light: LIGHT_FIELD_UNIT }
     );
-    this.shaderManager.useProgram('tileRenderer');
   }
 
   private drawGroundRings(): void {
@@ -790,14 +780,11 @@ export class WebGLRendererCore {
       this.viewport.width,
       this.viewport.height
     ]);
-    this.shaderManager.useProgram('tileRenderer');
   }
 
-  private drawShadowCast(gpu: GpuDevice, viewportTilesW: number, viewportTilesH: number): void {
-    if (!this.shadowCast || !this.painted || !this.shaderManager) return;
+  private drawShadowCast(viewportTilesW: number, viewportTilesH: number): void {
+    if (!this.shadowCast || !this.painted) return;
     const artTile = this.painted.tileset.tile;
-    gpu.setDepthCompare('less');
-    gpu.setBlendFunc('zero', 'src');
     this.stats.drawCalls += this.shadowCast.draw({
       canvas: [this.viewport.width, this.viewport.height],
       viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
@@ -807,9 +794,6 @@ export class WebGLRendererCore {
       view: { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH },
       casters: [this.resourceOverlayGrid, this.buildingOverlayGrid]
     });
-    gpu.setBlendFunc('src-alpha', 'one-minus-src-alpha');
-    gpu.setDepthCompare('less-equal');
-    this.shaderManager.useProgram('tileRenderer');
   }
 
   private drawTreeGround(
@@ -989,7 +973,8 @@ export class WebGLRendererCore {
       litBounds: this.lightBounds,
       cacheVersion: this.snowVersion,
       chunkLayer: 'snow',
-      rowPasses
+      rowPasses,
+      pipeline: rowPasses ? 'overlay' : 'flat'
     });
     this.stats.drawCalls++;
     this.stats.vertexCount += s.tilesRendered * 6;
@@ -1016,6 +1001,7 @@ export class WebGLRendererCore {
       litBounds: this.lightBounds,
       renderAllTiles: !viewportCulled,
       rowPasses: this.rowDepth,
+      pipeline: 'overlay',
       ...(chunkLayer
         ? { chunkLayer, cacheVersion: this.gridVersion, lightVersion: this.lightVersion }
         : {})

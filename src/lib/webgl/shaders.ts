@@ -1,5 +1,11 @@
 import type { ShaderProgram } from './types.js';
-import type { GpuDevice, GpuPipeline, GpuShaderModule } from '../gpu/device.js';
+import type {
+  GpuDevice,
+  GpuRenderPipeline,
+  GpuShaderModule,
+  RenderPipelineDescriptor
+} from '../gpu/device.js';
+import { addTilePipelines } from './tilePipelines.js';
 import vertexShaderSource from './shaders/vertex.glsl?raw';
 import fragmentShaderSource from './shaders/fragment.glsl?raw';
 import { withRockSurface } from './painted/rockSurface.js';
@@ -12,7 +18,7 @@ export interface ShaderSource {
 
 export interface ShaderCompilationResult {
   success: boolean;
-  program?: GpuPipeline;
+  pipeline?: GpuRenderPipeline;
   error?: string;
   warnings?: string[];
 }
@@ -28,47 +34,20 @@ export class ShaderManager {
     this.debug = debug;
   }
 
-  async loadShaderSource(vertexPath: string, fragmentPath: string): Promise<ShaderSource> {
-    try {
-      const [vertexResponse, fragmentResponse] = await Promise.all([
-        fetch(vertexPath),
-        fetch(fragmentPath)
-      ]);
-
-      if (!vertexResponse.ok || !fragmentResponse.ok) {
-        throw new Error('Failed to load shader files');
-      }
-
-      const vertex = await vertexResponse.text();
-      const fragment = await fragmentResponse.text();
-
-      return { vertex, fragment };
-    } catch (error) {
-      console.error('Error loading shader source:', error);
-      throw error;
-    }
-  }
-
-  createProgram(
+  createPipeline(
     name: string,
-    vertexSource: string,
-    fragmentSource: string
+    desc: Omit<RenderPipelineDescriptor, 'label' | 'debug'>
   ): ShaderCompilationResult {
     try {
-      const made = this.gpu.createRenderPipeline({
-        label: name,
-        glsl: { vertex: vertexSource, fragment: fragmentSource },
-        debug: this.debug
-      });
+      const made = this.gpu.createRenderPipeline({ ...desc, label: name, debug: this.debug });
       for (const { label, module } of made.modules) this.shaderCache.set(label, module);
       if (!made.ok) {
         return { success: false, error: made.error };
       }
 
       const shaderProgram: ShaderProgram = {
-        program: made.pipeline,
-        uniforms: made.uniforms,
-        attributes: made.attributes
+        pipeline: made.pipeline,
+        uniforms: made.uniforms
       };
       this.programs.set(name, shaderProgram);
 
@@ -77,7 +56,7 @@ export class ShaderManager {
         this.logProgramInfo(shaderProgram);
       }
 
-      return { success: true, program: made.pipeline };
+      return { success: true, pipeline: made.pipeline };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`❌ Shader compilation error for "${name}":`, errorMessage);
@@ -89,7 +68,6 @@ export class ShaderManager {
     console.group('🔧 Shader Program Info');
 
     console.log('Uniforms:', Array.from(shaderProgram.uniforms.keys()));
-    console.log('Attributes:', Array.from(shaderProgram.attributes.keys()));
 
     console.log('WebGL Limits:', this.gpu.limits());
 
@@ -107,7 +85,7 @@ export class ShaderManager {
       return false;
     }
 
-    this.gpu.setPipeline(shaderProgram.program);
+    this.gpu.setPipeline(shaderProgram.pipeline);
     return true;
   }
 
@@ -179,44 +157,11 @@ export class ShaderManager {
     return true;
   }
 
-  getAttributeLocation(programName: string, attributeName: string): number {
-    const program = this.programs.get(programName);
-    if (!program) {
-      console.error(`Shader program "${programName}" not found`);
-      return -1;
-    }
-
-    return program.attributes.get(attributeName) ?? -1;
-  }
-
-  async reloadProgram(name: string, vertexPath?: string, fragmentPath?: string): Promise<boolean> {
-    if (!vertexPath || !fragmentPath) {
-      console.error('Shader paths required for hot reload');
-      return false;
-    }
-
-    try {
-      const { vertex, fragment } = await this.loadShaderSource(vertexPath, fragmentPath);
-      const result = this.createProgram(name, vertex, fragment);
-
-      if (result.success) {
-        console.log(`🔄 Hot reloaded shader program: ${name}`);
-        return true;
-      } else {
-        console.error(`❌ Hot reload failed for ${name}:`, result.error);
-        return false;
-      }
-    } catch (error) {
-      console.error(`❌ Hot reload error for ${name}:`, error);
-      return false;
-    }
-  }
-
   dispose(): void {
     const gpu = this.gpu;
 
-    this.programs.forEach(({ program }) => {
-      gpu.destroyPipeline(program);
+    this.programs.forEach(({ pipeline }) => {
+      gpu.destroyRenderPipeline(pipeline);
     });
 
     this.shaderCache.forEach((shader) => {
@@ -243,7 +188,8 @@ export const tileFragmentSource = (painted: boolean): string =>
 export async function createTileRendererShaders(
   gpu: GpuDevice,
   debug: boolean = false,
-  painted: boolean = false
+  painted: boolean = false,
+  rowDepth: boolean = painted
 ): Promise<ShaderManager | null> {
   console.log('🔄 Creating tile renderer shaders...');
   const shaderManager = new ShaderManager(gpu, debug);
@@ -257,11 +203,7 @@ export async function createTileRendererShaders(
     console.log('📋 Vertex shader source length:', shaderSource.vertex.length);
     console.log('📋 Fragment shader source length:', shaderSource.fragment.length);
 
-    const result = shaderManager.createProgram(
-      'tileRenderer',
-      shaderSource.vertex,
-      shaderSource.fragment
-    );
+    const result = addTilePipelines(shaderManager, shaderSource, gpu.canvasFormat, rowDepth);
 
     if (result.success) {
       console.log('✅ Tile renderer shaders created successfully');

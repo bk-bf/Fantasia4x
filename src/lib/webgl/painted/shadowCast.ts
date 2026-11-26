@@ -3,7 +3,8 @@ import fragmentSource from '../shaders/paintedShadow.frag.glsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import type { GameGrid, GridUpdateEvent } from '../game-grid.js';
 import type { TileRect } from './lightGrade.js';
-import type { GpuDevice, GpuPipeline, GpuUniform, GpuVertexLayout } from '../../gpu/device.js';
+import type { GpuDevice, GpuRenderPipeline, GpuUniform } from '../../gpu/device.js';
+import { canvasPipeline } from '../canvasPipeline.js';
 import { SizedTexture } from '../sizedTexture.js';
 
 const PROGRAM = 'paintedShadow';
@@ -54,8 +55,7 @@ export function castHeights(
 
 export class PaintedShadowCast {
   private readonly gpu: GpuDevice;
-  private readonly program: GpuPipeline;
-  private readonly vao: GpuVertexLayout;
+  private readonly program: GpuRenderPipeline;
   private readonly texture: SizedTexture;
   private readonly at: Record<string, GpuUniform | null>;
   private heights = new Uint8Array(0);
@@ -68,8 +68,21 @@ export class PaintedShadowCast {
   private unwatch: (() => void)[] = [];
 
   static create(gpu: GpuDevice, shaders: ShaderManager): PaintedShadowCast | null {
-    const made = shaders.createProgram(PROGRAM, vertexSource, fragmentSource);
-    const program = shaders.getProgram(PROGRAM)?.program;
+    const made = shaders.createPipeline(
+      PROGRAM,
+      canvasPipeline(gpu, {
+        vertex: vertexSource,
+        fragment: fragmentSource,
+        topology: 'triangle-list',
+        blend: {
+          color: { srcFactor: 'zero', dstFactor: 'src' },
+          alpha: { srcFactor: 'zero', dstFactor: 'src' }
+        },
+        depthCompare: 'less',
+        depthWrite: true
+      })
+    );
+    const program = made.pipeline;
     if (!made.success || !program) {
       console.warn('[painted shadows] cast off:', made.error);
       return null;
@@ -77,10 +90,9 @@ export class PaintedShadowCast {
     return new PaintedShadowCast(gpu, program);
   }
 
-  private constructor(gpu: GpuDevice, program: GpuPipeline) {
+  private constructor(gpu: GpuDevice, program: GpuRenderPipeline) {
     this.gpu = gpu;
     this.program = program;
-    this.vao = gpu.createVertexLayout()!;
     this.texture = new SizedTexture(gpu, 'r8unorm');
     const names = [
       'u_canvas',
@@ -167,9 +179,7 @@ export class PaintedShadowCast {
     gpu.setVec2i(this.at.u_origin, rect.x, rect.y);
     gpu.setVec3fv(this.at.u_shade, SHADOW_SHADE);
     gpu.setF32(this.at.u_depth, SHADOW_DEPTH);
-    gpu.setVertexLayout(this.vao);
-    gpu.draw('triangle-list', 3);
-    gpu.setVertexLayout(null);
+    gpu.draw(3);
     return 1;
   }
 
@@ -177,7 +187,6 @@ export class PaintedShadowCast {
     for (const off of this.unwatch) off();
     this.unwatch = [];
     this.texture.destroy();
-    this.gpu.destroyVertexLayout(this.vao);
-    this.gpu.destroyPipeline(this.program);
+    this.gpu.destroyRenderPipeline(this.program);
   }
 }
