@@ -305,19 +305,3 @@ export function isPowerOfTwo(value: number): boolean {
 export function nextPowerOfTwo(value: number): number {
   return Math.pow(2, Math.ceil(Math.log2(value)));
 }
-
-export function validateTextureDimensions(width: number, height: number, gpu: GpuDevice): boolean {
-  const maxSize = gpu.maxTextureSize();
-
-  if (width > maxSize || height > maxSize) {
-    console.error(`❌ Texture dimensions ${width}x${height} exceed maximum size ${maxSize}`);
-    return false;
-  }
-
-  if (width <= 0 || height <= 0) {
-    console.error('❌ Texture dimensions must be positive');
-    return false;
-  }
-
-  return true;
-}

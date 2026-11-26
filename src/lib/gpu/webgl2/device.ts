@@ -12,7 +12,6 @@ import type {
   GpuTexture,
   GpuUniform,
   GpuVertexLayout,
-  IndexFormat,
   PrimitiveTopology,
   RenderPipelineDescriptor,
   RenderPipelineResult,
@@ -61,7 +60,11 @@ function errorName(gl: WebGL2RenderingContext, error: number): string {
 export class Webgl2Device implements GpuDevice {
   readonly backend = 'webgl2' as const;
 
-  constructor(readonly gl: WebGL2RenderingContext) {}
+  constructor(private readonly gl: WebGL2RenderingContext) {}
+
+  static rawContextForInstrumentation(device: Webgl2Device): WebGL2RenderingContext {
+    return device.gl;
+  }
 
   limits(): GpuLimits {
     const gl = this.gl;
@@ -69,22 +72,6 @@ export class Webgl2Device implements GpuDevice {
       maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
       maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
       maxCombinedTextureImageUnits: gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-    };
-  }
-
-  maxTextureSize(): number {
-    return this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE);
-  }
-
-  info(): Record<string, string> {
-    const gl = this.gl;
-    return {
-      vendor: gl.getParameter(gl.VENDOR) || 'Unknown',
-      renderer: gl.getParameter(gl.RENDERER) || 'Unknown',
-      version: gl.getParameter(gl.VERSION) || 'Unknown',
-      shadingLanguageVersion: gl.getParameter(gl.SHADING_LANGUAGE_VERSION) || 'Unknown',
-      maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE)?.toString() || 'Unknown',
-      maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS)?.toString() || 'Unknown'
     };
   }
 
@@ -184,15 +171,6 @@ export class Webgl2Device implements GpuDevice {
     const gl = this.gl;
     if (srcOffset === undefined) gl.bufferSubData(gl.ARRAY_BUFFER, offset, data);
     else gl.bufferSubData(gl.ARRAY_BUFFER, offset, data, srcOffset, length);
-  }
-
-  setIndexBuffer(buffer: GpuBuffer | null): void {
-    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, raw<WebGLBuffer>(buffer));
-  }
-
-  writeIndexBuffer(data: AllowSharedBufferSource, usage: BufferUsage): void {
-    const gl = this.gl;
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data, bufferUsage(gl, usage));
   }
 
   createVertexLayout(): GpuVertexLayout {
@@ -334,7 +312,8 @@ export class Webgl2Device implements GpuDevice {
 
   clear(desc: ClearDescriptor): void {
     const gl = this.gl;
-    gl.clear(desc.depth ? gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT : gl.COLOR_BUFFER_BIT);
+    const mask = (desc.color ? gl.COLOR_BUFFER_BIT : 0) | (desc.depth ? gl.DEPTH_BUFFER_BIT : 0);
+    if (mask) gl.clear(mask);
   }
 
   setClearColor(r: number, g: number, b: number, a: number): void {
@@ -394,11 +373,5 @@ export class Webgl2Device implements GpuDevice {
     firstVertex = 0
   ): void {
     this.gl.drawArraysInstanced(topology(this.gl, t), firstVertex, vertexCount, instanceCount);
-  }
-
-  drawIndexed(t: PrimitiveTopology, indexCount: number, format: IndexFormat, firstIndex = 0): void {
-    const gl = this.gl;
-    const [type, bytes] = format === 'uint16' ? [gl.UNSIGNED_SHORT, 2] : [gl.UNSIGNED_INT, 4];
-    gl.drawElements(topology(gl, t), indexCount, type, firstIndex * bytes);
   }
 }

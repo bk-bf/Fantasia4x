@@ -46,7 +46,6 @@ export interface TextureRegion extends TextureExtent {
 export type TextureData = ArrayBufferView | null;
 
 export type BufferUsage = 'static' | 'dynamic';
-export type IndexFormat = 'uint16' | 'uint32';
 
 export type VertexFormat = 'float32' | 'float32x2' | 'float32x3' | 'float32x4';
 export type VertexStepMode = 'vertex' | 'instance';
@@ -113,8 +112,6 @@ export interface GpuDevice {
   readonly backend: 'webgl2';
 
   limits(): GpuLimits;
-  maxTextureSize(): number;
-  info(): Record<string, string>;
   checkError(operation: string): boolean;
 
   createRenderPipeline(desc: RenderPipelineDescriptor): RenderPipelineResult;
@@ -139,8 +136,6 @@ export interface GpuDevice {
   setVertexBuffer(buffer: GpuBuffer | null): void;
   writeBuffer(data: AllowSharedBufferSource | number, usage: BufferUsage): void;
   writeSubBuffer(offset: number, data: ArrayBufferView, srcOffset?: number, length?: number): void;
-  setIndexBuffer(buffer: GpuBuffer | null): void;
-  writeIndexBuffer(data: AllowSharedBufferSource, usage: BufferUsage): void;
 
   createVertexLayout(): GpuVertexLayout;
   destroyVertexLayout(layout: GpuVertexLayout | null): void;
@@ -187,11 +182,5 @@ export interface GpuDevice {
     vertexCount: number,
     instanceCount: number,
     firstVertex?: number
-  ): void;
-  drawIndexed(
-    topology: PrimitiveTopology,
-    indexCount: number,
-    format: IndexFormat,
-    firstIndex?: number
   ): void;
 }

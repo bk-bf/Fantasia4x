@@ -1,5 +1,6 @@
 import { createWebgl2Device, isWebGL2Supported } from '../gpu/webgl2/context.js';
-import type { Webgl2Device } from '../gpu/webgl2/device.js';
+import type { GpuDevice } from '../gpu/device.js';
+import { Webgl2Device } from '../gpu/webgl2/device.js';
 import { crashBreadcrumb } from './crashLog.js';
 import { WORK_PINS } from '../workPins/flag.js';
 import { countGl } from '../workPins/page.js';
@@ -12,7 +13,7 @@ export interface WebGLStateOptions {
 
 export class WebGLStateManager {
   private canvas: HTMLCanvasElement;
-  private device: Webgl2Device | null = null;
+  private device: GpuDevice | null = null;
   private debug: boolean;
   private contextLostHandler: (event: Event) => void;
   private contextRestoredHandler: (event: Event) => void;
@@ -25,7 +26,7 @@ export class WebGLStateManager {
     this.contextRestoredHandler = this.onContextRestored.bind(this);
   }
 
-  async initialize(contextAttributes?: WebGLContextAttributes): Promise<Webgl2Device> {
+  async initialize(contextAttributes?: WebGLContextAttributes): Promise<GpuDevice> {
     if (this.debug) {
       console.log('🔄 Starting WebGL2 context initialization...');
     }
@@ -51,12 +52,13 @@ export class WebGLStateManager {
       console.log('📋 Context attributes:', attributes);
     }
 
-    this.device = createWebgl2Device(this.canvas, attributes);
+    const device = createWebgl2Device(this.canvas, attributes);
 
-    if (!this.device) {
+    if (!device) {
       throw new Error('Failed to create WebGL2 context');
     }
-    if (WORK_PINS) countGl(this.device.gl);
+    if (WORK_PINS) countGl(Webgl2Device.rawContextForInstrumentation(device));
+    this.device = device;
 
     this.canvas.addEventListener('webglcontextlost', this.contextLostHandler, false);
     this.canvas.addEventListener('webglcontextrestored', this.contextRestoredHandler, false);
@@ -67,7 +69,7 @@ export class WebGLStateManager {
       console.log('✅ WebGL2 context initialized successfully');
     }
 
-    return this.device;
+    return device;
   }
 
   private configureState(): void {
@@ -136,7 +138,7 @@ export class WebGLStateManager {
     }
   }
 
-  getDevice(): Webgl2Device | null {
+  getDevice(): GpuDevice | null {
     return this.device;
   }
 
