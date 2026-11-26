@@ -1,6 +1,6 @@
 import type { FontAtlas } from './types.js';
 import type { ShaderManager } from './shaders.js';
-import { checkWebGLError } from './utils.js';
+import type { GpuBuffer, GpuDevice, GpuVertexLayout } from '../gpu/device.js';
 
 export interface CharacterRenderOptions {
   char: string;
@@ -18,22 +18,17 @@ export interface MultiCharacterRenderOptions {
 }
 
 export class CharacterRenderer {
-  private gl: WebGL2RenderingContext;
+  private gpu: GpuDevice;
   private shaderManager: ShaderManager;
   private fontAtlas: FontAtlas;
   private debug: boolean;
 
-  private vao: WebGLVertexArrayObject | null = null;
-  private vbo: WebGLBuffer | null = null;
+  private vao: GpuVertexLayout | null = null;
+  private vbo: GpuBuffer | null = null;
   private vertexCount: number = 0;
 
-  constructor(
-    gl: WebGL2RenderingContext,
-    shaderManager: ShaderManager,
-    fontAtlas: FontAtlas,
-    debug = false
-  ) {
-    this.gl = gl;
+  constructor(gpu: GpuDevice, shaderManager: ShaderManager, fontAtlas: FontAtlas, debug = false) {
+    this.gpu = gpu;
     this.shaderManager = shaderManager;
     this.fontAtlas = fontAtlas;
     this.debug = debug;
@@ -249,37 +244,35 @@ export class CharacterRenderer {
   }
 
   private createGeometry(vertices: Float32Array, vertexCount: number): boolean {
-    const gl = this.gl;
+    const gpu = this.gpu;
 
     this.dispose();
 
-    this.vao = gl.createVertexArray();
+    this.vao = gpu.createVertexLayout();
     if (!this.vao) {
       console.error('❌ Failed to create vertex array object');
       return false;
     }
-    gl.bindVertexArray(this.vao);
+    gpu.setVertexLayout(this.vao);
 
-    this.vbo = gl.createBuffer();
+    this.vbo = gpu.createBuffer();
     if (!this.vbo) {
       console.error('❌ Failed to create vertex buffer object');
       return false;
     }
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    gpu.setVertexBuffer(this.vbo);
+    gpu.writeBuffer(vertices, 'static');
 
     const stride = 10 * 4;
 
     const positionLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_position');
     if (positionLocation >= 0) {
-      gl.enableVertexAttribArray(positionLocation);
-      gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, stride, 0);
+      gpu.vertexAttribute(positionLocation, { format: 'float32x2', stride, offset: 0 });
     }
 
     const texCoordLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_texCoord');
     if (texCoordLocation >= 0) {
-      gl.enableVertexAttribArray(texCoordLocation);
-      gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, stride, 2 * 4);
+      gpu.vertexAttribute(texCoordLocation, { format: 'float32x2', stride, offset: 2 * 4 });
     }
 
     const foregroundLocation = this.shaderManager.getAttributeLocation(
@@ -287,8 +280,7 @@ export class CharacterRenderer {
       'a_foreground'
     );
     if (foregroundLocation >= 0) {
-      gl.enableVertexAttribArray(foregroundLocation);
-      gl.vertexAttribPointer(foregroundLocation, 3, gl.FLOAT, false, stride, 4 * 4);
+      gpu.vertexAttribute(foregroundLocation, { format: 'float32x3', stride, offset: 4 * 4 });
     }
 
     const backgroundLocation = this.shaderManager.getAttributeLocation(
@@ -296,12 +288,11 @@ export class CharacterRenderer {
       'a_background'
     );
     if (backgroundLocation >= 0) {
-      gl.enableVertexAttribArray(backgroundLocation);
-      gl.vertexAttribPointer(backgroundLocation, 3, gl.FLOAT, false, stride, 7 * 4);
+      gpu.vertexAttribute(backgroundLocation, { format: 'float32x3', stride, offset: 7 * 4 });
     }
 
     this.vertexCount = vertexCount;
-    gl.bindVertexArray(null);
+    gpu.setVertexLayout(null);
 
     if (this.debug) {
       console.log(`✅ Character geometry setup completed with ${this.vertexCount} vertices`);
@@ -313,13 +304,13 @@ export class CharacterRenderer {
   render(): void {
     if (!this.vao || this.vertexCount === 0) return;
 
-    const gl = this.gl;
+    const gpu = this.gpu;
 
-    gl.bindVertexArray(this.vao);
-    gl.drawArrays(gl.TRIANGLES, 0, this.vertexCount);
-    gl.bindVertexArray(null);
+    gpu.setVertexLayout(this.vao);
+    gpu.draw('triangle-list', this.vertexCount);
+    gpu.setVertexLayout(null);
 
-    checkWebGLError(gl, 'character rendering');
+    gpu.checkError('character rendering');
   }
 
   getVertexCount(): number {
@@ -327,15 +318,15 @@ export class CharacterRenderer {
   }
 
   dispose(): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
 
     if (this.vbo) {
-      gl.deleteBuffer(this.vbo);
+      gpu.destroyBuffer(this.vbo);
       this.vbo = null;
     }
 
     if (this.vao) {
-      gl.deleteVertexArray(this.vao);
+      gpu.destroyVertexLayout(this.vao);
       this.vao = null;
     }
 

@@ -92,7 +92,7 @@ describe('wind in the vertex data', () => {
   it('writes each sprite its own sway after the vein, and none for a still or lying one', () => {
     const uploads: Float32Array[] = [];
     const r = new GridRenderer(
-      recordingGl(uploads),
+      new Webgl2Device(recordingGl(uploads)),
       shaders,
       {} as CharacterRenderer,
       atlas,
@@ -224,7 +224,7 @@ function windyCore(
       useProgram: () => true,
       setUniform: (_p: string, name: string, value: unknown) => uniforms.set(name, value)
     },
-    gridRenderer: new GridRenderer(gl, shaders, {} as CharacterRenderer, atlas, false, true)
+    gridRenderer: new GridRenderer(gpu, shaders, {} as CharacterRenderer, atlas, false, true)
   });
   return core;
 }

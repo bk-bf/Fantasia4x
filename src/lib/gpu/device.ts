@@ -134,10 +134,10 @@ export interface GpuDevice {
   createBuffer(): GpuBuffer;
   destroyBuffer(buffer: GpuBuffer | null): void;
   setVertexBuffer(buffer: GpuBuffer | null): void;
-  writeBuffer(data: BufferSource | number, usage: BufferUsage): void;
+  writeBuffer(data: AllowSharedBufferSource | number, usage: BufferUsage): void;
   writeSubBuffer(offset: number, data: ArrayBufferView, srcOffset?: number, length?: number): void;
   setIndexBuffer(buffer: GpuBuffer | null): void;
-  writeIndexBuffer(data: BufferSource, usage: BufferUsage): void;
+  writeIndexBuffer(data: AllowSharedBufferSource, usage: BufferUsage): void;
 
   createVertexLayout(): GpuVertexLayout;
   destroyVertexLayout(layout: GpuVertexLayout | null): void;

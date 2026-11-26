@@ -426,7 +426,7 @@ export class WebGLRendererCore {
         this.fontAtlas = await createSquareCellAtlas(this.tileWidth, this.debug);
       }
 
-      this.textureManager = new TextureManager(gl, this.debug);
+      this.textureManager = new TextureManager(gpu, this.debug);
       this.fontTexture = this.textureManager.createFontAtlasTexture(this.fontAtlas, {
         filtering: 'nearest',
         wrapping: 'clamp',
@@ -435,13 +435,13 @@ export class WebGLRendererCore {
       if (!this.fontTexture) throw new Error('Font texture creation failed');
 
       this.characterRenderer = new CharacterRenderer(
-        gl,
+        gpu,
         this.shaderManager,
         this.fontAtlas,
         this.debug
       );
       this.gridRenderer = new GridRenderer(
-        gl,
+        gpu,
         this.shaderManager,
         this.characterRenderer,
         this.fontAtlas,

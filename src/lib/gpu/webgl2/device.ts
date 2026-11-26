@@ -174,7 +174,7 @@ export class Webgl2Device implements GpuDevice {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, raw<WebGLBuffer>(buffer));
   }
 
-  writeBuffer(data: BufferSource | number, usage: BufferUsage): void {
+  writeBuffer(data: AllowSharedBufferSource | number, usage: BufferUsage): void {
     const gl = this.gl;
     if (typeof data === 'number') gl.bufferData(gl.ARRAY_BUFFER, data, bufferUsage(gl, usage));
     else gl.bufferData(gl.ARRAY_BUFFER, data, bufferUsage(gl, usage));
@@ -190,7 +190,7 @@ export class Webgl2Device implements GpuDevice {
     this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, raw<WebGLBuffer>(buffer));
   }
 
-  writeIndexBuffer(data: BufferSource, usage: BufferUsage): void {
+  writeIndexBuffer(data: AllowSharedBufferSource, usage: BufferUsage): void {
     const gl = this.gl;
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data, bufferUsage(gl, usage));
   }

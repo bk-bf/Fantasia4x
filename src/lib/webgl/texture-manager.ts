@@ -1,4 +1,5 @@
 import type { FontAtlas } from './types.js';
+import type { AddressMode, GpuDevice, GpuTexture, TextureFormat } from '../gpu/device.js';
 
 export interface TextureOptions {
   filtering?: 'nearest' | 'linear';
@@ -9,23 +10,22 @@ export interface TextureOptions {
 }
 
 export interface TextureInfo {
-  texture: WebGLTexture;
+  texture: GpuTexture;
   width: number;
   height: number;
-  format: number;
-  type: number;
+  format: TextureFormat;
   id: string;
   memoryUsage: number;
 }
 
 export class TextureManager {
-  private gl: WebGL2RenderingContext;
+  private gpu: GpuDevice;
   private textures = new Map<string, TextureInfo>();
   private totalMemoryUsage = 0;
   private debug: boolean;
 
-  constructor(gl: WebGL2RenderingContext, debug: boolean = false) {
-    this.gl = gl;
+  constructor(gpu: GpuDevice, debug: boolean = false) {
+    this.gpu = gpu;
     this.debug = debug;
 
     if (this.debug) {
@@ -33,7 +33,7 @@ export class TextureManager {
     }
   }
 
-  createFontAtlasTexture(atlas: FontAtlas, options: TextureOptions = {}): WebGLTexture | null {
+  createFontAtlasTexture(atlas: FontAtlas, options: TextureOptions = {}): GpuTexture | null {
     const textureId = `font-atlas-${atlas.fontFamily}-${atlas.fontSize}`;
 
     if (this.debug) {
@@ -47,8 +47,8 @@ export class TextureManager {
       return this.textures.get(textureId)!.texture;
     }
 
-    const gl = this.gl;
-    const texture = gl.createTexture();
+    const gpu = this.gpu;
+    const texture = gpu.createTexture();
 
     if (!texture) {
       console.error('❌ Failed to create WebGL texture');
@@ -56,37 +56,24 @@ export class TextureManager {
     }
 
     try {
-      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gpu.bindTexture(texture);
 
       const filtering = options.filtering || 'nearest';
       const wrapping = options.wrapping || 'clamp';
 
-      const minFilter = filtering === 'nearest' ? gl.NEAREST : gl.LINEAR;
-      const magFilter = filtering === 'nearest' ? gl.NEAREST : gl.LINEAR;
-
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
-
       const wrapMode = this.getWrapMode(wrapping);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
+      gpu.setSampler({
+        minFilter: filtering,
+        magFilter: filtering,
+        addressModeU: wrapMode,
+        addressModeV: wrapMode
+      });
 
-      const format = gl.RGBA;
-      const type = gl.UNSIGNED_BYTE;
+      const format: TextureFormat = 'legacy-rgba';
 
       const textureData = this.convertImageDataToRGBA(atlas.texture);
 
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        format,
-        atlas.atlasWidth,
-        atlas.atlasHeight,
-        0,
-        format,
-        type,
-        textureData
-      );
+      gpu.writeTexture({ format, width: atlas.atlasWidth, height: atlas.atlasHeight }, textureData);
 
       const bytesPerPixel = 4;
       const memoryUsage = atlas.atlasWidth * atlas.atlasHeight * bytesPerPixel;
@@ -96,7 +83,6 @@ export class TextureManager {
         width: atlas.atlasWidth,
         height: atlas.atlasHeight,
         format,
-        type,
         id: textureId,
         memoryUsage
       };
@@ -104,7 +90,7 @@ export class TextureManager {
       this.textures.set(textureId, textureInfo);
       this.totalMemoryUsage += memoryUsage;
 
-      gl.bindTexture(gl.TEXTURE_2D, null);
+      gpu.bindTexture(null);
 
       if (this.debug) {
         console.log(`✅ Font atlas texture created: ${textureId}`, {
@@ -118,7 +104,7 @@ export class TextureManager {
       return texture;
     } catch (error) {
       console.error('❌ Failed to create font atlas texture:', error);
-      gl.deleteTexture(texture);
+      gpu.destroyTexture(texture);
       return null;
     }
   }
@@ -129,9 +115,9 @@ export class TextureManager {
     height: number,
     options: TextureOptions = {},
     textureId?: string
-  ): WebGLTexture | null {
-    const gl = this.gl;
-    const texture = gl.createTexture();
+  ): GpuTexture | null {
+    const gpu = this.gpu;
+    const texture = gpu.createTexture();
 
     if (!texture) {
       console.error('❌ Failed to create WebGL texture');
@@ -141,18 +127,18 @@ export class TextureManager {
     const id = textureId || `texture-${Date.now()}`;
 
     try {
-      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gpu.bindTexture(texture);
 
       this.configureTextureParameters(options);
 
-      const { format, internalFormat, type } = this.getTextureFormat(options.format || 'rgba');
+      const format = this.getTextureFormat(options.format || 'rgba');
 
       const textureData = data instanceof ImageData ? data.data : data;
 
-      gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, textureData);
+      gpu.writeTexture({ format, width, height }, textureData);
 
       if (options.generateMipmap) {
-        gl.generateMipmap(gl.TEXTURE_2D);
+        gpu.generateMipmaps();
       }
 
       const bytesPerPixel = this.getBytesPerPixel(options.format || 'rgba');
@@ -163,7 +149,6 @@ export class TextureManager {
         width,
         height,
         format,
-        type,
         id,
         memoryUsage
       };
@@ -171,7 +156,7 @@ export class TextureManager {
       this.textures.set(id, textureInfo);
       this.totalMemoryUsage += memoryUsage;
 
-      gl.bindTexture(gl.TEXTURE_2D, null);
+      gpu.bindTexture(null);
 
       if (this.debug) {
         console.log(`✅ Texture created: ${id}`, {
@@ -184,7 +169,7 @@ export class TextureManager {
       return texture;
     } catch (error) {
       console.error(`❌ Failed to create texture ${id}:`, error);
-      gl.deleteTexture(texture);
+      gpu.destroyTexture(texture);
       return null;
     }
   }
@@ -196,9 +181,9 @@ export class TextureManager {
       return false;
     }
 
-    const gl = this.gl;
-    gl.activeTexture(gl.TEXTURE0 + unit);
-    gl.bindTexture(gl.TEXTURE_2D, textureInfo.texture);
+    const gpu = this.gpu;
+    gpu.setTextureSlot(unit);
+    gpu.bindTexture(textureInfo.texture);
     return true;
   }
 
@@ -213,7 +198,7 @@ export class TextureManager {
       return false;
     }
 
-    this.gl.deleteTexture(textureInfo.texture);
+    this.gpu.destroyTexture(textureInfo.texture);
     this.totalMemoryUsage -= textureInfo.memoryUsage;
     this.textures.delete(textureId);
 
@@ -238,10 +223,10 @@ export class TextureManager {
   }
 
   dispose(): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
 
     for (const textureInfo of this.textures.values()) {
-      gl.deleteTexture(textureInfo.texture);
+      gpu.destroyTexture(textureInfo.texture);
     }
 
     this.textures.clear();
@@ -252,54 +237,45 @@ export class TextureManager {
     }
   }
 
-  private getWrapMode(wrapping: string): number {
-    const gl = this.gl;
+  private getWrapMode(wrapping: string): AddressMode {
     switch (wrapping) {
       case 'repeat':
-        return gl.REPEAT;
+        return 'repeat';
       case 'mirror':
-        return gl.MIRRORED_REPEAT;
+        return 'mirror-repeat';
       case 'clamp':
       default:
-        return gl.CLAMP_TO_EDGE;
+        return 'clamp-to-edge';
     }
   }
 
   private configureTextureParameters(options: TextureOptions): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
 
     const filtering = options.filtering || 'linear';
     const wrapping = options.wrapping || 'clamp';
 
-    const minFilter = filtering === 'nearest' ? gl.NEAREST : gl.LINEAR;
-    const magFilter = filtering === 'nearest' ? gl.NEAREST : gl.LINEAR;
-
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
-
     const wrapMode = this.getWrapMode(wrapping);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
+    gpu.setSampler({
+      minFilter: filtering,
+      magFilter: filtering,
+      addressModeU: wrapMode,
+      addressModeV: wrapMode
+    });
   }
 
-  private getTextureFormat(format: string): {
-    format: number;
-    internalFormat: number;
-    type: number;
-  } {
-    const gl = this.gl;
-
+  private getTextureFormat(format: string): TextureFormat {
     switch (format) {
       case 'rgba':
-        return { format: gl.RGBA, internalFormat: gl.RGBA, type: gl.UNSIGNED_BYTE };
+        return 'legacy-rgba';
       case 'rgb':
-        return { format: gl.RGB, internalFormat: gl.RGB, type: gl.UNSIGNED_BYTE };
+        return 'legacy-rgb';
       case 'luminance':
-        return { format: gl.LUMINANCE, internalFormat: gl.LUMINANCE, type: gl.UNSIGNED_BYTE };
+        return 'legacy-luminance';
       case 'alpha':
-        return { format: gl.ALPHA, internalFormat: gl.ALPHA, type: gl.UNSIGNED_BYTE };
+        return 'legacy-alpha';
       default:
-        return { format: gl.RGBA, internalFormat: gl.RGBA, type: gl.UNSIGNED_BYTE };
+        return 'legacy-rgba';
     }
   }
 
@@ -330,12 +306,8 @@ export function nextPowerOfTwo(value: number): number {
   return Math.pow(2, Math.ceil(Math.log2(value)));
 }
 
-export function validateTextureDimensions(
-  width: number,
-  height: number,
-  gl: WebGL2RenderingContext
-): boolean {
-  const maxSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+export function validateTextureDimensions(width: number, height: number, gpu: GpuDevice): boolean {
+  const maxSize = gpu.maxTextureSize();
 
   if (width > maxSize || height > maxSize) {
     console.error(`❌ Texture dimensions ${width}x${height} exceed maximum size ${maxSize}`);
