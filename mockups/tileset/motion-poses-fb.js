@@ -84,7 +84,7 @@ function fbPose(name, u, c) {
   return p;
 }
 const HANGS = { R: [.5, 1.5, -8.5], L: [-.5, 1.5, -8.5] };
-const QUIVER = { in: [-.5, -1, 2], out: [-.5, -1, 4.5], lies: [0, -3, -19], past: [1.8, 6, -1.5], holds: 14 };
+const QUIVER = { in: [-.5, -1, 2], out: [-.5, -1, 4.5], lies: [0, -3, -19], past: [1.8, 6, -1.5], round: [2.5, 3.5, -2], holds: 14 };
 const BOW_LEADS = 4;
 const POLES3 = ['spear', 'staff', 'hoe'], HAFTS3 = ['axe', 'pick'];
 const spun = (v, deg) => { const c = Math.cos(deg * D2R), n = Math.sin(deg * D2R); return [v[0] * c - v[1] * n, v[0] * n + v[1] * c, v[2]]; };
@@ -106,9 +106,9 @@ function carried3(c, swing) {
 const drawn3 = family => (u, c) => {
   const from = { ...carried3(c, 0) }, to = GUARD3[family](c), lands = DRAWN.lands;
   if (u >= lands) return to;
-  if (family === 'bow') return keyed(u / lands, { ...from, R: HANGS.R, out: 0 }, [[0, {}], [.24, { L: [-.5, 4.5, -7.5], R: QUIVER.in, shaft: QUIVER.lies, cant: -30, lead: BOW_LEADS }], [.64, { L: [-1, 6, -7], R: QUIVER.out, shaft: QUIVER.lies, out: QUIVER.holds, cant: -38, lead: BOW_LEADS }, 'i'], [.8, { L: [0, 7.5, -5], R: QUIVER.past, shaft: [6, 10, -10], out: QUIVER.holds, cant: -34, lead: BOW_LEADS }, 'l'], [1, to, 'l']]);
+  if (family === 'bow') return keyed(u / lands, { ...from, R: HANGS.R, out: 0 }, [[0, {}], [.13, { R: QUIVER.round }, 'l'], [.24, { L: [-.5, 4.5, -7.5], R: QUIVER.in, shaft: QUIVER.lies, cant: -30, lead: BOW_LEADS }], [.64, { L: [-1, 6, -7], R: QUIVER.out, shaft: QUIVER.lies, out: QUIVER.holds, cant: -38, lead: BOW_LEADS }, 'i'], [.8, { L: [0, 7.5, -5], R: QUIVER.past, shaft: [6, 10, -10], out: QUIVER.holds, cant: -34, lead: BOW_LEADS }, 'l'], [1, to, 'l']]);
   const { both, ...open } = to, held = both && TWO_HANDED[c.tool] ? TWO_HANDED[c.tool][0] : 0;
-  return keyed(u / lands, { L: HANGS.L, ...from, grip: 0, turn: 0 }, [[0, {}], ...(both && POLES3.includes(c.tool) ? [[.14, { R: [1.5, 4.5, -6], grip: held * .1, aim: [5, 11, 13.5] }, 'l'], [.4, { R: [1.5, 8, -3.5], grip: held * .3, aim: [4, 9, 17] }, 'l'], [.68, { ...turned3({ R: [1, 7.8, -3], aim: [12, 5, 14] }, POLE_TURN * .6), grip: held * .7 }, 'l'], [.92, { ...turned3({ R: [-2.5, 7.8, -3.8], aim: [16, 7, 9] }, POLE_TURN * .9), grip: held * .9 }, 'l']] : [[.4, { R: [1, 6.5, -6.5], grip: held / 2, ...(from.aim && to.aim ? { aim: from.aim.map((v, i) => (v + to.aim[i]) / 2) } : null) }, 'l']]), [1, { L: HANGS.L, ...open, grip: held }, 'l']]);
+  return keyed(u / lands, { L: HANGS.L, ...from, grip: 0, turn: 0 }, [[0, {}], ...(both && POLES3.includes(c.tool) ? [[.14, { R: [1.5, 4.5, -6], grip: held * .1, aim: [5, 11, 13.5] }, 'l'], [.4, { R: [1.5, 8, -3.5], grip: held * .3, aim: [4, 9, 17] }, 'l'], [.68, { ...turned3({ R: [1, 7.8, -3], aim: [12, 5, 14] }, POLE_TURN * .6), grip: held * .7 }, 'l'], [.92, { ...turned3({ R: [-2.5, 7.8, -3.8], aim: [16, 8, 6] }, POLE_TURN * .9), grip: held * .9 }, 'l']] : [[.4, { R: [1, 6.5, -6.5], grip: held / 2, ...(from.aim && to.aim ? { aim: from.aim.map((v, i) => (v + to.aim[i]) / 2) } : null) }, 'l']]), [1, { L: HANGS.L, ...open, grip: held }, 'l']]);
 };
 const swinging = pose => { const q = turned3(pose, SWING_TURN); return { ...q, mid: 1, R: [q.R[0] + SWING_OUT, q.R[1], q.R[2]] }; };
 const swung3 = (rest, up, down, times) => u => keyed(u, { ...rest, both: 1 }, [[0, {}], [times[0], up, 'o'], [times[1], up], [times[2], down, 'i'], [times[3], down], [1, {}]]);

@@ -184,12 +184,12 @@ for (const anim of anims) {
     const sum = Object.fromEntries(KEYS.map(k => [k, 0])), share = { tool: [0, 0], load: [0, 0] };
     for (const [kind, over, loadId] of runs) {
       if (over.oneArm && PLAYED_WITH[anim] === 'bow') continue;
-      const floor = standing(kind, over, face), sizes = [], arrows = [];
+      const floor = standing(kind, over, face), sizes = [], arrows = [], who = kind + Object.entries(over).map(([k, v]) => ' ' + k + ' ' + v).join('');
       for (let i = 0; i < n; i++) {
         const u = (i + .5) / n, now = frame(NOW, kind, over, anim, face, u, loadId);
-        if (now.pose.tip && now.pose.face === face) { const tip = tipping(NOW.tipped(now.spr, face === 'f' ? -now.pose.tip : now.pose.tip), NOW.P.ink, false); if (tip.torn || tip.parts) { sum.v++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + kind + ' frame ' + (i + 1) + ': ' + PICTURE_NAMED.v + ', ' + tip.torn + ' edge pixels not inked, ' + tip.parts + ' loose parts'); } }
+        if (now.pose.tip && now.pose.face === face) { const tip = tipping(NOW.tipped(now.spr, face === 'f' ? -now.pose.tip : now.pose.tip), NOW.P.ink, false); if (tip.torn || tip.parts) { sum.v++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': ' + PICTURE_NAMED.v + ', ' + tip.torn + ' edge pixels not inked, ' + tip.parts + ' loose parts'); } }
         if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); arrows.push(null); continue; }
-        const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId, now.seed) : now).spr.c, face), where = kind + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
+        const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId, now.seed) : now).spr.c, face), where = who + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
         const seen = pictured({ ...now, bowHalf: NOW.BOW.half, shade: NOW.shade }, face, NOW.P.ink);
         for (const k of PICTURE_KEYS) got[k] = seen[k];
         if (kind.startsWith('folk-')) for (const k of COSTUMED) got[k] = 0;
@@ -205,8 +205,8 @@ for (const anim of anims) {
         frames++;
       }
       const most = (def.hit ? JUMP.struck : JUMP.held) / (smooth ? 2 : 1) + (smooth ? 1 : 0);
-      for (let i = 0; i < n; i++) { const a = arrows[i], b = arrows[(i + 1) % n]; if (i + 1 === n && def.once) continue; const loosed = def.hit && def.hit[1] === 'arrow' && b < a && (i + .5) / n <= def.hit[0] && (i + 1.5) / n > def.hit[0]; if (a !== null && b !== null && Math.abs(a - b) > most && !(def.hit && !b) && !loosed) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + kind + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': arrow ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }
-      for (let i = 0; i < n; i++) { const a = sizes[i], b = sizes[(i + 1) % n]; if (i + 1 === n && def.once) continue; if (a && b && Math.abs(a - b) > most) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + kind + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': tool ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }
+      for (let i = 0; i < n; i++) { const a = arrows[i], b = arrows[(i + 1) % n]; if (i + 1 === n && def.once) continue; const loosed = def.hit && def.hit[1] === 'arrow' && b < a && (i + .5) / n <= def.hit[0] && (i + 1.5) / n > def.hit[0]; if (a !== null && b !== null && Math.abs(a - b) > most && !(def.hit && !b) && !loosed) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': arrow ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }
+      for (let i = 0; i < n; i++) { const a = sizes[i], b = sizes[(i + 1) % n]; if (i + 1 === n && def.once) continue; if (a && b && Math.abs(a - b) > most) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': tool ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }
     }
     for (const k of KEYS) totals[k] += sum[k];
     for (const what of ['tool', 'load']) if (share[what][1]) shares.push(anim.padEnd(12) + NAMES[face].padEnd(9) + what.padEnd(5) + String(Math.round(100 * share[what][0] / share[what][1])).padStart(4) + '% of ' + share[what][1] + ' frames at least half visible');
