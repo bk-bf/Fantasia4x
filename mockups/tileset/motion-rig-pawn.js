@@ -82,12 +82,12 @@ function rigHead(s, f, o, X, hTop, face, p) {
   return er;
 }
 
-function rigHat(s, o, X, hTop, face, skin, tunic, hd, hh) {
+function rigHat(s, o, X, hTop, face, skin, tunic, hd, hh, drape = 2) {
   const sn = skin.length - 1, side = face === 's', back = face === 'b', hat = o.hat;
   if (hat === 'straw') { for (let i = -hd - 5; i < hd + 5; i++) { s.set(X + i, hTop + 1, P.thatch[(i & 1) ? 4 : 5]); s.set(X + i, hTop + 2, P.thatch[2]); } for (let i = -hd - 3; i < hd + 3; i++) s.set(X + i, hTop, P.thatch[4]); for (let j = 0; j < 4; j++) for (let i = -hd + 1; i < hd - 1; i++) s.set(X + i, hTop - 4 + j, j === 3 ? P.red[2] : P.thatch[clamp(5 - (i > 1 ? 1 : 0) - ((i + j) & 1), 0, 5)]); }
   if (hat === 'hood') {
     const c = o.hood || tunic, n = c.length - 1;
-    for (let j = -2; j < hh + 2; j++) { const inset = j === -2 ? 3 : j === -1 ? 1 : 0; for (let i = -hd - 1 + inset; i < hd + 1 - inset; i++) {
+    for (let j = -2; j < hh + drape; j++) { const inset = j === -2 ? 3 : j === -1 ? 1 : 0; for (let i = -hd - 1 + inset; i < hd + 1 - inset; i++) {
       if (!back && j > 2 && j < hh && (side ? i > 0 : i > -hd && i < hd - 1)) continue;
       const u = (i + hd + 1) / (2 * hd + 1); s.set(X + i, hTop + j, c[clamp((u < .3 ? n - 1 : u < .7 ? n - 2 : n - 3) + (j < 0 ? 1 : 0) - (back && i === 0 && j > 1 ? 1 : 0), 0, n)]);
     } }
@@ -300,7 +300,7 @@ function rigPawn(o, p) {
     if (f.tail) part('tail', D.tail, () => { for (let k = 0; k < 9; k++) s.rect(cx - (SW >> 1) - 2 - k, legTop + 1 + rnd(Math.sin(k * .5 + (p.tail || 0)) * 2) + (k >> 2), 1, k < 5 ? 3 : 2, skin[k < 5 ? sn - 2 : sn - 3]); }, { anchor: [cx, legTop] });
     part('far leg', D.farLeg, () => legS(fl, true), { anchor: [cx + 1, legTop] }); part('near leg', D.nearLeg, () => legS(fr, false), { anchor: [cx - 2, legTop] });
     part('torso', D.torso, torso, { anchor: [sx0, tTop] });
-    part('head', D.head, t => shaped ? (shaped.head(t, 's', HX, hTop, p), rigHat(t, o, HX, hTop, 's', skin, tunic, f.hd, f.hh)) : rigHead(t, f, o, HX + 1, hTop, 's', p), { anchor: [HX + 1, hTop + f.hh], rim: !!shaped && o.hat === 'hood' });
+    part('head', D.head, t => shaped ? (shaped.head(t, 's', HX, hTop, p), rigHat(t, o, HX, hTop, 's', skin, tunic, f.hd, f.hh, shaped.drape)) : rigHead(t, f, o, HX + 1, hTop, 's', p), { anchor: [HX + 1, hTop + f.hh] });
     part('pad', D.pad, () => pad(sx0 - 3, true), { anchor: near });
     const nearPath = fused ? reach(near[0], near[1], hr, bent) : nearLimb.path, nh = fused ? handOf(nearPath) : nearLimb.hand, nearCams = p.carry ? { upper: D.near, fore: D.near, hand: D.near } : nearLimb.cams;
     if (wielded) {
@@ -357,10 +357,12 @@ function rigPawn(o, p) {
       for (let x = xa + 1; x < xb; x++) { const u = (x - xa) / (xb - xa); s.set(x, tTop + 1 + j, o.cape[clamp((back ? (u < .25 ? 3 : u < .7 ? 2 : 1) : 1) - ((x + (j >> 2)) % 5 === 0 ? 1 : 0), 0, 4)]); }
       s.set(xa, tTop + 1 + j, o.cape[3]); s.set(xb, tTop + 1 + j, o.cape[1]);
     } }, { anchor: [sx0, tTop] });
-    part('head', D.head, t => shaped ? (shaped.head(t, face, HX, hTop, p), rigHat(t, o, HX, hTop, face, skin, tunic, f.hd, f.hh)) : rigHead(t, f, o, HX, hTop, face, p), { anchor: [HX, hTop + f.hh], rim: !!shaped && o.hat === 'hood' });
+    part('head', D.head, t => shaped ? (shaped.head(t, face, HX, hTop, p), rigHat(t, o, HX, hTop, face, skin, tunic, f.hd, f.hh, shaped.drape)) : rigHead(t, f, o, HX, hTop, face, p), { anchor: [HX, hTop + f.hh] });
     const reachOut = p.carry ? SPACE.carried : 0, wanted = i => !p.carry && p[armKey(i)] ? add3(joints[armKey(i)], p[armKey(i)]) : spaceOf(targets[i] ? [roots[i][0] + targets[i][0], roots[i][1] + targets[i][1]] : [roots[i][0], roots[i][1] + TOT], 0, reachOut);
     const held3 = armed(wanted(toolSide), wanted(other)), limbs = [0, 1].map(i => limbOf(held3[armKey(i)], roots[i])), paths = limbs.map(l => l.path), hL = limbs[0].hand, hR = limbs[1].hand, handsAt = [hL, hR], th = handsAt[toolSide];
     space.arms = { R: held3.R, L: held3.L, aim: held3.aim, second: held3.second, from: held3.from };
+    if (shaped && bowing && face === 'f') for (const l of limbs) for (const seg of ['upper', 'fore']) l.cams[seg] = Math.max(l.cams[seg], D.torso + SPACE.held);
+    if (shaped && bowing && back && p.bow >= 1) limbs[toolSide].cams.upper = Math.max(limbs[toolSide].cams.upper, D.head + SPACE.held);
     if (put && !resting && (IN_BOTH_ARMS.includes(p.carry) || cu < 1)) { const on = [0, 1].filter(i => grasps[i]), miss = on.reduce((m, i) => [m[0] + handsAt[i][0] - rnd(grasps[i][0]), m[1] + handsAt[i][1] - rnd(grasps[i][1])], [0, 0]); put = [rnd(put[0] + miss[0] / on.length), rnd(put[1] + miss[1] / on.length)]; }
     if (put && !resting && IN_BOTH_ARMS.includes(p.carry) && !back && boxAt(put).top < chin) put = [put[0], put[1] + chin - boxAt(put).top];
     if (put && !resting && p.carry === 'shoulder') { const b = boxAt(put); if (b.top <= chinRow && b.left <= head[1] && b.right >= head[0]) put = [back ? head[1] + 1 + load[2] : head[0] - load[0] + load[2], put[1]]; }

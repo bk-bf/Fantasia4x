@@ -460,6 +460,7 @@ const FOLK_PARTS = (() => {
     const arms = { lit: frontArm, dim: flipped(frontArm) };
     return {
       skin: c.skin,
+      drape: CAP[style] === 'long' ? 0 : 2,
       torso: (face, br) => at(face, br, 0).Torso,
       arm(face, br, lit, far, raised) {
         if (face === 's') { const rows = far ? sideArm.far : sideArm.near; return (j, k, len) => j < fromSide ? ' ' : along(rows, j - fromSide, len - fromSide, 2, 2)[k] || ' '; }
