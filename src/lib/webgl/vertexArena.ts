@@ -2,7 +2,6 @@ import { BufferUsage, type GpuBuffer, type GpuDevice } from '../gpu/device.js';
 
 export class VertexArena {
   buffer: GpuBuffer | null = null;
-  version = 0;
   private capacity = 0;
   private used = 0;
   private readonly retired: GpuBuffer[] = [];
@@ -28,7 +27,6 @@ export class VertexArena {
         usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
       });
       this.used = 0;
-      this.version++;
     }
     const first = this.used / this.stride;
     this.gpu.queue.writeBuffer(this.buffer, this.used, data);

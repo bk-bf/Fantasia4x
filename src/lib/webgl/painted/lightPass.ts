@@ -12,10 +12,9 @@ import {
 import {
   TextureUsage,
   type GpuDevice,
-  type GpuPipeline,
+  type GpuRenderPipeline,
   type GpuRenderTarget,
-  type GpuUniform,
-  type GpuVertexLayout
+  type GpuUniform
 } from '../../gpu/device.js';
 import { SizedTexture } from '../sizedTexture.js';
 
@@ -49,8 +48,7 @@ export interface LightPassFrame {
 
 export class PaintedLightPass {
   private readonly gpu: GpuDevice;
-  private readonly program: GpuPipeline;
-  private readonly vao: GpuVertexLayout;
+  private readonly program: GpuRenderPipeline;
   private readonly at: Record<string, GpuUniform | null>;
   private readonly packed = new Float32Array(MAX_LIGHTS * 8);
   private field: SizedTexture;
@@ -58,8 +56,13 @@ export class PaintedLightPass {
   private fieldSize: [number, number] = [0, 0];
 
   static create(gpu: GpuDevice, shaders: ShaderManager): PaintedLightPass | null {
-    const made = shaders.createProgram(PROGRAM, vertexSource, fragmentSource);
-    const program = shaders.getProgram(PROGRAM)?.program;
+    const made = shaders.createPipeline(PROGRAM, {
+      glsl: { vertex: vertexSource, fragment: fragmentSource, attributes: {} },
+      vertex: { buffers: [] },
+      primitive: { topology: 'triangle-list' },
+      fragment: { targets: [{ format: 'rgba8unorm' }] }
+    });
+    const program = made.pipeline;
     if (!made.success || !program) {
       console.warn('[painted light] off:', made.error);
       return null;
@@ -67,10 +70,9 @@ export class PaintedLightPass {
     return new PaintedLightPass(gpu, program);
   }
 
-  private constructor(gpu: GpuDevice, program: GpuPipeline) {
+  private constructor(gpu: GpuDevice, program: GpuRenderPipeline) {
     this.gpu = gpu;
     this.program = program;
-    this.vao = gpu.createVertexLayout()!;
     this.field = new SizedTexture(gpu, 'rgba8unorm', 1, 1, FIELD_USAGE);
     this.target = gpu.createRenderTarget()!;
     const names = [
@@ -105,7 +107,6 @@ export class PaintedLightPass {
     gpu.setVec3fv(this.at.u_weights, f.grade.weights);
     gpu.setVec3fv(this.at.u_timeAmbient, TIME_AMBIENT);
     gpu.setVec3fv(this.at.u_timeStrength, TIME_STRENGTH);
-    gpu.setVertexLayout(this.vao);
   }
 
   drawField(f: LightPassFrame): number {
@@ -117,10 +118,8 @@ export class PaintedLightPass {
     gpu.setI32(this.at.u_lightCount, count);
     if (count > 0) gpu.setVec4fv(this.at.u_lights, this.packed, 0, count * 8);
     gpu.beginRenderPass(this.target);
-    gpu.setBlending(false);
-    gpu.draw('triangle-list', 3);
+    gpu.draw(3);
     gpu.endRenderPass();
-    gpu.setVertexLayout(null);
     gpu.setTextureSlot(LIGHT_FIELD_UNIT);
     gpu.bindTexture(this.field.texture);
     gpu.setTextureSlot(0);
@@ -130,7 +129,6 @@ export class PaintedLightPass {
   dispose(): void {
     this.gpu.destroyRenderTarget(this.target);
     this.field.destroy();
-    this.gpu.destroyVertexLayout(this.vao);
-    this.gpu.destroyPipeline(this.program);
+    this.gpu.destroyRenderPipeline(this.program);
   }
 }

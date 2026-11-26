@@ -8,7 +8,13 @@ import { withRockSurface } from './rockSurface.js';
 import { LIGHT_FIELD_UNIT } from './lightPass.js';
 import { NOISE_SIZE, tierNoiseTexels } from './tierNoise.js';
 import { TIER_FIELDS, TIER_TEXEL, TierTiles, type TileAt } from './tierTiles.js';
-import type { GpuDevice, GpuPipeline, GpuUniform, GpuVertexLayout } from '../../gpu/device.js';
+import {
+  ALPHA_BLEND,
+  type GpuDevice,
+  type GpuRenderPipeline,
+  type GpuUniform
+} from '../../gpu/device.js';
+import { canvasPipeline } from '../canvasPipeline.js';
 import { samplersOf } from '../samplers.js';
 import { SizedTexture } from '../sizedTexture.js';
 
@@ -67,13 +73,12 @@ const UNIFORMS = [
 
 export class Tiers {
   private readonly gpu: GpuDevice;
-  private readonly program: GpuPipeline;
+  private readonly program: GpuRenderPipeline;
   private readonly painted: LoadedPaintedTileset;
   private readonly tiles = new TierTiles();
   private readonly tileTex: SizedTexture;
   private readonly fieldTex: SizedTexture;
   private readonly noiseTex: SizedTexture;
-  private readonly vao: GpuVertexLayout;
   private readonly at: Record<(typeof UNIFORMS)[number], GpuUniform | null>;
   private terrain: GameGrid | null = null;
   private resource: GameGrid | null = null;
@@ -85,8 +90,18 @@ export class Tiers {
     shaders: ShaderManager,
     painted: LoadedPaintedTileset
   ): Tiers | null {
-    const made = shaders.createProgram(PROGRAM, vertexSource, withRockSurface(fragmentSource));
-    const program = shaders.getProgram(PROGRAM)?.program;
+    const made = shaders.createPipeline(
+      PROGRAM,
+      canvasPipeline(gpu, {
+        vertex: vertexSource,
+        fragment: withRockSurface(fragmentSource),
+        topology: 'triangle-list',
+        blend: ALPHA_BLEND,
+        depthCompare: 'less-equal',
+        depthWrite: true
+      })
+    );
+    const program = made.pipeline;
     if (!made.success || !program) {
       console.error('[tiers] the rock tier shader did not build:', made.error);
       return null;
@@ -94,11 +109,10 @@ export class Tiers {
     return new Tiers(gpu, program, painted);
   }
 
-  private constructor(gpu: GpuDevice, program: GpuPipeline, painted: LoadedPaintedTileset) {
+  private constructor(gpu: GpuDevice, program: GpuRenderPipeline, painted: LoadedPaintedTileset) {
     this.gpu = gpu;
     this.program = program;
     this.painted = painted;
-    this.vao = gpu.createVertexLayout()!;
     this.tileTex = new SizedTexture(gpu, 'rgba16uint');
     this.fieldTex = new SizedTexture(gpu, 'rgba8unorm');
     gpu.bindSampler(TIER_FIELD_UNIT, samplersOf(gpu).linear);
@@ -204,9 +218,7 @@ export class Tiers {
     gpu.setTextureSlot(TIER_FIELD_UNIT);
     gpu.bindTexture(this.fieldTex.texture);
     this.bindShared();
-    gpu.setVertexLayout(this.vao);
-    gpu.draw('triangle-list', 6);
-    gpu.setVertexLayout(null);
+    gpu.draw(6);
     return 1;
   }
 
@@ -215,7 +227,6 @@ export class Tiers {
     this.tileTex.destroy();
     this.fieldTex.destroy();
     this.noiseTex.destroy();
-    gpu.destroyVertexLayout(this.vao);
-    gpu.destroyPipeline(this.program);
+    gpu.destroyRenderPipeline(this.program);
   }
 }

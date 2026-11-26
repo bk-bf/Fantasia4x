@@ -4,8 +4,7 @@ type Handle<K extends string> = { readonly [handle]: K };
 export type GpuBuffer = Handle<'buffer'>;
 export type GpuTexture = Handle<'texture'>;
 export type GpuRenderTarget = Handle<'render-target'>;
-export type GpuVertexLayout = Handle<'vertex-layout'>;
-export type GpuPipeline = Handle<'pipeline'>;
+export type GpuRenderPipeline = Handle<'render-pipeline'>;
 export type GpuShaderModule = Handle<'shader-module'>;
 export type GpuUniform = Handle<'uniform'>;
 export type GpuSampler = Handle<'sampler'>;
@@ -103,10 +102,15 @@ export type VertexFormat = 'float32' | 'float32x2' | 'float32x3' | 'float32x4';
 export type VertexStepMode = 'vertex' | 'instance';
 
 export interface VertexAttribute {
+  shaderLocation: number;
   format: VertexFormat;
-  stride: number;
   offset: number;
-  stepMode?: VertexStepMode;
+}
+
+export interface VertexBufferLayout {
+  arrayStride: number;
+  stepMode: VertexStepMode;
+  attributes: VertexAttribute[];
 }
 
 export const FLOAT32_FORMATS: readonly VertexFormat[] = [
@@ -120,7 +124,30 @@ export type PrimitiveTopology = 'triangle-list' | 'triangle-strip';
 
 export type BlendFactor = 'zero' | 'one' | 'src' | 'src-alpha' | 'one-minus-src-alpha';
 
-export type CompareFunction = 'less' | 'less-equal';
+export interface BlendComponent {
+  srcFactor: BlendFactor;
+  dstFactor: BlendFactor;
+}
+
+export interface BlendState {
+  color: BlendComponent;
+  alpha: BlendComponent;
+}
+
+export const ALPHA_BLEND: BlendState = {
+  color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha' },
+  alpha: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha' }
+};
+
+export type CompareFunction = 'always' | 'less' | 'less-equal';
+
+export type DepthFormat = 'depth24plus';
+
+export interface DepthStencilState {
+  format: DepthFormat;
+  depthWriteEnabled: boolean;
+  depthCompare: CompareFunction;
+}
 
 export interface StencilState {
   compare: 'always' | 'not-equal';
@@ -133,10 +160,23 @@ export interface ShaderSources {
   fragment: string;
 }
 
+export interface GlslSources extends ShaderSources {
+  attributes: Record<string, number>;
+}
+
+export interface ColorTargetState {
+  format: TextureFormat;
+  blend?: BlendState;
+}
+
 export interface RenderPipelineDescriptor {
   label: string;
-  glsl: ShaderSources;
+  glsl: GlslSources;
   wgsl?: ShaderSources;
+  vertex: { buffers: VertexBufferLayout[] };
+  primitive: { topology: PrimitiveTopology };
+  fragment: { targets: [ColorTargetState] };
+  depthStencil?: DepthStencilState;
   debug?: boolean;
 }
 
@@ -148,9 +188,8 @@ export interface CompiledModule {
 export type RenderPipelineResult =
   | {
       ok: true;
-      pipeline: GpuPipeline;
+      pipeline: GpuRenderPipeline;
       uniforms: Map<string, GpuUniform>;
-      attributes: Map<string, number>;
       modules: CompiledModule[];
     }
   | { ok: false; error: string; modules: CompiledModule[] };
@@ -170,16 +209,17 @@ export interface ClearDescriptor {
 export interface GpuDevice {
   readonly backend: 'webgl2';
   readonly queue: GpuQueue;
+  readonly canvasFormat: TextureFormat;
+  readonly canvasDepthFormat: DepthFormat | null;
 
   limits(): GpuLimits;
   checkError(operation: string): boolean;
 
   createRenderPipeline(desc: RenderPipelineDescriptor): RenderPipelineResult;
-  destroyPipeline(pipeline: GpuPipeline): void;
+  destroyRenderPipeline(pipeline: GpuRenderPipeline): void;
   destroyShaderModule(module: GpuShaderModule): void;
-  uniform(pipeline: GpuPipeline, name: string): GpuUniform | null;
-  attribute(pipeline: GpuPipeline, name: string): number;
-  setPipeline(pipeline: GpuPipeline | null): void;
+  uniform(pipeline: GpuRenderPipeline, name: string): GpuUniform | null;
+  setPipeline(pipeline: GpuRenderPipeline): void;
 
   setF32(u: GpuUniform | null, x: number): void;
   setI32(u: GpuUniform | null, x: number): void;
@@ -193,12 +233,7 @@ export interface GpuDevice {
 
   createBuffer(desc: BufferDescriptor): GpuBuffer;
   destroyBuffer(buffer: GpuBuffer | null): void;
-  setVertexBuffer(buffer: GpuBuffer | null): void;
-
-  createVertexLayout(): GpuVertexLayout;
-  destroyVertexLayout(layout: GpuVertexLayout | null): void;
-  setVertexLayout(layout: GpuVertexLayout | null): void;
-  vertexAttribute(location: number, attribute: VertexAttribute): void;
+  setVertexBuffer(slot: number, buffer: GpuBuffer, offset?: number): void;
 
   createTexture(desc: TextureDescriptor): GpuTexture;
   destroyTexture(texture: GpuTexture | null): void;
@@ -216,24 +251,12 @@ export interface GpuDevice {
   setClearColor(r: number, g: number, b: number, a: number): void;
   setViewport(x: number, y: number, width: number, height: number): void;
 
-  setBlending(on: boolean): void;
-  setBlendFunc(src: BlendFactor, dst: BlendFactor): void;
-  setBlendFuncSeparate(
-    srcColor: BlendFactor,
-    dstColor: BlendFactor,
-    srcAlpha: BlendFactor,
-    dstAlpha: BlendFactor
-  ): void;
-  setDepthTest(on: boolean): void;
-  depthTestEnabled(): boolean;
-  setDepthCompare(compare: CompareFunction): void;
   setStencil(state: StencilState | null): void;
 
-  draw(topology: PrimitiveTopology, vertexCount: number, firstVertex?: number): void;
-  drawInstanced(
-    topology: PrimitiveTopology,
+  draw(
     vertexCount: number,
-    instanceCount: number,
-    firstVertex?: number
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number
   ): void;
 }

@@ -64,7 +64,14 @@ export function blendFactor(gl: WebGL2RenderingContext, f: BlendFactor): number 
 }
 
 export function compareFunction(gl: WebGL2RenderingContext, c: CompareFunction): number {
-  return c === 'less' ? gl.LESS : gl.LEQUAL;
+  switch (c) {
+    case 'always':
+      return gl.ALWAYS;
+    case 'less':
+      return gl.LESS;
+    case 'less-equal':
+      return gl.LEQUAL;
+  }
 }
 
 export function topology(gl: WebGL2RenderingContext, t: PrimitiveTopology): number {

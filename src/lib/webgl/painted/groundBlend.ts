@@ -18,16 +18,16 @@ import {
   halfFloats,
   type GpuBuffer,
   type GpuDevice,
-  type GpuPipeline,
+  type GpuRenderPipeline,
   type GpuTexture,
-  type GpuUniform,
-  type GpuVertexLayout
+  type GpuUniform
 } from '../../gpu/device.js';
 import { TREE_UNIT, TreeGroundLayer, withTreeGround } from './treeGroundLayer.js';
 import { treeSoils } from './treeGroundTable.js';
 import type { TreeSoil } from './treeGroundManifest.js';
 import { samplersOf } from '../samplers.js';
 import { SizedTexture } from '../sizedTexture.js';
+import { canvasPipeline } from '../canvasPipeline.js';
 
 const PROGRAM = 'groundBlend';
 const MAX_KINDS = 64;
@@ -127,7 +127,7 @@ export function lightRect(bounds: Bounds, w: number, h: number): Rect {
 
 export class GroundBlend {
   private readonly gpu: GpuDevice;
-  private readonly program: GpuPipeline;
+  private readonly program: GpuRenderPipeline;
   private readonly atlas: GpuTexture;
   private readonly kindTex: SizedTexture;
   private readonly tideTex: SizedTexture;
@@ -144,7 +144,6 @@ export class GroundBlend {
   private readonly unitsPerTile: number;
   private riverData: RiverTiles = riverTiles(0);
   private riverStale = true;
-  private readonly vao: GpuVertexLayout;
   private readonly vbo: GpuBuffer;
   private readonly at: Record<string, GpuUniform | null>;
   private kinds = new Uint8Array(0);
@@ -164,8 +163,23 @@ export class GroundBlend {
     shaders: ShaderManager,
     painted: LoadedPaintedTileset
   ): GroundBlend | null {
-    const made = shaders.createProgram(PROGRAM, vertexSource, withTreeGround(fragmentSource));
-    const program = shaders.getProgram(PROGRAM)?.program;
+    const made = shaders.createPipeline(
+      PROGRAM,
+      canvasPipeline(gpu, {
+        vertex: vertexSource,
+        fragment: withTreeGround(fragmentSource),
+        attributes: { a_position: 0 },
+        buffers: [
+          {
+            arrayStride: 8,
+            stepMode: 'vertex',
+            attributes: [{ shaderLocation: 0, format: 'float32x2', offset: 0 }]
+          }
+        ],
+        topology: 'triangle-list'
+      })
+    );
+    const program = made.pipeline;
     if (!made.success || !program) {
       console.warn('[ground blend] off:', made.error);
       return null;
@@ -179,7 +193,7 @@ export class GroundBlend {
 
   private constructor(
     gpu: GpuDevice,
-    program: GpuPipeline,
+    program: GpuRenderPipeline,
     painted: LoadedPaintedTileset,
     water: GpuTexture
   ) {
@@ -197,16 +211,10 @@ export class GroundBlend {
     this.ice = new WaterIce(gpu);
     this.rivers = new RiverTextures(gpu);
     this.unitsPerTile = painted.tileset.tile / ART_PER_UNIT;
-    this.vao = gpu.createVertexLayout()!;
     this.vbo = gpu.createBuffer({
       size: 12 * 4,
       usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
     });
-    gpu.setVertexLayout(this.vao);
-    gpu.setVertexBuffer(this.vbo);
-    const loc = gpu.attribute(program, 'a_position');
-    gpu.vertexAttribute(loc, { format: 'float32x2', stride: 0, offset: 0 });
-    gpu.setVertexLayout(null);
     const names = [
       'u_projection',
       'u_viewOffset',
@@ -523,9 +531,8 @@ export class GroundBlend {
     this.rivers.bind();
     if (this.trees) this.bindOn(TREE_UNIT, this.trees.texture);
     gpu.setTextureSlot(0);
-    gpu.setVertexLayout(this.vao);
-    gpu.draw('triangle-list', 6);
-    gpu.setVertexLayout(null);
+    gpu.setVertexBuffer(0, this.vbo);
+    gpu.draw(6);
     return true;
   }
 
@@ -538,7 +545,6 @@ export class GroundBlend {
     this.ice.dispose();
     this.rivers.dispose();
     gpu.destroyBuffer(this.vbo);
-    gpu.destroyVertexLayout(this.vao);
-    gpu.destroyPipeline(this.program);
+    gpu.destroyRenderPipeline(this.program);
   }
 }

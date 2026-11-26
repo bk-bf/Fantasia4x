@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { GridRenderer, type GridRenderOptions } from '$lib/webgl/grid-renderer';
 import { GameGrid } from '$lib/webgl/game-grid';
 import type { FontAtlas } from '$lib/webgl/types';
-import type { ShaderManager } from '$lib/webgl/shaders';
+import { tileShaders } from './tileShaders';
 import { Webgl2Device } from '$lib/gpu/webgl2/device';
 
 const MAP = 128;
@@ -24,17 +24,14 @@ function setup() {
         if (key in target) return target[key as keyof typeof target];
         return (...args: unknown[]) => {
           if (key === 'bufferData' && args[1] instanceof Float32Array) uploads++;
+          if (key === 'bufferSubData' && args[2] instanceof Float32Array) uploads++;
           return {};
         };
       }
     }
   ) as unknown as WebGL2RenderingContext;
-  const shaders = {
-    getAttributeLocation: () => 1,
-    useProgram: () => true,
-    setUniform: () => {}
-  } as unknown as ShaderManager;
-  const renderer = new GridRenderer(new Webgl2Device(gl), shaders, atlas, false, false);
+  const gpu = new Webgl2Device(gl);
+  const renderer = new GridRenderer(gpu, tileShaders(gpu, false), atlas, false, false);
   const grid = new GameGrid();
   for (let y = 0; y < MAP; y++)
     for (let x = 0; x < MAP; x++)

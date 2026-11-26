@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { WorldTile } from '$lib/game/core/types';
 import type { TileData } from '$lib/webgl/tile-types';
 import type { FontAtlas } from '$lib/webgl/types';
-import type { ShaderManager } from '$lib/webgl/shaders';
+import { tileShaders } from '../tileShaders';
 import { Webgl2Device } from '$lib/gpu/webgl2/device';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
@@ -107,17 +107,15 @@ function chunkRenderer(uploads: Float32Array[]) {
         if (key in target) return target[key as keyof typeof target];
         return (...args: unknown[]) => {
           if (key === 'bufferData' && args[1] instanceof Float32Array) uploads.push(args[1]);
+          if (key === 'bufferSubData' && args[2] instanceof Float32Array) uploads.push(args[2]);
           return {};
         };
       }
     }
   ) as unknown as WebGL2RenderingContext;
-  const shaders = {
-    getAttributeLocation: () => 1,
-    useProgram: () => true
-  } as unknown as ShaderManager;
   const atlas = { characters: new Map(), atlasWidth: 64, atlasHeight: 64 } as unknown as FontAtlas;
-  const r = new GridRenderer(new Webgl2Device(gl), shaders, atlas, false, true);
+  const gpu = new Webgl2Device(gl);
+  const r = new GridRenderer(gpu, tileShaders(gpu, true), atlas, false, true);
   r.skipBlendedGround = true;
   return r;
 }
