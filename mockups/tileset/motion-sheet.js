@@ -70,7 +70,7 @@ const SHEET = (() => {
     one('eat', 'Needs', 'Eating', 'pawn', 'guard', 'eat', { over: { shield: null }, props: [['stool', -3, -1]] }),
     { id: 'draw-fb', group: 'Needs', label: 'Drawing water · toward and away', w: 136, cast: [P1('pawn', 'farmer', loop('draw', { face: 'f' }), [-30, 0], { tool: null }), P1('pawn', 'farmer', loop('draw', { face: 'b' }), [30, -2], { tool: null })] },
     { id: 'drink-fb', group: 'Needs', label: 'Drinking · toward and away', w: 136, cast: [P1('pawn', 'miner', loop('drink', { face: 'f' }), [-30, 0]), P1('pawn', 'miner', loop('drink', { face: 'b' }), [30, -2])] },
-    { id: 'eat-fb', group: 'Needs', label: 'Eating · toward and away', w: 136, cast: [P1('pawn', 'guard', loop('eat', { face: 'f' }), [-30, 0], { shield: null }), P1('pawn', 'guard', loop('eat', { face: 'b' }), [30, -2], { shield: null })] },
+    { id: 'eat-fb', group: 'Needs', label: 'Eating · toward and away', w: 136, cast: [P1('pawn', 'guard', loop('eat', { face: 'f' }), [-30, 0], { shield: null }), P1('pawn', 'guard', loop('eat', { face: 'b' }), [30, -2], { shield: null })], props: [['stool', -30, -1], ['stool', 30, -1]] },
     one('sleep', 'Needs', 'Sleeping', 'pawn', 'farmer', 'sleep'),
     one('out', 'Needs', 'Unconscious', 'pawn', 'farmer', 'out', { ox: 4 }),
     { id: 'out-folk', group: 'Needs', label: 'Unconscious · other folk', w: 204, h: 124, cast: [P1('pawn', 'guard', loop('out'), [-62, -38]), P1('pawn', 'smith', loop('out', { flip: 1 }), [2, -38]), P1('pawn', 'mage', loop('out'), [66, -38]), P1('pawn', 'hauler', loop('out', { flip: 1 }), [-62, 0]), P1('pawn', 'goblin', loop('out'), [0, 0]), P1('pawn', 'gnoll', loop('out', { flip: 1 }), [62, 0])] },
