@@ -40,7 +40,7 @@ export function pictured(now, face, ink) {
     else if (pieces(limb.all, w) > 1) { counts.q++; said.push(name + ' is in pieces'); }
     for (const [seg, px] of limb.segs) if (tapers(px, w)) { counts.r++; said.push(name + ' ' + seg + ' tapers'); }
     if (face !== 's' && limb.anchor && limb.hand.length) {
-      const side = Math.sign(limb.anchor[0] - centre) || 1, out = limb.all.filter(i => ((i % w) - limb.anchor[0]) * side >= FIN.out && ((i / w) | 0) <= limb.anchor[1] + FIN.above).length, hb = box(limb.hand, w), inward = Math.abs((hb[0] + hb[2]) / 2 - centre) < half;
+      const side = Math.sign(limb.anchor[0] - centre) || 1, out = limb.all.filter(i => ((i % w) - limb.anchor[0]) * side >= FIN.out && ((i / w) | 0) <= limb.anchor[1] + FIN.above).length, hb = box(limb.hand, w), inward = Math.abs((hb[0] + hb[2]) / 2 - centre) < half && (hb[1] + hb[3]) / 2 > limb.anchor[1];
       if (out && inward) { counts.r++; said.push(name + ' fins out at the shoulder'); }
     }
   }

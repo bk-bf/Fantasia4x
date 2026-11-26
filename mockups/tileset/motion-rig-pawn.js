@@ -230,10 +230,11 @@ function rigPawn(o, p) {
   const between = (a, b, k) => [mix(a[0], b[0], k), mix(a[1], b[1], k)];
   let put = null, origin = null;
   const space = { arms: null };
-  const sy = tTop + 1 - br, view = VIEWS[face], L1 = Math.ceil(TOT / 2), L2 = TOT - L1, J = hw + 1, joints = { R: [J, 0, 0], L: [-J, 0, 0] }, shoulderZ = base - sy;
+  const sy = tTop + 1 - br, view = VIEWS[face], L1 = Math.ceil(TOT / 2), L2 = TOT - L1, J = hw + 1, lead = clamp(p.lead || 0, -J + 1, J - 1), across = Math.sqrt(J * J - lead * lead), joints = { R: [across, -lead, 0], L: [-across, lead, 0] }, turned = rnd(lead), narrowed = rnd(J - across), shoulderZ = base - sy;
   const shownAt = q => { const a = view.at(q); return [origin[0] + a[0], origin[1] + a[1]]; };
   const before = P => Math.abs(P[0] - origin[0]) >= hw + 1 ? SPACE.ahead : P[1] > origin[1] - 1 ? SPACE.before : f.hd + SPACE.jut + 1;
   const spaceOf = (P, sign, F) => { const d = F || before(P); return side ? [sign * J, P[0] - origin[0], origin[1] - P[1]] : back ? [P[0] - origin[0], d, origin[1] - P[1] - SEEN.depth * d] : [origin[0] - P[0], d, origin[1] - P[1] + SEEN.depth * d]; };
+  const handFor = key => { const q = add3(joints[key], p[key]); return [q[0] - (p.mid || 0) * joints[key][0], q[1], q[2]]; };
   const solved = (key, target) => armSolved(joints[key], target, L1, L2, key === 'R' ? 1 : -1, p.elbow);
   const camOf = q => SPACE.cam[face][0] + (view.depth(q) - SPACE.cam[face][1]) / SPACE.cam[face][2], mid3 = (a, b) => mul3(add3(a, b), .5);
   const limbOf = (arm, art) => { const path = [art, shownAt(arm.E), shownAt(arm.H)]; path.rigid = true; const before = face === 'f' && arm.H[1] > SPACE.chest ? TOWARD_DEPTH.torso + TOWARD_DEPTH.step : -Infinity; return { path, hand: shownAt(arm.H).map(rnd), cams: { upper: Math.max(before, camOf(mid3(arm.S, arm.E))), fore: Math.max(before + TOWARD_DEPTH.step, camOf(mid3(arm.E, arm.H))), hand: Math.max(before + 2 * TOWARD_DEPTH.step, camOf(arm.H)) } }; };
@@ -269,7 +270,7 @@ function rigPawn(o, p) {
   const slung = !!p.carry || !!p.both || !!p.slung || bowing, gripAt = p.grip === undefined ? (p.both && TWO_HANDED[kind] ? TWO_HANDED[kind][0] : 0) : p.grip;
 
   if (side) {
-    const far = [sx0, sy], near = [sx0 - 1, sy], D = SIDE_DEPTH, head = [HX + 1 - f.hd, HX + 2 + f.hd], fused = p.carry === 'shoulder';
+    const far = [sx0 + turned, sy], near = [sx0 - 1 - turned, sy], D = SIDE_DEPTH, head = [HX + 1 - f.hd, HX + 2 + f.hd], fused = p.carry === 'shoulder';
     origin = [sx0 - .5, sy];
     ground = [cx + REST.toes, base];
     if (load && resting && base - load[1] + 1 <= chinRow) {
@@ -291,7 +292,7 @@ function rigPawn(o, p) {
     }
     if (grasp) { const k = resting ? reached : 1; hr = between(hr || [0, TOT], [grasp[0] - near[0], grasp[1] - near[1]], k); htl = between(htl || [0, TOT], [grasp[0] + 1 - far[0], grasp[1] - far[1]], k); }
     const bent = hr && hr[0] < 0 && hr[1] < 0 ? -1 : 1;
-    const held3 = fused ? null : armed(p.R && !p.carry ? add3(joints.R, p.R) : spaceOf(hr ? [near[0] + hr[0], near[1] + hr[1]] : [near[0], near[1] + TOT], 1), p.L && !p.carry ? add3(joints.L, p.L) : spaceOf(htl ? [far[0] + htl[0], far[1] + htl[1]] : [far[0], far[1] + TOT], -1));
+    const held3 = fused ? null : armed(p.R && !p.carry ? handFor('R') : spaceOf(hr ? [near[0] + hr[0], near[1] + hr[1]] : [near[0], near[1] + TOT], 1), p.L && !p.carry ? handFor('L') : spaceOf(htl ? [far[0] + htl[0], far[1] + htl[1]] : [far[0], far[1] + TOT], -1));
     const farLimb = fused ? null : limbOf(held3.L, far), nearLimb = fused ? null : limbOf(held3.R, near);
     const farPath = fused ? reach(far[0], far[1], htl, 1) : farLimb.path, fh = fused ? handOf(farPath) : farLimb.hand, farCams = p.carry ? { upper: D.far, fore: D.far, hand: D.far } : farLimb.cams;
     armParts('far arm', farPath, farPath, false, true, farCams, o.oneArm, bowing ? { grips: 'tool', palm: 'around', piece: 'stave' } : held3 && held3.second && wielded ? { grips: 'tool', palm: 'around', piece: 'second' } : null);
@@ -323,7 +324,7 @@ function rigPawn(o, p) {
     pts.hand = nh; pts.hands = [nh]; pts.mouth = [HX + f.hd + 2, hTop + Math.floor(f.hh * .5) + 3]; pts.head = [HX + (shaped ? 0 : 1), hTop - 3];
     pts.feet = [[cx + fl[0], base - fl[1]], [cx - 1 + fr[0], base - fr[1]]];
   } else {
-    const xL = cx - hw - 1 - ((aw - 1) >> 1) + rnd(lean), xR = cx + hw + (aw >> 1) + rnd(lean), roots = [[xL, sy], [xR, sy]], head = [HX - f.hd, HX + f.hd];
+    const xL = cx - hw - 1 - ((aw - 1) >> 1) + rnd(lean) + narrowed, xR = cx + hw + (aw >> 1) + rnd(lean) - narrowed, roots = [[xL, sy], [xR, sy]], head = [HX - f.hd, HX + f.hd];
     const T = back ? -1 : 1, D = back ? AWAY_DEPTH : TOWARD_DEPTH, mid = cx + rnd(lean), ahead = T, nearer = d => rnd(ahead * SEEN.depth * d);
     const keys = back ? ['hr', 'hl'] : ['hl', 'hr'], targets = [p[keys[0]], p[keys[1]]];
     const toolSide = back ? 1 : 0, other = 1 - toolSide, laden = toolSide, armKey = i => i === toolSide ? 'R' : 'L';
@@ -359,7 +360,7 @@ function rigPawn(o, p) {
       s.set(xa, tTop + 1 + j, o.cape[3]); s.set(xb, tTop + 1 + j, o.cape[1]);
     } }, { anchor: [sx0, tTop] });
     part('head', D.head, t => shaped ? (shaped.head(t, face, HX, hTop, p), rigHat(t, o, HX, hTop, face, skin, tunic, f.hd, f.hh, shaped.drape)) : rigHead(t, f, o, HX, hTop, face, p), { anchor: [HX, hTop + f.hh] });
-    const reachOut = p.carry ? SPACE.carried : 0, wanted = i => !p.carry && p[armKey(i)] ? add3(joints[armKey(i)], p[armKey(i)]) : spaceOf(targets[i] ? [roots[i][0] + targets[i][0], roots[i][1] + targets[i][1]] : [roots[i][0], roots[i][1] + TOT], 0, reachOut);
+    const reachOut = p.carry ? SPACE.carried : 0, wanted = i => !p.carry && p[armKey(i)] ? handFor(armKey(i)) : spaceOf(targets[i] ? [roots[i][0] + targets[i][0], roots[i][1] + targets[i][1]] : [roots[i][0], roots[i][1] + TOT], 0, reachOut);
     const held3 = armed(wanted(toolSide), wanted(other)), limbs = [0, 1].map(i => limbOf(held3[armKey(i)], roots[i])), paths = limbs.map(l => l.path), hL = limbs[0].hand, hR = limbs[1].hand, handsAt = [hL, hR], th = handsAt[toolSide];
     space.arms = { R: held3.R, L: held3.L, aim: held3.aim, second: held3.second, from: held3.from };
     if (shaped && bowing && face === 'f') for (const l of limbs) for (const seg of ['upper', 'fore']) l.cams[seg] = Math.max(l.cams[seg], D.torso + SPACE.held);
