@@ -1,0 +1,30 @@
+body.dbase.motion { background: var(--m-bg); }
+.motion #mock nav { margin-left: auto; }
+.motion #mock #clock { min-width: 64px; }
+.motion #mock #cost { color: var(--m-dim); font-variant-numeric: tabular-nums; }
+.motion #mock #pin.on { background: var(--m-hot); border-color: var(--m-hot); color: var(--m-on); }
+
+.motion #sheet { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 12px 16px 200px; color: var(--m-ink); font: 12px/16px system-ui, sans-serif; letter-spacing: normal; }
+#sheet h2 { margin: 18px 0 8px; font: 650 13px/16px system-ui, sans-serif; letter-spacing: .04em; text-transform: uppercase; color: var(--m-dim); }
+#sheet .cells { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+#sheet figure { margin: 0; padding: 0; cursor: pointer; }
+#sheet figure canvas { border: 1px solid var(--m-line); }
+#sheet figure.sel canvas, #sheet figure:focus-visible canvas { outline: 2px solid var(--m-hot); outline-offset: 1px; }
+#sheet figcaption { margin-top: 3px; color: var(--m-text); max-width: 100%; }
+#strip { margin: 0 -16px; padding: 10px 16px 12px; border-bottom: 1px solid var(--m-line); background: var(--m-field); }
+#strip header { display: flex; align-items: baseline; gap: 12px; }
+#strip h2 { margin: 0 0 6px; color: var(--m-ink); }
+#strip p { margin: 0; color: var(--m-dim); font-variant-numeric: tabular-nums; }
+#strip .frames { display: flex; flex-wrap: wrap; gap: 4px; }
+#strip figure { cursor: default; flex: none; }
+#strip figcaption { color: var(--m-dim); font-variant-numeric: tabular-nums; text-align: center; }
+@media (max-width: 600px) { .motion #sheet { padding: 8px 12px 260px; } #strip { margin: 0 -12px; padding: 8px 12px; } }
+#sheet .loadbar { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; color: var(--m-dim); }
+#sheet .loadbar select { font: inherit; color: var(--m-ink); background: var(--m-field); border: 1px solid var(--m-edge); padding: 2px 4px; max-width: min(340px, 70vw); }
+#sheet .loadbar select:focus-visible { outline: 1px solid var(--m-hot); }
+#sheet .loadbar output { color: var(--m-ink); }
+#sheet figure.off { opacity: .5; }
+#sheet .bulks h3 { margin: 16px 0 4px; font: 650 12px/16px system-ui, sans-serif; text-transform: none; letter-spacing: normal; color: var(--m-ink); }
+#sheet .bulks h3 small { margin-left: 10px; font-weight: 400; text-transform: none; color: var(--m-dim); }
+#sheet .bulks .counts { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0 0 8px; color: var(--m-dim); }
+#sheet .bulks .counts b { margin-right: 4px; color: var(--m-text); font-variant-numeric: tabular-nums; }
