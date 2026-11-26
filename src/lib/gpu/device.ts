@@ -16,8 +16,7 @@ export type TextureFormat =
   | 'r8uint'
   | 'rgba16uint'
   | 'rgba16float'
-  | 'rgba32float'
-  | 'legacy-rgba';
+  | 'rgba32float';
 
 export type FilterMode = 'nearest' | 'linear';
 export type AddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';

@@ -108,7 +108,7 @@ function uploadAtlas(gpu: GpuDevice, image: TexImageSource): GpuTexture {
     addressModeU: 'clamp-to-edge',
     addressModeV: 'clamp-to-edge'
   });
-  gpu.writeTextureImage('legacy-rgba', image);
+  gpu.writeTextureImage('rgba8unorm', image);
   gpu.bindTexture(null);
   return texture;
 }
@@ -117,7 +117,7 @@ function unlitTexture(gpu: GpuDevice): GpuTexture {
   const texture = gpu.createTexture();
   if (!texture) throw new Error('could not create the painted light texture');
   gpu.bindTexture(texture);
-  gpu.writeTexture({ format: 'legacy-rgba', width: 1, height: 1 }, new Uint8Array([0, 0, 0, 255]));
+  gpu.writeTexture({ format: 'rgba8unorm', width: 1, height: 1 }, new Uint8Array([0, 0, 0, 255]));
   gpu.setSampler({ minFilter: 'nearest', magFilter: 'nearest' });
   gpu.bindTexture(null);
   return texture;

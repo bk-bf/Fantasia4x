@@ -67,7 +67,7 @@ export class TextureManager {
         addressModeV: wrapMode
       });
 
-      const format: TextureFormat = 'legacy-rgba';
+      const format: TextureFormat = 'rgba8unorm';
 
       const textureData = this.convertImageDataToRGBA(atlas.texture);
 
