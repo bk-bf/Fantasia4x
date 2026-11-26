@@ -111,7 +111,7 @@ function rigHat(s, o, X, hTop, face, skin, tunic, hd, hh, drape = 2) {
 const WRAP = [P.cloth[2], P.cloth[1]];
 const rimOf = (was, c) => !!(was && c) && c[0] === was[0] * .6 && c[1] === was[1] * .6;
 
-const TURN_MOST = 1.1, REACH = { hip: 3, front: 6 }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3 }, CLEAR = { ground: 4, shins: 3 }, BEHIND_HEAD = ['game', 'drape'];
+const TURN_MOST = 1.1, REACH = { hip: 3, front: 6 }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3 }, CLEAR = { ground: 4, shins: 3, hop: 3 }, BEHIND_HEAD = ['game', 'drape'];
 function rigPawn(o, p) {
   p = p || {};
   let s = new Spr(RG.W, RG.H, RG.CX, RG.BASE);
@@ -353,7 +353,8 @@ function rigPawn(o, p) {
       for (const i of [0, 1]) if (grasps[i]) targets[i] = between(targets[i] || [0, TOT], [grasps[i][0] - roots[i][0], grasps[i][1] - roots[i][1]], k);
     }
     if (f.tail) part('tail', D.tail, () => { for (let k = 0; k < 9; k++) s.rect(cx + hw + aw + k, legTop + 1 + rnd(Math.sin(k * .5 + (p.tail || 0)) * 2) + (k >> 2), 1, k < 5 ? 3 : 2, skin[k < 5 ? sn - 2 : sn - 3]); }, { anchor: [cx, legTop] });
-    part('legs', D.legs, () => { legF(-1, fl, !back && o.oneLeg); legF(1, fr, back && o.oneLeg); }, { anchor: [cx, legTop] });
+    const hopped = q => o.oneLeg ? [q[0], Math.min(q[1], CLEAR.hop)] : q;
+    part('legs', D.legs, () => { legF(-1, hopped(fl), !back && o.oneLeg); legF(1, hopped(fr), back && o.oneLeg); }, { anchor: [cx, legTop] });
     part('torso', D.torso, torso, { anchor: [sx0, tTop] });
     part('pad', D.pad, () => { pad(cx - hw - aw + rnd(lean), true); pad(cx + hw - 1 + rnd(lean), false); }, { anchor: [sx0, tTop] });
     if (o.cape) part('cape', D.cape, () => { for (let j = 0; j < capeLen; j++) {

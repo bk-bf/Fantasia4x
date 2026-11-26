@@ -191,7 +191,7 @@ const PAWN_ANIMS = {
   } },
   talk: { label: 'Talking', group: 'Social', dur: 2.6, n: 8, pose(u, c) {
     const m = Math.floor(u * 10) & 1;
-    return keyed(u, { face: 's', item: null, hr: [3, 8], hl: HANG, hd: [0, 0], mouth: m, lean: .5 }, [[0, {}], [.18, { hr: [7, 1] }], [.34, { hr: [6, 3], hd: [0, 1] }], [.5, { hr: [7, 0], hl: [5, 3] }], [.72, { hr: [4, 7], hd: [0, 0] }], [1, {}]]);
+    return keyed(u, { face: 's', item: null, hr: [3, 8], hl: HANG, hd: [0, 0], mouth: m, lean: .5 }, [[0, {}], [.18, { hr: [7, 1] }], [.34, { hr: [6, 3], hd: [0, 1] }], [.5, { hr: [7, 1.5], hl: [5, 3] }], [.72, { hr: [4, 7], hd: [0, 0] }], [1, {}]]);
   } },
   listen: { label: 'Listening', group: 'Social', dur: 2.6, n: 8, pose(u, c) {
     return keyed(u, { face: 's', item: null, hr: [3, 8.5], hl: [2, 9], hd: [0, 0], blink: 0, br: 0 }, [[0, {}], [.3, { hd: [0, 1] }], [.4, { hd: [0, 0], br: 1 }], [.6, { hd: [0, 1], blink: c.lvl > 2 ? 1 : 0 }], [.7, { hd: [0, 0] }], [1, {}]]);

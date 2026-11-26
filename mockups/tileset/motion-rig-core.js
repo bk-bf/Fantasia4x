@@ -197,7 +197,7 @@ function aimSeen(aim, hand, tip, face) {
   }
   return v;
 }
-const FOOT_LINE = { band: -.5, step: .03, turns: 40 };
+const FOOT_LINE = { band: -1.5, step: .03, turns: 67 };
 function toolSeen(view, aim) {
   const v = view.at(aim);
   return { ang: Math.atan2(v[0], -v[1]) / D2R, fore: Math.max(SPACE.least, Math.hypot(v[0], v[1])) };
