@@ -23,8 +23,8 @@ function tapers(px, w) {
   const along = b[2] - b[0] >= b[3] - b[1], long = along ? b[2] - b[0] + 1 : b[3] - b[1] + 1, widths = new Map();
   if (long < TAPER.long) return false;
   for (const i of px) { const k = along ? i % w : (i / w) | 0; widths.set(k, (widths.get(k) || 0) + 1); }
-  const all = [...widths.values()];
-  return Math.max(...all) >= TAPER.wide && Math.min(...all) <= TAPER.thin;
+  const inner = [...widths.entries()].sort((a, b) => a[0] - b[0]).slice(1, -1).map(e => e[1]);
+  return inner.length > 1 && Math.max(...inner) >= TAPER.wide && Math.min(...inner) <= TAPER.thin;
 }
 const touches = (a, b, w) => { const near = new Set(); for (const i of a) for (let dy = -TOUCH; dy <= TOUCH; dy++) for (let dx = -TOUCH; dx <= TOUCH; dx++) near.add(i + dy * w + dx); return b.some(i => near.has(i)); };
 
@@ -66,7 +66,7 @@ export function pictured(now, face, ink) {
   }
   if (sp && !now.pose.sit && !now.pose.kneel) {
     const legRows = new Set();
-    for (let i = 0; i < shown.length; i++) { if (!shown[i]) continue; let owner = null; for (let k = stack.length - 1; k >= 0 && !owner; k--) if (stack[k].spr.c[i]) owner = stack[k]; if (owner && LEG_LAYERS.includes(owner.name)) legRows.add((i / w) | 0); }
+    for (const l of stack) if (LEG_LAYERS.includes(l.name)) for (const i of pixels(l.spr)) legRows.add((i / w) | 0);
     const full = sp.groundRow - sp.hipRow + 1;
     if (legRows.size && legRows.size < LEGS * full) { counts.y++; said.push('legs ' + legRows.size + ' rows of ' + full); }
   }
