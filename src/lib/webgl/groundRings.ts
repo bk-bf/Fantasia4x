@@ -49,7 +49,7 @@ export class GroundRings {
   private count = 0;
 
   static create(gpu: GpuDevice, shaders: ShaderManager): GroundRings | null {
-    const frame = new PassBindings(gpu, PROGRAM, RING_FRAME);
+    const frame = new PassBindings(gpu, PROGRAM, [RING_FRAME]);
     const draws = new DrawSlices(gpu, PROGRAM, RING_DRAW);
     const made = shaders.createPipeline(
       PROGRAM,

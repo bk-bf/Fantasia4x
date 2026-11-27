@@ -217,10 +217,15 @@ export class FallingLeaves {
   private textures: LeafTextures | null = null;
 
   static create(gpu: GpuDevice, shaders: ShaderManager): FallingLeaves | null {
-    const bindings = new PassBindings(gpu, PROGRAM, LEAF_FRAME, [
-      { name: 'u_paintAtlas', sampleType: 'unfilterable-float' },
-      { name: 'u_lightTexture', sampleType: 'unfilterable-float' }
-    ]);
+    const bindings = new PassBindings(
+      gpu,
+      PROGRAM,
+      [LEAF_FRAME],
+      [
+        { name: 'u_paintAtlas', sampleType: 'unfilterable-float' },
+        { name: 'u_lightTexture', sampleType: 'unfilterable-float' }
+      ]
+    );
     const made = shaders.createPipeline(
       PROGRAM,
       canvasPipeline(gpu, {

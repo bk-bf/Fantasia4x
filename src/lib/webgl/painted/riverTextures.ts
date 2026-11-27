@@ -1,10 +1,7 @@
 import { FLOW_RES, riverField, type RiverInput } from './riverFlow.js';
-import type { GpuDevice } from '../../gpu/device.js';
+import type { GpuDevice, GpuTexture } from '../../gpu/device.js';
 import { SizedTexture } from '../sizedTexture.js';
-import { samplersOf } from '../samplers.js';
 
-export const FLOW_UNIT = 14;
-export const STREAM_UNIT = 15;
 const STILL_FLOW = Uint8Array.of(128, 128, 0, 0);
 const FNV_OFFSET = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
@@ -36,17 +33,14 @@ export function riverKey(input: RiverInput, active: Uint8Array | null): number {
 }
 
 export class RiverTextures {
-  private readonly gpu: GpuDevice;
   private readonly flowTex: SizedTexture;
   private readonly streamTex: SizedTexture;
   private key: number | null = null;
   private active: Uint8Array | null = null;
 
   constructor(gpu: GpuDevice) {
-    this.gpu = gpu;
     this.flowTex = new SizedTexture(gpu, 'rgba8unorm');
     this.streamTex = new SizedTexture(gpu, 'rgba32float');
-    gpu.bindSampler(FLOW_UNIT, samplersOf(gpu).linear);
     this.clear();
   }
 
@@ -78,12 +72,12 @@ export class RiverTextures {
     this.upload(field.flow, input.w * FLOW_RES, input.h * FLOW_RES, field.stream, input.w, input.h);
   }
 
-  bind(): void {
-    const gpu = this.gpu;
-    gpu.setTextureSlot(FLOW_UNIT);
-    gpu.bindTexture(this.flowTex.texture);
-    gpu.setTextureSlot(STREAM_UNIT);
-    gpu.bindTexture(this.streamTex.texture);
+  get flow(): GpuTexture {
+    return this.flowTex.texture;
+  }
+
+  get stream(): GpuTexture {
+    return this.streamTex.texture;
   }
 
   dispose(): void {

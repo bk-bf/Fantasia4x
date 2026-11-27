@@ -98,15 +98,16 @@ describe('tree ground patches', () => {
 
   it('rebuilds and uploads nothing on a frame where the tree grids did not change', () => {
     let uploads = 0;
+    let allocated = false;
     const gpu = {
       createTexture: () => ({}),
       destroyTexture: () => {},
-      setTextureSlot: () => {},
-      bindTexture: () => {},
-      setSampler: () => {},
-      setUnpackAlignment: () => {},
-      writeTexture: () => {},
-      writeSubTexture: () => uploads++
+      queue: {
+        writeTexture: () => {
+          if (allocated) uploads++;
+          allocated = true;
+        }
+      }
     } as unknown as GpuDevice;
     const layer = new TreeGroundLayer(gpu, look, ART);
     const trees = new GameGrid();
@@ -144,12 +145,7 @@ describe('tree ground patches', () => {
     const gpu = {
       createTexture: () => ({}),
       destroyTexture: () => {},
-      setTextureSlot: () => {},
-      bindTexture: () => {},
-      setSampler: () => {},
-      setUnpackAlignment: () => {},
-      writeTexture: () => {},
-      writeSubTexture: () => {}
+      queue: { writeTexture: () => {} }
     } as unknown as GpuDevice;
     const layer = new TreeGroundLayer(gpu, look, ART);
     const oak = tileset.trees.get('oak_tree')!.mature!.summer[0].cells[0];

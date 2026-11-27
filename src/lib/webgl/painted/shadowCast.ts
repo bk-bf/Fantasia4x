@@ -73,9 +73,12 @@ export class PaintedShadowCast {
   private unwatch: (() => void)[] = [];
 
   static create(gpu: GpuDevice, shaders: ShaderManager): PaintedShadowCast | null {
-    const bindings = new PassBindings(gpu, PROGRAM, CAST, [
-      { name: 'u_heights', sampleType: 'unfilterable-float' }
-    ]);
+    const bindings = new PassBindings(
+      gpu,
+      PROGRAM,
+      [CAST],
+      [{ name: 'u_heights', sampleType: 'unfilterable-float' }]
+    );
     const made = shaders.createPipeline(
       PROGRAM,
       canvasPipeline(gpu, {

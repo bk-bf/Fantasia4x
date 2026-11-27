@@ -65,77 +65,93 @@ export interface GroupBindings {
   glsl(sources: GlslSources): GlslSources;
 }
 
+interface Block {
+  block: UniformBlock;
+  buffer: GpuBuffer;
+}
+
 export class PassBindings implements GroupBindings {
   readonly layout: GpuBindGroupLayout;
-  readonly block: UniformBlock | null;
-  private readonly buffer: GpuBuffer | null;
+  private readonly blocks: Block[];
+  private readonly owner = new Map<string, UniformBlock>();
   private bound: readonly GpuTexture[] = [];
   private made: GpuBindGroup | null = null;
 
   constructor(
     private readonly gpu: GpuDevice,
     private readonly label: string,
-    uniforms: UniformLayout | null,
+    uniforms: readonly UniformLayout[],
     private readonly textures: readonly PassTexture[] = []
   ) {
-    const entries: BindGroupLayoutEntry[] = [];
-    if (uniforms)
-      entries.push({ binding: 0, visibility: STAGES, buffer: { minBindingSize: uniforms.size } });
+    const entries: BindGroupLayoutEntry[] = uniforms.map((u, binding) => ({
+      binding,
+      visibility: STAGES,
+      buffer: { minBindingSize: u.size }
+    }));
     textures.forEach((t, i) =>
-      entries.push({ binding: i + 1, visibility: STAGES, texture: { sampleType: t.sampleType } })
+      entries.push({
+        binding: uniforms.length + i,
+        visibility: STAGES,
+        texture: { sampleType: t.sampleType }
+      })
     );
     this.layout = gpu.createBindGroupLayout({ label, entries });
-    this.block = uniforms ? new UniformBlock(uniforms) : null;
-    this.buffer = uniforms
-      ? gpu.createBuffer({
-          label,
-          size: uniforms.size,
-          usage: BufferUsage.UNIFORM | BufferUsage.COPY_DST
-        })
-      : null;
+    this.blocks = uniforms.map((u) => ({
+      block: new UniformBlock(u),
+      buffer: gpu.createBuffer({
+        label: `${label}.${u.name}`,
+        size: u.size,
+        usage: BufferUsage.UNIFORM | BufferUsage.COPY_DST
+      })
+    }));
+    for (const { block } of this.blocks)
+      for (const m of block.layout.members) {
+        if (this.owner.has(m.name)) throw new Error(`${label}: ${m.name} is in two blocks`);
+        this.owner.set(m.name, block);
+      }
   }
 
   glsl(sources: GlslSources): GlslSources {
-    const withBlock = this.block
-      ? blockSources(sources, this.block.layout, [PASS_GROUP, 0])
-      : sources;
+    const withBlocks = this.blocks.reduce(
+      (s, { block }, binding) => blockSources(s, block.layout, [PASS_GROUP, binding]),
+      sources
+    );
+    const first = this.blocks.length;
     return {
-      ...withBlock,
+      ...withBlocks,
       textures: {
         ...sources.textures,
-        ...Object.fromEntries(this.textures.map((t, i) => [t.name, textureBinding(t, i + 1)]))
+        ...Object.fromEntries(this.textures.map((t, i) => [t.name, textureBinding(t, first + i)]))
       }
     };
   }
 
   set(name: string, value: number | ArrayLike<number>): void {
-    if (!this.block) throw new Error(`${this.label} has no uniform block`);
-    this.block.set(name, value);
+    const block = this.owner.get(name);
+    if (!block) throw new Error(`${this.label} has no uniform ${name}`);
+    block.set(name, value);
   }
 
-  upload(size?: number): void {
-    if (this.block && this.buffer) this.block.upload(this.gpu.queue, this.buffer, 0, size);
+  upload(prefix: Readonly<Record<string, number>> = {}): void {
+    for (const { block, buffer } of this.blocks)
+      block.upload(this.gpu.queue, buffer, 0, prefix[block.layout.name]);
   }
 
   group(textures: readonly GpuTexture[] = []): GpuBindGroup {
     if (textures.length !== this.textures.length)
       throw new Error(`${this.label}: ${textures.length} textures for ${this.textures.length}`);
     if (this.made && textures.every((t, i) => t === this.bound[i])) return this.made;
-    const entries: BindGroupDescriptor['entries'] = textures.map((t, i) => ({
-      binding: i + 1,
-      resource: t
+    const entries: BindGroupDescriptor['entries'] = this.blocks.map(({ block, buffer }, i) => ({
+      binding: i,
+      resource: { buffer, size: block.layout.size }
     }));
-    if (this.block && this.buffer)
-      entries.unshift({
-        binding: 0,
-        resource: { buffer: this.buffer, size: this.block.layout.size }
-      });
+    textures.forEach((t, i) => entries.push({ binding: this.blocks.length + i, resource: t }));
     this.made = this.gpu.createBindGroup({ label: this.label, layout: this.layout, entries });
     this.bound = [...textures];
     return this.made;
   }
 
   destroy(): void {
-    this.gpu.destroyBuffer(this.buffer);
+    for (const { buffer } of this.blocks) this.gpu.destroyBuffer(buffer);
   }
 }
