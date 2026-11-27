@@ -8,7 +8,7 @@ import {
   type VertexBufferLayout
 } from '../gpu/device.js';
 import type { FramedPipeline } from './frameBindings.js';
-import type { ShaderCompilationResult, ShaderManager } from './shaders.js';
+import type { GroupBindings } from './passBindings.js';
 
 export const GLYPH_VERTEX_FLOATS = 24;
 export const ROW_VERTEX_FLOATS = 32;
@@ -73,14 +73,20 @@ const STATES: Record<TilePipeline, [BlendState | undefined, CompareFunction, boo
 export function tilePipelines(
   glsl: Omit<GlslSources, 'attributes'>,
   format: TextureFormat,
-  rowDepth: boolean
+  rowDepth: boolean,
+  bindings: readonly GroupBindings[] = []
 ): [string, FramedPipeline][] {
+  const sources = bindings.reduce<GlslSources>((s, b) => b.glsl(s), {
+    ...glsl,
+    attributes: TILE_ATTRIBUTES
+  });
   return (Object.keys(STATES) as TilePipeline[]).map((p) => {
     const [blend, depthCompare, depthWriteEnabled] = STATES[p];
     return [
       TILE_PIPELINE[p],
       {
-        glsl: { ...glsl, attributes: TILE_ATTRIBUTES },
+        glsl: sources,
+        layout: bindings.map((b) => b.layout),
         vertex: { buffers: [tileVertexLayout(rowDepth)] },
         primitive: { topology: 'triangle-list' },
         fragment: { targets: [{ format, blend }] },
@@ -90,17 +96,4 @@ export function tilePipelines(
       }
     ];
   });
-}
-
-export function addTilePipelines(
-  shaders: ShaderManager,
-  glsl: Omit<GlslSources, 'attributes'>,
-  format: TextureFormat,
-  rowDepth: boolean
-): ShaderCompilationResult {
-  for (const [name, desc] of tilePipelines(glsl, format, rowDepth)) {
-    const made = shaders.createPipeline(name, desc);
-    if (!made.success) return made;
-  }
-  return { success: true };
 }

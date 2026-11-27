@@ -1,9 +1,5 @@
 flat in highp vec4 v_tree;
 
-uniform highp vec4 u_wind;
-uniform highp vec4 u_treeWind;
-uniform highp vec4 u_treeTime;
-uniform highp vec3 u_treeVeil;
 
 const int TREE_CURTAIN = 2;
 const int TREE_HEART = 4;

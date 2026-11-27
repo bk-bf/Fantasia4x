@@ -16,20 +16,6 @@ in float a_veinNear;
 in float a_sway;
 in float a_tree;
 
-// Uniforms (constant for all vertices in a draw call)
-uniform float u_rowDepth;
-uniform vec4 u_wind;
-uniform vec2 u_windDir;
-uniform vec4 u_swayShape;
-uniform vec4 u_gustShape;
-uniform vec4 u_gustNoise;
-uniform vec4 u_windPhase;
-uniform float u_basePerArt;
-uniform float u_swayReach;
-uniform mediump vec2 u_paintTexelSize;
-uniform highp vec4 u_treeTime;
-uniform vec3 u_treeVeil;
-
 // Varying outputs (passed to fragment shader)
 out vec2 v_texCoord;     // Pass texture coordinates to fragment
 out vec3 v_foreground;   // Pass foreground color to fragment

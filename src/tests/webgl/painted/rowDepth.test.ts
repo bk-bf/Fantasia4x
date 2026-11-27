@@ -13,6 +13,7 @@ import { buildTileset, parseManifest, spriteAt } from '$lib/webgl/painted/manife
 import { SHADOW_DEPTH } from '$lib/webgl/painted/shadowCast';
 import { WindClock } from '$lib/webgl/painted/wind';
 import { WebGLStateManager } from '$lib/webgl/webgl-state';
+import type { TileSlice } from '$lib/webgl/tileShading';
 
 const GLYPH_FLOATS = 24;
 const ROW_FLOATS = 32;
@@ -277,21 +278,21 @@ function layeredCore(rowDepth: boolean) {
       getDevice: () => new Webgl2Device(gl),
       canvasPass: WebGLStateManager.prototype.canvasPass
     },
-    shaderManager: {
-      pipeline: () => ({}),
-      setUniform: (_p: string, name: string, value: unknown) => uniforms.set(name, value)
+    tile: {
+      set: (name: string, value: unknown) => uniforms.set(name, value),
+      setTextures: () => {},
+      upload: () => {}
     },
     gridRenderer: {
       chunksRebuiltLastRender: 0,
-      renderGrid: (_pass: unknown, grid: GameGrid, opts: GridRenderOptions) => {
-        const layer = names.get(grid)!;
-        draws.push({
-          layer: uniforms.get('u_bgOnly') === 1 ? `${layer} wash` : layer,
-          pipeline: opts.pipeline ?? 'terrain',
-          shadows: opts.rowPasses === true
-        });
-        return { tilesRendered: 0 };
-      }
+      getStats: () => ({ tilesRendered: 0 }),
+      prepareGrid: (grid: GameGrid, opts: GridRenderOptions) => ({
+        layer: opts.slice === 'wash' ? `${names.get(grid)} wash` : names.get(grid),
+        pipeline: opts.pipeline ?? 'terrain',
+        shadows: opts.rowPasses === true
+      }),
+      encodeGrid: (_pass: unknown, draw: { layer: string; pipeline: string; shadows: boolean }) =>
+        draws.push(draw)
     }
   });
   core['render']();
@@ -337,7 +338,6 @@ describe('the layers the depth test orders', () => {
     expect(draws.every((d) => !d.shadows)).toBe(true);
     expect(uniforms.has('u_rowDepth')).toBe(false);
     expect(uniforms.has('u_alphaCut')).toBe(false);
-    expect(uniforms.has('u_shadowPass')).toBe(false);
     expect(calls.some((c) => c[0] === 'depthFunc' || c[0] === 'depthMask')).toBe(false);
   });
 });
@@ -354,7 +354,7 @@ interface Pass {
 
 function passesOf(chunked: boolean, rowPasses: boolean): Pass[] {
   const passes: Pass[] = [];
-  const uniforms: Record<string, number> = { u_alphaCut: ALPHA_CUT };
+  let slice: TileSlice = 'terrain';
   let depthFunc = LEQUAL;
   let blend = 'SRC_ALPHA,ONE_MINUS_SRC_ALPHA';
   const { gl } = recordingGl();
@@ -365,15 +365,18 @@ function passesOf(chunked: boolean, rowPasses: boolean): Pass[] {
       if (key === 'blendFuncSeparate')
         return (a: number, b: number) => (blend = `${names.get(a)},${names.get(b)}`);
       if (key === 'drawArrays')
-        return () => passes.push({ shadow: uniforms.u_shadowPass === 1, depthFunc, blend });
+        return () => passes.push({ shadow: slice === 'shadow', depthFunc, blend });
       return (target as unknown as Record<string | symbol, unknown>)[key];
     }
   });
   const gpu = new Webgl2Device(recorded);
-  const shaders = Object.assign(tileShaders(gpu, true), {
-    setUniform: (_p: string, name: string, value: number) => (uniforms[name] = value)
-  });
-  const r = new GridRenderer(gpu, shaders, atlas, false, true);
+  const tile = tileShaders(gpu, true);
+  const use = tile.use.bind(tile);
+  tile.use = (pass, pipeline, next) => {
+    slice = next;
+    return use(pass, pipeline, next);
+  };
+  const r = new GridRenderer(gpu, tile, atlas, false, true);
   const grid = new GameGrid();
   grid.setTile(4, 6, tiles[2]);
   r.renderGrid(passOf(r), grid, {
@@ -383,7 +386,7 @@ function passesOf(chunked: boolean, rowPasses: boolean): Pass[] {
     renderAllTiles: true,
     ...(chunked ? { cacheVersion: 1, chunkLayer: 'resource' as const } : {})
   });
-  expect(uniforms.u_shadowPass ?? 0).toBe(0);
+  expect(slice).not.toBe('shadow');
   expect(depthFunc).toBe(LEQUAL);
   expect(blend).toBe('SRC_ALPHA,ONE_MINUS_SRC_ALPHA');
   return passes;

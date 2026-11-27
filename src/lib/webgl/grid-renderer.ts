@@ -1,17 +1,12 @@
 import type { GameGrid } from './game-grid.js';
 import { withOverlays, type TileData, type Viewport } from './tile-types.js';
-import type { ShaderManager } from './shaders.js';
+import type { TileShading, TileSlice } from './tileShading.js';
 import type { FontAtlas } from './types.js';
 import { tileQuad } from './drawnSprites.js';
 import { tuftTiles } from './painted/tufts.js';
 import { VertexArena } from './vertexArena.js';
 import { BufferUsage, type GpuBuffer, type GpuDevice, type GpuRenderPass } from '../gpu/device.js';
-import {
-  GLYPH_VERTEX_FLOATS,
-  ROW_VERTEX_FLOATS,
-  TILE_PIPELINE,
-  type TilePipeline
-} from './tilePipelines.js';
+import { GLYPH_VERTEX_FLOATS, ROW_VERTEX_FLOATS, type TilePipeline } from './tilePipelines.js';
 
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
 const ZERO_LIGHT: [number, number, number] = [0, 0, 0];
@@ -38,6 +33,20 @@ export interface GridRenderOptions {
   pointLightActive?: boolean;
   rowPasses?: boolean;
   pipeline?: TilePipeline;
+  slice?: TileSlice;
+}
+
+interface DrawPart {
+  buffer: GpuBuffer;
+  count: number;
+  first: number;
+}
+
+export interface GridDraw {
+  pipeline: TilePipeline;
+  slice: TileSlice;
+  rowPasses: boolean;
+  parts: DrawPart[];
 }
 
 export interface GridRenderStats {
@@ -64,11 +73,10 @@ interface WarmState {
 
 export class GridRenderer {
   private gpu: GpuDevice;
-  private shaderManager: ShaderManager;
+  private tile: TileShading;
   private fontAtlas: FontAtlas;
   private debug: boolean;
   private vertexFloats: number;
-  private drawnChunks: TerrainChunk[] = [];
 
   private arena: VertexArena | null = null;
   private currentVertexCount: number = 0;
@@ -99,13 +107,13 @@ export class GridRenderer {
 
   constructor(
     gpu: GpuDevice,
-    shaderManager: ShaderManager,
+    tile: TileShading,
     fontAtlas: FontAtlas,
     debug = false,
     rowDepth = false
   ) {
     this.gpu = gpu;
-    this.shaderManager = shaderManager;
+    this.tile = tile;
     this.fontAtlas = fontAtlas;
     this.debug = debug;
     this.vertexFloats = rowDepth ? ROW_VERTEX_FLOATS : GLYPH_VERTEX_FLOATS;
@@ -118,7 +126,40 @@ export class GridRenderer {
   }
 
   renderGrid(pass: GpuRenderPass, grid: GameGrid, options: GridRenderOptions): GridRenderStats {
+    const draw = this.prepareGrid(grid, options);
+    this.encodeGrid(pass, draw);
+    return { ...this.stats };
+  }
+
+  encodeGrid(pass: GpuRenderPass, draw: GridDraw): void {
+    if (draw.parts.length === 0) return;
+    if (!this.tile.use(pass, draw.pipeline, draw.slice)) {
+      console.error('❌ Failed to use tile renderer shader');
+      return;
+    }
+    this.drawParts(pass, draw.parts);
+    if (this.debug) this.gpu.checkError('grid batch rendering');
+    if (!draw.rowPasses) return;
+    this.tile.use(pass, 'shadow', 'shadow');
+    this.drawParts(pass, draw.parts);
+    this.tile.use(pass, draw.pipeline, draw.slice);
+  }
+
+  private drawParts(pass: GpuRenderPass, parts: readonly DrawPart[]): void {
+    for (const part of parts) {
+      pass.setVertexBuffer(0, part.buffer);
+      pass.draw(part.count, undefined, part.first);
+    }
+  }
+
+  prepareGrid(grid: GameGrid, options: GridRenderOptions): GridDraw {
     const startTime = performance.now();
+    const draw: GridDraw = {
+      pipeline: options.pipeline ?? 'terrain',
+      slice: options.slice ?? 'terrain',
+      rowPasses: options.rowPasses === true,
+      parts: []
+    };
 
     if (options.cacheVersion !== undefined) {
       const chunks =
@@ -131,14 +172,14 @@ export class GridRenderer {
               : options.chunkLayer === 'decor'
                 ? this.decorChunks
                 : this.terrainChunks;
-      const drawnTiles = this.renderTerrainChunked(pass, grid, options, chunks);
+      const drawnTiles = this.prepareChunks(grid, options, chunks, draw.parts);
       this.stats = {
         tilesRendered: drawnTiles,
         tilesCulled: 0,
         batchCount: drawnTiles > 0 ? 1 : 0,
         renderTime: performance.now() - startTime
       };
-      return { ...this.stats };
+      return draw;
     }
 
     const viewport: Viewport = {
@@ -154,7 +195,7 @@ export class GridRenderer {
 
     if (visibleTiles.length > 0) {
       const vertexData = this.generateBatchVertexData(visibleTiles, options);
-      this.uploadAndDraw(pass, vertexData, options.rowPasses === true, options.pipeline);
+      this.upload(vertexData, draw.parts);
     } else {
       this.currentVertexCount = 0;
     }
@@ -167,7 +208,7 @@ export class GridRenderer {
       renderTime
     };
 
-    return { ...this.stats };
+    return draw;
   }
 
   markTerrainChunksDirty(tiles: ReadonlyArray<{ x: number; y: number }>): void {
@@ -197,11 +238,11 @@ export class GridRenderer {
     }
   }
 
-  private renderTerrainChunked(
-    pass: GpuRenderPass,
+  private prepareChunks(
     grid: GameGrid,
     options: GridRenderOptions,
-    chunks: Map<string, TerrainChunk> = this.terrainChunks
+    chunks: Map<string, TerrainChunk>,
+    parts: DrawPart[]
   ): number {
     const CS = GridRenderer.CHUNK_SIZE;
     const m = GridRenderer.CHUNK_MARGIN;
@@ -216,12 +257,6 @@ export class GridRenderer {
     const maxCX = Math.floor((minTX + options.viewportWidth) / CS) + m;
     const maxCY = Math.floor((minTY + options.viewportHeight) / CS) + m;
 
-    const pipeline = options.pipeline ?? 'terrain';
-    if (!this.use(pass, pipeline)) {
-      console.error('❌ Failed to use tile renderer shader');
-      return 0;
-    }
-
     const dirtyMap =
       options.chunkLayer === 'snow'
         ? this.snowChunkDirty
@@ -230,11 +265,10 @@ export class GridRenderer {
           : this.chunkDirty;
 
     let drawnVerts = 0;
-    this.drawnChunks.length = 0;
     for (let cy = minCY; cy <= maxCY; cy++) {
       for (let cx = minCX; cx <= maxCX; cx++) {
-        drawnVerts += this.drawTerrainChunk(
-          pass,
+        drawnVerts += this.prepareChunk(
+          parts,
           grid,
           options,
           cx,
@@ -247,14 +281,13 @@ export class GridRenderer {
       }
     }
 
-    if (options.rowPasses) this.drawShadows(pass, pipeline, () => this.redrawChunks(pass));
     this.warmOneChunk(grid, options, cacheVersion, lightVersion, chunks, dirtyMap);
     this.currentVertexCount = drawnVerts;
     return drawnVerts / 6;
   }
 
-  private drawTerrainChunk(
-    pass: GpuRenderPass,
+  private prepareChunk(
+    parts: DrawPart[],
     grid: GameGrid,
     options: GridRenderOptions,
     cx: number,
@@ -278,9 +311,7 @@ export class GridRenderer {
       if (!chunk) return 0;
     }
     if (chunk.count > 0 && chunk.vbo) {
-      pass.setVertexBuffer(0, chunk.vbo);
-      pass.draw(chunk.count);
-      this.drawnChunks.push(chunk);
+      parts.push({ buffer: chunk.vbo, count: chunk.count, first: 0 });
       return chunk.count;
     }
     return 0;
@@ -380,60 +411,16 @@ export class GridRenderer {
     }
   }
 
-  private redrawChunks(pass: GpuRenderPass): void {
-    for (const chunk of this.drawnChunks) {
-      if (!chunk.vbo) continue;
-      pass.setVertexBuffer(0, chunk.vbo);
-      pass.draw(chunk.count);
-    }
-  }
-
-  private use(pass: GpuRenderPass, pipeline: TilePipeline): boolean {
-    const made = this.shaderManager.pipeline(TILE_PIPELINE[pipeline]);
-    if (made) pass.setPipeline(made);
-    return made !== null;
-  }
-
-  private drawShadows(pass: GpuRenderPass, back: TilePipeline, draw: () => void): void {
-    this.use(pass, 'shadow');
-    this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 1);
-    draw();
-    this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 0);
-    this.use(pass, back);
-  }
-
-  private uploadAndDraw(
-    pass: GpuRenderPass,
-    vertexData: Float32Array,
-    rowPasses = false,
-    pipeline: TilePipeline = 'terrain'
-  ): void {
+  private upload(vertexData: Float32Array, parts: DrawPart[]): void {
     if (!this.arena) {
       console.error('❌ Grid rendering resources not initialized');
       return;
     }
     if (vertexData.length === 0) return;
-
-    const gpu = this.gpu;
-
     const first = this.arena.push(vertexData);
-
-    if (!this.use(pass, pipeline)) {
-      console.error('❌ Failed to use tile renderer shader');
-      return;
-    }
-
-    pass.setVertexBuffer(0, this.arena.buffer!);
-
-    const vertexCount = vertexData.length / this.vertexFloats;
-    pass.draw(vertexCount, undefined, first);
-    if (rowPasses) this.drawShadows(pass, pipeline, () => pass.draw(vertexCount, undefined, first));
-
-    this.currentVertexCount = vertexCount;
-
-    if (this.debug) {
-      gpu.checkError('grid batch rendering');
-    }
+    const count = vertexData.length / this.vertexFloats;
+    parts.push({ buffer: this.arena.buffer!, count, first });
+    this.currentVertexCount = count;
   }
 
   private generateBatchVertexData(tiles: TileData[], options: GridRenderOptions): Float32Array {
