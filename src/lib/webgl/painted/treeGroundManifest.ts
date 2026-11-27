@@ -4,10 +4,10 @@ export const TREE_GROUND_WINTERS = ['buried', 'well', 'melt', 'ice'] as const;
 export type TreeGroundWinter = (typeof TREE_GROUND_WINTERS)[number];
 export const TREE_GROUND_TINTS = ['wet', 'hex', 'rime', 'remap'] as const;
 export const FLECK_SHAPES = ['leaf', 'needle', 'glint'] as const;
-const PLACES = ['foot', 'rim', 'spread'] as const;
+type Place = 'foot' | 'rim' | 'spread';
 const PROP_SEASONS = ['summer', 'autumn', 'winter'] as const;
 const ROOT_AGES = ['mature', 'elder'] as const;
-const ROOT_SEASONS = ['summer', 'winter'] as const;
+type RootSeason = 'summer' | 'winter';
 const FALLBACK_SOIL = 'g';
 
 type Ramp = string[];
@@ -30,7 +30,7 @@ interface ManifestProp {
   sprites: string[];
   mature: number;
   elder: number;
-  at: (typeof PLACES)[number];
+  at: Place;
   r0: number;
   r1: number;
   thirsty: boolean;
@@ -43,7 +43,7 @@ interface ManifestTreeGroundKind {
   winter: TreeGroundWinter;
   props: Record<TreeSeason, ManifestProp[]>;
   ring?: { sprites: string[]; n: [number, number]; r: [number, number] };
-  roots: Partial<Record<(typeof ROOT_AGES)[number], Record<(typeof ROOT_SEASONS)[number], string[]>>>;
+  roots: Partial<Record<(typeof ROOT_AGES)[number], Record<RootSeason, string[]>>>;
   look: TreeGroundLook;
 }
 
@@ -76,7 +76,7 @@ export interface TreeGroundKind {
   props: Record<TreeSeason, TreeGroundProp[]>;
   ring?: { sprites: PaintedSprite[]; n: [number, number]; r: [number, number] };
   roots: Partial<
-    Record<(typeof ROOT_AGES)[number], Record<(typeof ROOT_SEASONS)[number], PaintedSprite[]>>
+    Record<(typeof ROOT_AGES)[number], Record<RootSeason, PaintedSprite[]>>
   >;
   look: TreeGroundLook;
 }
