@@ -1,0 +1,50 @@
+2026-11-25T01:44:06.9836672Z ##[group]Run node tools/work-pins/gate.mjs --leg tps --base "$BASE"
+2026-11-25T01:44:06.9837233Z [36;1mnode tools/work-pins/gate.mjs --leg tps --base "$BASE"[0m
+2026-11-25T01:44:06.9869281Z shell: /usr/bin/bash -e {0}
+2026-11-25T01:44:06.9869551Z env:
+2026-11-25T01:44:06.9869811Z   BASE: ddf5a6b3a3df4a86d61923d0695c0907e71020b3
+2026-11-25T01:44:06.9870192Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-25T01:44:06.9870532Z   CARGO_HOME: /home/runner/.cargo
+2026-11-25T01:44:06.9870804Z   CARGO_INCREMENTAL: 0
+2026-11-25T01:44:06.9871033Z   CARGO_TERM_COLOR: always
+2026-11-25T01:44:06.9871272Z   CACHE_ON_FAILURE: false
+2026-11-25T01:44:06.9871522Z   PERF_CHANGE_ACCEPTED: false
+2026-11-25T01:44:06.9871786Z   TMPDIR: /home/runner/work/_temp
+2026-11-25T01:44:06.9872094Z   TPS_NOTES: /home/runner/work/_temp/tps-notes.jsonl
+2026-11-25T01:44:06.9872414Z ##[endgroup]
+2026-11-25T01:46:23.3162766Z ## Ticks per second: head is 0.2% faster than base
+2026-11-25T01:46:23.3163258Z 
+2026-11-25T01:46:23.3163588Z `dev-save 60 ticks`, 9 alternating rounds on core 3, ms per run.
+2026-11-25T01:46:23.3163909Z 
+2026-11-25T01:46:23.3164709Z | side | runs (median ms of each) | median ms | ticks per second |
+2026-11-25T01:46:23.3165398Z |---|---|---:|---:|
+2026-11-25T01:46:23.3166189Z | base | 158.5, 155.8, 152.1, 153.0, 152.9, 153.7, 151.9, 154.1, 154.2 | 153.7 | 390 |
+2026-11-25T01:46:23.3166834Z | head | 151.6, 152.6, 155.7, 156.2, 157.3, 157.0, 152.2, 153.4, 153.3 | 153.4 | 391 |
+2026-11-25T01:46:23.3168055Z $ taskset -c 3 pnpm exec vitest bench --run --config tools/bench/tps.config.ts --outputJson /home/runner/work/_temp/work-pins-3PYDZD/tps-floor-0.json tps/large-wilderness.bench
+2026-11-25T01:46:24.2548603Z Already up to date
+2026-11-25T01:47:47.9139134Z ## Absolute budgets, ticks per second: every measure within its limit
+2026-11-25T01:47:47.9139506Z 
+2026-11-25T01:47:47.9139775Z | scenario | phase | measure | runs | median | limit | unit |
+2026-11-25T01:47:47.9140217Z |---|---|---|---|---:|---|---|
+2026-11-25T01:47:47.9140927Z | large-wilderness | running, headless sim | ticks per second | 264, 264, 267, 248, 268 | 264 | floor 240 | ticks per second |
+2026-11-25T01:47:47.9141436Z 
+2026-11-25T01:47:47.9141632Z Limits are in `tools/work-pins/budgets.json`.
+2026-11-25T01:47:48.3226297Z ##[group]Run actions/upload-artifact@v7
+2026-11-25T01:47:48.3226639Z with:
+2026-11-25T01:47:48.3226854Z   name: tps-notes
+2026-11-25T01:47:48.3227125Z   path: /home/runner/work/_temp/tps-notes.jsonl
+2026-11-25T01:47:48.3227464Z   if-no-files-found: ignore
+2026-11-25T01:47:48.3227726Z   compression-level: 6
+2026-11-25T01:47:48.3227972Z   overwrite: false
+2026-11-25T01:47:48.3228206Z   include-hidden-files: false
+2026-11-25T01:47:48.3228459Z   archive: true
+2026-11-25T01:47:48.3228659Z env:
+2026-11-25T01:47:48.3228894Z   BASE: ddf5a6b3a3df4a86d61923d0695c0907e71020b3
+2026-11-25T01:47:48.3229257Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-25T01:47:48.3229599Z   CARGO_HOME: /home/runner/.cargo
+2026-11-25T01:47:48.3229872Z   CARGO_INCREMENTAL: 0
+2026-11-25T01:47:48.3230108Z   CARGO_TERM_COLOR: always
+2026-11-25T01:47:48.3230358Z   CACHE_ON_FAILURE: false
+2026-11-25T01:47:48.3230608Z   PERF_CHANGE_ACCEPTED: false
+2026-11-25T01:47:48.3230874Z ##[endgroup]
+2026-11-25T01:47:49.4176860Z Artifact tps-notes has been successfully uploaded! Final size is 368 bytes. Artifact ID is 14983072852

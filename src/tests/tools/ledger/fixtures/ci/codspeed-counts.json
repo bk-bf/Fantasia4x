@@ -1,0 +1,38 @@
+{
+ "sha": "bec6b24dd0a15c83c8881dd3944b205691b47a2e",
+ "counts": {
+  "tools/bench/jobs.bench.ts::jobs::haul:full-budget": {
+   "Ir": 2836382,
+   "Dr": 846622,
+   "Dw": 407824,
+   "I1mr": 2737,
+   "D1mr": 3709,
+   "D1mw": 1516,
+   "ILmr": 1647,
+   "DLmr": 2923,
+   "DLmw": 1481
+  },
+  "tools/bench/jobs.bench.ts::jobs::haul:crowded": {
+   "Ir": 2215158,
+   "Dr": 632293,
+   "Dw": 243406,
+   "I1mr": 3372,
+   "D1mr": 5301,
+   "D1mw": 2955,
+   "ILmr": 1968,
+   "DLmr": 2660,
+   "DLmw": 2830
+  },
+  "tools/bench/jobs.bench.ts::jobs::haul:colony": {
+   "Ir": 36198,
+   "Dr": 10958,
+   "Dw": 5877,
+   "I1mr": 1593,
+   "D1mr": 686,
+   "D1mw": 116,
+   "ILmr": 1083,
+   "DLmr": 624,
+   "DLmw": 114
+  }
+ }
+}

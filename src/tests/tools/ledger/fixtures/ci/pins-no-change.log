@@ -1,0 +1,37 @@
+2026-11-27T14:21:08.3172295Z ##[group]Run node tools/work-pins/gate.mjs --base "$BASE"
+2026-11-27T14:21:08.3172723Z [36;1mnode tools/work-pins/gate.mjs --base "$BASE"[0m
+2026-11-27T14:21:08.3195682Z shell: /usr/bin/bash -e {0}
+2026-11-27T14:21:08.3196000Z env:
+2026-11-27T14:21:08.3196264Z   BASE: 83ca8f151c3896e5b6a887b22e5e2d08aa717e2e
+2026-11-27T14:21:08.3196818Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-27T14:21:08.3197179Z   CARGO_HOME: /home/runner/.cargo
+2026-11-27T14:21:08.3197448Z   CARGO_INCREMENTAL: 0
+2026-11-27T14:21:08.3197722Z   CARGO_TERM_COLOR: always
+2026-11-27T14:21:08.3197982Z   CACHE_ON_FAILURE: false
+2026-11-27T14:21:08.3198313Z   WORK_PINS_NOTES: /home/runner/work/_temp/work-pins-notes.jsonl
+2026-11-27T14:21:08.3198649Z ##[endgroup]
+2026-11-27T14:21:51.3530157Z ## Work pins: every total within 5%, no change
+2026-11-27T14:21:51.3530506Z 
+2026-11-27T14:21:51.3530703Z ### Creature cost, total and per creature
+2026-11-27T14:21:51.3531057Z 
+2026-11-27T14:21:51.3531714Z - generated-map: base 50 placed, 0 added, 43 alive at the end; head 50 placed, 0 added, 43 alive at the end
+2026-11-27T14:21:51.3532362Z - mobs-200: base 200 placed, 0 added, 186 alive at the end; head 200 placed, 0 added, 186 alive at the end
+2026-11-27T14:21:51.3532974Z - mobs-50: base 50 placed, 0 added, 47 alive at the end; head 50 placed, 0 added, 47 alive at the end
+2026-11-27T14:21:51.3533274Z 
+2026-11-27T14:21:51.3533483Z | scenario | function | file:line | base | head | change |
+2026-11-27T14:21:51.3533826Z |---|---|---|---:|---:|---:|
+2026-11-27T14:21:51.3534235Z | generated-map | `counter mob upserts` |  | 14437 | 14437 | 0 (0.0%) |
+2026-11-27T14:21:51.3534661Z | generated-map | `creature calls` |  | 2542053 | 2542053 | 0 (0.0%) |
+2026-11-27T14:21:51.3535197Z | generated-map | `creature calls per creature` |  | 50841.06 | 50841.06 | 0 (0.0%) |
+2026-11-27T14:21:51.3535715Z | generated-map | `counter mob upserts per creature` |  | 288.74 | 288.74 | 0 (0.0%) |
+2026-11-27T14:21:51.3536270Z | mobs-200 | `counter mob upserts` |  | 40238 | 40238 | 0 (0.0%) |
+2026-11-27T14:21:51.3537004Z | mobs-200 | `creature calls` |  | 12137249 | 12137249 | 0 (0.0%) |
+2026-11-27T14:21:51.3537698Z | mobs-200 | `creature calls per creature` |  | 60686.25 | 60686.25 | 0 (0.0%) |
+2026-11-27T14:21:51.3538373Z | mobs-200 | `counter mob upserts per creature` |  | 201.19 | 201.19 | 0 (0.0%) |
+2026-11-27T14:21:51.3539025Z | mobs-50 | `counter mob upserts` |  | 12284 | 12284 | 0 (0.0%) |
+2026-11-27T14:21:51.3539584Z | mobs-50 | `creature calls` |  | 2065671 | 2065671 | 0 (0.0%) |
+2026-11-27T14:21:51.3540207Z | mobs-50 | `creature calls per creature` |  | 41313.42 | 41313.42 | 0 (0.0%) |
+2026-11-27T14:21:51.3540919Z | mobs-50 | `counter mob upserts per creature` |  | 245.68 | 245.68 | 0 (0.0%) |
+2026-11-27T14:21:51.3541648Z | mobs-200 / mobs-50 | `creature calls per creature` |  | 1.469 | 1.469 | 0 (0.0%) |
+2026-11-27T14:21:51.3542382Z | mobs-200 / mobs-50 | `counter mob upserts per creature` |  | 0.819 | 0.819 | 0 (0.0%) |
+2026-11-27T14:21:51.3542761Z 

@@ -276,8 +276,17 @@ try {
   else if (cmd === 'reindex') withLock(root, () => console.log(`${reindex(root)} entries indexed`));
   else if (cmd === 'ingest-raw') await withLock(root, async () => console.log(JSON.stringify((await import('./sync.mjs')).ingestRaw(root))));
   else if (cmd === 'sync') await withLock(root, async () => (await import('./sync.mjs')).sync());
+  else if (cmd === 'ci') {
+    const { values } = parseArgs({
+      args: rest,
+      options: { floor: { type: 'string' }, 'max-calls': { type: 'string' }, previous: { type: 'string' } }
+    });
+    const { ingestCI } = await import('./ci.mjs');
+    const opts = { floor: values.floor, maxCalls: values['max-calls'], previous: values.previous };
+    console.log(JSON.stringify(await withLock(root, () => ingestCI(root, opts))));
+  }
   else {
-    console.error('usage: pnpm ledger list|show|fetch|record|import|reindex|sync|ingest-raw');
+    console.error('usage: pnpm ledger list|show|fetch|record|import|reindex|sync|ingest-raw|ci');
     process.exit(2);
   }
 } catch (err) {

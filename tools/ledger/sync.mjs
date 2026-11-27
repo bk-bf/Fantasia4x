@@ -6,6 +6,7 @@ import { dirname, isAbsolute, join, relative } from 'node:path';
 import { sha256Of } from './spool.mjs';
 import { ingestSpool, storeDir } from './store.mjs';
 import { ingestPerfLog } from './ingest.mjs';
+import { ingestCI } from './ci.mjs';
 
 export const MACHINES = {
   ubuntuserver: { ssh: null, checkouts: ['Documents/Projects/Fantasia4x'] },
@@ -193,6 +194,9 @@ export function ingestRaw(root, report = { play: 0, open: 0, missing: [] }) {
 export const steps = [
   (root, report) => {
     for (const [machine, cfg] of Object.entries(MACHINES)) pullMachine(root, machine, cfg, report);
+  },
+  async (root, report) => {
+    report.ci = await ingestCI(root);
   }
 ];
 
