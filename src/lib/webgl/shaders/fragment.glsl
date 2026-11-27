@@ -70,6 +70,11 @@ int rockShade(int rim, highp ivec2 p) {
     return int(texelFetch(u_rockTexture, (p % size + size) % size, 0)[rim] * 255.0 + 0.5);
 }
 
+uniform highp sampler2D u_veinTexture;
+uniform highp usampler2D u_tierTileTexture;
+uniform highp sampler2D u_tierNoiseTexture;
+uniform highp vec2 u_snowRamp;
+uniform float u_snow;
 #define ROCK_SURFACE_CODE
 #define TREE_PARTS_CODE
 

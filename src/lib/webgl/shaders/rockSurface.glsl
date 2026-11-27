@@ -1,9 +1,3 @@
-uniform highp sampler2D u_veinTexture;
-uniform highp usampler2D u_tierTileTexture;
-uniform highp sampler2D u_tierNoiseTexture;
-uniform highp vec2 u_snowRamp;
-uniform float u_snow;
-
 const int VEIN_EDGE = 4;
 const int VEIN_TILE = 32;
 const float VEIN_SCORE = 2.6;

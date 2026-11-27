@@ -511,6 +511,9 @@ export class WebGLRendererCore {
     if (overlays && this.rowDepth) this.prepareShadowCast(viewportTilesW, viewportTilesH);
     if (this.lightPass && lightFrame) this.lightPass.prepare(lightFrame);
     const windSecs = this.wind.tick(performance.now());
+    this.tiers?.sync();
+    if (overlays && ROCK_TIERS && this.rowDepth)
+      this.prepareTiers(gpu, viewportTilesW, viewportTilesH, lightFrame);
     if (overlays) this.prepareLeaves(gpu, windSecs, viewportTilesW, viewportTilesH, lightFrame);
     const vignette = this.vignetteOn && lightFrame ? this.vignette : null;
     if (vignette && lightFrame)
@@ -563,7 +566,6 @@ export class WebGLRendererCore {
         1 / this.fontAtlas.atlasHeight
       ]);
     }
-    this.tiers?.sync();
     if (this.painted) this.bindPaintedAtlas(gpu, this.painted);
     if (this.rowDepth) {
       this.shaderManager.setUniform('tileRenderer', 'u_rowDepth', 1 / ROW_DEPTH_RANGE);
@@ -628,7 +630,7 @@ export class WebGLRendererCore {
         if (layer === 'resource' && this.snowGrid && passOn('snow'))
           this.drawSnowPieces(pass, gpu, viewportTilesW, viewportTilesH, lightTime);
         if (layer === 'resource' && ROCK_TIERS && this.rowDepth)
-          this.drawTiers(pass, gpu, viewportTilesW, viewportTilesH, lightFrame);
+          this.stats.drawCalls += this.tiers?.encode(pass) ?? 0;
       }
       if (this.leaves) this.stats.drawCalls += this.leaves.encode(pass);
       this.stats.overlayMs = performance.now() - tOverlay;
@@ -650,37 +652,37 @@ export class WebGLRendererCore {
     gpu.queue.submit([encoder.finish()]);
   }
 
-  private drawTiers(
-    pass: GpuRenderPass,
+  private prepareTiers(
     gpu: GpuDevice,
     viewportTilesW: number,
     viewportTilesH: number,
     lightFrame: LightPassFrame | null
   ): void {
-    if (!this.tiers || !this.painted || !this.shaderManager || !this.fontTexture) return;
+    if (!this.tiers || !this.painted) return;
     const art = this.painted.tileset.tile;
-    this.stats.drawCalls += this.tiers.draw(pass, {
-      view: {
-        x0: this.viewTileX * art,
-        y0: this.viewTileY * art,
-        x1: (this.viewTileX + viewportTilesW + 1) * art,
-        y1: (this.viewTileY + viewportTilesH + 1) * art
+    this.tiers.prepare(
+      {
+        view: {
+          x0: this.viewTileX * art,
+          y0: this.viewTileY * art,
+          x1: (this.viewTileX + viewportTilesW + 1) * art,
+          y1: (this.viewTileY + viewportTilesH + 1) * art
+        },
+        ambient: lightFrame
+          ? lightFrame.grade.ambient
+          : [
+              this.ambientLight * this.ambientTint[0],
+              this.ambientLight * this.ambientTint[1],
+              this.ambientLight * this.ambientTint[2]
+            ],
+        fieldLit: lightFrame !== null,
+        tone: [lightFrame?.grade.saturation ?? 1, lightFrame?.grade.brightness ?? 1],
+        rowPx: art,
+        rowDepth: 1 / ROW_DEPTH_RANGE,
+        snow: this.season === WINTER
       },
-      ambient: lightFrame
-        ? lightFrame.grade.ambient
-        : [
-            this.ambientLight * this.ambientTint[0],
-            this.ambientLight * this.ambientTint[1],
-            this.ambientLight * this.ambientTint[2]
-          ],
-      fieldLit: lightFrame !== null,
-      tone: [lightFrame?.grade.saturation ?? 1, lightFrame?.grade.brightness ?? 1],
-      rowPx: art,
-      rowDepth: 1 / ROW_DEPTH_RANGE,
-      snow: this.season === WINTER
-    });
-    gpu.setTextureSlot(0);
-    gpu.bindTexture(this.fontTexture);
+      this.lightField(gpu, lightFrame)
+    );
   }
 
   private lightFrame(
