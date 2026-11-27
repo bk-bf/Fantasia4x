@@ -3,6 +3,7 @@ import { chooseGpu, wgslRule } from '$lib/webgl/gpuChoice';
 import { readGpuSwitch } from '$lib/webgl/passes';
 import { MissingWgsl, ShaderManager } from '$lib/webgl/shaders';
 import type { GpuDevice } from '$lib/gpu/device';
+import type { FramedPipeline } from '$lib/webgl/frameBindings';
 
 const device = { destroy: vi.fn() } as unknown as GPUDevice;
 
@@ -63,12 +64,12 @@ describe('the WGSL rule', () => {
   it('throws MissingWgsl for a GLSL-only pipeline under require, and turns it off under skip', () => {
     const createRenderPipeline = vi.fn();
     const gpu = { createRenderPipeline } as unknown as GpuDevice;
-    const glslOnly = {
+    const glslOnly: FramedPipeline = {
       glsl: { vertex: '', fragment: '', attributes: {} },
       layout: [],
       vertex: { buffers: [] },
-      primitive: { topology: 'triangle-list' as const },
-      fragment: { targets: [] }
+      primitive: { topology: 'triangle-list' },
+      fragment: { targets: [{ format: 'rgba8unorm' }] }
     };
     expect(() => new ShaderManager(gpu, false, 'require').createPipeline('p', glslOnly)).toThrow(
       MissingWgsl
