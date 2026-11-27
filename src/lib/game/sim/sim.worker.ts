@@ -480,7 +480,6 @@ self.onmessage = async (e: MessageEvent) => {
       lastDropsArrRef = undefined;
       lastBatch = performance.now();
       if (!loop && !WORK_PINS) loop = setInterval(batch, 16);
-      post({ kind: 'ready' });
       publish(msg.state, true, true);
       break;
     }

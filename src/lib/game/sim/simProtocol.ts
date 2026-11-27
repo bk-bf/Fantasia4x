@@ -23,7 +23,6 @@ export interface SimLogEvent {
 }
 
 export type WorkerToMain =
-  | { kind: 'ready' }
   | {
       kind: 'snapshot';
       state: Partial<GameState>;
