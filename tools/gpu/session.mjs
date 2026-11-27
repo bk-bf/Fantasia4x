@@ -40,6 +40,21 @@ export async function startCompositor(log) {
 
 const SERVED_SAVE = 'f4x-bench-save.json';
 
+export function gpuSwitch(env = process.env) {
+  const gpu = env.F4X_GPU ?? '';
+  if (gpu && gpu !== 'webgpu' && gpu !== 'webgl2') throw new Error(`F4X_GPU is ${gpu}; it takes webgpu or webgl2`);
+  const wgslOnly = env.F4X_PASSES === 'wgsl';
+  /** @param {URLSearchParams} q */
+  const apply = (q) => {
+    if (gpu) q.set('gpu', gpu);
+    if (wgslOnly) q.set('skip', [q.get('skip'), 'glsl-only'].filter(Boolean).join(','));
+    return q;
+  };
+  return { gpu, args: gpu ? ['--enable-unsafe-webgpu', '--enable-features=Vulkan'] : [], apply };
+}
+
+export const backendOf = (page) => page.evaluate(() => globalThis.__f4xGpu ?? null);
+
 export function patchChromium(chromium, { chrome, socket, cleanEnv, query, servedSave, args }) {
   const origLaunch = chromium.launch.bind(chromium);
   chromium.launch = async (o) => {

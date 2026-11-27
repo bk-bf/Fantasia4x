@@ -4,12 +4,13 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { encodePng } from './png.mjs';
-import { patchChromium, startCompositor } from './session.mjs';
+import { backendOf, gpuSwitch, patchChromium, startCompositor } from './session.mjs';
 
 /** @typedef {import('playwright').Page} Page */
 /** @typedef {{ scene: string, w: number, h: number, sha256: string } & Record<string, unknown>} Scene */
 
-const USAGE = 'usage: CHROME=<chromium> node tools/gpu/capture.mjs <app tree> <out dir>';
+const USAGE =
+  'usage: CHROME=<chromium> [F4X_GPU=webgpu|webgl2] [F4X_PASSES=wgsl] node tools/gpu/capture.mjs <app tree> <out dir>';
 const [TREE_ARG, OUT_ARG] = process.argv.slice(2);
 const CHROME = process.env.CHROME;
 if (!TREE_ARG || !OUT_ARG || !CHROME) {
@@ -17,6 +18,9 @@ if (!TREE_ARG || !OUT_ARG || !CHROME) {
   process.exit(2);
 }
 const TREE = resolve(TREE_ARG);
+const { gpu: GPU, args: GPU_ARGS, apply: applyGpu } = gpuSwitch();
+const GPU_QUERY = applyGpu(new URLSearchParams());
+const QUERY = GPU_QUERY.size ? `?${GPU_QUERY}` : '';
 const OUT = resolve(OUT_ARG);
 mkdirSync(OUT, { recursive: true });
 const git = (/** @type {string[]} */ args) =>
@@ -60,6 +64,65 @@ function keepDrawingBuffer() {
       return ctx;
     }
     return orig.call(this, type, attrs);
+  };
+}
+
+function keepWebgpuFrames() {
+  const w = /** @type {any} */ (globalThis);
+  if (!w.GPUCanvasContext) return;
+  const proto = w.GPUCanvasContext.prototype;
+  const configure = proto.configure;
+  proto.configure = function (/** @type {any} */ c) {
+    this.__f4xDevice = c.device;
+    return configure.call(this, {
+      ...c,
+      usage: (c.usage ?? w.GPUTextureUsage.RENDER_ATTACHMENT) | w.GPUTextureUsage.COPY_SRC
+    });
+  };
+  const current = proto.getCurrentTexture;
+  proto.getCurrentTexture = function () {
+    const texture = current.call(this);
+    w.__f4xFrameTexture = { context: this, texture };
+    return texture;
+  };
+  const submit = w.GPUQueue.prototype.submit;
+  w.GPUQueue.prototype.submit = function (/** @type {any} */ buffers) {
+    const result = submit.call(this, buffers);
+    const frame = w.__f4xFrameTexture;
+    w.__f4xFrameTexture = null;
+    const device = frame?.context.__f4xDevice;
+    if (!frame || device?.queue !== this) return result;
+    const { texture } = frame;
+    const bytesPerRow = Math.ceil((texture.width * 4) / 256) * 256;
+    const buffer = device.createBuffer({
+      size: bytesPerRow * texture.height,
+      usage: w.GPUBufferUsage.COPY_DST | w.GPUBufferUsage.MAP_READ
+    });
+    const encoder = device.createCommandEncoder();
+    encoder.copyTextureToBuffer(
+      { texture },
+      { buffer, bytesPerRow },
+      { width: texture.width, height: texture.height }
+    );
+    submit.call(this, [encoder.finish()]);
+    const done = buffer.mapAsync(w.GPUMapMode.READ).then(() => {
+      const rows = new Uint8Array(buffer.getMappedRange());
+      const rgba = new Uint8Array(texture.width * texture.height * 4);
+      const bgra = texture.format === 'bgra8unorm';
+      for (let y = 0; y < texture.height; y++)
+        for (let x = 0; x < texture.width; x++) {
+          const i = y * bytesPerRow + x * 4;
+          const o = (y * texture.width + x) * 4;
+          rgba[o] = rows[i + (bgra ? 2 : 0)];
+          rgba[o + 1] = rows[i + 1];
+          rgba[o + 2] = rows[i + (bgra ? 0 : 2)];
+          rgba[o + 3] = rows[i + 3];
+        }
+      buffer.destroy();
+      return { w: texture.width, h: texture.height, rgba };
+    });
+    w.__f4xWebgpuFrame = done;
+    return result;
   };
 }
 
@@ -215,6 +278,15 @@ async function remountRenderer(
 }
 
 async function readCanvas(/** @type {Page} */ page) {
+  const gpuFrame = await page.evaluate(async () => {
+    const frame = await /** @type {any} */ (globalThis).__f4xWebgpuFrame;
+    if (!frame) return null;
+    let s = '';
+    for (let i = 0; i < frame.rgba.length; i += 0x8000)
+      s += String.fromCharCode(...frame.rgba.subarray(i, i + 0x8000));
+    return { w: frame.w, h: frame.h, b64: btoa(s), canvases: 1 };
+  });
+  if (gpuFrame) return { ...gpuFrame, rgba: Buffer.from(gpuFrame.b64, 'base64') };
   const r = await page.evaluate(() => {
     /** @type {HTMLCanvasElement[]} */
     const canvases = /** @type {any} */ (globalThis).__f4xGlCanvases;
@@ -284,9 +356,9 @@ patchChromium(chromium, {
   chrome: CHROME,
   socket: comp.socket,
   cleanEnv: comp.cleanEnv,
-  query: '',
+  query: QUERY,
   servedSave: null,
-  args: []
+  args: GPU_ARGS
 });
 
 /** @type {Scene[]} */
@@ -302,9 +374,10 @@ for (const load of LOADS.filter((l) => !only || only.includes(l.name))) {
     log,
     clock: true,
     workPins: true,
-    query: '',
+    query: QUERY,
     init: [
       keepDrawingBuffer,
+      keepWebgpuFrames,
       installRandomStreams,
       logWorker,
       disableAutosaveInit,
@@ -328,6 +401,10 @@ for (const load of LOADS.filter((l) => !only || only.includes(l.name))) {
     }, !!process.env.F4X_TRACE_RANDOM);
     await remountRenderer(page, log, load.season);
     await settle(page);
+    const gpu = await backendOf(page);
+    log(`GPU ${JSON.stringify(gpu)} query ${QUERY || '(none)'}`);
+    if (GPU && gpu?.backend !== GPU)
+      throw new Error(`asked for ${GPU} but the renderer runs ${gpu?.backend ?? 'nothing'}`);
     for (const [zoom, deltaY, steps] of ZOOMS) {
       if (steps) {
         await wheel(page, deltaY, steps);

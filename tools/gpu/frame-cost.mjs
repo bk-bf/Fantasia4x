@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { openGpuGame, sleep } from './session.mjs';
+import { backendOf, gpuSwitch, openGpuGame, sleep } from './session.mjs';
 import { assertSpeed, setSpeed, watchSim } from './sim-speed.mjs';
 
 /** @typedef {import('../work-pins/browser-session.mjs').Page} Page */
@@ -10,7 +10,7 @@ import { assertSpeed, setSpeed, watchSim } from './sim-speed.mjs';
 
 const [TREE, LABEL, OUT_DIR, SECONDS = '8'] = process.argv.slice(2);
 const USAGE =
-  'usage: CHROME=<chromium binary> [F4X_QUERY=?painted=0] [F4X_SCENARIO=large-wilderness | F4X_FIXTURE=<save.json.gz>] [F4X_SKIP="none;gl;terrain,snow"] [F4X_CAPPED=1] node tools/gpu/frame-cost.mjs <app tree> <label> <out dir> [seconds per cell]';
+  'usage: CHROME=<chromium binary> [F4X_GPU=webgpu|webgl2] [F4X_PASSES=wgsl] [F4X_QUERY=?painted=0] [F4X_SCENARIO=large-wilderness | F4X_FIXTURE=<save.json.gz>] [F4X_SKIP="none;gl;terrain,snow"] [F4X_CAPPED=1] node tools/gpu/frame-cost.mjs <app tree> <label> <out dir> [seconds per cell]';
 const UNCAPPED = ['--disable-gpu-vsync', '--disable-frame-rate-limit'];
 const MAX_SPEED = 1000;
 const SETTLE_MS = 3000;
@@ -29,7 +29,8 @@ const SPEEDS = [
 ];
 const scenario = process.env.F4X_SCENARIO ?? (process.env.F4X_FIXTURE ? '' : 'large-wilderness');
 const skipSets = (process.env.F4X_SKIP ?? 'none;gl').split(';').map((s) => (s === 'none' ? '' : s));
-const args = process.env.F4X_CAPPED === '1' ? [] : UNCAPPED;
+const gpu = gpuSwitch();
+const args = [...(process.env.F4X_CAPPED === '1' ? [] : UNCAPPED), ...gpu.args];
 const seconds = Number(SECONDS);
 
 /** @param {string} skip */
@@ -37,6 +38,7 @@ function queryFor(skip) {
   const q = new URLSearchParams(process.env.F4X_QUERY ?? '');
   if (scenario) q.set('scenario', scenario);
   if (skip) q.set('skip', skip);
+  gpu.apply(q);
   const s = q.toString();
   return s ? `?${s}` : '';
 }
@@ -100,6 +102,7 @@ async function runSkipSet(skip, rows) {
   });
   try {
     if (scenario) await waitForScenario(page, scenario);
+    log(`GPU ${JSON.stringify(await backendOf(page))}`);
     await cdp.send('Performance.enable');
     for (const [zoom, deltaY, steps] of ZOOMS) {
       await setPaused(true);
