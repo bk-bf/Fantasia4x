@@ -42,7 +42,6 @@ export interface BindGroupDescriptor {
 }
 export type GpuRenderPipeline = Handle<'render-pipeline'>;
 export type GpuShaderModule = Handle<'shader-module'>;
-export type GpuUniform = Handle<'uniform'>;
 export type GpuSampler = Handle<'sampler'>;
 
 export type TextureFormat =
@@ -241,7 +240,6 @@ export type RenderPipelineResult =
   | {
       ok: true;
       pipeline: GpuRenderPipeline;
-      uniforms: Map<string, GpuUniform>;
       modules: CompiledModule[];
     }
   | { ok: false; error: string; modules: CompiledModule[] };
@@ -316,27 +314,13 @@ export interface GpuDevice {
   createRenderPipeline(desc: RenderPipelineDescriptor): RenderPipelineResult;
   destroyRenderPipeline(pipeline: GpuRenderPipeline): void;
   destroyShaderModule(module: GpuShaderModule): void;
-  uniform(pipeline: GpuRenderPipeline, name: string): GpuUniform | null;
-
-  setF32(u: GpuUniform | null, x: number): void;
-  setI32(u: GpuUniform | null, x: number): void;
-  setVec2f(u: GpuUniform | null, x: number, y: number): void;
-  setVec2i(u: GpuUniform | null, x: number, y: number): void;
-  setVec4f(u: GpuUniform | null, x: number, y: number, z: number, w: number): void;
-  setVec2fv(u: GpuUniform | null, v: Iterable<number>): void;
-  setVec3fv(u: GpuUniform | null, v: Iterable<number>): void;
-  setVec4fv(u: GpuUniform | null, v: Iterable<number>, offset?: number, length?: number): void;
-  setMat4fv(u: GpuUniform | null, v: Iterable<number>): void;
 
   createBuffer(desc: BufferDescriptor): GpuBuffer;
   destroyBuffer(buffer: GpuBuffer | null): void;
 
   createTexture(desc: TextureDescriptor): GpuTexture;
   destroyTexture(texture: GpuTexture | null): void;
-  setTextureSlot(slot: number): void;
-  bindTexture(texture: GpuTexture | null): void;
   createSampler(desc: SamplerDescriptor): GpuSampler;
-  bindSampler(slot: number, sampler: GpuSampler | null): void;
 
   createBindGroupLayout(desc: BindGroupLayoutDescriptor): GpuBindGroupLayout;
   createBindGroup(desc: BindGroupDescriptor): GpuBindGroup;

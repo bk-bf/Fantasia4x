@@ -17,14 +17,13 @@ import type {
   GpuSampler,
   GpuShaderModule,
   GpuTexture,
-  GpuUniform,
   RenderPipelineDescriptor,
   RenderPipelineResult,
   SamplerDescriptor,
   TextureDescriptor
 } from '../device.js';
 import { addressMode, filterMode } from './formats.js';
-import { Webgl2Pipelines, type Webgl2Pipeline, type Webgl2Uniform } from './pipeline.js';
+import { Webgl2Pipelines, type Webgl2Pipeline } from './pipeline.js';
 import { Webgl2State } from './state.js';
 import { Webgl2VertexArrays } from './vertexArrays.js';
 import { CANVAS_COLOR, CANVAS_DEPTH, Webgl2Framebuffers } from './passes.js';
@@ -173,61 +172,9 @@ export class Webgl2Device implements GpuDevice {
     this.gl.deleteShader(raw<WebGLShader>(module));
   }
 
-  uniform(pipeline: GpuRenderPipeline, name: string): GpuUniform | null {
-    const program = this.pipelines.get(pipeline).program;
-    const location = this.gl.getUniformLocation(program, name);
-    if (location === null) return null;
-    const uniform: Webgl2Uniform = { program, location };
-    return uniform as unknown as GpuUniform;
-  }
-
   private setPipeline(pipeline: GpuRenderPipeline): void {
     this.pipeline = this.pipelines.get(pipeline);
     this.state.apply(this.pipeline);
-  }
-
-  private at(u: GpuUniform | null): WebGLUniformLocation | null {
-    if (!u) return null;
-    const { program, location } = raw<Webgl2Uniform>(u);
-    this.state.use(program);
-    return location;
-  }
-
-  setF32(u: GpuUniform | null, x: number): void {
-    this.gl.uniform1f(this.at(u), x);
-  }
-
-  setI32(u: GpuUniform | null, x: number): void {
-    this.gl.uniform1i(this.at(u), x);
-  }
-
-  setVec2f(u: GpuUniform | null, x: number, y: number): void {
-    this.gl.uniform2f(this.at(u), x, y);
-  }
-
-  setVec2i(u: GpuUniform | null, x: number, y: number): void {
-    this.gl.uniform2i(this.at(u), x, y);
-  }
-
-  setVec4f(u: GpuUniform | null, x: number, y: number, z: number, w: number): void {
-    this.gl.uniform4f(this.at(u), x, y, z, w);
-  }
-
-  setVec2fv(u: GpuUniform | null, v: Iterable<number>): void {
-    this.gl.uniform2fv(this.at(u), v);
-  }
-
-  setVec3fv(u: GpuUniform | null, v: Iterable<number>): void {
-    this.gl.uniform3fv(this.at(u), v);
-  }
-
-  setVec4fv(u: GpuUniform | null, v: Iterable<number>, offset?: number, length?: number): void {
-    if (offset === undefined) this.gl.uniform4fv(this.at(u), v);
-    else this.gl.uniform4fv(this.at(u), v, offset, length);
-  }
-
-  setMat4fv(u: GpuUniform | null, v: Iterable<number>): void {
-    this.gl.uniformMatrix4fv(this.at(u), false, v);
   }
 
   createBuffer(desc: BufferDescriptor): GpuBuffer {
@@ -252,15 +199,6 @@ export class Webgl2Device implements GpuDevice {
     this.textures.destroy(texture);
   }
 
-  setTextureSlot(slot: number): void {
-    this.textures.slot = slot;
-    this.gl.activeTexture(this.gl.TEXTURE0 + slot);
-  }
-
-  bindTexture(texture: GpuTexture | null): void {
-    this.gl.bindTexture(this.gl.TEXTURE_2D, raw<WebGLTexture>(texture));
-  }
-
   createSampler(desc: SamplerDescriptor): GpuSampler {
     const gl = this.gl;
     const sampler = gl.createSampler();
@@ -269,10 +207,6 @@ export class Webgl2Device implements GpuDevice {
     gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, addressMode(gl, desc.addressModeU));
     gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, addressMode(gl, desc.addressModeV));
     return sampler as unknown as GpuSampler;
-  }
-
-  bindSampler(slot: number, sampler: GpuSampler | null): void {
-    this.gl.bindSampler(slot, raw<WebGLSampler | null>(sampler));
   }
 
   createBindGroupLayout(desc: BindGroupLayoutDescriptor): GpuBindGroupLayout {

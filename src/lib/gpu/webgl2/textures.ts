@@ -12,7 +12,6 @@ export class Webgl2Textures {
   private readonly info = new WeakMap<WebGLTexture, TextureInfo>();
   private readonly scratch: number;
   private rowLength = 0;
-  slot = 0;
 
   constructor(
     private readonly gl: WebGL2RenderingContext,
@@ -29,14 +28,12 @@ export class Webgl2Textures {
     gl.activeTexture(gl.TEXTURE0 + this.scratch);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     act();
-    gl.activeTexture(gl.TEXTURE0 + this.slot);
   }
 
   bindOn(unit: number, texture: GpuTexture): void {
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE0 + unit);
     gl.bindTexture(gl.TEXTURE_2D, texture as unknown as WebGLTexture);
-    gl.activeTexture(gl.TEXTURE0 + this.slot);
   }
 
   private setRowLength(texels: number): void {

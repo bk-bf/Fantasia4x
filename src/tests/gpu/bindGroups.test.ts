@@ -156,7 +156,7 @@ describe('webgl2 bind groups', () => {
     );
   });
 
-  it('gives each texture a unit above the legacy ones and binds its sampler there', () => {
+  it('gives each texture its own unit and binds its sampler there', () => {
     const { gpu, calls } = recording();
     const layout = gpu.createBindGroupLayout({
       entries: [
@@ -168,7 +168,7 @@ describe('webgl2 bind groups', () => {
       gpu,
       pipeline([layout], { blocks: {}, textures: { u_tex: { texture: [0, 0], sampler: [0, 1] } } })
     );
-    expect(calls.find((c) => c[0] === 'uniform1i')?.slice(1)).toEqual(['u_tex', 16]);
+    expect(calls.find((c) => c[0] === 'uniform1i')?.slice(1)).toEqual(['u_tex', 0]);
     const texture = gpu.createTexture({
       format: 'rgba8unorm',
       width: 1,
@@ -201,8 +201,8 @@ describe('webgl2 bind groups', () => {
         .slice(before)
         .find((c) => c[0] === 'bindSampler')
         ?.slice(1)
-    ).toEqual([16, sampler]);
-    expect(calls.slice(before).find((c) => c[0] === 'activeTexture')?.[1]).toBe(GL.TEXTURE0 + 16);
+    ).toEqual([0, sampler]);
+    expect(calls.slice(before).find((c) => c[0] === 'activeTexture')?.[1]).toBe(GL.TEXTURE0);
   });
 });
 

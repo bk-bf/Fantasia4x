@@ -4,7 +4,6 @@ import type {
   GpuBindGroupLayout,
   GpuRenderPipeline,
   GpuShaderModule,
-  GpuUniform,
   RenderPipelineDescriptor,
   RenderPipelineResult,
   VertexBufferLayout
@@ -67,17 +66,11 @@ function compileShader(
   return shader;
 }
 
-export interface Webgl2Uniform {
-  program: WebGLProgram;
-  location: WebGLUniformLocation;
-}
-
-export const FIRST_BOUND_UNIT = 16;
+export const FIRST_BOUND_UNIT = 0;
 const INVALID_INDEX = 0xffffffff;
 
 export interface LinkedProgram {
   program: WebGLProgram;
-  uniforms: Map<string, GpuUniform>;
   blocks: { slot: BindingSlot; point: number }[];
   textures: { slot: BindingSlot; sampler?: BindingSlot; unit: number }[];
   users: number;
@@ -92,20 +85,6 @@ export interface Webgl2Pipeline {
   topology: number;
   blend: readonly [number, number, number, number] | null;
   depth: { func: number; write: boolean } | null;
-}
-
-function uniformsOf(gl: WebGL2RenderingContext, program: WebGLProgram): Map<string, GpuUniform> {
-  const uniforms = new Map<string, GpuUniform>();
-  const count = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-  for (let i = 0; i < count; i++) {
-    const info = gl.getActiveUniform(program, i);
-    if (!info) continue;
-    const location = gl.getUniformLocation(program, info.name);
-    if (location === null) continue;
-    const uniform: Webgl2Uniform = { program, location };
-    uniforms.set(info.name, uniform as unknown as GpuUniform);
-  }
-  return uniforms;
 }
 
 function link(
@@ -263,7 +242,6 @@ export class Webgl2Pipelines {
       }
       linked = {
         program: made.program,
-        uniforms: uniformsOf(this.gl, made.program),
         ...bound,
         users: 0
       };
@@ -273,7 +251,7 @@ export class Webgl2Pipelines {
     const state = pipelineState(this.gl, desc, linked);
     const pipeline = state as unknown as GpuRenderPipeline;
     this.pipelines.set(pipeline, state);
-    return { ok: true, pipeline, uniforms: linked.uniforms, modules };
+    return { ok: true, pipeline, modules };
   }
 
   get(pipeline: GpuRenderPipeline): Webgl2Pipeline {

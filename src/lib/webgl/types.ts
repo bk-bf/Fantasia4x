@@ -1,4 +1,4 @@
-import type { GpuRenderPipeline, GpuUniform } from '../gpu/device.js';
+import type { GpuRenderPipeline } from '../gpu/device.js';
 
 export interface RGB {
   r: number;
@@ -42,7 +42,6 @@ export interface RendererOptions {
 
 export interface ShaderProgram {
   pipeline: GpuRenderPipeline;
-  uniforms: Map<string, GpuUniform>;
 }
 
 export interface CharacterInfo {
