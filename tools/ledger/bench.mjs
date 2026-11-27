@@ -7,7 +7,7 @@ import { gunzipSync, gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const RUNNER = fileURLToPath(new URL('./rerun-remote.sh', import.meta.url));
-export const LOAD_LIMIT = 2.5;
+export const LOAD_LIMIT = 1.5;
 
 export function parseKv(text) {
   const out = { busy: [] };
