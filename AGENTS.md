@@ -379,6 +379,11 @@ in `check.yml` keeps that one comment on each pull request, written by
 `tools/work-pins/perf-notes.mjs`. A change the notes show as real cost gets a follow-up issue, or
 goes back to its branch.
 
+**A multi-step port or refactor that costs perf in an intermediate step stays on its branch.** Keep
+that branch current with `dev`, and merge it nowhere, `dev` and the test branches included, until
+its frame cost is at or below the baseline it started from. Report the cost as a number against
+that baseline. Never propose the `perf change accepted` label for an intermediate step.
+
 **A validated perf fix reaches `test/look-overhaul` the moment it reaches `dev`.** Perf comes
 before UI, and the UI work is played and judged on `test/look-overhaul`, so a perf fix missing there
 is a slowdown the owner plays and reports. In the same task that lands the fix on `dev`, merge
