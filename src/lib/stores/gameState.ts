@@ -10,9 +10,10 @@ import {
 } from '$lib/game/core/state/stockpile';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import './simLogBridge';
-import { vlog } from '$lib/game/core/util/logSink';
+import { vlog, simLog } from '$lib/game/core/util/logSink';
 import { describeSession } from '$lib/dev/sessionHeader';
 import { stampGenerated } from '$lib/dev/buildStamp';
+import { readLedgerSettings, ledgerSettingsLine } from '$lib/dev/ledger';
 import { setPerfContextProvider } from '$lib/dev/perfContext';
 import {
   environmentService,
@@ -297,6 +298,23 @@ function startAutoTurns() {
 
 function logSession(gs: GameState) {
   if (browser) vlog('perf', gs.turn, () => describeSession(gs, gameSpeedValue));
+  if (browser && import.meta.env.DEV && USE_SIM_WORKER) startLedgerSession(gs);
+}
+
+function startLedgerSession(gs: GameState) {
+  const settings = readLedgerSettings(
+    localStorage,
+    navigator.webdriver === true,
+    ensureActiveSave(),
+    new URLSearchParams(location.search).get('scenario')
+  );
+  simLog.logEvent({ category: 'perf', turn: gs.turn, message: ledgerSettingsLine(settings) });
+  simWorkerBridge.ledger(settings);
+  simWorkerBridge.ledgerCapture('session');
+}
+
+function ledgerManualSave(id: string) {
+  if (browser && import.meta.env.DEV && USE_SIM_WORKER) simWorkerBridge.ledgerCapture('manual', id);
 }
 
 setPerfContextProvider(() => {
@@ -643,11 +661,12 @@ function startGame(mode: 'new' | 'load', saveId?: string) {
 }
 
 async function saveGame(): Promise<void> {
-  await saveSnapshotNow(get(gameState) as GameState, get(activityLog));
+  ledgerManualSave(await saveSnapshotNow(get(gameState) as GameState, get(activityLog)));
 }
 
 async function overwriteSave(id: string): Promise<void> {
   await overwriteSnapshotNow(id, get(gameState) as GameState, get(activityLog));
+  ledgerManualSave(id);
 }
 
 function flushSave(): Promise<void> {

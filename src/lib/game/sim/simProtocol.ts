@@ -1,4 +1,5 @@
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
+import type { LedgerReason, LedgerSettings } from './ledgerCapture';
 
 export type EntitySync<T extends { id: string }> =
   | { full: T[] }
@@ -15,7 +16,9 @@ export type MainToWorker =
   | { kind: 'command'; cmd: SimCommand }
   | { kind: 'setSpeed'; speed: number }
   | { kind: 'setPaused'; paused: boolean }
-  | { kind: 'requestSave' };
+  | { kind: 'requestSave' }
+  | { kind: 'ledger'; settings: LedgerSettings }
+  | { kind: 'ledgerCapture'; reason: LedgerReason; save?: string | null };
 
 export interface SimLogEvent {
   m: string;
