@@ -18,7 +18,15 @@ import { join, relative } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { fileRef, newId } from './spool.mjs';
 import { stats } from './perflog.mjs';
-import { getEntry, keyedEntry, listEntries, putBlob, putKeyed, readBlob } from './store.mjs';
+import {
+  getEntry,
+  keyedEntry,
+  listEntries,
+  putBlob,
+  putKeyed,
+  readBlob,
+  withLock
+} from './store.mjs';
 
 export const REPO_SLUG = 'bk-bf/Fantasia4x';
 export const WORKFLOWS = ['check.yml', 'promote.yml'];
@@ -765,7 +773,11 @@ const sinceOf = (state) =>
     ? new Date(Date.parse(state.newest) - RERUN_WINDOW_MS).toISOString().slice(0, 19) + 'Z'
     : null;
 
-export async function ingestCI(root, opts = {}) {
+export function ingestCI(root, opts = {}) {
+  return withLock(root, () => ingest(root, opts));
+}
+
+async function ingest(root, opts = {}) {
   const env = opts.env ?? process.env;
   const api = opts.api ?? ghApi();
   const floor = Number(opts.floor ?? env.F4X_LEDGER_CI_FLOOR ?? 1500);

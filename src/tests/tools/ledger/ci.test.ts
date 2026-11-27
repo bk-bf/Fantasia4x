@@ -353,7 +353,7 @@ function fakeGitHub() {
       return { data: file };
     }
   };
-  return { api, runs, jobs, calls, job };
+  return { api, runs, jobs, calls, job, logs, zips };
 }
 
 describe('CI ingest', () => {
@@ -454,5 +454,36 @@ describe('CI ingest', () => {
     expect(rest).toMatchObject({ runs: 1, stopped: null });
     expect(listEntries(root, { kind: 'ci' })).toHaveLength(2);
     expect(readCursor(root).workflows['check.yml'].complete).toBe(true);
+  });
+
+  it('rebuilds an empty store, taking what GitHub has dropped from the previous store', async () => {
+    const gh = fakeGitHub();
+    await ingestCI(root, { api: gh.api, floor: 0, localDir });
+    delete gh.zips[14983072852];
+    delete gh.logs[2];
+    const fresh = mkdtempSync(join(tmpdir(), 'ledger-ci-fresh-'));
+    const report = await ingestCI(fresh, { api: gh.api, floor: 0, localDir, previous: root });
+    expect(report).toMatchObject({ runs: 2, entries: 2, restored: 2, carried: 0 });
+    const tps = listEntries(fresh, { tool: 'tps' })[0];
+    expect(tps.invalid).toBeUndefined();
+    expect(tps.perf.legs.tps.notes[0].name).toBe('dev-save 60 ticks');
+    const measure = listEntries(fresh, { tool: 'work-pins' })[0];
+    expect(measure.perf.legs['work-pins'].changed).toBe(863);
+    expect(measure.invalid).toEqual(['artifacts expired']);
+  });
+
+  it('carries over entries of runs GitHub no longer lists once the rebuild has caught up', async () => {
+    const gh = fakeGitHub();
+    await ingestCI(root, { api: gh.api, floor: 0, localDir });
+    const old = listEntries(root, { kind: 'ci' });
+    gh.runs.splice(0, 1);
+    const fresh = mkdtempSync(join(tmpdir(), 'ledger-ci-fresh-'));
+    const report = await ingestCI(fresh, { api: gh.api, floor: 0, localDir, previous: root });
+    expect(report).toMatchObject({ runs: 1, entries: 0, carried: 2 });
+    expect(listEntries(fresh, { kind: 'ci' }).map((e: { id: string }) => e.id)).toEqual(
+      old.map((e: { id: string }) => e.id)
+    );
+    const again = await ingestCI(fresh, { api: gh.api, floor: 0, localDir, previous: root });
+    expect(again.carried).toBe(0);
   });
 });

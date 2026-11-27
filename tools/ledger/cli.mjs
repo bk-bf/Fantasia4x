@@ -283,7 +283,7 @@ try {
     });
     const { ingestCI } = await import('./ci.mjs');
     const opts = { floor: values.floor, maxCalls: values['max-calls'], previous: values.previous };
-    console.log(JSON.stringify(await withLock(root, () => ingestCI(root, opts))));
+    console.log(JSON.stringify(await ingestCI(root, opts)));
   }
   else {
     console.error('usage: pnpm ledger list|show|fetch|record|import|reindex|sync|ingest-raw|ci');
