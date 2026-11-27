@@ -216,6 +216,9 @@ function mirrorToFile(entry: ActivityLogEntry): void {
 
 export const KEEPALIVE_BODY_LIMIT = 60_000;
 
+const utf8 = new TextEncoder();
+const byteLength = (text: string): number => utf8.encode(text).length;
+
 export function keepaliveBodies<T>(entries: readonly T[], limit = KEEPALIVE_BODY_LIMIT): string[] {
   const bodies: string[] = [];
   let batch: string[] = [];
@@ -227,9 +230,10 @@ export function keepaliveBodies<T>(entries: readonly T[], limit = KEEPALIVE_BODY
   };
   for (const entry of entries) {
     const json = JSON.stringify(entry);
-    if (batch.length && size + json.length + 16 > limit) close();
+    const bytes = byteLength(json);
+    if (batch.length && size + bytes + 16 > limit) close();
     batch.push(json);
-    size += json.length + 1;
+    size += bytes + 1;
   }
   close();
   return bodies;
@@ -238,8 +242,9 @@ export function keepaliveBodies<T>(entries: readonly T[], limit = KEEPALIVE_BODY
 let _keepaliveInFlight = 0;
 
 export function postMirror(body: string): void {
-  const keepalive = _keepaliveInFlight + body.length <= KEEPALIVE_BODY_LIMIT;
-  if (keepalive) _keepaliveInFlight += body.length;
+  const bytes = byteLength(body);
+  const keepalive = _keepaliveInFlight + bytes <= KEEPALIVE_BODY_LIMIT;
+  if (keepalive) _keepaliveInFlight += bytes;
   fetch('/api/log', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -248,7 +253,7 @@ export function postMirror(body: string): void {
   })
     .catch(() => {})
     .finally(() => {
-      if (keepalive) _keepaliveInFlight -= body.length;
+      if (keepalive) _keepaliveInFlight -= bytes;
     });
 }
 

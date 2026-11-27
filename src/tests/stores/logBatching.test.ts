@@ -142,6 +142,16 @@ describe('keepaliveBodies', () => {
     expect(bodies.flatMap((b) => JSON.parse(b).entries)).toEqual(entries);
   });
 
+  it('measures a body in bytes, so lines of wide characters still fit the limit', () => {
+    const wide = (i: number) => ({ category: 'ai', line: `[T${i}] ${'é'.repeat(200)}` });
+    const bodies = keepaliveBodies(
+      Array.from({ length: 600 }, (_, i) => wide(i)),
+      60_000
+    );
+    for (const body of bodies)
+      expect(new TextEncoder().encode(body).length).toBeLessThanOrEqual(60_000);
+  });
+
   it('keeps a quiet second in one body', () => {
     expect(keepaliveBodies([line(1), line(2)])).toEqual([
       JSON.stringify({ entries: [line(1), line(2)] })
@@ -165,6 +175,24 @@ describe('postMirror', () => {
     await new Promise((r) => setTimeout(r, 0));
     postMirror(body);
     expect(sent).toEqual([true, false, true]);
+    pending.splice(0).forEach((done) => done());
+    await new Promise((r) => setTimeout(r, 0));
+    vi.unstubAllGlobals();
+  });
+
+  it('counts the bytes a body takes on the wire, not its characters', async () => {
+    const pending: Array<() => void> = [];
+    const sent: boolean[] = [];
+    vi.stubGlobal('fetch', (_url: string, init: RequestInit) => {
+      sent.push(init.keepalive === true);
+      return new Promise<Response>((done) => pending.push(() => done(new Response(null))));
+    });
+    const body = 'é'.repeat(20_000);
+    postMirror(body);
+    postMirror(body);
+    expect(sent).toEqual([true, false]);
+    pending.splice(0).forEach((done) => done());
+    await new Promise((r) => setTimeout(r, 0));
     vi.unstubAllGlobals();
   });
 });
