@@ -19,6 +19,12 @@ ghi <branch>
   painted in Electron.
 - Say which commit it lands on, and whether he needs a new save.
 
+Hand it over the moment the branch is pushed and its build runs. A reviewer, a second
+headless pass or an audit route never sits between finished work and this line: start any
+review async, give him `ghi <branch>` at once, and if the review finds a real problem, land the
+fix on the same branch (a commit on top, a `git revert`, or a cherry-picked fix) and give him the
+line again with the new commit.
+
 Never hand him `./launch.sh`, `git fetch` or `git switch`: the checkout's launcher changes with the
 branch it is on, and an old one ignores a branch argument and starts nothing.
 
