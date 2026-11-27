@@ -19,6 +19,8 @@ export function textureFormat(gl: WebGL2RenderingContext, f: TextureFormat): GlT
   switch (f) {
     case 'rgba8unorm':
       return { internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE };
+    case 'bgra8unorm':
+      throw new Error('bgra8unorm is a WebGPU canvas format WebGL2 cannot store');
     case 'rg8unorm':
       return { internalFormat: gl.RG8, format: gl.RG, type: gl.UNSIGNED_BYTE };
     case 'r8unorm':

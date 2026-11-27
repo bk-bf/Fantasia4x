@@ -7,9 +7,10 @@ import {
   type GpuBindGroupLayout,
   type GpuBuffer,
   type GpuDevice,
-  type RenderPipelineDescriptor
+  type RenderPipelineDescriptor,
+  type WgslSources
 } from '../gpu/device.js';
-import { UniformBlock, uniformLayout, withBlocks } from '../gpu/uniforms.js';
+import { UniformBlock, uniformLayout, withBlocks, withWgslBlock } from '../gpu/uniforms.js';
 import { samplersOf } from './samplers.js';
 
 export const VIEW = uniformLayout('View', [
@@ -80,6 +81,14 @@ function withView(glsl: GlslSources): GlslSources {
   };
 }
 
+const WGSL_SAMPLERS =
+  `@group(${FRAME_GROUP}) @binding(${NEAREST_SAMPLER[1]}) var nearestSampler: sampler;\n` +
+  `@group(${FRAME_GROUP}) @binding(${LINEAR_SAMPLER[1]}) var linearSampler: sampler;\n`;
+
+function withViewWgsl(wgsl: WgslSources): WgslSources {
+  return { code: WGSL_SAMPLERS + withWgslBlock(wgsl, VIEW, [FRAME_GROUP, 0]).code };
+}
+
 export function framed(
   gpu: GpuDevice,
   desc: FramedPipeline
@@ -87,6 +96,7 @@ export function framed(
   return {
     ...desc,
     glsl: withView(desc.glsl),
+    ...(desc.wgsl ? { wgsl: withViewWgsl(desc.wgsl) } : {}),
     layout: [frameBindings(gpu).layout, ...(desc.layout ?? [])]
   };
 }

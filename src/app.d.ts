@@ -1,3 +1,5 @@
+import '@webgpu/types';
+
 declare global {
   namespace App {}
 

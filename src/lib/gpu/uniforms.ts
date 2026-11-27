@@ -1,4 +1,4 @@
-import type { GpuBuffer, GpuQueue } from './device.js';
+import type { BindingSlot, GpuBuffer, GpuQueue, WgslSources } from './device.js';
 
 export type UniformType = 'float' | 'int' | 'vec2' | 'ivec2' | 'vec3' | 'vec4' | 'ivec4' | 'mat4';
 export type Precision = 'highp' | 'mediump';
@@ -64,6 +64,39 @@ export function withBlocks(source: string, layouts: readonly UniformLayout[]): s
   const text = layouts.map(glslBlock).join('');
   const version = source.match(/^#version[^\n]*\n/);
   return version ? version[0] + text + source.slice(version[0].length) : text + source;
+}
+
+const WGSL_TYPE: Record<UniformType, string> = {
+  float: 'f32',
+  int: 'i32',
+  vec2: 'vec2<f32>',
+  ivec2: 'vec2<i32>',
+  vec3: 'vec3<f32>',
+  vec4: 'vec4<f32>',
+  ivec4: 'vec4<i32>',
+  mat4: 'mat4x4<f32>'
+};
+
+export const wgslInstance = (blockName: string): string =>
+  blockName[0].toLowerCase() + blockName.slice(1);
+
+export function wgslBlock(layout: UniformLayout, [group, binding]: BindingSlot): string {
+  const lines = layout.members.map((m) => {
+    const type = WGSL_TYPE[m.type];
+    return `  ${m.name}: ${m.count !== undefined ? `array<${type}, ${m.count}>` : type},`;
+  });
+  return (
+    `struct ${layout.name} {\n${lines.join('\n')}\n}\n` +
+    `@group(${group}) @binding(${binding}) var<uniform> ${wgslInstance(layout.name)}: ${layout.name};\n`
+  );
+}
+
+export function withWgslBlock(
+  sources: WgslSources,
+  layout: UniformLayout,
+  slot: BindingSlot
+): WgslSources {
+  return { code: wgslBlock(layout, slot) + sources.code };
 }
 
 export class UniformBlock {

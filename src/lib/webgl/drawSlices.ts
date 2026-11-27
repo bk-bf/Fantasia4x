@@ -5,9 +5,10 @@ import {
   type GpuBindGroup,
   type GpuBindGroupLayout,
   type GpuBuffer,
-  type GpuDevice
+  type GpuDevice,
+  type WgslSources
 } from '../gpu/device.js';
-import { UniformBlock, type UniformLayout } from '../gpu/uniforms.js';
+import { UniformBlock, withWgslBlock, type UniformLayout } from '../gpu/uniforms.js';
 import { blockSources, type GroupBindings } from './passBindings.js';
 
 export const DRAW_GROUP = 2;
@@ -45,6 +46,10 @@ export class DrawSlices implements GroupBindings {
 
   glsl(sources: GlslSources): GlslSources {
     return blockSources(sources, this.uniforms, [DRAW_GROUP, 0]);
+  }
+
+  wgsl(sources: WgslSources): WgslSources {
+    return withWgslBlock(sources, this.uniforms, [DRAW_GROUP, 0]);
   }
 
   private reserve(count: number): void {

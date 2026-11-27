@@ -10,9 +10,15 @@ import {
   type GpuBindGroupLayout,
   type GpuBuffer,
   type GpuDevice,
-  type GpuTexture
+  type GpuTexture,
+  type WgslSources
 } from '../gpu/device.js';
-import { UniformBlock, withBlocks, type UniformLayout } from '../gpu/uniforms.js';
+import {
+  UniformBlock,
+  withBlocks,
+  withWgslBlock,
+  type UniformLayout
+} from '../gpu/uniforms.js';
 import { LINEAR_SAMPLER, NEAREST_SAMPLER } from './frameBindings.js';
 
 export const PASS_GROUP = 1;
@@ -60,9 +66,20 @@ function textureBinding(t: PassTexture, binding: number): GlslTexture {
   return { texture: [PASS_GROUP, binding], ...(sampler ? { sampler } : {}) };
 }
 
+const WGSL_TEXTURE = {
+  float: 'texture_2d<f32>',
+  'unfilterable-float': 'texture_2d<f32>',
+  uint: 'texture_2d<u32>'
+} as const;
+
+export function wgslTexture(t: PassTexture, binding: number): string {
+  return `@group(${PASS_GROUP}) @binding(${binding}) var ${t.name}: ${WGSL_TEXTURE[t.sampleType]};\n`;
+}
+
 export interface GroupBindings {
   readonly layout: GpuBindGroupLayout;
   glsl(sources: GlslSources): GlslSources;
+  wgsl(sources: WgslSources): WgslSources;
 }
 
 interface Block {
@@ -124,6 +141,16 @@ export class PassBindings implements GroupBindings {
         ...Object.fromEntries(this.textures.map((t, i) => [t.name, textureBinding(t, first + i)]))
       }
     };
+  }
+
+  wgsl(sources: WgslSources): WgslSources {
+    const withBlocks = this.blocks.reduce(
+      (s, { block }, binding) => withWgslBlock(s, block.layout, [PASS_GROUP, binding]),
+      sources
+    );
+    const first = this.blocks.length;
+    const textures = this.textures.map((t, i) => wgslTexture(t, first + i)).join('');
+    return { code: textures + withBlocks.code };
   }
 
   set(name: string, value: number | ArrayLike<number>): void {

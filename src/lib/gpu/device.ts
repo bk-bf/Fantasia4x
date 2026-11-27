@@ -46,6 +46,7 @@ export type GpuSampler = Handle<'sampler'>;
 
 export type TextureFormat =
   | 'rgba8unorm'
+  | 'bgra8unorm'
   | 'rg8unorm'
   | 'r8unorm'
   | 'r8uint'
@@ -81,6 +82,7 @@ export function bytesPerTexel(format: TextureFormat): number {
     case 'rg8unorm':
       return 2;
     case 'rgba8unorm':
+    case 'bgra8unorm':
       return 4;
     case 'rgba16uint':
     case 'rgba16float':
@@ -212,6 +214,19 @@ export interface GlslSources extends ShaderSources {
   textures?: Record<string, GlslTexture>;
 }
 
+export interface WgslSources {
+  code: string;
+}
+
+export const WGSL_VERTEX_ENTRY = 'vs';
+export const WGSL_FRAGMENT_ENTRY = 'fs';
+
+export type ShaderLanguage = 'glsl' | 'wgsl';
+
+export function shaderLanguages(desc: Pick<RenderPipelineDescriptor, 'wgsl'>): ShaderLanguage[] {
+  return desc.wgsl ? ['glsl', 'wgsl'] : ['glsl'];
+}
+
 export interface ColorTargetState {
   format: TextureFormat;
   blend?: BlendState;
@@ -221,7 +236,7 @@ export interface RenderPipelineDescriptor {
   label: string;
   layout: GpuBindGroupLayout[];
   glsl: GlslSources;
-  wgsl?: ShaderSources;
+  wgsl?: WgslSources;
   vertex: { buffers: VertexBufferLayout[] };
   primitive: { topology: PrimitiveTopology };
   fragment: { targets: [ColorTargetState] };
@@ -302,8 +317,10 @@ export interface GpuCanvas {
   getDepthTexture(): GpuTexture | null;
 }
 
+export type GpuBackend = 'webgl2' | 'webgpu';
+
 export interface GpuDevice {
-  readonly backend: 'webgl2';
+  readonly backend: GpuBackend;
   readonly queue: GpuQueue;
   readonly canvas: GpuCanvas;
 
