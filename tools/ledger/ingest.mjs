@@ -6,6 +6,7 @@ import { gunzipSync, gzipSync } from 'node:zlib';
 import { fileRef, newId, sha256Of, worldId as worldIdOfSnapshot } from './spool.mjs';
 import { isOpen, sessionPerf, sessionTimes, splitSessions } from './perflog.mjs';
 import { allEntries, getEntry, keyedEntry, putBlob, putKeyed } from './store.mjs';
+import { withInvalid } from './invalid.mjs';
 
 const REPO = new URL('../..', import.meta.url).pathname;
 const expanded = new Map();
@@ -39,6 +40,14 @@ function sessionKey(machine, checkout, session) {
   return `perf.log|${machine}|${checkout}|${start}`;
 }
 
+export const captureOf = (e) => e.captureId ?? e.world?.captureId ?? null;
+
+export function captureIndex(root) {
+  const out = new Map();
+  for (const e of allEntries(root)) if (e.kind === 'save' && captureOf(e)) out.set(captureOf(e), { save: e.world?.save ?? null, entry: e.id });
+  return out;
+}
+
 function coveredLines(root, key, firstId) {
   let to = getEntry(root, firstId).perf?.lines?.to;
   if (to == null) return null;
@@ -64,6 +73,11 @@ export function ingestPerfLog(root, opts) {
   const { text, mtime } = concatLogs(paths);
   const sessions = splitSessions(text, timeZone);
   const report = { created: 0, known: 0, open: 0, ids: [] };
+  let captures = null;
+  const resolve = (cap) => {
+    captures ??= captureIndex(root);
+    return captures.get(cap) ?? null;
+  };
   for (const session of sessions) {
     const key = sessionKey(machine, checkout, session);
     const first = keyedEntry(root, key);
@@ -82,7 +96,7 @@ export function ingestPerfLog(root, opts) {
       continue;
     }
     const part = from ? { ...session, lines: session.lines.slice(from) } : session;
-    const { header, perf, host, save } = sessionPerf(part);
+    const { header, perf, host, save } = sessionPerf(part, resolve);
     const { start, end } = from ? sessionTimes({ start: part.lines.find((l) => l.at != null) ?? part.lines[0], lines: part.lines }) : sessionTimes(session);
     const body = Buffer.from(part.lines.map((l) => l.raw).join('\n') + '\n');
     const sha = putBlob(root, body);
@@ -98,7 +112,7 @@ export function ingestPerfLog(root, opts) {
     if (start == null) notes.push('the log lines carry no timestamps');
     const entry = {
       v: 1,
-      id: newId(machine, start ?? mtime),
+      id: newId(machine, start ?? mtime, entryKey),
       kind: 'play',
       at: start == null ? null : new Date(start).toISOString(),
       recordedAt: new Date().toISOString(),
@@ -173,19 +187,20 @@ export function ingestSave(root, opts) {
   const known = keyedEntry(root, key);
   if (known) return { id: known, worldId, created: false };
   const info = describeSave(snapshot);
+  const amended = opts.amend?.(worldId, info) ?? {};
   const sha = putBlob(root, gz);
   const when = at ?? (opts.path ? statSync(opts.path).mtimeMs : Date.now());
   const parent = opts.parent !== undefined ? opts.parent : sessionFor(root, machine, info, at);
   const entry = {
     v: 1,
-    id: newId(machine, when),
+    id: newId(machine, when, key),
     kind: 'save',
     at: new Date(when).toISOString(),
     recordedAt: new Date().toISOString(),
     launchedBy: nobody(who),
     machine,
-    branch: opts.branch ?? null,
-    commit: opts.commit ?? null,
+    branch: amended.branch ?? opts.branch ?? null,
+    commit: fullCommit(amended.commit ?? opts.commit ?? null),
     dirty: opts.dirty ?? null,
     refs: opts.refs ?? null,
     tool: opts.tool ?? null,
@@ -195,7 +210,7 @@ export function ingestSave(root, opts) {
     perf: null,
     files: [fileRef('save', fileName ?? (opts.path ? basename(opts.path) : `${worldId.slice(0, 12)}.json.gz`), sha, root)],
     parent,
-    note
+    note: [note, ...(amended.notes ?? [])].filter(Boolean).join('; ')
   };
   const r = putKeyed(root, key, entry);
   return { id: r.id, worldId, created: r.created };
@@ -254,7 +269,7 @@ export function ingestResult(root, opts) {
   const from = opts.saveWorld ?? null;
   const entry = {
     v: 1,
-    id: newId(machine, at),
+    id: newId(machine, at, k),
     kind,
     at: new Date(at).toISOString(),
     recordedAt: new Date().toISOString(),
@@ -288,6 +303,44 @@ export function ingestResult(root, opts) {
     parent: opts.parent ?? null,
     note
   };
-  const r = putKeyed(root, k, entry);
+  const r = putKeyed(root, k, withInvalid(entry));
   return { id: r.id, created: r.created };
+}
+
+export function ingestBench(root, opts) {
+  const { machine, path, tool = null, who = null, note = '', siblings = [] } = opts;
+  const k = opts.key ?? `bench|${machine}|${sha256Of(readFileSync(path))}`;
+  const known = keyedEntry(root, k);
+  if (known) return { id: known, created: false };
+  const data = JSON.parse(readFileSync(path, 'utf8'));
+  const at = opts.at ?? statSync(path).mtimeMs;
+  const map = data.map ? (Array.isArray(data.map) ? data.map.join('x') : data.map) : null;
+  const role = (n) => (n.endsWith('.cpuprofile') ? 'profile' : n.endsWith('.png') || n.endsWith('.json') ? 'result' : 'log');
+  const entry = {
+    v: 1,
+    id: newId(machine, at, k),
+    kind: 'bench',
+    at: new Date(at).toISOString(),
+    recordedAt: new Date().toISOString(),
+    launchedBy: opts.launchedBy ?? nobody(who),
+    machine,
+    branch: opts.branch ?? null,
+    commit: opts.commit ?? null,
+    dirty: opts.dirty ?? null,
+    refs: opts.refs ?? null,
+    tool,
+    scenario: Array.isArray(data) ? null : data.scenario ?? null,
+    world: { save: opts.worldId ?? null, name: null, turn: null, seed: null, map, pawns: null, mobs: null, generatedBy: null, savedBy: null },
+    host: data.host ?? noHost(),
+    perf: Array.isArray(data) ? { rows: data } : data,
+    files: [
+      fileRef('result', basename(path), putBlob(root, path), root),
+      ...siblings.map((p) => fileRef(role(basename(p)), basename(p), putBlob(root, p), root))
+    ],
+    parent: opts.parent ?? null,
+    note
+  };
+  if (opts.invalid?.length) entry.invalid = opts.invalid;
+  const r = putKeyed(root, k, withInvalid(entry));
+  return { id: r.id, created: r.created, invalid: r.created ? (withInvalid(entry).invalid ?? []) : null };
 }

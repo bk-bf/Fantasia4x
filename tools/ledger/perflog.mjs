@@ -4,7 +4,7 @@ const TAGGED = /^\[T(\d+)\] \[(\w+)\] (.*)$/;
 const RESET = /^=== log reset at (\S+) /;
 const TPS = /^tps=(\d+(?:\.\d+)?) speed=(\S+) pawns=(\d+) mobs=(\d+)/;
 const FPS = /^render fps=(\d+(?:\.\d+)?) /;
-const CAPTURE = /^ledger (save=\S+|failed) /;
+const CAPTURE = /^ledger (save=\S+|save cap=\S+|failed) /;
 const TOKEN = /(\w+)=("(?:[^"]*)"|\S+)/g;
 const HOUR = 3600_000;
 
@@ -155,7 +155,7 @@ function dominant(groups) {
   return best;
 }
 
-export function sessionPerf(session) {
+export function sessionPerf(session, resolve = () => null) {
   const header = session.start.type === 'session' ? sessionHeader(session.start.msg) : null;
   const checkpoints = [];
   const tps = [];
@@ -177,14 +177,16 @@ export function sessionPerf(session) {
     if (line.type === 'capture') {
       const t = tokens(line.msg);
       const ms = num(t.ms) ?? 0;
-      if (!t.save) continue;
+      if (!t.save && !t.cap) continue;
+      const found = t.cap ? resolve(t.cap) : null;
       checkpoints.push({
-        save: t.save,
+        save: t.save ?? found?.save ?? null,
+        capture: t.cap ?? null,
         reason: t.reason ?? null,
         turn: num(t.turn) ?? line.turn,
         at: t.at ?? (line.at == null ? null : new Date(line.at).toISOString()),
         ms,
-        entry: t.entry ?? null
+        entry: t.entry ?? found?.entry ?? null
       });
     } else if (line.type === 'tps') {
       const since = lastTps ?? (line.at == null ? null : line.at - 1000);
@@ -220,8 +222,8 @@ export function sessionPerf(session) {
     const to = checkpoints[k] ?? null;
     if (!checkpoints.length) break;
     stretches.push({
-      from: from ? { save: from.save, turn: from.turn, at: from.at } : { save: header?.save ?? started?.save ?? null, turn: header?.turn ?? null, at: null },
-      to: to ? { save: to.save, turn: to.turn, at: to.at } : null,
+      from: from ? { save: from.save, capture: from.capture, turn: from.turn, at: from.at } : { save: header?.save ?? started?.save ?? null, capture: started?.capture ?? null, turn: header?.turn ?? null, at: null },
+      to: to ? { save: to.save, capture: to.capture, turn: to.turn, at: to.at } : null,
       tps: bySpeed(inside)
     });
   }

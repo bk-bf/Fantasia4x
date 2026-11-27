@@ -190,9 +190,9 @@ const matches = (value, wanted) =>
 
 export function listEntries(root, f = {}) {
   const all = allEntries(root);
-  const savedFrom = new Set(
-    f.world == null ? [] : all.filter((e) => e.kind === 'save' && (e.world?.save ?? '').startsWith(f.world) && e.parent).map((e) => e.parent)
-  );
+  const worldSaves = f.world == null ? [] : all.filter((e) => e.kind === 'save' && (e.world?.save ?? '').startsWith(f.world));
+  const savedFrom = new Set(worldSaves.filter((e) => e.parent).map((e) => e.parent));
+  const captures = new Set(worldSaves.map((e) => e.captureId ?? e.world?.captureId).filter(Boolean));
   return all.filter(
     (e) =>
       (f.machine == null || e.machine === f.machine) &&
@@ -204,7 +204,7 @@ export function listEntries(root, f = {}) {
       (f.world == null ||
         (e.world?.save ?? '').startsWith(f.world) ||
         savedFrom.has(e.id) ||
-        (e.perf?.checkpoints ?? []).some((c) => (c.save ?? '').startsWith(f.world))) &&
+        (e.perf?.checkpoints ?? []).some((c) => (c.save ?? '').startsWith(f.world) || captures.has(c.capture))) &&
       (f.since == null || (e.at ?? '') >= f.since)
   );
 }

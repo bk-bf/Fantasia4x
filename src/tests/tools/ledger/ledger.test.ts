@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, writeFileSync, readFileSync, readdirSync, existsSync, utimesSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, utimesSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -23,8 +23,9 @@ import {
   verifyBlob
 } from '../../../../tools/ledger/store.mjs';
 import { splitSessions, sessionPerf } from '../../../../tools/ledger/perflog.mjs';
-import { ingestPerfLog, ingestResult, ingestSave } from '../../../../tools/ledger/ingest.mjs';
-import { LIVE } from '../../../../tools/ledger/sync.mjs';
+import { ingestBench, ingestPerfLog, ingestResult, ingestSave } from '../../../../tools/ledger/ingest.mjs';
+import { LIVE, SPOOL, mirror, pullMachine } from '../../../../tools/ledger/sync.mjs';
+import { invalidReasons, withInvalid } from '../../../../tools/ledger/invalid.mjs';
 import { resolveSave, assembleSave } from '../../../../tools/ledger/fetch.mjs';
 
 const SESSION_A =
@@ -277,6 +278,53 @@ describe('perf.log sessions', () => {
   });
 });
 
+describe('checkpoints by capture id', () => {
+  const capLog = (cap: string) =>
+    [
+      SESSION_B,
+      tps('14:48:44.414', 6060, 60, '1x'),
+      `2026-11-27 14:48:45.000 [T06100] [info] ledger save cap=${cap} reason=periodic turn=6100 at=2026-11-27T13:48:45.000Z ms=1500 speed=1x`,
+      tps('14:48:45.414', 6120, 20, '1x'),
+      tps('14:48:46.414', 6180, 30, '1x'),
+      tps('14:48:47.414', 6240, 40, '1x'),
+      tps('14:48:48.414', 6300, 61, '1x')
+    ].join('\n') + '\n';
+  const saveEntry = (cap: string, world: string, at: string) => ({
+    v: 1,
+    id: newId('laptop', new Date(at)),
+    kind: 'save',
+    machine: 'laptop',
+    captureId: cap,
+    world: { save: world },
+    files: []
+  });
+  const opts = (log: string) => ({ machine: 'laptop', checkout: 'c', paths: [log], timeZone: 'Europe/Berlin', now: Date.parse('2026-11-28T00:00:00Z') });
+
+  it('links a checkpoint to the save entry with its capture id and leaves the capture window out of the TPS', () => {
+    const save = saveEntry('cap-1', 'c'.repeat(64), '2026-11-27T13:48:45Z');
+    putEntry(dir, save);
+    const log = join(dir, 'perf.log');
+    writeFileSync(log, capLog('cap-1'));
+    ingestPerfLog(dir, opts(log));
+    const [play] = listEntries(dir, { kind: 'play' }) as unknown as (Entry & { perf: { checkpoints: unknown[]; tps: Stats } })[];
+    expect(play.perf.checkpoints).toEqual([
+      { save: 'c'.repeat(64), capture: 'cap-1', reason: 'periodic', turn: 6100, at: '2026-11-27T13:48:45.000Z', ms: 1500, entry: save.id }
+    ]);
+    expect(play.perf.tps).toMatchObject({ median: 61, n: 2 });
+    expect(listEntries(dir, { world: 'cccc' }).map((e) => e.id)).toContain(play.id);
+  });
+
+  it('finds a session by the world of a save that arrived after it', () => {
+    const log = join(dir, 'perf.log');
+    writeFileSync(log, capLog('cap-2'));
+    ingestPerfLog(dir, opts(log));
+    const [play] = listEntries(dir, { kind: 'play' });
+    expect((play as unknown as { perf: { checkpoints: { save: null }[] } }).perf.checkpoints[0].save).toBeNull();
+    putEntry(dir, saveEntry('cap-2', 'd'.repeat(64), '2026-11-27T13:48:46Z'));
+    expect(listEntries(dir, { world: 'dddd' }).map((e) => e.id)).toContain(play.id);
+  });
+});
+
 describe('saves', () => {
   it('links a save to the session it was written in', () => {
     const log = join(dir, 'perf.log');
@@ -336,5 +384,113 @@ describe('sync', () => {
   it('reads perf.log and its rotated names as the live log and keeps older copies apart', () => {
     for (const n of ['perf.log', 'perf.log.1', 'perf.log.20261127T003735Z', 'perf.log.20261127T003735Z-2']) expect(LIVE.test(n)).toBe(true);
     for (const n of ['perf.log.kept-0a1b2c3d4e5f', 'perf.log.kept-012345678901', 'perf.log.bak', 'perf.log.20261127T0037Z']) expect(LIVE.test(n)).toBe(false);
+  });
+});
+
+describe('sync from a machine', () => {
+  const tree = (base: string, files: Record<string, string | Buffer>) => {
+    for (const [rel, body] of Object.entries(files)) {
+      mkdirSync(join(base, rel, '..'), { recursive: true });
+      writeFileSync(join(base, rel), body);
+    }
+  };
+  const sha = (b: string | Buffer) => createHash('sha256').update(b).digest('hex');
+
+  it('clears from the spool only what the store holds and verifies, and touches nothing else', () => {
+    const home = join(dir, 'home');
+    const store = join(dir, 'store');
+    const good = Buffer.from('good blob');
+    const keptId = newId('test', new Date('2026-11-27T10:00:00Z'));
+    const changedId = newId('test', new Date('2026-11-27T11:00:00Z'));
+    const kept = { v: 1, id: keptId, kind: 'play', machine: 'test', files: [{ role: 'log', name: 'g', sha256: sha(good), bytes: good.length }] };
+    const changed = { v: 1, id: changedId, kind: 'play', machine: 'test', files: [], note: 'spool copy' };
+    putEntry(store, { ...changed, note: 'stored copy' });
+    const wt = join(home, 'wt', 'side');
+    const outside = {
+      [`${SPOOL}/../other.txt`]: 'not the spool',
+      [`${SPOOL}/notes.txt`]: 'not a blob or entry',
+      'proj/.debug/perf.log': `${SESSION_B}\n${tps('14:48:44.414', 6060, 60, '1x')}\n`,
+      'proj/.debug/other.log': 'other log',
+      'proj/.git/worktrees/side/gitdir': `${wt}/.git\n`,
+      'wt/side/.debug/perf.log': `${SESSION_A}\n`
+    };
+    tree(home, {
+      ...outside,
+      [`${SPOOL}/blobs/${sha(good).slice(0, 2)}/${sha(good)}`]: good,
+      [`${SPOOL}/blobs/${'b'.repeat(2)}/${'b'.repeat(64)}`]: 'does not hash to its name',
+      [`${SPOOL}/entries/${keptId}.json`]: JSON.stringify(kept),
+      [`${SPOOL}/entries/${changedId}.json`]: JSON.stringify(changed)
+    });
+    const report = { reached: [] as string[], skipped: [] as string[], entries: 0, play: 0, open: 0, removed: 0, errors: [] as string[] };
+    pullMachine(store, 'test', { ssh: null, root: home, checkouts: ['proj'] }, report);
+    expect(report.reached).toEqual(['test']);
+    expect(report.entries).toBe(1);
+    expect(report.removed).toBe(2);
+    expect(report.errors.join('\n')).toMatch(/does not match its hash/);
+    expect(report.errors.join('\n')).toMatch(/differs from the stored one/);
+    expect(readdirSync(join(home, SPOOL, 'entries'))).toEqual([`${changedId}.json`]);
+    expect(existsSync(join(home, SPOOL, 'blobs', 'bb', 'b'.repeat(64)))).toBe(true);
+    expect(existsSync(join(home, SPOOL, 'blobs', sha(good).slice(0, 2), sha(good)))).toBe(false);
+    for (const [rel, body] of Object.entries(outside)) expect(readFileSync(join(home, rel), 'utf8')).toBe(body);
+    expect(getEntry(store, changedId).note).toBe('stored copy');
+    expect(readBlob(store, sha(good)).toString()).toBe('good blob');
+    const plays = listEntries(store, { kind: 'play', tool: 'perf.log' }) as unknown as (Entry & { perf: { checkout: string } })[];
+    expect(plays.map((e) => e.perf.checkout).sort()).toEqual(['proj', 'wt/side']);
+    expect(existsSync(join(store, 'raw', 'test', 'proj', 'perf.log'))).toBe(true);
+    expect(existsSync(join(store, 'raw', 'test', 'proj', 'other.log'))).toBe(false);
+  });
+
+  it('mirrors a log that grew in place and keeps a log that was replaced beside it', () => {
+    const stage = join(dir, 'stage');
+    const raw = join(dir, 'raw');
+    tree(stage, { 'perf.log': 'one\n' });
+    mirror(stage, raw);
+    tree(stage, { 'perf.log': 'one\ntwo\n' });
+    expect(mirror(stage, raw)).toEqual([]);
+    expect(readFileSync(join(raw, 'perf.log'), 'utf8')).toBe('one\ntwo\n');
+    tree(stage, { 'perf.log': 'fresh\n' });
+    const archived = mirror(stage, raw);
+    expect(archived).toEqual([join(raw, `perf.log.kept-${sha('one\ntwo\n').slice(0, 12)}`)]);
+    expect(readFileSync(archived[0], 'utf8')).toBe('one\ntwo\n');
+    expect(readFileSync(join(raw, 'perf.log'), 'utf8')).toBe('fresh\n');
+  });
+});
+
+describe('invalid runs', () => {
+  const reason = 'tps: speed not set, fixed in 30487224/1c851dac';
+  const has = (commit: string, fix: string) => (commit === 'unknown' ? null : commit === `after-${fix.slice(0, 8)}`);
+
+  it('flags frame-cost and steady runs whose commit lacks the speed fix, or that ran before it when the commit is unknown', () => {
+    expect(invalidReasons({ tool: 'frame-cost', commit: 'old', at: '2026-11-28T00:00:00Z' }, has)).toEqual([reason]);
+    expect(invalidReasons({ tool: 'frame-cost', commit: 'after-30487224', at: '2026-11-26T00:00:00Z' }, has)).toEqual([]);
+    expect(invalidReasons({ tool: 'steady', commit: 'after-30487224', at: '2026-11-28T00:00:00Z' }, has)).toEqual([reason]);
+    expect(invalidReasons({ tool: 'steady', commit: 'after-1c851dac', at: '2026-11-28T00:00:00Z' }, has)).toEqual([]);
+    expect(invalidReasons({ tool: 'frame-cost', commit: null, at: '2026-11-27T02:47:14Z' }, has)).toEqual([reason]);
+    expect(invalidReasons({ tool: 'frame-cost', commit: 'unknown', at: '2026-11-27T02:47:16Z' }, has)).toEqual([]);
+    expect(invalidReasons({ tool: 'steady', commit: null, at: '2026-11-27T03:00:00Z' }, has)).toEqual([reason]);
+    expect(invalidReasons({ tool: 'zoom-out', commit: null, at: '2026-11-20T00:00:00Z' }, has)).toEqual([]);
+  });
+
+  it('keeps reasons an entry already carries and adds none twice', () => {
+    expect(withInvalid({ tool: 'steady', commit: null, at: '2026-11-27T03:00:00Z', invalid: [reason, 'busy host'] }, has).invalid).toEqual([reason, 'busy host']);
+    expect(withInvalid({ tool: 'tick-harness', commit: null, at: null }, has)).not.toHaveProperty('invalid');
+  });
+
+  it('flags an imported frame-cost run from before the fix and keeps its files', () => {
+    const path = join(dir, 'base-frame-cost.json');
+    writeFileSync(path, JSON.stringify({ scenario: 'dev-save', map: [750, 750], rows: [] }));
+    const shot = join(dir, 'base-frame-cost.png');
+    writeFileSync(shot, 'png');
+    const at = Date.parse('2026-11-27T01:00:00Z');
+    const r = ingestBench(dir, { machine: 'desktop', path, tool: 'frame-cost', at, siblings: [shot] });
+    const e = getEntry(dir, r.id);
+    expect(e).toMatchObject({ kind: 'bench', tool: 'frame-cost', invalid: [reason], world: { map: '750x750' } });
+    expect(e.files.map((f: { name: string }) => f.name)).toEqual(['base-frame-cost.json', 'base-frame-cost.png']);
+    expect(ingestBench(dir, { machine: 'desktop', path, tool: 'frame-cost', at })).toMatchObject({ id: r.id, created: false });
+  });
+
+  it('reads the fix commits from this repository', () => {
+    expect(invalidReasons({ tool: 'frame-cost', commit: '30487224b8ede8a91872899b19fc841b290696c4', at: null })).toEqual([]);
+    expect(invalidReasons({ tool: 'steady', commit: '30487224b8ede8a91872899b19fc841b290696c4', at: null })).toEqual([reason]);
   });
 });

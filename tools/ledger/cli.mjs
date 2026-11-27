@@ -8,6 +8,7 @@ import { fileRef, gitInfo, launchedBy, machineName, newId, spoolDir, writeBlob, 
 import { getEntry, listEntries, reindex, storeDir, withLock } from './store.mjs';
 import { ingestPerfLog, ingestResult, ingestSave } from './ingest.mjs';
 import { assembleSave, resolveSave } from './fetch.mjs';
+import { withInvalid } from './invalid.mjs';
 
 const ZONES = { laptop: 'Europe/Berlin', desktop: 'Europe/Berlin', ubuntuserver: 'Etc/UTC' };
 const [cmd, ...rest] = process.argv.slice(2);
@@ -21,9 +22,19 @@ function remoteHost() {
 function overSsh(host, args, binary = false) {
   const remote = process.env.F4X_LEDGER_REMOTE_CLI || '~/Documents/Projects/Fantasia4x/tools/ledger/cli.mjs';
   const quoted = args.map((a) => `'${String(a).replace(/'/g, `'\\''`)}'`).join(' ');
+  const missing = `no ledger CLI at ${remote} on ${host}; set F4X_LEDGER_REMOTE_CLI to the tools/ledger/cli.mjs of a checkout there that has it`;
   const r = spawnSync(
     'timeout',
-    ['10m', 'ssh', '-o', 'ConnectTimeout=10', '-o', 'BatchMode=yes', host, `node ${remote} ${quoted}`],
+    [
+      '10m',
+      'ssh',
+      '-o',
+      'ConnectTimeout=10',
+      '-o',
+      'BatchMode=yes',
+      host,
+      `test -f ${remote} || { echo '${missing}' >&2; exit 3; }; node ${remote} ${quoted}`
+    ],
     { stdio: ['ignore', binary ? 'pipe' : 'inherit', 'inherit'], maxBuffer: 2 ** 31 }
   );
   if (r.status !== 0) process.exit(r.status ?? 1);
@@ -38,7 +49,8 @@ function stretchLines(e) {
     const speeds = Object.entries(s.tps ?? {})
       .map(([sp, st]) => `${sp} ${fmtStats(st)}`)
       .join(', ');
-    return `    T${s.from.turn ?? '?'} ${short(s.from.save, 12)} → ${s.to ? `T${s.to.turn} ${short(s.to.save, 12)}` : 'end'}: ${speeds || 'no running samples'}`;
+    const at = (p) => (p.save ? short(p.save, 12) : p.capture ? `cap ${p.capture}` : '-');
+    return `    T${s.from.turn ?? '?'} ${at(s.from)} → ${s.to ? `T${s.to.turn} ${at(s.to)}` : 'end'}: ${speeds || 'no running samples'}`;
   });
 }
 
@@ -95,9 +107,9 @@ function show([id]) {
   const e = getEntry(root, id);
   console.log(JSON.stringify(e, null, 2));
   const lines = stretchLines(e);
-  if (lines.length) console.log(`\nstretches between checkpoints:\n${lines.join('\n')}`);
+  if (lines.length) console.error(`\nstretches between checkpoints:\n${lines.join('\n')}`);
   const children = listEntries(root, {}).filter((c) => c.parent === e.id);
-  if (children.length) console.log(`\nlinked back to this entry:\n${children.map((c) => `  ${line(c)}`).join('\n')}`);
+  if (children.length) console.error(`\nlinked back to this entry:\n${children.map((c) => `  ${line(c)}`).join('\n')}`);
 }
 
 function fetch(args) {
@@ -141,7 +153,7 @@ function record(args) {
   const at = values.at ?? new Date().toISOString();
   const { world, perf, host, ...restResult } = result;
   const id = writeEntry(
-    {
+    withInvalid({
       v: 1,
       id: newId(machine, at),
       kind: values.kind,
@@ -157,7 +169,7 @@ function record(args) {
       files,
       parent: values.parent ?? null,
       note: values.note ?? ''
-    },
+    }),
     dir
   );
   console.log(id);
@@ -262,9 +274,10 @@ try {
   } else if (cmd === 'record') record(rest);
   else if (cmd === 'import') withLock(root, () => importDir(rest));
   else if (cmd === 'reindex') withLock(root, () => console.log(`${reindex(root)} entries indexed`));
+  else if (cmd === 'ingest-raw') await withLock(root, async () => console.log(JSON.stringify((await import('./sync.mjs')).ingestRaw(root))));
   else if (cmd === 'sync') await withLock(root, async () => (await import('./sync.mjs')).sync());
   else {
-    console.error('usage: pnpm ledger list|show|fetch|record|import|reindex|sync');
+    console.error('usage: pnpm ledger list|show|fetch|record|import|reindex|sync|ingest-raw');
     process.exit(2);
   }
 } catch (err) {

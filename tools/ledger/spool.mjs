@@ -59,9 +59,10 @@ function stamp(date) {
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 }
 
-/** @param {string} [machine] @param {Date | string} [date] */
-export function newId(machine = machineName(), date = new Date()) {
-  return `${stamp(new Date(date))}-${machine}-${randomBytes(3).toString('hex')}`;
+/** @param {string} [machine] @param {Date | string | number} [date] @param {string} [key] */
+export function newId(machine = machineName(), date = new Date(), key) {
+  const suffix = key == null ? randomBytes(3).toString('hex') : sha256Of(key).slice(0, 6);
+  return `${stamp(new Date(date))}-${machine}-${suffix}`;
 }
 
 /** @param {string} dir @param {string[]} args */

@@ -1,7 +1,8 @@
 // @ts-nocheck
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, utimesSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, isAbsolute, join, relative } from 'node:path';
 import { sha256Of } from './spool.mjs';
 import { ingestSpool, storeDir } from './store.mjs';
 import { ingestPerfLog } from './ingest.mjs';
@@ -14,44 +15,64 @@ export const MACHINES = {
 
 const SSH_OPTS = ['-o', 'ConnectTimeout=10', '-o', 'BatchMode=yes', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=4'];
 
-function run(cmd, args, { input, limit = '10m' } = {}) {
-  return spawnSync('timeout', [limit, cmd, ...args], { encoding: 'utf8', input, maxBuffer: 2 ** 28 });
+export const SPOOL = '.local/share/fantasia4x/ledger-spool';
+const HOME = /^(\/home\/[^/]+|\/root|\/Users\/[^/]+)\//;
+
+function run(cmd, args, { input, limit = '10m', cwd } = {}) {
+  return spawnSync('timeout', [limit, cmd, ...args], { encoding: 'utf8', input, cwd, maxBuffer: 2 ** 28 });
 }
 
-function shell(host, script, opts) {
-  return host ? run('ssh', [...SSH_OPTS, host, script], opts) : run('sh', ['-c', script], opts);
+const homeOf = (cfg) => cfg.root ?? homedir();
+
+function shell(cfg, script, opts) {
+  return cfg.ssh ? run('ssh', [...SSH_OPTS, cfg.ssh, script], opts) : run('sh', ['-c', script], { ...opts, cwd: homeOf(cfg) });
 }
 
 const slug = (path) => path.replace(/^\/+/, '').replace(/[^\w.-]+/g, '-');
 
-function probe(machine, cfg) {
-  const lines = [
-    'echo "tz=$(timedatectl show -p Timezone --value 2>/dev/null || cat /etc/timezone 2>/dev/null)"',
-    'echo "home=$HOME"',
-    'echo "spool=${F4X_LEDGER_SPOOL:-${XDG_DATA_HOME:-$HOME/.local/share}/fantasia4x/ledger-spool}"',
-    ...cfg.checkouts.map(
-      (c) =>
-        `[ -d "$HOME/${c}" ] && { echo "wt=$HOME/${c}"; git -C "$HOME/${c}" worktree list --porcelain 2>/dev/null | sed -n 's/^worktree /wt=/p'; }`
-    )
-  ];
-  const r = shell(cfg.ssh, lines.join('; '), { limit: '60s' });
-  if (r.status !== 0 && !r.stdout) return null;
-  const out = { tz: null, home: null, spool: null, worktrees: new Set() };
-  for (const l of r.stdout.split('\n')) {
-    const eq = l.indexOf('=');
-    if (eq < 0) continue;
-    const k = l.slice(0, eq);
-    const v = l.slice(eq + 1).trim();
-    if (k === 'wt') out.worktrees.add(v);
-    else if (v) out[k] = v;
-  }
-  return out;
+function source(cfg, path) {
+  if (cfg.ssh) return `${cfg.ssh}:${path}`;
+  return isAbsolute(path) ? path : join(homeOf(cfg), path);
+}
+
+function rsync(cfg, args, limit = '20m') {
+  return run('rsync', ['--timeout=60', '-e', `ssh ${SSH_OPTS.join(' ')}`, ...args], { limit });
 }
 
 function pull(cfg, from, to, extra = []) {
   mkdirSync(to, { recursive: true });
-  const src = cfg.ssh ? `${cfg.ssh}:${from}` : from;
-  return run('rsync', ['-a', '--timeout=60', '-e', `ssh ${SSH_OPTS.join(' ')}`, ...extra, src, to], { limit: '20m' });
+  return rsync(cfg, ['-a', ...extra, source(cfg, from), to]);
+}
+
+export function timeZoneOf(cfg) {
+  const r = rsync(cfg, ['--list-only', '-l', source(cfg, '/etc/localtime')], '60s');
+  if (r.status !== 0) return { reached: false, tz: null };
+  const m = /-> \S*zoneinfo\/(\S+)\s*$/m.exec(r.stdout);
+  return { reached: true, tz: m ? m[1] : null };
+}
+
+function homeRelative(cfg, path) {
+  const home = cfg.ssh ? null : homeOf(cfg);
+  if (home && path.startsWith(`${home}/`)) return path.slice(home.length + 1);
+  const m = HOME.exec(path);
+  return m ? path.slice(m[0].length) : path;
+}
+
+export function worktreesOf(root, machine, cfg) {
+  const out = new Set();
+  for (const c of cfg.checkouts) {
+    out.add(c);
+    const stage = join(root, 'incoming', machine, 'worktrees', slug(c));
+    const r = pull(cfg, `${c}/.git/worktrees/`, `${stage}/`, ['--delete', '--include=/*/', '--include=/*/gitdir', '--exclude=*']);
+    if (r.status !== 0) continue;
+    for (const name of readdirSync(stage)) {
+      const file = join(stage, name, 'gitdir');
+      if (!existsSync(file)) continue;
+      const gitdir = readFileSync(file, 'utf8').trim();
+      if (gitdir) out.add(homeRelative(cfg, dirname(gitdir)));
+    }
+  }
+  return out;
 }
 
 function sameStart(older, newer) {
@@ -97,9 +118,10 @@ function ingestCheckout(root, machine, checkout, dir, timeZone, report) {
   }
 }
 
-function pullSpool(root, machine, cfg, info, report) {
+export function pullSpool(root, machine, cfg, report, spool = SPOOL) {
   const stage = join(root, 'incoming', machine, 'spool');
-  const r = pull(cfg, `${info.spool}/`, `${stage}/`, ['--include=/blobs/***', '--include=/entries/***', '--exclude=*.tmp-*', '--exclude=*']);
+  const r = pull(cfg, `${spool}/`, `${stage}/`, ['--include=/blobs/***', '--include=/entries/***', '--exclude=*.tmp-*', '--exclude=*']);
+  if (r.status !== 0 && /No such file|change_dir/.test(r.stderr)) return;
   if (r.status !== 0 && r.status !== 23 && r.status !== 24) {
     report.errors.push(`${machine}: spool rsync exit ${r.status} ${r.stderr.trim().slice(0, 200)}`);
     return;
@@ -107,27 +129,29 @@ function pullSpool(root, machine, cfg, info, report) {
   const got = ingestSpool(root, stage, { remove: false });
   report.entries += got.entries;
   report.errors.push(...got.errors.map((e) => `${machine}: ${e}`));
-  const rel = [...got.removable.entries, ...got.removable.blobs].map((p) => relative(stage, p));
+  const rel = [...got.removable.entries, ...got.removable.blobs]
+    .map((p) => relative(stage, p))
+    .filter((p) => /^(blobs\/[0-9a-f]{2}\/[0-9a-f]{64}|entries\/[\w.-]+\.json)$/.test(p));
   if (!rel.length) return;
-  const del = shell(cfg.ssh, `cd "${info.spool}" && xargs -0 rm -f --`, { input: rel.join('\0'), limit: '60s' });
+  const del = shell(cfg, `cd "${spool}" && xargs -0 rm -f --`, { input: rel.join('\0'), limit: '60s' });
   if (del.status === 0) {
     for (const p of rel) spawnSync('rm', ['-f', '--', join(stage, p)]);
     report.removed += rel.length;
   } else report.errors.push(`${machine}: could not clear the spool: ${del.stderr.trim().slice(0, 200)}`);
 }
 
-function pullMachine(root, machine, cfg, report) {
-  const info = probe(machine, cfg);
-  if (!info || !info.home) {
+export function pullMachine(root, machine, cfg, report) {
+  const { reached, tz } = timeZoneOf(cfg);
+  if (!reached) {
     report.skipped.push(machine);
     return;
   }
   report.reached.push(machine);
-  pullSpool(root, machine, cfg, info, report);
-  for (const wt of info.worktrees) {
-    const checkout = wt.startsWith(`${info.home}/`) ? wt.slice(info.home.length + 1) : wt;
+  if (!tz) report.errors.push(`${machine}: /etc/localtime names no zone; its perf.log times are read as UTC`);
+  pullSpool(root, machine, cfg, report);
+  for (const checkout of worktreesOf(root, machine, cfg)) {
     const stage = join(root, 'incoming', machine, 'logs', slug(checkout));
-    const r = pull(cfg, `${wt}/.debug/`, `${stage}/`, ['--include=perf.log*', '--exclude=*']);
+    const r = pull(cfg, `${checkout}/.debug/`, `${stage}/`, ['--include=perf.log*', '--exclude=*']);
     if (r.status !== 0) {
       if (!/No such file|change_dir/.test(r.stderr)) report.errors.push(`${machine} ${checkout}: rsync exit ${r.status}`);
       continue;
@@ -135,8 +159,35 @@ function pullMachine(root, machine, cfg, report) {
     if (!readdirSync(stage).length) continue;
     const raw = join(root, 'raw', machine, slug(checkout));
     mirror(stage, raw);
-    ingestCheckout(root, machine, checkout, raw, info.tz, report);
+    writeSource(raw, { machine, checkout, timeZone: tz });
+    ingestCheckout(root, machine, checkout, raw, tz, report);
   }
+}
+
+export function writeSource(raw, source) {
+  const path = join(raw, '.source.json');
+  const text = JSON.stringify(source) + '\n';
+  if (existsSync(path) && readFileSync(path, 'utf8') === text) return;
+  writeFileSync(`${path}.tmp`, text);
+  renameSync(`${path}.tmp`, path);
+}
+
+export function ingestRaw(root, report = { play: 0, open: 0, missing: [] }) {
+  const base = join(root, 'raw');
+  if (!existsSync(base)) return report;
+  for (const machine of readdirSync(base).sort()) {
+    for (const name of readdirSync(join(base, machine)).sort()) {
+      const raw = join(base, machine, name);
+      const path = join(raw, '.source.json');
+      if (!existsSync(path)) {
+        report.missing.push(`${machine}/${name}`);
+        continue;
+      }
+      const source = JSON.parse(readFileSync(path, 'utf8'));
+      ingestCheckout(root, source.machine, source.checkout, raw, source.timeZone, report);
+    }
+  }
+  return report;
 }
 
 export const steps = [
