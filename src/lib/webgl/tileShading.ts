@@ -1,5 +1,4 @@
 import type {
-  GlslSources,
   GpuDevice,
   GpuRenderPass,
   GpuRenderPipeline,
@@ -10,7 +9,7 @@ import type {
 import { uniformLayout, type Precision, type UniformMember } from '../gpu/uniforms.js';
 import { DRAW_GROUP, DrawSlices } from './drawSlices.js';
 import { PASS_GROUP, PassBindings, blankTexture } from './passBindings.js';
-import type { ShaderManager } from './shaders.js';
+import type { ShaderManager, ShaderSource } from './shaders.js';
 import { TILE_PIPELINE, tilePipelines, type TilePipeline } from './tilePipelines.js';
 import { CUT_MAX } from './painted/cutaway.js';
 
@@ -108,14 +107,14 @@ export class TileShading {
   static create(
     gpu: GpuDevice,
     shaders: ShaderManager,
-    glsl: Omit<GlslSources, 'attributes'>,
+    sources: ShaderSource,
     format: TextureFormat,
     depth: DepthFormat | null
   ): TileShading | { error: string } {
     const bindings = new PassBindings(gpu, 'tile', [TILE_STATIC, TILE_FRAME], TILE_TEXTURES);
     const draws = new DrawSlices(gpu, 'tile', TILE_DRAW);
     const pipelines = new Map<TilePipeline, GpuRenderPipeline>();
-    for (const [name, desc] of tilePipelines(glsl, format, depth, [bindings, draws])) {
+    for (const [name, desc] of tilePipelines(sources, format, depth, [bindings, draws])) {
       const made = shaders.createPipeline(name, desc);
       if (!made.success || !made.pipeline) {
         bindings.destroy();

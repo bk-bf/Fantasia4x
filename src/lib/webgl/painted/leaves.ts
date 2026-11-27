@@ -1,6 +1,7 @@
 import vertexSource from '../shaders/leaf.vert.glsl?raw';
 import fragmentSource from '../shaders/leaf.frag.glsl?raw';
 import ditherSource from '../shaders/dither.wgsl?raw';
+import toneSource from '../shaders/tone.wgsl?raw';
 import wgslSource from '../shaders/leaf.wgsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import type { AtlasTexels } from '../drawnSprites.js';
@@ -233,7 +234,7 @@ export class FallingLeaves {
       canvasPipeline(gpu, {
         vertex: vertexSource,
         fragment: fragmentSource,
-        wgsl: ditherSource + wgslSource,
+        wgsl: ditherSource + toneSource + wgslSource,
         attributes: Object.fromEntries(LEAF_ATTRIBUTES.map(([name], i) => [name, i])),
         buffers: [LEAF_LAYOUT],
         topology: 'triangle-strip',

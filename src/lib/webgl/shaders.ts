@@ -11,10 +11,18 @@ import vertexShaderSource from './shaders/vertex.glsl?raw';
 import fragmentShaderSource from './shaders/fragment.glsl?raw';
 import { withRockSurface } from './painted/rockSurface.js';
 import { withTreeParts } from './painted/treeParts.js';
+import ditherSource from './shaders/dither.wgsl?raw';
+import toneSource from './shaders/tone.wgsl?raw';
+import rockSurfaceSource from './shaders/rockSurface.wgsl?raw';
+import treePartsSource from './shaders/treeParts.wgsl?raw';
+import tileSource from './shaders/tile.wgsl?raw';
+import tileDepthSource from './shaders/tileDepth.wgsl?raw';
+import tileFlatSource from './shaders/tileFlat.wgsl?raw';
 
 export interface ShaderSource {
   vertex: string;
   fragment: string;
+  wgsl?: string;
 }
 
 export type WgslRule = 'any' | 'skip' | 'require';
@@ -134,6 +142,15 @@ export const tileFragmentSource = (painted: boolean): string =>
     withRockSurface(painted ? withPaintedDefine(fragmentShaderSource) : fragmentShaderSource)
   );
 
+export const tileWgslSource = (painted: boolean, rowDepth: boolean): string =>
+  `const PAINTED = ${painted};\n` +
+  ditherSource +
+  toneSource +
+  rockSurfaceSource +
+  treePartsSource +
+  tileSource +
+  (rowDepth ? tileDepthSource : tileFlatSource);
+
 export async function createTileRendererShaders(
   gpu: GpuDevice,
   debug: boolean = false,
@@ -147,7 +164,8 @@ export async function createTileRendererShaders(
   try {
     const shaderSource: ShaderSource = {
       vertex: vertexShaderSource,
-      fragment: tileFragmentSource(painted)
+      fragment: tileFragmentSource(painted),
+      wgsl: tileWgslSource(painted, rowDepth)
     };
 
     console.log('📋 Vertex shader source length:', shaderSource.vertex.length);

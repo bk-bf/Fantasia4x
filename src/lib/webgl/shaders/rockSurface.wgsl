@@ -30,6 +30,11 @@ fn wrapped(q: vec2i, size: vec2i) -> vec2i {
     return (q % size + size) % size;
 }
 
+fn rockShade(rim: i32, p: vec2i) -> i32 {
+    let size = vec2i(textureDimensions(u_rockTexture, 0));
+    return i32(textureLoad(u_rockTexture, wrapped(p, size), 0)[rim] * 255.0 + 0.5);
+}
+
 fn veinNearBit(near: f32, bit: u32) -> bool {
     return (i32(near + 0.5) & (1 << bit)) != 0;
 }

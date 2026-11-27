@@ -1,5 +1,4 @@
 const CORNERS = array<vec2f, 6>(vec2f(0.0), vec2f(1.0, 0.0), vec2f(0.0, 1.0), vec2f(1.0, 0.0), vec2f(1.0), vec2f(0.0, 1.0));
-const LUMA = vec3f(0.2126, 0.7152, 0.0722);
 const TIER_REACH: u32 = 8u;
 const STEP: i32 = 24;
 const TOP_TIER: i32 = 4;
@@ -42,10 +41,6 @@ fn vs(@builtin(vertex_index) index: u32) -> TierOut {
     out.position = view.u_projection * vec4f((base - view.u_viewOffset) * view.u_zoom, 0.0, 1.0);
     out.art = art;
     return out;
-}
-
-fn weathered(c: vec3f) -> vec3f {
-    return mix(vec3f(dot(c, LUMA)), c, tierFrame.u_saturation) * tierFrame.u_brightness;
 }
 
 fn fieldAt(p: vec2i) -> vec4f {
@@ -105,8 +100,7 @@ fn ledge(src: vec2i, level: i32, shadow: f32) -> vec3f {
     let right = levelAt(src + vec2i(1, 0)) < level;
     let rim = select(select(0, 2, right), 1, up || left);
     let lip = levelAt(src - vec2i(0, LIP)) < level || levelAt(src - vec2i(LIP, 0)) < level;
-    let size = vec2i(textureDimensions(u_rockTexture, 0));
-    let shade = i32(textureLoad(u_rockTexture, wrapped(src, size), 0)[rim] * 255.0 + 0.5);
+    let shade = rockShade(rim, src);
     if (snowLies(src, level, rim, lip, tierFrame.u_snow)) {
         return snowOn(src, shade, rim, shadow, tierFrame.u_snowRamp);
     }
@@ -175,5 +169,5 @@ fn fs(frag: TierOut) -> TierPixel {
     if (tierFrame.u_fieldLit > 0.5) {
         light = textureLoad(u_lightTexture, vec2i(frag.position.xy), 0).rgb * 2.0;
     }
-    return TierPixel(vec4f(weathered(rock * light), 1.0), 0.5 - 0.5 * f32(y) / tierFrame.u_rowPx * tierFrame.u_rowDepth);
+    return TierPixel(vec4f(weathered(rock * light, tierFrame.u_saturation, tierFrame.u_brightness), 1.0), 0.5 - 0.5 * f32(y) / tierFrame.u_rowPx * tierFrame.u_rowDepth);
 }

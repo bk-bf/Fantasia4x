@@ -5,12 +5,14 @@ import {
   type CompareFunction,
   type DepthFormat,
   type GlslSources,
+  type WgslSources,
   type StencilFaceState,
   type TextureFormat,
   type VertexBufferLayout
 } from '../gpu/device.js';
 import type { FramedPipeline } from './frameBindings.js';
 import type { GroupBindings } from './passBindings.js';
+import type { ShaderSource } from './shaders.js';
 
 export const GLYPH_VERTEX_FLOATS = 24;
 export const ROW_VERTEX_FLOATS = 32;
@@ -82,7 +84,7 @@ const STATES: Record<TilePipeline, TileState> = {
 };
 
 export function tilePipelines(
-  glsl: Omit<GlslSources, 'attributes'>,
+  { wgsl: code, ...glsl }: ShaderSource,
   format: TextureFormat,
   depth: DepthFormat | null,
   bindings: readonly GroupBindings[] = []
@@ -91,6 +93,10 @@ export function tilePipelines(
     ...glsl,
     attributes: TILE_ATTRIBUTES
   });
+  const wgsl =
+    code === undefined
+      ? undefined
+      : bindings.reduce<WgslSources>((s, b) => b.wgsl(s), { code });
   return (Object.keys(STATES) as TilePipeline[]).map((p) => {
     const [blend, depthCompare, depthWriteEnabled, stencil] = STATES[p];
     const marks = stencil && depth === 'depth24plus-stencil8';
@@ -98,6 +104,7 @@ export function tilePipelines(
       TILE_PIPELINE[p],
       {
         glsl: sources,
+        ...(wgsl ? { wgsl } : {}),
         layout: bindings.map((b) => b.layout),
         vertex: { buffers: [tileVertexLayout(depth !== null)] },
         primitive: { topology: 'triangle-list' },

@@ -1,5 +1,4 @@
 const SPAN: f32 = 4.0;
-const LUMA = vec3f(0.2126, 0.7152, 0.0722);
 const SHAPE_LEAF: i32 = 0;
 const SHAPE_DOT: i32 = 1;
 const SHAPE_PLUS: i32 = 2;
@@ -102,5 +101,5 @@ fn fs(frag: LeafOut) -> @location(0) vec4f {
     }
     light = mix(light, vec3f(1.0), glow);
     rgb *= light;
-    return vec4f(mix(vec3f(dot(rgb, LUMA)), rgb, leafFrame.u_tone.x) * leafFrame.u_tone.y, 1.0);
+    return vec4f(weathered(rgb, leafFrame.u_tone.x, leafFrame.u_tone.y), 1.0);
 }

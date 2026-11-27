@@ -2,6 +2,7 @@ import vertexSource from '../shaders/tier.vert.glsl?raw';
 import fragmentSource from '../shaders/tier.frag.glsl?raw';
 import ditherSource from '../shaders/dither.wgsl?raw';
 import rockSurfaceSource from '../shaders/rockSurface.wgsl?raw';
+import toneSource from '../shaders/tone.wgsl?raw';
 import wgslSource from '../shaders/tier.wgsl?raw';
 import type { GameGrid } from '../game-grid.js';
 import type { ShaderManager } from '../shaders.js';
@@ -88,7 +89,7 @@ export class Tiers {
       canvasPipeline(gpu, {
         vertex: vertexSource,
         fragment: withRockSurface(fragmentSource),
-        wgsl: ditherSource + rockSurfaceSource + wgslSource,
+        wgsl: ditherSource + toneSource + rockSurfaceSource + wgslSource,
         topology: 'triangle-list',
         blend: ALPHA_BLEND,
         depthCompare: 'less-equal',
