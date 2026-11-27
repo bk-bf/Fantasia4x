@@ -249,6 +249,15 @@ export interface CompiledModule {
   module: GpuShaderModule;
 }
 
+export class PipelineBuildFailed extends Error {
+  constructor(
+    readonly pipeline: string,
+    reason: string
+  ) {
+    super(`the ${pipeline} pipeline did not build: ${reason}`);
+  }
+}
+
 export type RenderPipelineResult =
   | {
       ok: true;
@@ -332,6 +341,7 @@ export interface GpuDevice {
   checkError(operation: string): boolean;
 
   createRenderPipeline(desc: RenderPipelineDescriptor): RenderPipelineResult;
+  pipelinesReady(): Promise<void>;
   destroyRenderPipeline(pipeline: GpuRenderPipeline): void;
   destroyShaderModule(module: GpuShaderModule): void;
 

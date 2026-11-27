@@ -1,4 +1,5 @@
 import {
+  PipelineBuildFailed,
   WGSL_FRAGMENT_ENTRY,
   WGSL_VERTEX_ENTRY,
   type BindGroupLayoutEntry,
@@ -34,6 +35,8 @@ function reportCompilation(label: string, code: string, module: GPUShaderModule)
 export class WebgpuPipelines {
   private readonly modules = new Map<string, GPUShaderModule>();
   private readonly built = new WeakMap<GpuRenderPipeline, Built>();
+  private readonly pending = new Set<Promise<void>>();
+  private failure: PipelineBuildFailed | null = null;
 
   constructor(
     private readonly device: GPUDevice,
@@ -66,7 +69,7 @@ export class WebgpuPipelines {
       buffers: desc.vertex.buffers
     };
     this.built.set(handle, built);
-    device
+    const building = device
       .createRenderPipelineAsync({
         label: desc.label,
         layout: device.createPipelineLayout({
@@ -91,17 +94,28 @@ export class WebgpuPipelines {
           if (!built.failed) built.pipeline = pipeline;
         },
         (error: unknown) => {
+          if (built.failed) return;
           built.failed = true;
-          console.error(
-            `❌ WebGPU pipeline ${desc.label} is invalid and will not draw: ${error instanceof Error ? error.message : String(error)}`
+          const failure = new PipelineBuildFailed(
+            desc.label,
+            error instanceof Error ? error.message : String(error)
           );
+          this.failure ??= failure;
+          console.error(`❌ WebGPU: ${failure.message}`);
         }
-      );
+      )
+      .finally(() => this.pending.delete(building));
+    this.pending.add(building);
     return {
       ok: true,
       pipeline: handle,
       modules: [{ label: desc.label, module: module as unknown as GpuShaderModule }]
     };
+  }
+
+  async settled(): Promise<void> {
+    while (this.pending.size > 0) await Promise.all(this.pending);
+    if (this.failure) throw this.failure;
   }
 
   private of(pipeline: GpuRenderPipeline): Built {

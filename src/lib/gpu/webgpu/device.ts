@@ -134,6 +134,10 @@ export class WebgpuDevice implements GpuDevice {
     return this.pipelines.create(desc);
   }
 
+  pipelinesReady(): Promise<void> {
+    return this.pipelines.settled();
+  }
+
   destroyRenderPipeline(pipeline: GpuRenderPipeline): void {
     this.pipelines.retire(pipeline);
   }

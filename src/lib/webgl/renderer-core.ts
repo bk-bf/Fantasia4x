@@ -6,7 +6,7 @@ import { ALPHA_CUT, GridRenderer, type GridDraw, type GridRenderOptions } from '
 import type { TileShading } from './tileShading.js';
 import { WebGLStateManager } from './webgl-state.js';
 import type { GameGrid } from './game-grid.js';
-import type { GpuDevice, GpuRenderPass, GpuTexture } from '../gpu/device.js';
+import { PipelineBuildFailed, type GpuDevice, type GpuRenderPass, type GpuTexture } from '../gpu/device.js';
 import type { FontAtlas } from './types.js';
 import { BASE_TILE_PX } from './tile-types.js';
 import { WORK_PINS } from '../workPins/flag.js';
@@ -411,8 +411,13 @@ export class WebGLRendererCore {
     try {
       return await this.build();
     } catch (error) {
-      if (!(error instanceof MissingWgsl) || !this.webglState.canFallBack) {
+      const noWebgpu = error instanceof MissingWgsl || error instanceof PipelineBuildFailed;
+      if (!noWebgpu || !this.webglState.canFallBack) {
         console.error('❌ WebGL init failed:', error);
+        if (error instanceof PipelineBuildFailed)
+          throw new Error(
+            'WebGPU could not build its shaders. Start with ?gpu=webgl2 to draw with WebGL2.'
+          );
         throw error;
       }
       console.info(`[gpu] ${error.message}, so the automatic choice falls back to WebGL2`);
@@ -493,6 +498,7 @@ export class WebGLRendererCore {
     if (this.painted) this.tiers = Tiers.create(gpu, this.shaderManager, this.painted);
     if (this.gameGrid) this.tiers?.setGrids(this.gameGrid, this.resourceOverlayGrid);
 
+    await gpu.pipelinesReady();
     if (this.debug) console.log('✅ WebGL2 renderer ready');
     return true;
   }

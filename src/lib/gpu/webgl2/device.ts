@@ -178,6 +178,10 @@ export class Webgl2Device implements GpuDevice {
     return this.pipelines.create(desc);
   }
 
+  pipelinesReady(): Promise<void> {
+    return Promise.resolve();
+  }
+
   destroyRenderPipeline(pipeline: GpuRenderPipeline): void {
     if (this.pipeline === (pipeline as unknown)) this.pipeline = null;
     this.pipelines.destroy(pipeline);

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ALPHA_BLEND,
   BufferUsage,
+  PipelineBuildFailed,
   ShaderStage,
   TextureUsage,
   type BindGroupLayoutEntry,
@@ -9,6 +10,8 @@ import {
   type RenderPipelineDescriptor
 } from '../../lib/gpu/device.js';
 import { WebgpuDevice } from '../../lib/gpu/webgpu/device.js';
+import { uniformLayout } from '../../lib/gpu/uniforms.js';
+import { DrawSlices } from '../../lib/webgl/drawSlices.js';
 
 type Call = [string, ...unknown[]];
 
@@ -22,8 +25,26 @@ const LIMITS = {
   maxUniformBuffersPerShaderStage: 12
 };
 
-function fake(options: { pipelines?: 'resolve' | 'reject'; limits?: Partial<typeof LIMITS> } = {}) {
+const FORMAT_BYTES: Record<string, number> = {
+  float32: 4,
+  float32x2: 8,
+  float32x3: 12,
+  float32x4: 16
+};
+
+function overrun(desc: GPURenderPipelineDescriptor): string | null {
+  for (const layout of desc.vertex.buffers ?? [])
+    for (const a of layout?.attributes ?? [])
+      if (a.offset + FORMAT_BYTES[a.format] > layout!.arrayStride)
+        return `attribute ${a.shaderLocation} overruns its ${layout!.arrayStride}-byte stride`;
+  return null;
+}
+
+function fake(
+  options: { pipelines?: 'resolve' | 'reject' | 'hold'; limits?: Partial<typeof LIMITS> } = {}
+) {
   const calls: Call[] = [];
+  const held: (() => void)[] = [];
   const record =
     (name: string, made: (...a: never[]) => unknown = () => ({ name })) =>
     (...a: unknown[]) => {
@@ -57,10 +78,17 @@ function fake(options: { pipelines?: 'resolve' | 'reject'; limits?: Partial<type
       getCompilationInfo: () => Promise.resolve({ messages: [] })
     })),
     createPipelineLayout: record('createPipelineLayout', (d: object) => ({ pipelineLayout: d })),
-    createRenderPipelineAsync: record('createRenderPipelineAsync', (d: object) =>
-      options.pipelines === 'reject'
-        ? Promise.reject(new Error('the fragment stage does not compile'))
-        : Promise.resolve({ pipeline: d })
+    createRenderPipelineAsync: record(
+      'createRenderPipelineAsync',
+      (d: GPURenderPipelineDescriptor) => {
+        const invalid = overrun(d);
+        if (invalid) return Promise.reject(new Error(invalid));
+        if (options.pipelines === 'reject')
+          return Promise.reject(new Error('the fragment stage does not compile'));
+        if (options.pipelines === 'hold')
+          return new Promise((resolve) => held.push(() => resolve({ pipeline: d })));
+        return Promise.resolve({ pipeline: d });
+      }
     ),
     createCommandEncoder: record('createCommandEncoder', () => ({
       beginRenderPass: record('beginRenderPass', () => ({
@@ -86,12 +114,17 @@ function fake(options: { pipelines?: 'resolve' | 'reject'; limits?: Partial<type
     { validate: true }
   );
   const named = (name: string) => calls.filter((c) => c[0] === name).map((c) => c.slice(1));
-  return { gpu, calls, named, canvasTexture };
+  const release = () => held.splice(0).forEach((r) => r());
+  return { gpu, calls, named, canvasTexture, release };
 }
 
 const STAGES = ShaderStage.VERTEX | ShaderStage.FRAGMENT;
 
-function pipelineDesc(layout: GpuBindGroupLayout[], wgsl = true): RenderPipelineDescriptor {
+function pipelineDesc(
+  layout: GpuBindGroupLayout[],
+  wgsl = true,
+  instanceOffset = 0
+): RenderPipelineDescriptor {
   return {
     label: 'p',
     layout,
@@ -107,7 +140,7 @@ function pipelineDesc(layout: GpuBindGroupLayout[], wgsl = true): RenderPipeline
         {
           arrayStride: 16,
           stepMode: 'instance',
-          attributes: [{ shaderLocation: 1, offset: 4, format: 'float32x4' }]
+          attributes: [{ shaderLocation: 1, offset: instanceOffset, format: 'float32x4' }]
         }
       ]
     },
@@ -190,7 +223,7 @@ describe('the WebGPU device maps', () => {
       {
         arrayStride: 16,
         stepMode: 'instance',
-        attributes: [{ shaderLocation: 1, offset: 4, format: 'float32x4' }]
+        attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x4' }]
       }
     ]);
     expect(desc.fragment?.targets).toEqual([
@@ -252,18 +285,17 @@ describe('the WebGPU device maps', () => {
   });
 });
 
+const SLICE_UNIFORMS = uniformLayout('D', [{ name: 'u_x', type: 'vec4', precision: 'highp' }]);
+
 function drawn(options?: Parameters<typeof fake>[0]) {
   const f = fake(options);
   const { gpu } = f;
-  const slice: BindGroupLayoutEntry = {
-    binding: 0,
-    visibility: STAGES,
-    buffer: { hasDynamicOffset: true, minBindingSize: 64 }
-  };
-  const layout = gpu.createBindGroupLayout({
-    entries: [slice, { binding: 1, visibility: STAGES, texture: { sampleType: 'float' } }]
+  const slices = new DrawSlices(gpu, 'd', SLICE_UNIFORMS);
+  slices.stage(0, { u_x: [1, 2, 3, 4] });
+  slices.stage(1, { u_x: [5, 6, 7, 8] });
+  const sampled = gpu.createBindGroupLayout({
+    entries: [{ binding: 0, visibility: STAGES, texture: { sampleType: 'float' } }]
   });
-  const uniforms = gpu.createBuffer({ size: 1024, usage: BufferUsage.UNIFORM | BufferUsage.COPY_DST });
   const vertices = gpu.createBuffer({ size: 1024, usage: BufferUsage.VERTEX | BufferUsage.COPY_DST });
   const texture = gpu.createTexture({
     format: 'rgba8unorm',
@@ -272,13 +304,10 @@ function drawn(options?: Parameters<typeof fake>[0]) {
     usage: TextureUsage.TEXTURE_BINDING | TextureUsage.COPY_DST
   });
   const group = gpu.createBindGroup({
-    layout,
-    entries: [
-      { binding: 0, resource: { buffer: uniforms, size: 64 } },
-      { binding: 1, resource: texture }
-    ]
+    layout: sampled,
+    entries: [{ binding: 0, resource: texture }]
   });
-  const made = gpu.createRenderPipeline(pipelineDesc([layout]));
+  const made = gpu.createRenderPipeline(pipelineDesc([slices.layout, sampled]));
   if (!made.ok) throw new Error(made.error);
   const draw = () => {
     const encoder = gpu.createCommandEncoder();
@@ -286,25 +315,27 @@ function drawn(options?: Parameters<typeof fake>[0]) {
       colorAttachments: [{ view: gpu.canvas.getCurrentTexture(), loadOp: 'load', storeOp: 'store' }]
     });
     pass.setPipeline(made.pipeline);
-    pass.setBindGroup(0, group, [gpu.limits().minUniformBufferOffsetAlignment]);
+    pass.setBindGroup(0, slices.group, [slices.offset(1)]);
+    pass.setBindGroup(1, group);
     pass.setVertexBuffer(0, vertices, 0);
     pass.setVertexBuffer(1, vertices, 512);
     pass.draw(4, 2);
     pass.end();
     return encoder.finish();
   };
-  return { ...f, uniforms, vertices, texture, draw };
+  return { ...f, slices, vertices, texture, draw };
 }
 
 describe('a draw on the WebGPU device', () => {
   it('passes the dynamic offset a slice sits at, one alignment stride per slice', async () => {
-    const { gpu, named, draw } = drawn();
-    await settle();
-    draw();
-    expect(gpu.limits().minUniformBufferOffsetAlignment).toBe(256);
-    expect(named('setBindGroup')[0].slice(0, 1)).toEqual([0]);
-    expect(named('setBindGroup')[0][2]).toEqual([256]);
-    expect(named('draw')).toEqual([[4, 2, 0, 0]]);
+    for (const alignment of [256, 512]) {
+      const { named, draw } = drawn({ limits: { minUniformBufferOffsetAlignment: alignment } });
+      await settle();
+      draw();
+      expect(named('setBindGroup')[0].slice(0, 1)).toEqual([0]);
+      expect(named('setBindGroup')[0][2]).toEqual([alignment]);
+      expect(named('draw')).toEqual([[4, 2, 0, 0]]);
+    }
   });
 
   it('encodes nothing until the pipeline is built, and never once it failed', async () => {
@@ -321,16 +352,47 @@ describe('a draw on the WebGPU device', () => {
   });
 });
 
+describe('the WebGPU pipelines are ready', () => {
+  it('once every pipeline asked for so far has built, and the draws encode from then on', async () => {
+    const { gpu, named, draw, release } = drawn({ pipelines: 'hold' });
+    let ready = false;
+    void gpu.pipelinesReady().then(() => (ready = true));
+    await settle();
+    expect(ready).toBe(false);
+    draw();
+    expect(named('draw')).toEqual([]);
+    release();
+    await settle();
+    expect(ready).toBe(true);
+    draw();
+    expect(named('draw')).toEqual([[4, 2, 0, 0]]);
+  });
+
+  it('never, when a build fails: the wait rejects with the pipeline that failed', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { gpu } = drawn({ pipelines: 'reject' });
+    const ready = gpu.pipelinesReady();
+    await expect(ready).rejects.toBeInstanceOf(PipelineBuildFailed);
+    await expect(ready).rejects.toThrow(/the p pipeline did not build: the fragment stage/);
+  });
+
+  it('never, for an attribute that overruns its stride', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { gpu } = fake();
+    gpu.createRenderPipeline(pipelineDesc([], true, 4));
+    await expect(gpu.pipelinesReady()).rejects.toThrow(/attribute 1 overruns its 16-byte stride/);
+  });
+});
+
 describe('the WebGPU write-after-use validator', () => {
   it('refuses a write over a uniform slice a draw of the same submit reads', async () => {
-    const { gpu, uniforms, draw } = drawn();
+    const { gpu, slices, draw } = drawn();
     await settle();
     const commands = draw();
-    const words = new Float32Array(4);
-    expect(() => gpu.queue.writeBuffer(uniforms, 0, words)).not.toThrow();
-    expect(() => gpu.queue.writeBuffer(uniforms, 256 + 16, words)).toThrow(/read by a draw/);
+    expect(() => slices.upload(1)).not.toThrow();
+    expect(() => slices.upload(2)).toThrow(/bytes 0-512 were read by a draw at 256-272/);
     gpu.queue.submit([commands]);
-    expect(() => gpu.queue.writeBuffer(uniforms, 256 + 16, words)).not.toThrow();
+    expect(() => slices.upload(2)).not.toThrow();
   });
 
   it('refuses a write over vertices or instances the draw reads, and a texture it samples', async () => {
@@ -351,18 +413,18 @@ describe('the WebGPU write-after-use validator', () => {
   });
 
   it('keeps reads across a second encoder until the queue submits', async () => {
-    const { gpu, uniforms, draw } = drawn();
+    const { gpu, slices, draw } = drawn();
     await settle();
     draw();
     gpu.createCommandEncoder();
-    expect(() => gpu.queue.writeBuffer(uniforms, 256, new Float32Array(4))).toThrow(/read by a draw/);
+    expect(() => slices.upload(2)).toThrow(/read by a draw/);
   });
 
   it('refuses a write that is not whole 4-byte words', () => {
-    const { gpu, uniforms } = drawn();
-    expect(() => gpu.queue.writeBuffer(uniforms, 2, new Float32Array(1))).toThrow(/4-byte/);
-    expect(() => gpu.queue.writeBuffer(uniforms, 0, new Uint8Array(6))).toThrow(/4-byte/);
-    expect(() => gpu.queue.writeBuffer(uniforms, 0, new Uint8Array(8), 2, 4)).not.toThrow();
+    const { gpu, vertices } = drawn();
+    expect(() => gpu.queue.writeBuffer(vertices, 2, new Float32Array(1))).toThrow(/4-byte/);
+    expect(() => gpu.queue.writeBuffer(vertices, 0, new Uint8Array(6))).toThrow(/4-byte/);
+    expect(() => gpu.queue.writeBuffer(vertices, 0, new Uint8Array(8), 2, 4)).not.toThrow();
   });
 });
 

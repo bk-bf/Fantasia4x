@@ -74,6 +74,12 @@ function made(gpu: Webgl2Device, desc: RenderPipelineDescriptor) {
 }
 
 describe('webgl2 pipelines', () => {
+  it('are ready as soon as they link', async () => {
+    const { gpu } = recording();
+    made(gpu, pipeline());
+    await expect(gpu.pipelinesReady()).resolves.toBeUndefined();
+  });
+
   it('links one program for pipelines that share their shaders, with the attribute locations bound first', () => {
     const { gpu, calls } = recording();
     made(gpu, pipeline());
