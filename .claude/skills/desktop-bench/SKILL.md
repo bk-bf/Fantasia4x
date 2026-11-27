@@ -39,6 +39,11 @@ Tell the owner before starting if the desktop is off; he turns it on.
   `items`, `creatures`, `tall-resources`, `overlay` (the creature and item overlay update) and
   `effects` (the world-effects layer). A pass's cost is the baseline's row minus the row with it
   skipped. `F4X_CAPPED=1` keeps vsync on. It runs no CPU profiler.
+- The GPU layer's write-after-use check (`src/lib/gpu/webgl2/validate.ts`) runs in vitest and is
+  off in every build the owner plays or the probes measure, since it records every draw's reads on
+  the main thread. `?validate=1` turns it on in a dev build, read once by `GPU_VALIDATE` in
+  `src/lib/webgl/passes.ts`; a frame that writes a buffer or texture a pending draw reads then
+  throws. Never measure with it on.
 - All of them share `tools/gpu/session.mjs`, which starts the nested compositor and the browser.
   The compositor's unit is named after the probe's process, so two probes at once no longer stop
   each other's compositor; still run one at a time when the numbers matter, since they share
