@@ -84,7 +84,9 @@ export class WebgpuDevice implements GpuDevice {
     return this.pipelines.create(desc);
   }
 
-  destroyRenderPipeline(): void {}
+  destroyRenderPipeline(pipeline: GpuRenderPipeline): void {
+    this.pipelines.retire(pipeline);
+  }
 
   destroyShaderModule(module: GpuShaderModule): void {
     this.pipelines.forget(module);

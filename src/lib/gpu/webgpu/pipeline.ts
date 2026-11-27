@@ -22,7 +22,7 @@ function reportCompilation(label: string, code: string, module: GPUShaderModule)
 
 export class WebgpuPipelines {
   private readonly modules = new Map<string, GPUShaderModule>();
-  private readonly failed = new WeakSet<GPURenderPipeline>();
+  private readonly skipped = new WeakSet<GPURenderPipeline>();
 
   constructor(private readonly device: GPUDevice) {}
 
@@ -63,7 +63,7 @@ export class WebgpuPipelines {
     });
     void device.popErrorScope().then((error) => {
       if (!error) return;
-      this.failed.add(pipeline);
+      this.skipped.add(pipeline);
       console.error(`❌ WebGPU pipeline ${desc.label} is invalid and will not draw: ${error.message}`);
     });
     return {
@@ -74,7 +74,11 @@ export class WebgpuPipelines {
   }
 
   draws(pipeline: GpuRenderPipeline): boolean {
-    return !this.failed.has(pipeline as unknown as GPURenderPipeline);
+    return !this.skipped.has(pipeline as unknown as GPURenderPipeline);
+  }
+
+  retire(pipeline: GpuRenderPipeline): void {
+    this.skipped.add(pipeline as unknown as GPURenderPipeline);
   }
 
   forget(module: GpuShaderModule): void {
