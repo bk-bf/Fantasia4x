@@ -9,7 +9,8 @@ import type {
   GpuSampler,
   GpuTexture
 } from '../device.js';
-import type { Webgl2Pipeline } from './pipeline.js';
+import { UNIFORM_POINTS_PER_GROUP, type Webgl2Pipeline } from './pipeline.js';
+import { refuseBindings, type BindingLimits } from '../limits.js';
 
 interface LayoutRecord {
   entries: Map<number, BindGroupLayoutEntry>;
@@ -51,10 +52,17 @@ export class Webgl2BindGroups {
   constructor(
     private readonly gl: WebGL2RenderingContext,
     private readonly bindOn: (unit: number, texture: GpuTexture) => void,
-    private readonly reads: BindingReads | null
+    private readonly reads: BindingReads | null,
+    private readonly limits: BindingLimits
   ) {}
 
   createLayout(desc: BindGroupLayoutDescriptor): GpuBindGroupLayout {
+    refuseBindings('createBindGroupLayout', desc.label, desc.entries, this.limits);
+    for (const e of desc.entries)
+      if ('buffer' in e && e.buffer && e.binding >= UNIFORM_POINTS_PER_GROUP)
+        throw new Error(
+          `createBindGroupLayout ${desc.label ?? ''}: uniform buffer binding ${e.binding} is past the ${UNIFORM_POINTS_PER_GROUP} binding points a group has`
+        );
     const entries = new Map(desc.entries.map((e) => [e.binding, e]));
     const dynamic = desc.entries
       .filter((e) => 'buffer' in e && e.buffer.hasDynamicOffset)
@@ -65,9 +73,16 @@ export class Webgl2BindGroups {
     return handle;
   }
 
+  entriesOf(layout: GpuBindGroupLayout): BindGroupLayoutEntry[] {
+    const record = this.layouts.get(layout);
+    if (!record) throw new Error('not a layout this device created');
+    return [...record.entries.values()];
+  }
+
   createGroup(desc: BindGroupDescriptor): GpuBindGroup {
     const layout = this.layouts.get(desc.layout);
     if (!layout) throw new Error('createBindGroup: not a layout this device created');
+    refuseBindings('createBindGroup', desc.label, desc.entries, this.limits);
     const resources = new Map(desc.entries.map((e) => [e.binding, e.resource]));
     for (const binding of layout.entries.keys())
       if (!resources.has(binding))

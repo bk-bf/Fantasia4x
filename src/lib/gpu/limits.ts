@@ -1,4 +1,4 @@
-import { ShaderStage, type BindGroupLayoutEntry, type GpuLimits } from '../device.js';
+import { ShaderStage, type BindGroupLayoutEntry, type GpuLimits } from './device.js';
 
 export type BindingLimits = Pick<
   GpuLimits,
@@ -8,10 +8,28 @@ export type BindingLimits = Pick<
   | 'maxUniformBuffersPerShaderStage'
 >;
 
-export function bindingError(binding: number, limits: BindingLimits): string | null {
-  return binding >= limits.maxBindingsPerBindGroup
-    ? `binding ${binding} is past this device's ${limits.maxBindingsPerBindGroup} bindings per group`
-    : null;
+export const WEBGPU_DEFAULT_BINDINGS_PER_GROUP = 1000;
+
+export function bindingLimitsOf(limits: BindingLimits): BindingLimits {
+  return {
+    maxBindGroups: limits.maxBindGroups,
+    maxBindingsPerBindGroup: limits.maxBindingsPerBindGroup,
+    maxSampledTexturesPerShaderStage: limits.maxSampledTexturesPerShaderStage,
+    maxUniformBuffersPerShaderStage: limits.maxUniformBuffersPerShaderStage
+  };
+}
+
+export function refuseBindings(
+  op: string,
+  label: string | undefined,
+  entries: readonly { binding: number }[],
+  limits: BindingLimits
+): void {
+  for (const { binding } of entries)
+    if (binding >= limits.maxBindingsPerBindGroup)
+      throw new Error(
+        `${op} ${label ?? ''}: binding ${binding} is past this device's ${limits.maxBindingsPerBindGroup} bindings per group`
+      );
 }
 
 const STAGES = [

@@ -26,7 +26,7 @@ import type {
 import { WriteValidator, type DrawnSlot } from '../validate.js';
 import { CANVAS_COLOR, CANVAS_DEPTH, WebgpuCanvas, type WebgpuCanvasTarget } from './canvas.js';
 import { bufferUsage, layoutEntry, textureUsage } from './formats.js';
-import { bindingError, type BindingLimits } from './limits.js';
+import { bindingLimitsOf, refuseBindings, type BindingLimits } from '../limits.js';
 import { WebgpuPipelines } from './pipeline.js';
 
 const raw = <T>(h: unknown): T => h as T;
@@ -63,13 +63,7 @@ export class WebgpuDevice implements GpuDevice {
     options: { validate?: boolean } = {}
   ) {
     this.canvas = new WebgpuCanvas(device, target);
-    const l = device.limits;
-    this.bindingLimits = {
-      maxBindGroups: l.maxBindGroups,
-      maxBindingsPerBindGroup: l.maxBindingsPerBindGroup,
-      maxSampledTexturesPerShaderStage: l.maxSampledTexturesPerShaderStage,
-      maxUniformBuffersPerShaderStage: l.maxUniformBuffersPerShaderStage
-    };
+    this.bindingLimits = bindingLimitsOf(device.limits);
     this.pipelines = new WebgpuPipelines(device, this.bindingLimits, (layout) =>
       this.entriesOf(layout)
     );
@@ -181,13 +175,8 @@ export class WebgpuDevice implements GpuDevice {
     return raw<GpuSampler>(this.device.createSampler(desc));
   }
 
-  private refuseBinding(op: string, label: string | undefined, binding: number): void {
-    const error = bindingError(binding, this.bindingLimits);
-    if (error) throw new Error(`${op} ${label ?? ''}: ${error}`);
-  }
-
   createBindGroupLayout(desc: BindGroupLayoutDescriptor): GpuBindGroupLayout {
-    for (const e of desc.entries) this.refuseBinding('createBindGroupLayout', desc.label, e.binding);
+    refuseBindings('createBindGroupLayout', desc.label, desc.entries, this.bindingLimits);
     const layout = raw<GpuBindGroupLayout>(
       this.device.createBindGroupLayout({ label: desc.label, entries: desc.entries.map(layoutEntry) })
     );
@@ -201,7 +190,7 @@ export class WebgpuDevice implements GpuDevice {
   }
 
   createBindGroup(desc: BindGroupDescriptor): GpuBindGroup {
-    for (const e of desc.entries) this.refuseBinding('createBindGroup', desc.label, e.binding);
+    refuseBindings('createBindGroup', desc.label, desc.entries, this.bindingLimits);
     const layout = this.entriesOf(desc.layout);
     const group = raw<GpuBindGroup>(
       this.device.createBindGroup({

@@ -10,7 +10,7 @@ import {
   type VertexBufferLayout
 } from '../device.js';
 import { blendState, depthStencilState, vertexBuffers } from './formats.js';
-import { pipelineLayoutError, type BindingLimits } from './limits.js';
+import { pipelineLayoutError, type BindingLimits } from '../limits.js';
 
 interface Built {
   label: string;

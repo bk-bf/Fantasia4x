@@ -30,6 +30,7 @@ import { WriteValidator } from '../validate.js';
 import { Webgl2Buffers } from './buffers.js';
 import { Webgl2Textures } from './textures.js';
 import { Webgl2BindGroups } from './bindGroups.js';
+import { WEBGPU_DEFAULT_BINDINGS_PER_GROUP, bindingLimitsOf } from '../limits.js';
 
 const raw = <T>(h: unknown): T => h as T;
 
@@ -105,7 +106,7 @@ export class Webgl2Device implements GpuDevice {
     };
     const state = new Webgl2State(gl);
     this.state = state;
-    this.pipelines = new Webgl2Pipelines(gl, (program) => state.use(program), validator !== null);
+    const limits = bindingLimitsOf(this.limits());
     this.bindGroups = new Webgl2BindGroups(
       gl,
       (unit, texture) => textures.bindOn(unit, texture),
@@ -114,7 +115,15 @@ export class Webgl2Device implements GpuDevice {
             buffer: (b, s, e) => validator.readBuffer(b, s, e),
             texture: (t) => validator.sample(t)
           }
-        : null
+        : null,
+      limits
+    );
+    this.pipelines = new Webgl2Pipelines(
+      gl,
+      (program) => state.use(program),
+      validator !== null,
+      limits,
+      (layout) => this.bindGroups.entriesOf(layout)
     );
     this.vertexArrays = new Webgl2VertexArrays(gl);
     this.framebuffers = new Webgl2Framebuffers(
@@ -146,7 +155,7 @@ export class Webgl2Device implements GpuDevice {
       maxBindGroups: Math.floor(
         Number(gl.getParameter(gl.MAX_UNIFORM_BUFFER_BINDINGS)) / UNIFORM_POINTS_PER_GROUP
       ),
-      maxBindingsPerBindGroup: UNIFORM_POINTS_PER_GROUP,
+      maxBindingsPerBindGroup: WEBGPU_DEFAULT_BINDINGS_PER_GROUP,
       maxSampledTexturesPerShaderStage: gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS),
       maxUniformBuffersPerShaderStage: Math.min(
         gl.getParameter(gl.MAX_VERTEX_UNIFORM_BLOCKS),

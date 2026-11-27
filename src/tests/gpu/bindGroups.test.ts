@@ -17,10 +17,16 @@ const GL = {
   TEXTURE0: 0x84c0,
   TEXTURE_2D: 0x0de1,
   UNIFORM_OFFSET: 0x8a3b,
-  LINK_STATUS: 0x8b82
+  LINK_STATUS: 0x8b82,
+  MAX_TEXTURE_IMAGE_UNITS: 0x8872,
+  MAX_VERTEX_UNIFORM_BLOCKS: 0x8a2b,
+  MAX_FRAGMENT_UNIFORM_BLOCKS: 0x8a2d
 };
 
-function recording(offsets: Record<string, number> = { u_a: 0, u_b: 16 }) {
+function recording(
+  offsets: Record<string, number> = { u_a: 0, u_b: 16 },
+  parameters: Record<number, number> = {}
+) {
   const calls: unknown[][] = [];
   let made = 0;
   const gl = new Proxy(GL, {
@@ -30,7 +36,7 @@ function recording(offsets: Record<string, number> = { u_a: 0, u_b: 16 }) {
       return (...args: unknown[]) => {
         calls.push([key, ...args]);
         if (key === 'getProgramParameter') return args[1] === GL.LINK_STATUS ? true : 0;
-        if (key === 'getParameter') return 32;
+        if (key === 'getParameter') return parameters[args[0] as number] ?? 32;
         if (key === 'getUniformBlockIndex') return args[1] === 'B' ? 3 : 0xffffffff;
         if (key === 'getUniformIndices') return (args[1] as string[]).map((_, i) => i);
         if (key === 'getActiveUniforms') return Object.values(offsets);
@@ -212,10 +218,17 @@ describe('repeated draws', () => {
   it('walk the bindings again only when the pipeline, a bind group or its offsets change', () => {
     const walked: number[] = [];
     const gl = { UNIFORM_BUFFER: GL.UNIFORM_BUFFER, bindBufferRange: () => {} };
-    const groups = new Webgl2BindGroups(gl as unknown as WebGL2RenderingContext, () => {}, {
-      buffer: (_, start) => walked.push(start),
-      texture: () => {}
-    });
+    const groups = new Webgl2BindGroups(
+      gl as unknown as WebGL2RenderingContext,
+      () => {},
+      { buffer: (_, start) => walked.push(start), texture: () => {} },
+      {
+        maxBindGroups: 4,
+        maxBindingsPerBindGroup: 8,
+        maxSampledTexturesPerShaderStage: 16,
+        maxUniformBuffersPerShaderStage: 12
+      }
+    );
     const layout = groups.createLayout({
       entries: [
         {
@@ -314,5 +327,88 @@ describe('the dev write-after-use check over bind groups', () => {
     pass.end();
     gpu.queue.submit([]);
     write();
+  });
+});
+
+describe('webgl2 limits', () => {
+  it('refuses a binding past the bindings per group it reports, in a layout or a group', () => {
+    const { gpu } = recording();
+    const most = gpu.limits().maxBindingsPerBindGroup;
+    expect(most).toBe(1000);
+    const texture = (binding: number) => ({
+      binding,
+      visibility: ShaderStage.FRAGMENT,
+      texture: { sampleType: 'float' as const }
+    });
+    expect(() => gpu.createBindGroupLayout({ label: 'L', entries: [texture(most)] })).toThrow(
+      /createBindGroupLayout L: binding 1000 is past this device's 1000 bindings per group/
+    );
+    const image = gpu.createTexture({
+      format: 'rgba8unorm',
+      width: 1,
+      height: 1,
+      usage: TextureUsage.TEXTURE_BINDING
+    });
+    expect(() =>
+      gpu.createBindGroup({
+        label: 'G',
+        layout: gpu.createBindGroupLayout({ entries: [texture(8)] }),
+        entries: [
+          { binding: 8, resource: image },
+          { binding: most, resource: image }
+        ]
+      })
+    ).toThrow(/createBindGroup G: binding 1000 is past this device's 1000 bindings per group/);
+  });
+
+  it('refuses a uniform buffer binding past the eight binding points of its group', () => {
+    const { gpu } = recording();
+    const past = { binding: 8, visibility: ShaderStage.VERTEX, buffer: { minBindingSize: 16 } };
+    expect(() => gpu.createBindGroupLayout({ label: 'L', entries: [past] })).toThrow(
+      /createBindGroupLayout L: uniform buffer binding 8 is past the 8 binding points a group has/
+    );
+  });
+
+  it('refuses a pipeline with more groups than the binding points hold', () => {
+    const { gpu } = recording();
+    expect(gpu.limits().maxBindGroups).toBe(4);
+    const empty = gpu.createBindGroupLayout({ entries: [] });
+    const result = gpu.createRenderPipeline(pipeline([empty, empty, empty, empty, empty]));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/5 bind groups are past this device's 4/);
+  });
+
+  it('refuses a pipeline with more uniform blocks in a stage than that stage allows', () => {
+    const { gpu } = recording(undefined, { [GL.MAX_VERTEX_UNIFORM_BLOCKS]: 1 });
+    expect(gpu.limits().maxUniformBuffersPerShaderStage).toBe(1);
+    const block = (binding: number) => ({
+      binding,
+      visibility: ShaderStage.VERTEX,
+      buffer: { minBindingSize: 16 }
+    });
+    const two = gpu.createBindGroupLayout({ entries: [block(0), block(1)] });
+    const result = gpu.createRenderPipeline(pipeline([two]));
+    expect(result.ok).toBe(false);
+    if (!result.ok)
+      expect(result.error).toMatch(/2 uniform buffers in the vertex stage are past this device's 1/);
+  });
+
+  it('refuses a pipeline whose textures need units past the context has', () => {
+    const { gpu, calls } = recording(undefined, { [GL.MAX_TEXTURE_IMAGE_UNITS]: 1 });
+    const empty = gpu.createBindGroupLayout({ entries: [] });
+    const result = gpu.createRenderPipeline(
+      pipeline([empty], {
+        blocks: {},
+        textures: {
+          u_a: { texture: [0, 0], sampler: [0, 1] },
+          u_b: { texture: [0, 2], sampler: [0, 3] }
+        }
+      })
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok)
+      expect(result.error).toMatch(/2 textures from unit 0 are past this context's 1 texture units/);
+    expect(calls.some((c) => c[0] === 'uniform1i')).toBe(false);
+    expect(calls.some((c) => c[0] === 'deleteProgram')).toBe(true);
   });
 });

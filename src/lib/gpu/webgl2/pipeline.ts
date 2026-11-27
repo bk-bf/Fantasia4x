@@ -1,4 +1,5 @@
 import type {
+  BindGroupLayoutEntry,
   BindingSlot,
   CompiledModule,
   GpuBindGroupLayout,
@@ -10,6 +11,7 @@ import type {
   VertexBufferLayout
 } from '../device.js';
 import { blendFactor, compareFunction, stencilOperation, topology } from './formats.js';
+import { pipelineLayoutError, type BindingLimits } from '../limits.js';
 
 function reportShaderErrors(source: string, error: string, name: string): void {
   const lines = source.split('\n');
@@ -211,6 +213,11 @@ function bindings(
   const named = Object.entries(desc.glsl.textures ?? {}).sort(
     ([, a], [, b]) => a.texture[0] - b.texture[0] || a.texture[1] - b.texture[1]
   );
+  const maxUnits = Number(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS)) || Infinity;
+  if (FIRST_BOUND_UNIT + named.length > maxUnits)
+    return {
+      error: `${desc.label}: ${named.length} textures from unit ${FIRST_BOUND_UNIT} are past this context's ${maxUnits} texture units`
+    };
   if (named.length > 0) use(program);
   named.forEach(([name, t], i) => {
     const unit = FIRST_BOUND_UNIT + i;
@@ -259,11 +266,15 @@ export class Webgl2Pipelines {
   constructor(
     private readonly gl: WebGL2RenderingContext,
     private readonly use: (program: WebGLProgram) => void,
-    private readonly checkOffsets: boolean
+    private readonly checkOffsets: boolean,
+    private readonly limits: BindingLimits,
+    private readonly entriesOf: (layout: GpuBindGroupLayout) => readonly BindGroupLayoutEntry[]
   ) {}
 
   create(desc: RenderPipelineDescriptor): RenderPipelineResult {
     const modules: CompiledModule[] = [];
+    const over = pipelineLayoutError(desc.layout.map(this.entriesOf), this.limits);
+    if (over) return { ok: false, error: `${desc.label}: ${over}`, modules };
     const key = JSON.stringify(desc.glsl);
     let linked = this.linked.get(key);
     if (!linked) {
