@@ -1,10 +1,10 @@
-export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K', 'L', 'N', 'O', 'P', 'R', 'S', 'V', 'W'];
-export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing shows with no hand showing on it', x: 'held thing against the face', y: 'legs shortened', B: 'arms knotted', C: 'tool in line with the arm', D: 'load cut short', E: 'carried body shows no head', F: 'load over one arm and under the other', G: 'hand on the wide end', H: 'load does not read', K: 'load in the arms shows above the shoulders from behind', L: 'carried person not cradled in both arms', N: 'tool shows shorter than it is drawn', O: 'hand off a two-handed tool', P: 'tool on the wrong side of the head or back', R: 'load on the shoulders hidden or crossed by the arms', S: 'block held at its edge with no hand under it', V: 'arm at the quiver sticks out behind the back', W: 'drawn bow lies flat on the torso' };
+export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K', 'L', 'N', 'O', 'P', 'R', 'S', 'V', 'W', 'X'];
+export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing shows with no hand showing on it', x: 'held thing against the face', y: 'legs shortened', B: 'arms knotted', C: 'tool in line with the arm', D: 'load cut short', E: 'carried body shows no head', F: 'load over one arm and under the other', G: 'hand on the wide end', H: 'load does not read', K: 'load in the arms shows above the shoulders from behind', L: 'carried person not cradled in both arms', N: 'tool shows shorter than it is drawn', O: 'hand off a two-handed tool', P: 'tool on the wrong side of the head or back', R: 'load on the shoulders hidden or crossed by the arms', S: 'block held at its edge with no hand under it', X: 'carried pole behind the arm that carries it', V: 'arm at the quiver sticks out behind the back', W: 'drawn bow lies flat on the torso' };
 const HAND_BLOCK = 4, TAPER = { long: 5, thin: 1, wide: 3 }, FIN = { out: 4, above: 1 }, PROFILE = .8, BAND = 2, LEGS = .6, TOUCH = 1;
 const LEG_LAYERS = ['legs', 'far leg', 'near leg'], BROW = 6, FRONT = 5, OUTLINES = 2, GRASPED = .2;
 const SHOWS = 3, APART = 4, IN_LINE = { cos: .94, reach: 5, tools: ['hammer', 'club', 'axe', 'pick'] }, WHOLE = .6, HEAD_SHOWS = .6, WIDE_END = 1, IN_ARMS = ['chest', 'low', 'cradle'];
 const KEPT_AS_APPROVED = { x: ['shoulder'] };
-const QUIVERED = .9, BODY_HIDES = ['bow', 'arrow'], BOWED = { behind: 3, flat: .25 };
+const QUIVERED = .9, BODY_HIDES = ['bow', 'arrow'], BOWED = { behind: 3, flat: .25 }, HAFT = 5;
 const CRADLE = { palm: 3, across: 2, above: 3, below: 2 };
 const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15, FACE = { dark: .5, marks: 4 }, POLES = ['spear', 'staff'], LEVEL = 2, UPRIGHT = .7, YOKED = { above: .2 }, BLOCK = { wide: 12, tall: 8, under: 2, along: 3 };
 const READS = { bars: s => s.w <= 9 && s.w >= 2 * s.h, bundles: s => s.filled <= .6 * s.w * s.h };
@@ -36,6 +36,7 @@ function tapers(px, w, shoulder) {
 const axisOf = (px, w) => { let mx = 0, my = 0; for (const i of px) { mx += i % w; my += (i / w) | 0; } mx /= px.length; my /= px.length; let xx = 0, yy = 0, xy = 0; for (const i of px) { const dx = i % w - mx, dy = ((i / w) | 0) - my; xx += dx * dx; yy += dy * dy; xy += dx * dy; } const a = .5 * Math.atan2(2 * xy, xx - yy); return [Math.cos(a), Math.sin(a), mx, my]; };
 const alongAxis = (px, w, ax) => { let lo = 1e9, hi = -1e9; for (const i of px) { const t = (i % w - ax[2]) * ax[0] + (((i / w) | 0) - ax[3]) * ax[1]; if (t < lo) lo = t; if (t > hi) hi = t; } return px.length ? hi - lo + 1 : 0; };
 const crosses = (a, b, c, d) => { const side = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])); return side(a, b, c) * side(a, b, d) < 0 && side(c, d, a) * side(c, d, b) < 0; };
+const shaftOf = spr => { const rows = []; for (let y = 0; y < spr.h; y++) { let n = 0; for (let x = 0; x < spr.w; x++) if (spr.c[y * spr.w + x]) n++; if (n) rows.push(n); } rows.sort((a, b) => a - b); return rows[rows.length >> 1] || 0; };
 const centre = (px, w) => { let x = 0, y = 0; for (const i of px) { x += i % w; y += (i / w) | 0; } return [x / px.length, y / px.length]; };
 const touches = (a, b, w) => { const near = new Set(); for (const i of a) for (let dy = -TOUCH; dy <= TOUCH; dy++) for (let dx = -TOUCH; dx <= TOUCH; dx++) near.add(i + dy * w + dx); return b.some(i => near.has(i)); };
 
@@ -144,6 +145,11 @@ export function pictured(now, face, ink) {
         if (seen.length && centre(seen, w)[0] <= torso[0]) wrong.push('the body is not in front of the carrier');
       }
       if (wrong.length) { counts.L += wrong.length; said.push(...wrong); }
+    }
+    if (face === 'f' && now.pose.carry === 'hip' && lay.spr && lay.rows && lay.spr && shaftOf(lay.spr) <= HAFT && !onGround) {
+      let under = 0;
+      for (const seg of stack.filter(s => s.limb && s.seg !== 'hand' && stack.some(h => h.limb === s.limb && h.seg === 'hand' && h.grips === 'load'))) { const k = stack.indexOf(seg); for (const i of pixels(seg.spr)) if (l.spr.c[i] && top[i] === k) under++; }
+      if (under >= SHOWS) { counts.X++; said.push(under + ' px of the carried pole lie behind the arm that carries it'); }
     }
     if (face !== 's' && IN_ARMS.includes(now.pose.carry) && limbs.size === 2) {
       const state = [...limbs.keys()].map(name => { let over = 0, under = 0; for (const seg of stack.filter(s => s.limb === name && s.seg !== 'hand')) { const k = stack.indexOf(seg); for (const i of pixels(seg.spr)) if (l.spr.c[i]) { if (top[i] === k) over++; else if (stack[top[i]] === l) under++; } } return over + under < 2 ? 0 : over > under ? 1 : -1; });

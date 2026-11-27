@@ -14,7 +14,7 @@ const HAUL = (() => {
   const FUSED = ['shoulder'];
   const END_SOURCES = [['map-carry-end', 'map-carry-end']];
   const WORN_SOURCES = ['map-carry', 'map-ground', 'map-pile-1', 'map', '0'];
-  const UPHELD = { pole: 26, butt: 10, hilt: 3 }, BELLY = { filled: .45, front: [.55, .82], held: 2 };
+  const UPHELD = { pole: 26, butt: 10, hilt: 3, haft: 5 }, BELLY = { filled: .45, front: [.55, .82], held: 2 };
   const STANCES = { one: { carry: 'tuck', draw: 'ready', ready: 'guard', stow: 'stow' }, two: { carry: 'tuck', draw: 'readyTwo', ready: 'guardTwo', stow: 'stowTwo' }, bow: { carry: 'tuck', draw: 'readyBow', ready: 'guardBow', stow: 'stowBow' } };
   const POLES = ['spear', 'staff'], HANDLE = { pole: .45, haft: .16 };
   const NAMES = {
@@ -87,6 +87,7 @@ const HAUL = (() => {
     game: s => [s.w >> 1, s.h - 1],
     cradle: s => [s.w >> 1, s.h - 1]
   };
+  const haftOf = spr => { const rows = []; for (let y = 0; y < spr.h; y++) { let n = 0; for (let x = 0; x < spr.w; x++) if (spr.c[y * spr.w + x]) n++; if (n) rows.push(n); } rows.sort((a, b) => a - b); return rows[rows.length >> 1] || 0; };
   function shaftAt(spr, row, upside) {
     const from = upside ? spr.h - 1 - row : row, xs = [];
     for (let x = 0; x < spr.w; x++) if (spr.c[from * spr.w + x]) xs.push(x);
@@ -166,7 +167,7 @@ const HAUL = (() => {
     const out = { key: load.id + '/' + variant + (across ? '/end' : '') + (stood ? '/stood' : '') + (mirrored ? '/mirrored' : '') + (yoked ? '/yoked' : ''), sprite: 'item/' + load.id + '/' + variant, spr, grip: spr.hold || GRIPS[hold](spr, load.storage), sag: load.limp && !ended ? SAG[bent ? 'bent' : yoked ? 'yoked' : hold] : 0 };
     if (upright || stood) {
       const held = spr.h - 1 - (spr.h > UPHELD.pole ? UPHELD.butt : UPHELD.hilt);
-      Object.assign(out, { key: out.key + (flipped ? '/upside' : '') + '/whole', upside: flipped, rows: [0, spr.h], grip: shaftAt(spr, held, flipped) });
+      Object.assign(out, { key: out.key + (flipped ? '/upside' : '') + '/whole', upside: flipped, rows: [0, spr.h], hafted: haftOf(spr) <= UPHELD.haft, grip: shaftAt(spr, held, flipped) });
       if (stood) out.stood = true;
     }
     if (mirrored) out.mirrored = true;
@@ -181,7 +182,7 @@ const HAUL = (() => {
     return out;
   }
   const span = (load, hold, face) => { const lying = layer(load, hold, face, true).spr, held = layer(load, hold, face); return { wide: held.spr.w, tall: lying.h, across: !!held.yoked }; };
-  const flags = l => Object.fromEntries(['sag', 'upside', 'rows', 'fused', 'yoked', 'stood', 'mirrored'].filter(k => l[k]).map(k => [k, l[k]]));
+  const flags = l => Object.fromEntries(['sag', 'upside', 'rows', 'hafted', 'fused', 'yoked', 'stood', 'mirrored'].filter(k => l[k]).map(k => [k, l[k]]));
   function ported(load) {
     const side = layer(load, load.hold, 's'), row = { bulk: load.bulk, hold: load.hold, sprite: side.sprite, grip: side.grip, ...flags(side) };
     for (const [face, name] of [['f', 'toward'], ['b', 'away']]) { const l = layer(load, load.hold, face); if (l.key !== side.key) row[name] = { sprite: l.sprite, grip: l.grip, ...flags(l) }; }
