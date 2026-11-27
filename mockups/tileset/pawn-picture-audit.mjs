@@ -169,7 +169,7 @@ export function pictured(now, face, ink) {
       }
     }
     if (meta.family === 'long' && lay.spr && !onGround) {
-      const s = lay.spr, tall = s.h >= s.w, n = tall ? s.h : s.w, wide = k => { let c = 0; for (let j = 0; j < (tall ? s.w : s.h); j++) if (s.c[tall ? k * s.w + j : j * s.w + k]) c++; return c; }, widths = Array.from({ length: n }, (_, k) => wide(k)).filter(v => v).sort((x, y) => x - y), at = wide(lay.grip[tall ? 1 : 0]);
+      const s = lay.spr, tall = s.h >= s.w, n = tall ? s.h : s.w, wide = k => { let c = 0; for (let j = 0; j < (tall ? s.w : s.h); j++) if (s.c[tall ? k * s.w + j : j * s.w + k]) c++; return c; }, widths = Array.from({ length: n }, (_, k) => wide(k)).filter(v => v).sort((x, y) => x - y), at = wide(tall && lay.upside ? s.h - 1 - lay.grip[1] : lay.grip[tall ? 1 : 0]);
       if (widths.length && at > widths[widths.length >> 1] + WIDE_END) { counts.G++; said.push('hand where the load is ' + at + ' px wide, its middle width is ' + widths[widths.length >> 1]); }
     }
     if (READS[meta.storage] && lay.spr) { const s = lay.spr, filled = pixels(s).length; if (!READS[meta.storage]({ w: s.w, h: s.h, filled })) { counts.H++; said.push(meta.storage + ' sprite ' + s.w + 'x' + s.h + ' with ' + filled + ' px'); } }
@@ -190,7 +190,7 @@ export function pictured(now, face, ink) {
   if (face === 's' && head && pts.mouth && !now.pose.covers) {
     let against = 0;
     const joined = i => { for (let q = i - 1; q > i - OUTLINES - 2; q--) { if (!shown[q]) return false; if (head.spr.c[q]) return q % w >= pts.mouth[0] - FRONT; } return false; };
-    for (const l of [...tools.filter(l => l.piece !== 'arrow'), ...stack.filter(k => k.name === 'load' && !(now.pose.cu < 1) && k.cam > head.cam && !KEPT_AS_APPROVED.x.includes(now.pose.carry))]) for (const i of pixels(l.spr)) { const y = (i / w) | 0; if (y < pts.mouth[1] - BROW || y > pts.chin || !shown[i] || !same(shown[i], l.spr.c[i])) continue; if ([i - 1, i + 1, i - w, i + w, i].some(q => head.spr.c[q] && q % w >= pts.mouth[0] - FRONT) || (!(now.pose.bow >= 1) && joined(i))) against++; }
+    for (const l of [...tools.filter(l => l.piece !== 'arrow'), ...stack.filter(k => k.name === 'load' && !(now.pose.cu < 1) && k.cam > head.cam && !KEPT_AS_APPROVED.x.includes(now.pose.carry))]) for (const i of pixels(l.spr)) { const y = (i / w) | 0; if (y < pts.mouth[1] - BROW || y > pts.chin || !shown[i] || !same(shown[i], l.spr.c[i])) continue; if ([i - 1, i + 1, i - w, i + w, i].some(q => head.spr.c[q] && q % w >= pts.mouth[0] - FRONT) || (sp && sp.tool === 'bow' && !(now.pose.bow >= 1) && joined(i))) against++; }
     if (against) { counts.x += against; said.push(against + ' px of a held thing against the face'); }
   }
   if (face === 'b' && IN_ARMS.includes(now.pose.carry) && pts.torso && !(now.pose.down > .5) && !(now.pose.cu < 1)) {

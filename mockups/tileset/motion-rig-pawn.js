@@ -111,7 +111,7 @@ function rigHat(s, o, X, hTop, face, skin, tunic, hd, hh, drape = 2) {
 const WRAP = [P.cloth[2], P.cloth[1]];
 const rimOf = (was, c) => !!(was && c) && c[0] === was[0] * .6 && c[1] === was[1] * .6;
 
-const TURN_MOST = 1.1, REACH = { hip: 3, front: 6, emptyGrip: -5, pole: 18, spread: 3, under: 2, palm: { share: .35, most: 5, in: 3, wide: 12, tall: 8 } }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3, yoke: -4, yokeHead: 3, yokeGrip: { f: 5, b: 3 }, yokeUp: { f: 8, b: 0 }, yokeHand: { f: 4, b: 1 }, yokePast: { f: 3, b: -99 }, yokeAt: { f: -.45, b: .25 }, byJaw: .29, underShoulders: 1, underHip: 2, underJaw: {}, cradled: { ahead: 3, underChin: 2, under: 2, deep: 8 }, onHands: 1, pastJaw: { game: 1 } }, CLEAR = { ground: 4, shins: 3, hop: 3 }, BEHIND_HEAD = ['game'];
+const TURN_MOST = 1.1, REACH = { hip: 3, front: 6, ahead: 9, emptyGrip: -5, pole: 18, spread: 3, under: 2, palm: { share: .35, most: 5, in: 3, wide: 12, tall: 8 } }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3, yoke: -4, yokeHead: 3, yokeGrip: { f: 5, b: 3 }, yokeUp: { f: 8, b: 0 }, yokeHand: { f: 4, b: 1 }, yokePast: { f: 3, b: -99 }, yokeAt: { f: -.45, b: .25 }, byJaw: .29, underShoulders: 1, underHip: 2, underJaw: {}, cradled: { ahead: 3, underChin: 2, under: 2, deep: 8 }, onHands: 1, pastJaw: { game: 1 } }, CLEAR = { ground: 4, shins: 3, hop: 3 }, BEHIND_HEAD = ['game'];
 function rigPawn(o, p) {
   p = p || {};
   let s = new Spr(RG.W, RG.H, RG.CX, RG.BASE);
@@ -223,7 +223,8 @@ function rigPawn(o, p) {
   const resting = p.carry && p.down > .5;
   let held = p.carry ? HELD[p.carry !== 'hip' && (resting || (p.cu < REST.raised && !BEHIND_HEAD.includes(p.carry))) ? 'rest' : p.carry][face] : null;
   if (held && p.load && p.load[8] && SUNK.yokeAt[face]) held = { ...held, at: SUNK.yokeAt[face] };
-  if (held && p.carry === 'hip' && face === 'f' && p.load) held = resting ? { ...held, at: REST.underArms } : p.load[6] ? { ...held, at: SUNK.byJaw } : held;
+  if (held && p.carry === 'hip' && face === 'f' && p.load) held = p.load[6] ? { ...held, at: SUNK.byJaw } : resting ? { ...held, at: REST.underArms } : held;
+  if (held && p.carry === 'hip' && face === 's' && p.load && p.load[6] && !resting) held = { ...held, at: SUNK.byJaw };
   let holds = null, hand = null, ground = null;
 
   const chinRow = hTop + f.hh - 1, chin = hTop + f.hh, jaw = shaped ? SUNK.underJaw[p.carry] || 0 : 0, aft = shaped ? SUNK.pastJaw[p.carry] || 0 : 0, load = p.carry && p.load ? p.load : null, cradled = p.carry === 'cradle', cu = p.cu === undefined ? 1 : p.cu, reached = clamp(p.reach || 0, 0, 1);
@@ -300,8 +301,9 @@ function rigPawn(o, p) {
     let htl = p.hl, hr = p.hr || (TOOLS[kind] ? [2, armLen - 2] : null);
     let grasp = null, farGrasp = null, underChin = null, faceRow = null;
     const chestTop = at => at[1] - SUNK.cradled.deep;
-    const clearOf = y => load && p.carry === 'hip' && !resting && cu >= 1 ? Math.min(y, base - CLEAR.ground - (load[1] - 1 - load[3]) - 1) : y;
+    const clearOf = y => load && p.carry === 'hip' && !resting && (cu >= 1 || load[6]) ? Math.min(y, base - (cu >= 1 ? CLEAR.ground : 0) - (load[1] - 1 - load[3]) - 1) : y;
     if (hr && p.carry === 'hip') hr = [hr[0], clearOf(near[1] + hr[1]) - near[1]];
+    if (hr && p.carry === 'hip' && load && load[6] && !resting && cu >= 1) hr = [Math.max(hr[0], Math.min(head[1] + 1 + load[2] - near[0], REACH.ahead)), hr[1]];
     if (load && resting) { const b = boxAt(ground); grasp = [b.left + load[4], Math.min(b.top + load[5], sy + TOT - 1)]; }
     else if (load && (IN_BOTH_ARMS.includes(p.carry) || p.carry === 'game')) {
       const inArms = IN_BOTH_ARMS.includes(p.carry), left = cradled ? sx0 + SUNK.cradled.ahead - load[2] : sx0 + REACH.hip;
@@ -359,6 +361,7 @@ function rigPawn(o, p) {
     ground = [mid, base - (load && resting && !load[3] ? REST.along : 0) - (load && resting && back ? REST.sunk : 0)];
     if (load && resting && !back && ground[1] - load[3] <= chinRow) ground = [mid, chinRow + 1 + load[3]];
     if (load && resting && !back) ground = [mid, Math.min(ground[1], base + REST.sunk - (load[1] - 1 - load[3]))];
+    if (load && resting && load[6]) ground = [roots[toolSide][0], ground[1]];
     let palms = null, grasps = null;
     const heaved = load && p.carry !== 'hip' && (resting || cu < (IN_BOTH_ARMS.includes(p.carry) || load[8] ? 1 : SUNK.oneHand));
     if (load && p.carry === 'hip' && !resting && cu >= 1 && !load[6] && targets[toolSide]) targets[toolSide] = [targets[toolSide][0], Math.min(targets[toolSide][1], base - CLEAR.ground - (load[1] - 1 - load[3]) - 1 - sy)];
@@ -409,7 +412,7 @@ function rigPawn(o, p) {
     const shieldArm = o.shield && !slung ? other : -1;
     const handCam = i => lifted(i) ? held.at + (palmOf(i) === 'under' ? -D.step : D.step) : D.hand;
     const over = i => lifted(i) && palmOf(i) === 'around' && !(back && load && load[8]);
-    const beside = i => !back && lifted(i) && p.carry === 'hip' && !resting && !!(load && load[6] && load[11]);
+    const beside = i => !back && lifted(i) && p.carry === 'hip' && !!(load && load[6] && load[11]);
     for (const i of [0, 1]) armParts(i ? 'right arm' : 'left arm', paths[i], seen(i), !i, false, p.carry ? { upper: beside(i) ? held.at - D.step / 2 : over(i) ? Math.max(D.upper, held.at + D.step / 4) : D.upper, fore: beside(i) ? held.at - D.step / 4 : over(i) ? Math.max(D.fore, held.at + D.step / 2) : D.fore, hand: handCam(i) } : limbs[i].cams, i === other && o.oneArm, lifted(i) ? { grips: 'load', palm: palmOf(i) } : gripping.includes(i) ? { grips: 'tool', palm: palmOf(i), ...(bowing ? { piece: i === other ? 'stave' : fetched ? 'arrow' : 'string' } : null) } : null, back && !resting && IN_BOTH_ARMS.includes(p.carry));
     if (!targets[0] && !p.carry && !gripping.includes(0)) layers.find(l => l.name === 'left arm upper').spr.set(xL - (aw >> 1), sy, null);
     for (const i of [0, 1]) part('pad', back || p.carry ? D.pad : Math.max(D.torso, limbs[i].cams.upper) + D.step / 2, () => pad(i ? cx + hw - 1 + rnd(lean) : cx - hw - aw + rnd(lean), !i), { anchor: [sx0, tTop] });

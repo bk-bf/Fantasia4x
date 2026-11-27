@@ -36,7 +36,7 @@ const CAST = [
 ];
 const PEOPLE = ['carried_pawn', 'goblin_carcass', 'pawn_carcass'];
 const LOADS = { tote: ['bone_stock', 'steel_cleaver', 'stone_spear'], heft: ['wild_berries', 'copper_bar'], lug: ['granite_block', 'wild_oats'], haul: ['pine_log', 'pine_plank'], bear: ['harpy_carcass', 'bullywug_carcass'], rescue: PEOPLE };
-const SHOWN = ['coney_fur', 'branch', 'linen_gambeson', 'rabbit_carcass', 'giant_olm_carcass', 'steel_bodkin_arrow', 'great_bone'];
+const SHOWN = ['coney_fur', 'branch', 'linen_gambeson', 'rabbit_carcass', 'giant_olm_carcass', 'steel_bodkin_arrow', 'great_bone', 'orc_cleaver', 'orc_maul', 'anvil_breaker', 'siege_lock_arbalest', 'orc_greataxe', 'iron_tide_greataxe', 'steel_greataxe', 'rune_bitten_greataxe', 'steel_arbalest', 'rune_cranked_arbalest'];
 const HANDLING = ['lift', 'drop', 'held'];
 const BODY = ['torso', 'head', 'legs', 'far leg', 'near leg', 'cape', 'pad'];
 const FACES = ['s', 'f', 'b'], NAMES = { s: 'sideways', f: 'toward', b: 'away' };
