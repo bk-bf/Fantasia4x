@@ -43,9 +43,9 @@ function watchSim() {
         const d = e.data;
         if (d?.kind === 'snapshot' && typeof d.state?.turn === 'number') window.__f4xTurn = d.state.turn;
         if (d?.kind === 'simlog')
-          for (const ev of d.events ?? []) {
-            const m = /speed=([\d.]+)x/.exec(ev.message ?? '');
-            if (ev.category === 'perf' && m) window.__f4xSpeed = Number(m[1]);
+          for (const { m: sink, a } of d.events ?? []) {
+            const speed = /speed=([\d.]+)x/.exec(a?.[0]?.message ?? '');
+            if (sink === 'logEvent' && a[0].category === 'perf' && speed) window.__f4xSpeed = Number(speed[1]);
           }
       });
     }
