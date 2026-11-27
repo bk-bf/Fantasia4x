@@ -144,6 +144,27 @@ systemd-run --user --collect --unit=f4x-frame-cost -E PATH="$PATH" -E CHROME="$C
   `pausedShare` above 0 was paused part of the time, by auto-pause or by hand; never report it
   as running.
 
+## Comparing frames between two builds
+
+`tools/gpu/capture.mjs` draws six fixed scenes per build, and `compare.mjs` counts the pixels that
+differ. Set up one worktree per build as above, then capture each:
+
+```bash
+systemd-run --user --collect --unit=f4x-capture-<label> -E PATH="$PATH" -E CHROME="$CH" \
+  -p RuntimeMaxSec=3600 systemd-inhibit --what=idle:sleep --why=capture \
+  bash -c "node $T/tools/gpu/capture.mjs $T ~/captures/<label> > ~/captures/<label>.log 2>&1"
+grep -E "^TREE|renderer|ERRORS" ~/captures/<label>.log
+node $T/tools/gpu/compare.mjs ~/captures/<before> ~/captures/<after> ~/captures/<after>-diff
+```
+
+- A capture takes about two minutes. Run captures one after another, never two at once.
+- The log's `TREE` line names the commit the frames came from; check it before comparing.
+- Capture the base twice first. The two must come out bit-identical, or the noise floor is not
+  zero and a difference proves nothing.
+- `compare.mjs` prints `identical` or `DIFF <n> px, max channel delta <d>` per scene and writes a
+  diff image for each scene that differs. A difference is explained only by a capture that makes
+  it go away: change one thing on a throwaway commit, capture it, compare it against base.
+
 ## Reporting
 
 State the machine, GPU, browser build, renderer, fixture, the commits compared and the rounds,
