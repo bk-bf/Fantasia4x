@@ -160,14 +160,23 @@ export function sessionPerf(session) {
   const checkpoints = [];
   const tps = [];
   const fps = [];
-  let skip = 0;
+  const windows = session.lines
+    .filter((l) => l.type === 'capture')
+    .map((l) => {
+      const t = tokens(l.msg);
+      const ms = num(t.ms) ?? 0;
+      const from = Date.parse(t.at ?? '') || (l.at == null ? null : l.at - ms);
+      return from == null ? null : [from, from + ms];
+    })
+    .filter(Boolean);
+  const stalled = (from, to) => windows.some(([a, b]) => a < to && b > from);
+  let lastTps = null;
   const changes = [];
   let power = header?.host ?? {};
   for (const line of session.lines) {
     if (line.type === 'capture') {
       const t = tokens(line.msg);
       const ms = num(t.ms) ?? 0;
-      skip = Math.max(1, Math.ceil(ms / 1000));
       if (!t.save) continue;
       checkpoints.push({
         save: t.save,
@@ -178,10 +187,9 @@ export function sessionPerf(session) {
         entry: t.entry ?? null
       });
     } else if (line.type === 'tps') {
-      if (skip > 0) {
-        skip--;
-        continue;
-      }
+      const since = lastTps ?? (line.at == null ? null : line.at - 1000);
+      if (line.at != null) lastTps = line.at;
+      if (line.at != null && stalled(since, line.at)) continue;
       if (!running(line)) continue;
       const [, value, speed] = TPS.exec(line.msg);
       tps.push({ value: Number(value), speed, turn: line.turn, stretch: checkpoints.length });

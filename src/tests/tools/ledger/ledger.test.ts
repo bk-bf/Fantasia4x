@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { mkdtempSync, writeFileSync, readFileSync, readdirSync, existsSync, utimesSync } from 'node:fs';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, writeFileSync, readFileSync, readdirSync, existsSync, utimesSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -44,7 +44,8 @@ const LOG = [
   tps('01:38:00.100', 30100, 100, '4x'),
   tps('01:38:01.100', 30340, 90, '4x'),
   fps('01:38:01.100', 30340, 92),
-  '2026-11-27 01:38:02.000 [T30500] [info] ledger save=aaaa1111 reason=periodic turn=30500 at=2026-11-27T00:38:00.500Z ms=1500 speed=4x bytes=100 entry=20261127T003800Z-laptop-bbbbbb',
+  '2026-11-27 01:38:01.300 [T30500] [info] ledger capture=on interval=120s',
+  '2026-11-27 01:38:03.000 [T30500] [info] ledger save=aaaa1111 reason=periodic turn=30500 at=2026-11-27T00:38:01.200Z ms=1800 speed=4x bytes=100 entry=20261127T003800Z-laptop-bbbbbb',
   tps('01:38:02.100', 30560, 5, '4x'),
   tps('01:38:03.100', 30800, 6, '4x'),
   tps('01:38:04.100', 31040, 70, '4x'),
@@ -95,6 +96,9 @@ const perfOf = (i: number) => sessionPerf(splitSessions(LOG, 'Europe/Berlin')[i]
 let dir: string;
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'ledger-test-'));
+});
+afterEach(() => {
+  rmSync(dir, { recursive: true, force: true });
 });
 
 describe('spool', () => {
