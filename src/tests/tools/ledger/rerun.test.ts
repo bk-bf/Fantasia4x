@@ -216,7 +216,7 @@ describe('rerun on a machine', () => {
   it('waits while another bench runs or the load is high before it builds or measures', async () => {
     ownerSave();
     const deps = fakeDesktop({ busyChecks: 2 });
-    const [id] = await rerun(root, parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev']), deps, env);
+    const [id] = await rerun(root, parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev']), deps as unknown as Deps, env);
     expect(deps.slept).toEqual([30_000, 30_000]);
     expect(getEntry(root, id).host.load).toEqual([0.2, 0.3, 0.4]);
   });
