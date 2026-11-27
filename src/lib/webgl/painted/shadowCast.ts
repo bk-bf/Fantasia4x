@@ -1,5 +1,7 @@
 import vertexSource from '../shaders/paintedLight.vert.glsl?raw';
 import fragmentSource from '../shaders/paintedShadow.frag.glsl?raw';
+import fullscreenSource from '../shaders/fullscreen.wgsl?raw';
+import wgslSource from '../shaders/paintedShadow.wgsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import type { GameGrid, GridUpdateEvent } from '../game-grid.js';
 import type { TileRect } from './lightGrade.js';
@@ -52,7 +54,7 @@ export function castHeights(
   return any;
 }
 
-const CAST = uniformLayout('Cast', [
+const CAST = uniformLayout('ShadowCast', [
   { name: 'u_shade', type: 'vec3', precision: 'highp' },
   { name: 'u_depth', type: 'float', precision: 'highp' },
   { name: 'u_origin', type: 'ivec2', precision: 'highp' },
@@ -84,6 +86,7 @@ export class PaintedShadowCast {
       canvasPipeline(gpu, {
         vertex: vertexSource,
         fragment: fragmentSource,
+        wgsl: fullscreenSource + wgslSource,
         topology: 'triangle-list',
         blend: {
           color: { srcFactor: 'zero', dstFactor: 'src' },

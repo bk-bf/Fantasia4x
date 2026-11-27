@@ -1,5 +1,7 @@
 import vertexSource from '../shaders/paintedLight.vert.glsl?raw';
 import fragmentSource from '../shaders/paintedVignette.frag.glsl?raw';
+import fullscreenSource from '../shaders/fullscreen.wgsl?raw';
+import wgslSource from '../shaders/paintedVignette.wgsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import { clamp, dith } from '../../pixelArt/noise.js';
 import type { GpuDevice, GpuRenderPass, GpuRenderPipeline } from '../../gpu/device.js';
@@ -60,6 +62,7 @@ export class PaintedVignette {
       canvasPipeline(gpu, {
         vertex: vertexSource,
         fragment: fragmentSource,
+        wgsl: fullscreenSource + wgslSource,
         topology: 'triangle-list',
         blend: {
           color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha' },

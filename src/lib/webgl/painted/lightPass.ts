@@ -1,5 +1,7 @@
 import vertexSource from '../shaders/paintedLight.vert.glsl?raw';
 import fragmentSource from '../shaders/paintedLight.frag.glsl?raw';
+import fullscreenSource from '../shaders/fullscreen.wgsl?raw';
+import wgslSource from '../shaders/paintedLight.wgsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import {
   MAX_LIGHTS,
@@ -65,6 +67,7 @@ export class PaintedLightPass {
     const bindings = new PassBindings(gpu, PROGRAM, [LIGHTS]);
     const made = shaders.createPipeline(PROGRAM, {
       glsl: bindings.glsl({ vertex: vertexSource, fragment: fragmentSource, attributes: {} }),
+      wgsl: bindings.wgsl({ code: fullscreenSource + wgslSource }),
       layout: [bindings.layout],
       vertex: { buffers: [] },
       primitive: { topology: 'triangle-list' },
