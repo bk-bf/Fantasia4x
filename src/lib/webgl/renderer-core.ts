@@ -499,6 +499,9 @@ export class WebGLRendererCore {
     frame.view.set('u_viewOffset', [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX]);
     frame.view.set('u_zoom', [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX]);
     frame.view.upload(gpu.queue, frame.buffer);
+    const vignette = this.vignetteOn && lightFrame ? this.vignette : null;
+    if (vignette && lightFrame)
+      vignette.prepare({ strength: lightFrame.grade.vignette, tilePx: this.tileWidth });
     const encoder = gpu.createCommandEncoder();
     if (this.lightPass && lightFrame)
       this.stats.drawCalls += this.lightPass.drawField(encoder, lightFrame);
@@ -629,11 +632,7 @@ export class WebGLRendererCore {
     } else {
       this.stats.overlayMs = 0;
     }
-    if (this.vignette && lightFrame && this.vignetteOn)
-      this.stats.drawCalls += this.vignette.draw(pass, {
-        strength: lightFrame.grade.vignette,
-        tilePx: this.tileWidth
-      });
+    if (vignette) this.stats.drawCalls += vignette.encode(pass);
     pass.end();
     gpu.queue.submit([encoder.finish()]);
     return true;
