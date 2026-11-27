@@ -1,5 +1,10 @@
 import type { ShaderProgram } from './types.js';
-import type { GpuDevice, GpuRenderPipeline, GpuShaderModule } from '../gpu/device.js';
+import {
+  shaderLanguages,
+  type GpuDevice,
+  type GpuRenderPipeline,
+  type GpuShaderModule
+} from '../gpu/device.js';
 import { framed, type FramedPipeline } from './frameBindings.js';
 import { TileShading } from './tileShading.js';
 import vertexShaderSource from './shaders/vertex.glsl?raw';
@@ -10,6 +15,14 @@ import { withTreeParts } from './painted/treeParts.js';
 export interface ShaderSource {
   vertex: string;
   fragment: string;
+}
+
+export type WgslRule = 'any' | 'skip' | 'require';
+
+export class MissingWgsl extends Error {
+  constructor(readonly pipeline: string) {
+    super(`${pipeline} has no WGSL yet`);
+  }
 }
 
 export interface ShaderCompilationResult {
@@ -25,12 +38,21 @@ export class ShaderManager {
   private shaderCache: Map<string, GpuShaderModule> = new Map();
   private debug: boolean;
 
-  constructor(gpu: GpuDevice, debug: boolean = false) {
+  constructor(
+    gpu: GpuDevice,
+    debug: boolean = false,
+    readonly wgsl: WgslRule = 'any'
+  ) {
     this.gpu = gpu;
     this.debug = debug;
   }
 
   createPipeline(name: string, desc: FramedPipeline): ShaderCompilationResult {
+    if (this.wgsl !== 'any' && !shaderLanguages(desc).includes('wgsl')) {
+      if (this.wgsl === 'require') throw new MissingWgsl(name);
+      console.warn(`[gpu] ${name} is off: it has no WGSL yet`);
+      return { success: false, error: `${name} has no WGSL yet` };
+    }
     try {
       const made = this.gpu.createRenderPipeline({
         ...framed(this.gpu, desc),
@@ -101,7 +123,7 @@ export class ShaderManager {
 
 export interface TileShaders {
   shaders: ShaderManager;
-  tile: TileShading;
+  tile: TileShading | null;
 }
 
 const withPaintedDefine = (source: string): string =>
@@ -116,10 +138,11 @@ export async function createTileRendererShaders(
   gpu: GpuDevice,
   debug: boolean = false,
   painted: boolean = false,
-  rowDepth: boolean = painted
+  rowDepth: boolean = painted,
+  wgsl: WgslRule = 'any'
 ): Promise<TileShaders | null> {
   console.log('🔄 Creating tile renderer shaders...');
-  const shaderManager = new ShaderManager(gpu, debug);
+  const shaderManager = new ShaderManager(gpu, debug, wgsl);
 
   try {
     const shaderSource: ShaderSource = {
@@ -142,9 +165,11 @@ export async function createTileRendererShaders(
       console.log('✅ Tile renderer shaders created successfully');
       return { shaders: shaderManager, tile };
     }
+    if (wgsl === 'skip') return { shaders: shaderManager, tile: null };
     console.error('❌ Failed to create tile renderer shaders:', tile.error);
     return null;
   } catch (error) {
+    if (error instanceof MissingWgsl) throw error;
     console.error('❌ Failed to load shader files:', error);
     return null;
   }

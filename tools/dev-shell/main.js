@@ -1,10 +1,12 @@
 const { app, BrowserWindow, session, shell, ipcMain } = require('electron');
 const path = require('path');
+const { enableFeatures, GPU_FEATURES } = require('../../electron/features.cjs');
 
 const APP_URL = process.env.SPIKE_URL || 'http://localhost:5173';
 const START_QUERY = [
   process.env.F4X_PAINTED === '0' ? 'painted=0' : '',
-  process.env.F4X_SCENARIO ? `scenario=${encodeURIComponent(process.env.F4X_SCENARIO)}` : ''
+  process.env.F4X_SCENARIO ? `scenario=${encodeURIComponent(process.env.F4X_SCENARIO)}` : '',
+  process.env.F4X_GPU ? `gpu=${encodeURIComponent(process.env.F4X_GPU)}` : ''
 ]
   .filter(Boolean)
   .join('&');
@@ -24,6 +26,8 @@ app.commandLine.appendSwitch('js-flags', '--max-semi-space-size=128');
 app.commandLine.appendSwitch('remote-debugging-port', process.env.ELECTRON_DEBUG_PORT || '9222');
 
 app.commandLine.appendSwitch('log-level', '3');
+
+enableFeatures(app, GPU_FEATURES);
 
 function createWindow() {
   const shellUA = `${session.defaultSession.getUserAgent()} ${SHELL_UA_MARKER}`;

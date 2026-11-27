@@ -1,5 +1,5 @@
 import { createOrthographicMatrix, PerformanceTimer } from './utils.js';
-import { ShaderManager, createTileRendererShaders } from './shaders.js';
+import { MissingWgsl, ShaderManager, createTileRendererShaders } from './shaders.js';
 import { createSquareCellAtlas, loadBitlandsAtlas } from './font-atlas.js';
 import { TextureManager, uploadFontAtlas } from './texture-manager.js';
 import { ALPHA_CUT, GridRenderer, type GridDraw, type GridRenderOptions } from './grid-renderer.js';
@@ -90,6 +90,7 @@ export interface RendererOptions {
   tileHeight?: number;
   debug?: boolean;
   contextAttributes?: WebGLContextAttributes;
+  onDeviceLost?: (message: string) => void;
 }
 
 export class WebGLRendererCore {
@@ -191,7 +192,8 @@ export class WebGLRendererCore {
     this.webglState = new WebGLStateManager({
       canvas: this.canvas,
       contextAttributes: options.contextAttributes,
-      debug: this.debug
+      debug: this.debug,
+      onDeviceLost: options.onDeviceLost
     });
 
     this.initPromise = this.initialize();
@@ -407,62 +409,92 @@ export class WebGLRendererCore {
 
   private async initialize(): Promise<boolean> {
     try {
-      if (this.debug) console.log('🔄 Initializing WebGL2 renderer...');
-
-      const gpu = await this.webglState.initialize({
-        depth: this.rowDepth,
-        stencil: this.rowDepth
-      });
-
-      const made = await createTileRendererShaders(gpu, this.debug, PAINTED_TILES);
-      if (!made) throw new Error('Shader init failed');
-      this.shaderManager = made.shaders;
-      this.tile = made.tile;
-
-      try {
-        this.fontAtlas = await loadBitlandsAtlas(12, 18, this.debug);
-        this.tilesetLoaded = true;
-      } catch {
-        if (this.debug) console.warn('Bitlands atlas unavailable, using canvas atlas');
-        this.fontAtlas = await createSquareCellAtlas(this.tileWidth, this.debug);
+      return await this.build();
+    } catch (error) {
+      if (!(error instanceof MissingWgsl) || !this.webglState.canFallBack) {
+        console.error('❌ WebGL init failed:', error);
+        throw error;
       }
+      console.info(`[gpu] ${error.message}, so the automatic choice falls back to WebGL2`);
+      this.forgetPasses();
+      this.webglState.fallBackToWebgl2(error.message);
+      return this.build();
+    }
+  }
 
-      this.textureManager = new TextureManager(gpu, this.debug);
-      this.fontTexture = this.textureManager.createFontAtlasTexture(this.fontAtlas);
-      if (!this.fontTexture) throw new Error('Font texture creation failed');
+  private forgetPasses(): void {
+    this.shaderManager = null;
+    this.tile = null;
+    this.textureManager = null;
+    this.fontTexture = null;
+    this.gridRenderer = null;
+    this.painted = null;
+    this.groundBlend = null;
+    this.lightPass = null;
+    this.shadowCast = null;
+    this.vignette = null;
+    this.groundRings = null;
+    this.leaves = null;
+    this.tiers = null;
+  }
 
-      this.gridRenderer = new GridRenderer(
-        gpu,
-        made.tile,
-        this.fontAtlas,
-        this.debug,
-        this.rowDepth
-      );
-      if (PAINTED_TILES) this.painted = await loadPaintedTileset(gpu);
-      if (GROUND_BLEND && this.painted)
-        this.groundBlend = GroundBlend.create(gpu, this.shaderManager, this.painted);
-      this.groundBlend?.setWaterStyle(this.wavesOn);
+  private async build(): Promise<boolean> {
+    if (this.debug) console.log('🔄 Initializing WebGL2 renderer...');
+
+    const gpu = await this.webglState.initialize({
+      depth: this.rowDepth,
+      stencil: this.rowDepth
+    });
+
+    const made = await createTileRendererShaders(
+      gpu,
+      this.debug,
+      PAINTED_TILES,
+      this.rowDepth,
+      this.webglState.wgslRule
+    );
+    if (!made) throw new Error('Shader init failed');
+    this.shaderManager = made.shaders;
+    this.tile = made.tile;
+
+    try {
+      this.fontAtlas = await loadBitlandsAtlas(12, 18, this.debug);
+      this.tilesetLoaded = true;
+    } catch {
+      if (this.debug) console.warn('Bitlands atlas unavailable, using canvas atlas');
+      this.fontAtlas = await createSquareCellAtlas(this.tileWidth, this.debug);
+    }
+
+    this.textureManager = new TextureManager(gpu, this.debug);
+    this.fontTexture = this.textureManager.createFontAtlasTexture(this.fontAtlas);
+    if (!this.fontTexture) throw new Error('Font texture creation failed');
+
+    this.gridRenderer = made.tile
+      ? new GridRenderer(gpu, made.tile, this.fontAtlas, this.debug, this.rowDepth)
+      : null;
+    if (PAINTED_TILES) this.painted = await loadPaintedTileset(gpu);
+    if (GROUND_BLEND && this.painted)
+      this.groundBlend = GroundBlend.create(gpu, this.shaderManager, this.painted);
+    this.groundBlend?.setWaterStyle(this.wavesOn);
+    if (this.gridRenderer) {
       this.gridRenderer.skipBlendedGround = this.groundBlend !== null;
       this.gridRenderer.skipWaterIce = this.groundBlend !== null;
-      if (this.gameGrid) this.groundBlend?.setGrid(this.gameGrid);
-      this.groundBlend?.setTrees(this.treeGrids());
-      this.groundBlend?.setIce(this.snowGrid);
-      this.snowVersion++;
-      if (PAINTED_LIGHT && this.painted)
-        this.lightPass = PaintedLightPass.create(gpu, this.shaderManager);
-      if (this.painted) this.shadowCast = PaintedShadowCast.create(gpu, this.shaderManager);
-      if (this.lightPass) this.vignette = PaintedVignette.create(gpu, this.shaderManager);
-      this.groundRings = GroundRings.create(gpu, this.shaderManager);
-      if (this.painted) this.leaves = FallingLeaves.create(gpu, this.shaderManager);
-      if (this.painted) this.tiers = Tiers.create(gpu, this.shaderManager, this.painted);
-      if (this.gameGrid) this.tiers?.setGrids(this.gameGrid, this.resourceOverlayGrid);
-
-      if (this.debug) console.log('✅ WebGL2 renderer ready');
-      return true;
-    } catch (error) {
-      console.error('❌ WebGL init failed:', error);
-      throw error;
     }
+    if (this.gameGrid) this.groundBlend?.setGrid(this.gameGrid);
+    this.groundBlend?.setTrees(this.treeGrids());
+    this.groundBlend?.setIce(this.snowGrid);
+    this.snowVersion++;
+    if (PAINTED_LIGHT && this.painted)
+      this.lightPass = PaintedLightPass.create(gpu, this.shaderManager);
+    if (this.painted) this.shadowCast = PaintedShadowCast.create(gpu, this.shaderManager);
+    if (this.lightPass) this.vignette = PaintedVignette.create(gpu, this.shaderManager);
+    this.groundRings = GroundRings.create(gpu, this.shaderManager);
+    if (this.painted) this.leaves = FallingLeaves.create(gpu, this.shaderManager);
+    if (this.painted) this.tiers = Tiers.create(gpu, this.shaderManager, this.painted);
+    if (this.gameGrid) this.tiers?.setGrids(this.gameGrid, this.resourceOverlayGrid);
+
+    if (this.debug) console.log('✅ WebGL2 renderer ready');
+    return true;
   }
 
   resize(width: number, height: number): void {
@@ -484,7 +516,7 @@ export class WebGLRendererCore {
     const gpu = this.webglState.getDevice();
     const tile = this.tile;
     const grid = this.gridRenderer;
-    if (!gpu || !tile || !grid || !this.fontTexture || !this.gameGrid) return false;
+    if (!gpu || !this.fontTexture || !this.gameGrid) return false;
 
     const viewportTilesW = Math.ceil(this.viewport.width / this.tileWidth);
     const viewportTilesH = Math.ceil(this.viewport.height / this.tileHeight);
@@ -528,17 +560,17 @@ export class WebGLRendererCore {
         [lightFrame?.grade.saturation ?? 1, lightFrame?.grade.brightness ?? 1],
         this.lightField(gpu, lightFrame)
       );
-    this.prepareTile(gpu, tile, lightFrame, flicker, viewportTilesW, viewportTilesH);
+    if (tile) this.prepareTile(gpu, tile, lightFrame, flicker, viewportTilesW, viewportTilesH);
 
     const tTerrain = performance.now();
-    const terrain = passOn('terrain')
+    const terrain = grid && passOn('terrain')
       ? this.prepareGrid(grid, this.gameGrid, viewportTilesW, viewportTilesH, lightTime, {
           pointLightActive: this.dynamicLight,
           lightVersion: this.lightVersion,
           cacheVersion: this.gridVersion
         })
       : null;
-    this.stats.terrainRebuilds = terrain ? grid.chunksRebuiltLastRender : 0;
+    this.stats.terrainRebuilds = grid && terrain ? grid.chunksRebuiltLastRender : 0;
     const terrainPrepareMs = performance.now() - tTerrain;
 
     const tOverlay = performance.now();
@@ -558,7 +590,7 @@ export class WebGLRendererCore {
       this.stats.drawCalls++;
       this.stats.vertexCount += 6;
     }
-    if (terrain) grid.encodeGrid(pass, terrain);
+    if (grid && terrain) grid.encodeGrid(pass, terrain);
     this.stats.terrainMs = terrainPrepareMs + performance.now() - tTerrainEncode;
 
     if (overlays) {
@@ -575,7 +607,7 @@ export class WebGLRendererCore {
   }
 
   private prepareOverlays(
-    grid: GridRenderer,
+    grid: GridRenderer | null,
     viewportTilesW: number,
     viewportTilesH: number,
     lightTime: number
@@ -583,11 +615,12 @@ export class WebGLRendererCore {
     const steps: ((pass: GpuRenderPass) => number)[] = [];
     const drawGrid = (draw: GridDraw) =>
       steps.push((pass) => {
-        grid.encodeGrid(pass, draw);
+        grid?.encodeGrid(pass, draw);
         return 0;
       });
-    const snowOn = this.snowGrid !== null && passOn('snow');
-    if (snowOn) drawGrid(this.prepareSnow(grid, viewportTilesW, viewportTilesH, lightTime, 'wash'));
+    const snowOn = grid !== null && this.snowGrid !== null && passOn('snow');
+    if (grid && snowOn)
+      drawGrid(this.prepareSnow(grid, viewportTilesW, viewportTilesH, lightTime, 'wash'));
     const trees = this.prepareTreeGround(grid, viewportTilesW, viewportTilesH, lightTime);
     if (trees) steps.push(trees);
     const shadowCast = this.shadowCast;
@@ -597,7 +630,7 @@ export class WebGLRendererCore {
     for (const layer of SPRITE_LAYERS) {
       if (!passOn(LAYER_PASS[layer])) continue;
       const sprites = this.spriteGrid(layer);
-      if (sprites)
+      if (grid && sprites)
         drawGrid(
           this.prepareSprites(
             grid,
@@ -608,7 +641,7 @@ export class WebGLRendererCore {
             CHUNKED[layer]
           )
         );
-      if (layer === 'resource' && snowOn)
+      if (grid && layer === 'resource' && snowOn)
         drawGrid(this.prepareSnow(grid, viewportTilesW, viewportTilesH, lightTime, 'overlay'));
       const tiers = this.tiers;
       if (layer === 'resource' && ROCK_TIERS && this.rowDepth && tiers)
@@ -849,13 +882,14 @@ export class WebGLRendererCore {
   }
 
   private prepareTreeGround(
-    grid: GridRenderer,
+    grid: GridRenderer | null,
     viewportTilesW: number,
     viewportTilesH: number,
     lightTime: number
   ): ((pass: GpuRenderPass) => number) | null {
     const blend = this.groundBlend;
     if (!blend?.trees || !passOn('terrain')) return null;
+    if (!grid) return (pass) => (blend.encodeWinterTrees(pass) ? 1 : 0);
     const view = { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH };
     const touched = blend.trees.dressAround(view, DRESS_BUDGET_MS);
     if (touched.length > 0) grid.markDecorChunksDirty(touched);

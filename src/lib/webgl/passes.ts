@@ -8,7 +8,8 @@ const RENDER_PASSES = [
   'creatures',
   'tall-resources',
   'overlay',
-  'effects'
+  'effects',
+  'glsl-only'
 ] as const;
 
 type RenderPass = (typeof RENDER_PASSES)[number];
@@ -32,3 +33,15 @@ export const GPU_VALIDATE: boolean =
   import.meta.env.DEV && typeof window !== 'undefined'
     ? readValidateFlag(window.location?.search ?? '')
     : false;
+
+export type GpuSwitch = 'webgpu' | 'webgl2' | null;
+
+export function readGpuSwitch(search: string): GpuSwitch {
+  const named = new URLSearchParams(search).get('gpu');
+  return named === 'webgpu' || named === 'webgl2' ? named : null;
+}
+
+export const GPU_SWITCH: GpuSwitch =
+  import.meta.env.DEV && typeof window !== 'undefined'
+    ? readGpuSwitch(window.location?.search ?? '')
+    : null;

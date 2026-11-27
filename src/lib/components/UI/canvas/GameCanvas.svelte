@@ -2131,7 +2131,8 @@
         canvas,
         tileWidth,
         tileHeight,
-        contextAttributes: { alpha: false, antialias: false, powerPreference: 'high-performance' }
+        contextAttributes: { alpha: false, antialias: false, powerPreference: 'high-performance' },
+        onDeviceLost: (message) => (errorMsg = message)
       });
 
       const ok = await renderer.waitForInitialization();
@@ -2182,7 +2183,7 @@
         }
       }).observe(container);
     } catch (e) {
-      errorMsg = e instanceof Error ? e.message : String(e);
+      errorMsg = `WebGL unavailable: ${e instanceof Error ? e.message : String(e)}`;
       console.error('[GameCanvas]', e);
     }
   }
@@ -3904,7 +3905,7 @@
   <canvas bind:this={markCanvas} class="desig-layer mark-layer"></canvas>
 
   {#if errorMsg}
-    <div class="error">WebGL unavailable: {errorMsg}</div>
+    <div class="error">{errorMsg}</div>
   {/if}
 
   {#if banner}<ModeBanner model={banner} />{/if}

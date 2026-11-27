@@ -1,6 +1,9 @@
 const { app, BrowserWindow, protocol, shell, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { enableFeatures, GPU_FEATURES } = require('./features.cjs');
+
+enableFeatures(app, GPU_FEATURES);
 
 const BUILD_DIR = path.join(app.getAppPath(), 'build');
 const APP_ORIGIN = 'app://bundle';
