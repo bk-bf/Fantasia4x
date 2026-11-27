@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { Webgl2Device } from '../../lib/gpu/webgl2/device.js';
 import { BufferUsage } from '../../lib/gpu/device.js';
+import { readValidateFlag } from '../../lib/webgl/passes.js';
 
-function device(validate: boolean) {
+function device(validate?: boolean) {
   const gl = new Proxy(
     { LINK_STATUS: 0x8b82 },
     {
@@ -68,6 +69,19 @@ describe('writes after use in the same submit', () => {
     const encoder = drawn();
     gpu.queue.submit([encoder.finish()]);
     expect(() => gpu.queue.writeBuffer(buffer, 24, new Float32Array(4))).not.toThrow();
+  });
+
+  it('checks by default under the test runner', () => {
+    const { gpu, buffer, drawn } = device();
+    drawn();
+    expect(() => gpu.queue.writeBuffer(buffer, 24, new Float32Array(4))).toThrow(/not submitted/);
+  });
+
+  it('is switched on in a dev build only by ?validate=1', () => {
+    expect(readValidateFlag('?validate=1')).toBe(true);
+    expect(readValidateFlag('?painted=1&validate=1')).toBe(true);
+    expect(readValidateFlag('')).toBe(false);
+    expect(readValidateFlag('?validate=0')).toBe(false);
   });
 
   it('checks nothing with validation off', () => {

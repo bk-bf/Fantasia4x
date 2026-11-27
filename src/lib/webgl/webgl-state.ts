@@ -1,4 +1,5 @@
 import { createWebgl2Device } from '../gpu/webgl2/context.js';
+import { GPU_VALIDATE } from './passes.js';
 import type { GpuDevice, RenderPassDescriptor } from '../gpu/device.js';
 import { Webgl2Device } from '../gpu/webgl2/device.js';
 import { crashBreadcrumb } from './crashLog.js';
@@ -50,7 +51,11 @@ export class WebGLStateManager {
       console.log('📋 Context attributes:', attributes);
     }
 
-    const device = createWebgl2Device(this.canvas, attributes);
+    const device = createWebgl2Device(
+      this.canvas,
+      attributes,
+      GPU_VALIDATE ? { validate: true } : {}
+    );
 
     if (!device) {
       throw new Error('WebGL2 is not supported in this browser');
