@@ -1,17 +1,8 @@
-import {
-  appendFileSync,
-  writeFileSync,
-  mkdirSync,
-  existsSync,
-  statSync,
-  readdirSync,
-  readFileSync
-} from 'node:fs';
+import { mkdirSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadavg, freemem, totalmem } from 'node:os';
+import { appendToLog, logDir } from '$lib/server/logFiles';
 import type { RequestHandler } from './$types';
-
-const MAX_LOG_BYTES = 16 * 1024 * 1024;
 
 const CATEGORY_RE = /^[a-z][a-z0-9_]*$/;
 
@@ -57,23 +48,6 @@ function hostState(): string {
   ].join(' ');
 }
 
-function appendToLog(logFile: string, lines: string[]): void {
-  if (lines.length === 0) return;
-  const payload = lines.join('\n') + '\n';
-  let size = 0;
-  try {
-    size = statSync(logFile).size;
-  } catch {
-    size = 0;
-  }
-  if (size >= MAX_LOG_BYTES) {
-    const banner = `=== log reset at ${new Date().toISOString()} (exceeded ${MAX_LOG_BYTES} bytes) ===\n`;
-    writeFileSync(logFile, banner + payload, 'utf8');
-  } else {
-    appendFileSync(logFile, payload, 'utf8');
-  }
-}
-
 export const POST: RequestHandler = async ({ request }) => {
   if (!import.meta.env.DEV) return new Response(null, { status: 204 });
 
@@ -108,9 +82,9 @@ export const POST: RequestHandler = async ({ request }) => {
     lastPower = power;
   }
 
-  const logDir = join(process.cwd(), '.debug');
-  if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
-  for (const [cat, lines] of buckets) appendToLog(join(logDir, `${cat}.log`), lines);
+  const dir = logDir();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  for (const [cat, lines] of buckets) appendToLog(join(dir, `${cat}.log`), lines);
 
   return new Response(null, { status: 204 });
 };
