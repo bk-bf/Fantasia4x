@@ -65,7 +65,7 @@ function frame(G, kind, over, anim, face, u, loadId, seed) {
 
 const solid = spr => { let n = 0; for (let i = 0; i < spr.c.length; i++) if (spr.c[i]) n++; return n; };
 const tallOf = s => { let top = -1, low = -1; for (let q = 0; q < s.c.length; q++) if (s.c[q]) { if (top < 0) top = (q / s.w) | 0; low = (q / s.w) | 0; } return low - top + 1; };
-const PICKED_UP = ['lift', 'drop'], SETTLE = .06, LOAD_JUMP = 11, LOAD_STEP = 6, RIGID = { share: .88, least: 10 }, UNDER = 1, SEATED = ['sit', 'warm', 'eat'], SEATS = ['stool', 'bench', 'chair'], SEAT_REACH = 8;
+const PICKED_UP = ['lift', 'drop'], SETTLE = .06, LOAD_JUMP = 11, LOAD_STEP = 6, RIGID = { share: .88, least: 10 }, UNDER = 1, PART_ART_UNDER = { fall: ['folk-winged', 'folk-marked'] }, SEATED = ['sit', 'warm', 'eat'], SEATS = ['stool', 'bench', 'chair'], SEAT_REACH = 8;
 const alike = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
 const shows = (shown, own) => !!shown && !!own && (shown === own || alike(shown, own) || alike(shown, NOW.shade(own)) || alike(shown, NOW.shade(NOW.shade(own))));
 const isBody = l => BODY.includes(l.name), isArm = l => !!l.limb, isTool = l => l.name === 'tool' || l.name === 'tool butt', isArrow = l => isTool(l) && l.piece === 'arrow', isLoad = l => l.name === 'load';
@@ -200,7 +200,7 @@ for (const anim of anims) {
       for (let i = 0; i < n; i++) {
         const u = (i + .5) / n, now = frame(NOW, kind, over, anim, face, u, loadId);
         if (now.pose.tip && now.pose.face === face) { const tip = tipping(NOW.tipped(now.spr, face === 'f' ? -now.pose.tip : now.pose.tip), NOW.P.ink, false); const spurs = Math.max(0, tip.spurs - spursOf(now.spr)); if (tip.torn || tip.parts || spurs) { sum.v++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': ' + PICTURE_NAMED.v + ', ' + tip.torn + ' edge pixels not inked, ' + tip.parts + ' loose parts, ' + spurs + ' spurs'); } }
-        if (now.lying && face === 's') { let low = 0; for (let q = 0; q < now.lying.c.length; q++) if (now.lying.c[q]) low = (q / now.lying.w) | 0; if (low > NOW.RG.BASE + UNDER) { sum.J++; if (noted) notes.push(anim + ' ' + who + ' frame ' + (i + 1) + ': ' + NAMED.J + ', ' + (low - NOW.RG.BASE) + ' px under'); } }
+        if (now.lying && face === 's') { let low = 0; for (let q = 0; q < now.lying.c.length; q++) if (now.lying.c[q]) low = (q / now.lying.w) | 0; if (low > NOW.RG.BASE + UNDER && !(PART_ART_UNDER[anim] || []).includes(kind)) { sum.J++; if (noted) notes.push(anim + ' ' + who + ' frame ' + (i + 1) + ': ' + NAMED.J + ', ' + (low - NOW.RG.BASE) + ' px under'); } }
         if (now.lying && tallOf(now.lying) > now.asleep) { sum.M++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': ' + NAMED.M + ', ' + tallOf(now.lying) + ' rows tall, ' + now.asleep + ' asleep'); }
         if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); arrows.push(null); lengths.push(null); continue; }
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId, now.seed) : now).spr.c, face), where = who + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
