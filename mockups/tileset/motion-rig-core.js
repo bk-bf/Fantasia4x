@@ -151,7 +151,7 @@ function aimed(ang, stow, back) {
   const along = back ? STOWED.away : STOWED.toward, turn = ((ang - along + 540) % 360) - 180;
   return { ang: along + turn * (1 - stow), fore: mix(SEEN.depth, 1, 1 - stow) };
 }
-const BOW = { half: 11, sag: 4, nock: 10, grip: 4.5 };
+const BOW = { half: 11, sag: 4, nock: 10, grip: 4.5, eases: .5 };
 const SIDE_DEPTH = { far: -3, farHeld: -2.9, farHand: -2.85, shield: -2.8, cape: -2, tail: -1.9, farLeg: -1, nearLeg: -.9, torso: 0, over: .25, head: .3, pad: .9, tucked: .9, near: 1, tool: 1.5, hand: 1.6, fingers: 1.7 };
 const TOWARD_DEPTH = { slung: -3.5, cape: -1.3, tail: -1.25, legs: -.3, torso: -.2, head: .3, upper: 1, pad: 1.5, fore: 2, shield: 2.5, hand: 3, butt: -.5, step: .05 };
 const AWAY_DEPTH = { shield: -3.5, hand: -3, fore: -2, upper: -1, tail: -.4, legs: -.3, torso: -.2, pad: -.15, cape: -.12, slung: .2, head: .3, butt: 3.2, step: .05 };

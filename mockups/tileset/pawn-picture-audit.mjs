@@ -1,10 +1,10 @@
-export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K', 'L', 'N', 'O', 'P', 'R', 'S'];
-export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing shows with no hand showing on it', x: 'held thing against the face', y: 'legs shortened', B: 'arms knotted', C: 'tool in line with the arm', D: 'load cut short', E: 'carried body shows no head', F: 'load over one arm and under the other', G: 'hand on the wide end', H: 'load does not read', K: 'load in the arms shows above the shoulders from behind', L: 'carried person not cradled in both arms', N: 'tool shows shorter than it is drawn', O: 'hand off a two-handed tool', P: 'tool on the wrong side of the head or back', R: 'load on the shoulders hidden or crossed by the arms', S: 'block held at its edge with no hand under it' };
+export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K', 'L', 'N', 'O', 'P', 'R', 'S', 'V', 'W'];
+export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing shows with no hand showing on it', x: 'held thing against the face', y: 'legs shortened', B: 'arms knotted', C: 'tool in line with the arm', D: 'load cut short', E: 'carried body shows no head', F: 'load over one arm and under the other', G: 'hand on the wide end', H: 'load does not read', K: 'load in the arms shows above the shoulders from behind', L: 'carried person not cradled in both arms', N: 'tool shows shorter than it is drawn', O: 'hand off a two-handed tool', P: 'tool on the wrong side of the head or back', R: 'load on the shoulders hidden or crossed by the arms', S: 'block held at its edge with no hand under it', V: 'arm at the quiver sticks out behind the back', W: 'drawn bow lies flat on the torso' };
 const HAND_BLOCK = 4, TAPER = { long: 5, thin: 1, wide: 3 }, FIN = { out: 4, above: 1 }, PROFILE = .8, BAND = 2, LEGS = .6, TOUCH = 1;
-const LEG_LAYERS = ['legs', 'far leg', 'near leg'], BROW = 6, FRONT = 5, GRASPED = .2;
+const LEG_LAYERS = ['legs', 'far leg', 'near leg'], BROW = 6, FRONT = 5, OUTLINES = 2, GRASPED = .2;
 const SHOWS = 3, APART = 4, IN_LINE = { cos: .94, reach: 5, tools: ['hammer', 'club', 'axe', 'pick'] }, WHOLE = .6, HEAD_SHOWS = .6, WIDE_END = 1, IN_ARMS = ['chest', 'low', 'cradle'];
 const KEPT_AS_APPROVED = { x: ['shoulder'] };
-const QUIVERED = .9, BODY_HIDES = ['bow', 'arrow'];
+const QUIVERED = .9, BODY_HIDES = ['bow', 'arrow'], BOWED = { behind: 3, flat: .25 };
 const CRADLE = { palm: 3, across: 2, above: 3, below: 2 };
 const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15, FACE = { dark: .5, marks: 4 }, POLES = ['spear', 'staff'], LEVEL = 2, UPRIGHT = .7, YOKED = { above: .2 }, BLOCK = { wide: 12, tall: 8, under: 2, along: 3 };
 const READS = { bars: s => s.w <= 9 && s.w >= 2 * s.h, bundles: s => s.filled <= .6 * s.w * s.h };
@@ -82,7 +82,7 @@ export function pictured(now, face, ink) {
   const drawnOf = ls => ls.flatMap(l => pixels(l.spr)), arrowsOf = tools.filter(l => l.piece === 'arrow');
   const things = [['tool', rigid.flatMap(showing), handsOn('tool'), drawnOf(rigid)], ['arrow', quivered ? [] : arrowsOf.flatMap(showing), stack.filter(l => l.seg === 'hand').flatMap(showing), drawnOf(arrowsOf)], ...(onGround ? [] : loads.map(l => ['load', showing(l), handsOn('load'), pixels(l.spr)]))];
   const behindBody = what => { const own = stack.filter(l => l.seg === 'hand' && l.grips === 'tool' && (what === 'arrow' ? l.piece !== 'stave' : l.piece !== 'string')); return own.length > 0 && own.every(h => showing(h).length < SHOWS); };
-  for (const [what, px, by, drawn] of things) if (px.length >= SHOWS && !touches(drawn, by, w) && !(BODY_HIDES.includes(what === 'tool' ? sp && sp.tool : what) && (face === 'b' || behindBody(what))) && !(face === 'b' && what === 'tool' && behindBody(what))) { counts.w++; said.push(what + ' shows ' + px.length + ' px with no hand showing on it'); }
+  for (const [what, px, by, drawn] of things) if (px.length >= SHOWS && !touches(drawn, by, w) && !(BODY_HIDES.includes(what === 'tool' ? sp && sp.tool : what) && (face === 'b' || (what !== 'arrow' && behindBody(what)))) && !(face === 'b' && what === 'tool' && behindBody(what))) { counts.w++; said.push(what + ' shows ' + px.length + ' px with no hand showing on it'); }
   if (toolPx.length) {
     const ax = axisOf(toolPx, w), seen = rigid.flatMap(showing), gripped = toolPx.filter(i => top[i] >= 0 && stack[top[i]].limb), underHead = toolPx.filter(i => top[i] >= 0 && stack[top[i]].name === 'head'), behindBack = face !== 'f' ? toolPx.filter(i => top[i] >= 0 && !stack[top[i]].limb && !rigid.includes(stack[top[i]]) && (face === 'b' || stack[top[i]].name !== 'head')) : [];
     const paired = !!(sp && sp.arms && sp.arms.second && sp.arms.aim && sp.tool !== 'bow'), along = i => (i % w - ax[2]) * ax[0] + (((i / w) | 0) - ax[3]) * ax[1];
@@ -169,9 +169,22 @@ export function pictured(now, face, ink) {
     if (READS[meta.storage] && lay.spr) { const s = lay.spr, filled = pixels(s).length; if (!READS[meta.storage]({ w: s.w, h: s.h, filled })) { counts.H++; said.push(meta.storage + ' sprite ' + s.w + 'x' + s.h + ' with ' + filled + ' px'); } }
   }
   const head = stack.find(l => l.name === 'head'), pts = now.rigged.pts;
+  if (sp && sp.tool === 'bow') {
+    const torso = stack.find(l => l.name === 'torso'), stave = tools.filter(l => l.piece === 'stave').flatMap(l => pixels(l.spr)), arrowPx = arrowsOf.flatMap(l => pixels(l.spr)), bowHand = stack.filter(l => l.seg === 'hand' && l.piece === 'stave').flatMap(l => pixels(l.spr));
+    if (face === 's' && quivered && torso && head) {
+      const back = Math.min(box(pixels(torso.spr), w)[0], box(pixels(head.spr), w)[0]), out = stack.filter(l => l.limb === 'near arm').flatMap(showing).filter(i => i % w <= back - BOWED.behind);
+      if (out.length >= SHOWS) { counts.V++; said.push(out.length + ' px of the arm at the quiver show behind the back'); }
+    }
+    if (face === 'f' && now.pose.bow >= 1 && torso && stave.length) {
+      const on = stave.filter(i => torso.spr.c[i]).length;
+      if (on > BOWED.flat * stave.length) { counts.W++; said.push(on + ' of ' + stave.length + ' px of the bow lie on the torso'); }
+    }
+    if (face !== 'b' && arrowPx.length && bowHand.length && !quivered) { let gap = 1e9; for (const i of arrowPx) for (const j of bowHand) gap = Math.min(gap, Math.hypot(i % w - j % w, ((i / w) | 0) - ((j / w) | 0))); counts.arrowGap = gap; }
+  }
   if (face === 's' && head && pts.mouth && !now.pose.covers) {
     let against = 0;
-    for (const l of [...tools.filter(l => l.piece !== 'arrow'), ...stack.filter(k => k.name === 'load' && !(now.pose.cu < 1) && k.cam > head.cam && !KEPT_AS_APPROVED.x.includes(now.pose.carry))]) for (const i of pixels(l.spr)) { const y = (i / w) | 0; if (y < pts.mouth[1] - BROW || y > pts.chin || !shown[i] || !same(shown[i], l.spr.c[i])) continue; if ([i - 1, i + 1, i - w, i + w, i].some(q => head.spr.c[q] && q % w >= pts.mouth[0] - FRONT)) against++; }
+    const joined = i => { for (let q = i - 1; q > i - OUTLINES - 2; q--) { if (!shown[q]) return false; if (head.spr.c[q]) return q % w >= pts.mouth[0] - FRONT; } return false; };
+    for (const l of [...tools.filter(l => l.piece !== 'arrow'), ...stack.filter(k => k.name === 'load' && !(now.pose.cu < 1) && k.cam > head.cam && !KEPT_AS_APPROVED.x.includes(now.pose.carry))]) for (const i of pixels(l.spr)) { const y = (i / w) | 0; if (y < pts.mouth[1] - BROW || y > pts.chin || !shown[i] || !same(shown[i], l.spr.c[i])) continue; if ([i - 1, i + 1, i - w, i + w, i].some(q => head.spr.c[q] && q % w >= pts.mouth[0] - FRONT) || (!(now.pose.bow >= 1) && joined(i))) against++; }
     if (against) { counts.x += against; said.push(against + ' px of a held thing against the face'); }
   }
   if (face === 'b' && IN_ARMS.includes(now.pose.carry) && pts.torso && !(now.pose.down > .5) && !(now.pose.cu < 1)) {

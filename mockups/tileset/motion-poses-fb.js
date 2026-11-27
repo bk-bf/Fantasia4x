@@ -87,8 +87,11 @@ function fbPose(name, u, c) {
 }
 const UPRIGHT = [1.5, 2, 19];
 const HANGS = { R: [.5, 1.5, -8.5], L: [-.5, 1.5, -8.5] };
-const QUIVER = { in: [-.5, -1, 2], out: [-.5, -1, 4.5], lies: [0, -3, -19], past: [1.8, 6, -1.5], round: [2.5, 3.5, -2], holds: 14 };
+const QUIVER = { in: [-.5, -.5, 2.5], out: [-.5, -.5, 5], lies: [0, -3, -19], swung: { at: [3.2, 1.5, 2.5], elbow: [1, .6, .2], lies: [14, -2, -5] }, behind: { in: [-.5, -1, 2], out: [-.5, -1, 4.5], lies: [0, -3, -19] }, past: [1.8, 6, -1.5], round: [2.5, 3.5, -2], holds: 14, elbow: [.5, .2, 1] };
+const reached = (c, at) => c.face === 'b' ? { R: QUIVER.behind[at], shaft: QUIVER.behind.lies } : { R: QUIVER[at], elbowR: QUIVER.elbow, shaft: QUIVER.lies };
 const BOW_LEADS = 4;
+const SHOT_ASIDE = 50;
+const SHOT_OUT = { arm: 9.5, pull: 6.5, drops: -2.5, ahead: 3.5 };
 const POLES3 = ['spear', 'staff', 'hoe'], HAFTS3 = ['axe', 'pick'];
 const spun = (v, deg) => { const c = Math.cos(deg * D2R), n = Math.sin(deg * D2R); return [v[0] * c - v[1] * n, v[0] * n + v[1] * c, v[2]]; };
 const turned3 = (pose, deg) => { const out = { ...pose, turn: deg }; for (const k of ['R', 'L', 'aim', 'shaft', 'elbow']) if (pose[k]) out[k] = spun(pose[k], deg); return out; };
@@ -99,12 +102,13 @@ const pushed = (pose, by) => { const a = unit3(pose.aim); return { R: pose.R.map
 const GUARD3 = {
   one: c => c.face === 'b' ? { R: [4, 5, -3.5], aim: c.tool === 'spear' ? [4, 11, 16] : [7, 12, 14], L: [-4, 6, -3] } : { R: [1, 6, -3.5], aim: c.tool === 'spear' ? [4, 11, 16] : [7, 12, 14], L: [0, 8.5, -3] },
   two: c => c.face !== 's' ? (POLES3.includes(c.tool) ? { R: [6, 6, -1.5], aim: [12, 0, 7], both: 1, mid: 1 } : { R: [7, 3, 0], aim: [9, 0, 17], both: 1, mid: 1 }) : POLES3.includes(c.tool) ? turned3({ R: [-4, 7.5, -3.5], aim: [17, 10, 4], both: 1 }, POLE_TURN) : { R: [-6.5, 5, -2], aim: [3, 8, 17], both: 1 },
-  bow: () => ({ L: [1.2, 8.4, -3], R: [.5, 3, -7], aim: [0, 16, -4], shaft: [0, 16, -3], out: QUIVER.holds, bow: 0, arrow: 0, pull: 0, cant: -28, lead: BOW_LEADS, mid: 0 }),
+  bow: c => ({ L: [1.2, 8.4, -3], R: c && c.face !== 'b' ? [-2.5, 7, -3.5] : [.5, 3, -7], aim: [0, 16, -4], shaft: [0, 16, -3], laid: c && c.face !== 'b' ? 1 : 0, out: QUIVER.holds, bow: 0, arrow: 0, pull: 0, cant: -28, lead: BOW_LEADS, mid: 0 }),
 };
+const BOW_DIPS = 1.2;
 function carried3(c, swing) {
   const s = swing || 0;
   if (!c.tool) return null;
-  if (c.tool === 'bow') return { L: [-.5, 5 - s * 1.5, -7.5 + Math.abs(s) * .5], aim: [0, 14, -14], cant: -35, bow: 0, arrow: 0, pull: 0, lead: 0 };
+  if (c.tool === 'bow') return { L: [-.5, 5 - s * 1.5, -7.5 + Math.abs(s) * .5 - Math.max(0, s) * BOW_DIPS], aim: [0, 14, -14], cant: -35, bow: 0, arrow: 0, pull: 0, lead: 0 };
   if (c.tool === 'torch') return { R: [1, 7.5, -3], aim: [6, 8, 18] };
   if (POLES3.includes(c.tool)) return { R: [1.5, 3 + s * 1.5, -8.2 + Math.abs(s) * .5], aim: [2, 11, 16] };
   return { R: [.5, 1.5 + s * 2.5, -8.5 + Math.abs(s)], aim: c.face === 's' ? [3, 20, -2] : UPRIGHT };
@@ -112,7 +116,7 @@ function carried3(c, swing) {
 const drawn3 = family => (u, c) => {
   const from = { ...carried3(c, 0) }, to = GUARD3[family](c), lands = DRAWN.lands;
   if (u >= lands) return to;
-  if (family === 'bow') return keyed(u / lands, { ...from, R: HANGS.R, out: 0 }, [[0, {}], [.13, { R: QUIVER.round }, 'l'], [.24, { L: [-.5, 4.5, -7.5], R: QUIVER.in, shaft: QUIVER.lies, cant: -30, lead: BOW_LEADS }], [.64, { L: [-1, 6, -7], R: QUIVER.out, shaft: QUIVER.lies, out: QUIVER.holds, cant: -38, lead: BOW_LEADS }, 'i'], [.8, { L: [0, 7.5, -5], R: QUIVER.past, shaft: [6, 10, -10], out: QUIVER.holds, cant: -34, lead: BOW_LEADS }, 'l'], [1, to, 'l']]);
+  if (family === 'bow') return keyed(u / lands, { ...from, R: HANGS.R, out: 0 }, [[0, {}], [.13, { R: QUIVER.round }, 'l'], [.24, { L: [-.5, 4.5, -7.5], ...reached(c, 'in'), cant: -30, lead: BOW_LEADS }], [.64, { L: [-1, 6, -7], ...reached(c, 'out'), out: QUIVER.holds, cant: -38, lead: BOW_LEADS }, 'i'], ...(c.face === 'b' ? [] : [[.72, { L: [-.5, 6.8, -6], R: QUIVER.swung.at, elbowR: QUIVER.swung.elbow, shaft: QUIVER.swung.lies, out: QUIVER.holds, cant: -36, lead: BOW_LEADS }, 'l']]), [.8, { L: [0, 7.5, -5], R: QUIVER.past, shaft: [6, 10, -10], out: QUIVER.holds, cant: -34, lead: BOW_LEADS }, 'l'], [1, to, 'l']]);
   const { both, ...open } = to, held = both && gripsOf(c.tool, c.face) ? gripsOf(c.tool, c.face)[0] : 0, across = both && c.face !== 's';
   return keyed(u / lands, { L: HANGS.L, ...from, grip: 0, turn: 0, mid: 0 }, [[0, {}], ...(both && POLES3.includes(c.tool) && c.face === 's' ? [[.14, { R: [1.5, 4.5, -6], grip: held * .1, aim: [5, 11, 13.5] }, 'l'], [.4, { R: [1.5, 8, -3.5], grip: held * .3, aim: [4, 9, 17] }, 'l'], [.68, { ...turned3({ R: [1, 7.8, -3], aim: [12, 5, 14] }, POLE_TURN * .6), grip: held * .7 }, 'l'], [.92, { ...turned3({ R: [-2.5, 7.8, -3.8], aim: [16, 8, 6] }, POLE_TURN * .9), grip: held * .9 }, 'l']] : [[.4, { R: c.face === 's' ? [1, 6.5, -6.5] : [3.5, 6.5, -4.5], grip: held / 2, ...(from.aim && to.aim ? { aim: from.aim.map((v, i) => (v + to.aim[i]) / 2) } : null), ...(across ? { L: [2, 5, -6], mid: 0 } : null) }, 'l']]), [1, { L: across ? to.R.map((v, i) => v + unit3(to.aim)[i] * (gripsOf(c.tool, c.face) ? gripsOf(c.tool, c.face)[1] : -BARE_GRIP)) : HANGS.L, ...open, grip: held }, 'l']]);
 };
@@ -139,7 +143,7 @@ const ARMS3 = {
   attack: (u, c) => keyed(u, GUARD3.one(c), [[0, {}], [.14, { R: [2, 8, -1.5], aim: [8, 13, 13] }], [.3, { R: [3, 8, 1.5], aim: [7, 10, 15] }, 'o'], [.36, { R: [3, 8, 1.5], aim: [7, 8, 16] }], [.52, { R: [3, 8, -1.5], aim: [10, 12, -6] }, 'l'], [.64, { R: [3, 7, -3.5], aim: [9, 12, -8] }], [1, {}]]),
   thrust: (u, c) => c.face !== 's' ? keyed(u, { mid: 1, R: [6, THRUST_AT[c.face], -3], aim: [16, 0, -5], L: [-4.5, 4, -4] }, [[0, {}], [.3, { R: [5, THRUST_AT[c.face], -2.6] }, 'o'], [.45, { R: [10, THRUST_AT[c.face], -4.2] }, 'i'], [.62, { R: [10, THRUST_AT[c.face], -4.2] }], [1, {}]]) : keyed(u, THRUST_SIDE.rest, [[0, {}], [.3, pushed(THRUST_SIDE.rest, THRUST_SIDE.back), 'o'], [.45, pushed(THRUST_SIDE.rest, THRUST_SIDE.out), 'i'], [.62, pushed(THRUST_SIDE.rest, THRUST_SIDE.out)], [1, {}]]),
   block: (u, c) => keyed(u, GUARD3.one(c), [[0, {}], [.3, { L: [-1, 8.5, -1.5] }], [.48, { L: [-1, 8.5, -1.5] }], [.56, { L: [-1, 7.5, -1.5] }, 'o'], [.8, { L: [-1, 8.5, -1.5] }], [1, {}]]),
-  shoot: (u, c) => { const low = GUARD3.bow(c), up = { L: [-1, 6.9, c.face === 's' ? -4.5 : -3.5], mid: 1, aim: [0, 19, -6.5], cant: -36, lead: BOW_LEADS + .5 }, nocks = [-1, 8.8, c.face === 's' ? -2.5 : -1], drawn = { ...up, R: nocks, bow: 1, arrow: 1, pull: c.face === 's' ? 3 : 4.5 }; return keyed(u, low, [[0, {}], [.1, { R: [-.7, 7.5, -5] }], [.2, { ...up, R: nocks, shaft: up.aim }, 'l'], [.24, { ...drawn, pull: c.face === 's' ? 2.5 : 3.5 }, 'l'], [.6, drawn, 'o'], [.75, drawn], [.76, { ...up, out: 0, R: [-1, 7, -.5] }, 'l'], [.84, { R: QUIVER.in, shaft: QUIVER.lies, out: 0 }], [.92, { R: QUIVER.out, shaft: QUIVER.lies }, 'l'], [.96, { R: QUIVER.past, shaft: [6, 10, -10] }, 'l'], [1, {}]]); },
+  shoot: (u, c) => { const side = c.face !== 's', low = { ...GUARD3.bow(c), turn: 0 }, aside = v => side ? spun(v, SHOT_ASIDE) : v, placed = v => side ? [aside(v)[0], aside(v)[1] + SHOT_OUT.ahead, v[2]] : v, up = { L: placed([-1, side ? SHOT_OUT.arm : 6.9, side ? -3.5 : -4.5]), mid: 1, turn: side ? SHOT_ASIDE : 0, aim: aside([0, 19, side ? SHOT_OUT.drops : -6.5]), cant: -36, lead: BOW_LEADS + .5 }, nocks = placed([-1, side ? SHOT_OUT.arm + 1.9 : 8.8, side ? -1 : -2.5]), drawn = { ...up, R: nocks, bow: 1, arrow: 1, pull: c.face === 's' ? 3 : SHOT_OUT.pull }; return keyed(u, low, [[0, {}], [.1, { R: placed([-.7, 7.5, -5]) }], [.2, { ...up, R: nocks, shaft: up.aim }, 'l'], [.24, { ...drawn, pull: c.face === 's' ? 2.5 : SHOT_OUT.pull - 2 }, 'l'], [.6, drawn, 'o'], [.75, drawn], [.76, { ...up, out: 0, R: placed([-1, 7, -.5]) }, 'l'], [.84, { ...reached(c, 'in'), out: 0 }], [.92, { ...reached(c, 'out') }, 'l'], [.96, { R: QUIVER.past, shaft: [6, 10, -10] }, 'l'], [1, {}]]); },
   fall: (u, c) => { const rest = u < FELL.lets ? carried3(c, 0) : null; return rest && rest.R ? { ...rest, R: [rest.R[0], rest.R[1], rest.R[2] + u / FELL.lets] } : rest; },
   hit: (u, c) => { const rest = carried3(c, 0), by = d => rest.R.map((v, i) => v + d[i]); return rest && rest.R ? keyed(u, rest, [[0, {}], [.25, { R: by([2, 0, 2]) }, 'o'], [.55, { R: by([1.5, 0, 1.5]) }], [1, {}]]) : rest; },
   stagger: (u, c) => { const rest = carried3(c, 0), by = d => rest.R.map((v, i) => v + d[i]); return rest && rest.R ? keyed(u, rest, [[0, {}], [.2, { R: by([2.5, -.5, 2.5]) }, 'o'], [.45, { R: by([2, 0, 1.5]) }], [.7, { R: by([0, 0, 1]) }], [1, { R: by([0, 0, .5]) }]]) : rest; },
