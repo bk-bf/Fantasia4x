@@ -1,12 +1,12 @@
-export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K', 'L', 'N', 'O', 'P', 'R'];
-export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing shows with no hand showing on it', x: 'held thing against the face', y: 'legs shortened', B: 'arms knotted', C: 'tool in line with the arm', D: 'load cut short', E: 'carried body shows no head', F: 'load over one arm and under the other', G: 'hand on the wide end', H: 'load does not read', K: 'load in the arms shows above the shoulders from behind', L: 'carried person not cradled in both arms', N: 'tool shows shorter than it is drawn', O: 'hand off a two-handed tool', P: 'tool on the wrong side of the head or back', R: 'load on the shoulders hidden or crossed by the arms' };
+export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K', 'L', 'N', 'O', 'P', 'R', 'S'];
+export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing shows with no hand showing on it', x: 'held thing against the face', y: 'legs shortened', B: 'arms knotted', C: 'tool in line with the arm', D: 'load cut short', E: 'carried body shows no head', F: 'load over one arm and under the other', G: 'hand on the wide end', H: 'load does not read', K: 'load in the arms shows above the shoulders from behind', L: 'carried person not cradled in both arms', N: 'tool shows shorter than it is drawn', O: 'hand off a two-handed tool', P: 'tool on the wrong side of the head or back', R: 'load on the shoulders hidden or crossed by the arms', S: 'block held at its edge with no hand under it' };
 const HAND_BLOCK = 4, TAPER = { long: 5, thin: 1, wide: 3 }, FIN = { out: 4, above: 1 }, PROFILE = .8, BAND = 2, LEGS = .6, TOUCH = 1;
 const LEG_LAYERS = ['legs', 'far leg', 'near leg'], BROW = 6, FRONT = 5, GRASPED = .2;
 const SHOWS = 3, APART = 4, IN_LINE = { cos: .94, reach: 5, tools: ['hammer', 'club', 'axe', 'pick'] }, WHOLE = .6, HEAD_SHOWS = .6, WIDE_END = 1, IN_ARMS = ['chest', 'low', 'cradle'];
 const KEPT_AS_APPROVED = { x: ['shoulder'] };
 const QUIVERED = .9, BODY_HIDES = ['bow', 'arrow'];
 const CRADLE = { palm: 3, across: 2, above: 3, below: 2 };
-const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15, FACE = { dark: .5, marks: 4 }, YOKED = { above: .2 };
+const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15, FACE = { dark: .5, marks: 4 }, YOKED = { above: .2 }, BLOCK = { wide: 12, tall: 8, under: 2, along: 3 };
 const READS = { bars: s => s.w <= 9 && s.w >= 2 * s.h, bundles: s => s.filled <= .6 * s.w * s.h };
 
 const same = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
@@ -149,6 +149,14 @@ export function pictured(now, face, ink) {
       const shoulders = stack.find(s => s.name === 'torso').anchor[1], all = pixels(l.spr).length, above = showing(l).filter(i => ((i / w) | 0) < shoulders).length, across = stack.filter(s => s.limb && s.seg !== 'hand').flatMap(showing).filter(i => l.spr.c[i]).length;
       if (face === 'f' && above < YOKED.above * all) { counts.R++; said.push(above + ' of ' + all + ' px of the load show above the shoulders'); }
       if (face === 'b' && across > LAPPED) { counts.R++; said.push(across + ' px of the arms cross the load on the shoulders'); }
+    }
+    if (IN_ARMS.includes(now.pose.carry) && now.pose.carry !== 'cradle' && !now.pose.load[10] && face !== 'b' && !onGround && !(now.pose.cu < 1) && placed.length) {
+      const xs = placed.map(i => i % w), left = Math.min(...xs), right = Math.max(...xs);
+      if (lay.spr.w >= BLOCK.wide && lay.spr.h >= BLOCK.tall) for (const hand of stack.filter(s => s.seg === 'hand' && (face === 'f' || s.limb === 'near arm'))) {
+        const px = showing(hand); if (px.length < SHOWS) continue;
+        const x = centre(px, w)[0], inside = Math.min(x - left, right - x);
+        if (inside < (face === 'f' ? BLOCK.under : BLOCK.along)) { counts.S++; said.push('the ' + hand.limb + ' hand is ' + inside.toFixed(1) + ' px in from the edge of the load'); }
+      }
     }
     if (meta.family === 'long' && lay.spr && !onGround) {
       const s = lay.spr, tall = s.h >= s.w, n = tall ? s.h : s.w, wide = k => { let c = 0; for (let j = 0; j < (tall ? s.w : s.h); j++) if (s.c[tall ? k * s.w + j : j * s.w + k]) c++; return c; }, widths = Array.from({ length: n }, (_, k) => wide(k)).filter(v => v).sort((x, y) => x - y), at = wide(lay.grip[tall ? 1 : 0]);
