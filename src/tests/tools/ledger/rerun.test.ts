@@ -12,7 +12,7 @@ import {
   findSave,
   rerun
 } from '../../../../tools/ledger/rerun.mjs';
-import { recordRun, recordBench, agentEnv } from '../../../../tools/ledger/bench.mjs';
+import { recordRun, recordBench, agentEnv, hostRecord, hostInvalid, snapshot, parseKv } from '../../../../tools/ledger/bench.mjs';
 import { ingestSave } from '../../../../tools/ledger/ingest.mjs';
 import { listEntries, getEntry, ingestSpool } from '../../../../tools/ledger/store.mjs';
 
@@ -134,14 +134,17 @@ describe('finding the save to rerun', () => {
 type Call = { host: string; script: string };
 type Deps = Parameters<typeof rerun>[2];
 
-function fakeDesktop(opts: { reachable?: boolean; failRound?: boolean } = {}) {
+function fakeDesktop(opts: { reachable?: boolean; failRound?: boolean; busyChecks?: number } = {}) {
   const calls: Call[] = [];
   let n = 0;
+  let quietCalls = 0;
+  const slept: number[] = [];
   const ok = (stdout = '') => ({ status: 0, stdout, stderr: '' });
   const deps = {
     calls,
+    slept,
     log: () => {},
-    sleep: () => {},
+    sleep: (ms: number) => slept.push(ms),
     now: () => Date.parse('2026-11-27T18:00:00Z') + n++ * 1000,
     git: (args: string[]) => {
       if (args[0] === 'fetch') return ok();
@@ -157,7 +160,10 @@ function fakeDesktop(opts: { reachable?: boolean; failRound?: boolean } = {}) {
       calls.push({ host, script });
       if (opts.reachable === false) return { status: 255, stdout: '', stderr: 'ssh: connect to host desktop: No route to host' };
       if (script.startsWith('echo "home=')) return ok('home=/home/k\n');
-      if (script.includes("'quiet'")) return ok('load=0.20 0.30 0.40\n');
+      if (script.includes("'quiet'")) {
+        const busy = (opts.busyChecks ?? 0) > quietCalls++;
+        return ok(busy ? 'cores=16\nload=9.00 5.00 3.00\nbusy=77 node tools/gpu/steady.mjs\n' : 'cores=16\nload=0.20 0.30 0.40\n');
+      }
       if (script.includes("'prepare'")) return ok('patched=1\ndirty=1\nready abc\n');
       if (script.includes("'round'")) return opts.failRound ? { status: 1, stdout: 'boom', stderr: '' } : ok('TPS 190\n');
       const cat = /^cat '([^']+)'$/.exec(script);
@@ -194,7 +200,9 @@ describe('rerun on a machine', () => {
     for (const e of entries) {
       expect(e).toMatchObject({ kind: 'harness', tool: 'tick-harness', machine: 'desktop', parent: saveId, scenario: 'save' });
       expect(e.world).toMatchObject({ save: worldId, pawns: 2, mobs: 3, turn: 120, map: '3x2', name: 'Fen' });
-      expect(e.perf).toMatchObject({ tps: { median: 190 }, speed: '4x', harnessCommit: SHA_LO, enginePatched: true, hostLoad: '0.20 0.30 0.40' });
+      expect(e.perf).toMatchObject({ tps: { median: 190 }, speed: '4x', harnessCommit: SHA_LO, enginePatched: true });
+      expect(e.host).toMatchObject({ cores: 16, start: { load: [0.2, 0.3, 0.4] }, end: { load: [0.2, 0.3, 0.4] }, others: [] });
+      expect(e.invalid).toBeUndefined();
       expect(e.launchedBy).toMatchObject({ who: 'agent', session: 'sess-1', thread: 'thread-1' });
       expect(e.files.map((f: { role: string }) => f.role).sort()).toEqual(['log', 'result', 'save']);
     }
@@ -203,6 +211,14 @@ describe('rerun on a machine', () => {
     const cleanup = deps.calls.find((c) => c.script.includes("'cleanup'"))!.script;
     expect(cleanup).toContain(`ledger-rerun-${SHA_DEV.slice(0, 12)}`);
     expect(cleanup).toContain(`ledger-rerun-${SHA_LO.slice(0, 12)}`);
+  });
+
+  it('waits while another bench runs or the load is high before it builds or measures', async () => {
+    ownerSave();
+    const deps = fakeDesktop({ busyChecks: 2 });
+    const [id] = await rerun(root, parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev']), deps, env);
+    expect(deps.slept).toEqual([30_000, 30_000]);
+    expect(getEntry(root, id).host.start.load).toEqual([0.2, 0.3, 0.4]);
   });
 
   it('keeps the worktrees with --keep and still clears the run directory', async () => {
@@ -220,6 +236,18 @@ describe('rerun on a machine', () => {
     await expect(rerun(root, parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev']), deps as unknown as Deps, env)).rejects.toThrow(/round 1/);
     expect(listEntries(root, { kind: 'harness' })).toEqual([]);
     expect(deps.calls.some((c) => c.script.includes("'cleanup'"))).toBe(true);
+  });
+});
+
+describe('the measuring machine', () => {
+  it('marks a run invalid when another bench ran beside it or it started under load', () => {
+    const quiet = snapshot(parseKv('cores=16\nload=0.5 0.4 0.3\n'), 'a');
+    const busy = snapshot(parseKv('cores=16\nload=3.1 2 1\nbusy=42 node tools/gpu/frame-cost.mjs /t x /o 8\n'), 'b');
+    expect(hostInvalid(hostRecord(quiet, quiet))).toEqual([]);
+    const host = hostRecord(quiet, busy);
+    expect(host).toEqual({ cores: 16, start: { at: 'a', load: [0.5, 0.4, 0.3] }, end: { at: 'b', load: [3.1, 2, 1] }, others: [{ pid: 42, cmd: 'node tools/gpu/frame-cost.mjs /t x /o 8' }] });
+    expect(hostInvalid(host)).toEqual(['another f4x bench was running: 42 node tools/gpu/frame-cost.mjs /t x /o 8']);
+    expect(hostInvalid(hostRecord(busy, quiet), 2.5)[1]).toBe('load 3.1 at start, above 2.5');
   });
 });
 

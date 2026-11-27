@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { randomBytes } from 'node:crypto';
-import { buildEntry } from './bench.mjs';
+import { buildEntry, hostRecord, LOAD_LIMIT, parseKv, snapshot } from './bench.mjs';
 import { resolveSave } from './fetch.mjs';
 import { harnessPerf } from './ingest.mjs';
 import { spoolDir, writeEntry } from './spool.mjs';
@@ -110,19 +110,6 @@ export function harnessVars(o, saveOnRemote, out, tag, branch) {
   return v;
 }
 
-export function parseKv(text) {
-  const out = { busy: [] };
-  for (const l of String(text ?? '').split('\n')) {
-    const eq = l.indexOf('=');
-    if (eq < 1) continue;
-    const k = l.slice(0, eq);
-    const v = l.slice(eq + 1).trim();
-    if (k === 'busy') out.busy.push(v);
-    else out[k] = v;
-  }
-  return out;
-}
-
 const q = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
 
 export function defaultDeps() {
@@ -175,9 +162,10 @@ function waitQuiet(deps, host, ctx) {
     const r = remote(deps, host, ctx, ['quiet'], '60s');
     if (r.status !== 0) throw new Error(`${host} stopped answering: ${r.stderr.trim().slice(0, 200)}`);
     const kv = parseKv(r.stdout);
-    if (!kv.busy.length) return kv;
-    if (deps.now() >= until) throw new Error(`${host} stayed busy for 20 minutes:\n  ${kv.busy.join('\n  ')}`);
-    deps.log(`${host} is busy, waiting: ${kv.busy[0].slice(0, 160)}`);
+    const load = Number(String(kv.load ?? '').split(' ')[0]);
+    if (!kv.busy.length && !(load > LOAD_LIMIT)) return snapshot(kv, new Date(deps.now()).toISOString());
+    if (deps.now() >= until) throw new Error(`${host} stayed busy for 20 minutes (load ${kv.load}):\n  ${kv.busy.join('\n  ')}`);
+    deps.log(`${host} is busy, waiting: load ${kv.load}${kv.busy.length ? `, ${kv.busy[0].slice(0, 160)}` : ''}`);
     deps.sleep(30_000);
   }
 }
@@ -223,8 +211,10 @@ export async function rerun(root, o, deps = defaultDeps(), env = process.env) {
       const tag = `r${step.round}-${t.sha.slice(0, 12)}`;
       const out = `${ctx.run}/out`;
       const at = new Date(deps.now()).toISOString();
-      deps.log(`round ${step.round}/${o.rounds} ${t.ref} ${o.mode} (${i + 1} of ${order.length}), load ${hostBefore.load}`);
+      deps.log(`round ${step.round}/${o.rounds} ${t.ref} ${o.mode} (${i + 1} of ${order.length}), load ${hostBefore.load.join(' ')}`);
       const r = unit(deps, host, ctx, tag, ['round', wtOf(t), o.mode, ...harnessVars(o, save, out, tag, t.branch)]);
+      const after = remote(deps, host, ctx, ['quiet'], '60s');
+      const hostAfter = after.status === 0 ? snapshot(parseKv(after.stdout), new Date(deps.now()).toISOString()) : null;
       const name = resultName(o.mode, tag, o.speed);
       const got = deps.ssh(host, `cat ${q(`${out}/${name}`)}`, { limit: '60s' });
       if (r.status !== 0 || got.status !== 0) throw new Error(`round ${step.round} at ${t.ref} failed on ${host}:\n${r.stdout.slice(-3000)}`);
@@ -234,7 +224,7 @@ export async function rerun(root, o, deps = defaultDeps(), env = process.env) {
       writeFileSync(resultPath, got.stdout);
       writeFileSync(logPath, r.stdout);
       const id = await recordRound(root, {
-        o, t, step, result, at, found, harness, hostBefore, batch, env, localSave, resultPath, logPath, machine: host
+        o, t, step, result, at, found, harness, hostBefore, hostAfter, batch, env, localSave, resultPath, logPath, machine: host
       });
       ids.push(id);
       deps.log(`recorded ${id}: ${summary(result)}`);
@@ -273,9 +263,9 @@ export async function recordRound(root, c) {
         ref: c.t.ref,
         harnessRef: c.harness.ref,
         harnessCommit: c.harness.sha,
-        enginePatched: c.t.prep?.patched === '1',
-        hostLoad: c.hostBefore?.load ?? null
+        enginePatched: c.t.prep?.patched === '1'
       },
+      host: hostRecord(c.hostBefore ?? null, c.hostAfter ?? null),
       files: [
         { role: 'result', path: c.resultPath },
         { role: 'log', path: c.logPath }

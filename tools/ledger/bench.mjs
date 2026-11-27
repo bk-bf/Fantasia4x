@@ -6,6 +6,58 @@ import { basename, join, resolve } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
+const RUNNER = fileURLToPath(new URL('./rerun-remote.sh', import.meta.url));
+export const LOAD_LIMIT = 2.5;
+
+export function parseKv(text) {
+  const out = { busy: [] };
+  for (const l of String(text ?? '').split('\n')) {
+    const eq = l.indexOf('=');
+    if (eq < 1) continue;
+    const k = l.slice(0, eq);
+    const v = l.slice(eq + 1).trim();
+    if (k === 'busy') out.busy.push(v);
+    else out[k] = v;
+  }
+  return out;
+}
+
+export function snapshot(kv, at = new Date().toISOString()) {
+  if (!kv?.load) return null;
+  const others = kv.busy.map((b) => {
+    const sp = b.indexOf(' ');
+    return { pid: Number(sp < 0 ? b : b.slice(0, sp)), cmd: sp < 0 ? '' : b.slice(sp + 1) };
+  });
+  return { at, load: kv.load.split(' ').map(Number), cores: kv.cores ? Number(kv.cores) : null, others };
+}
+
+export function hostNow(self = process.pid) {
+  try {
+    return snapshot(parseKv(execFileSync('bash', [RUNNER, 'quiet', String(self)], { encoding: 'utf8', timeout: 15_000, stdio: ['ignore', 'pipe', 'ignore'] })));
+  } catch {
+    return null;
+  }
+}
+
+const AT_IMPORT = process.env.F4X_LEDGER_OFF === '1' ? null : hostNow();
+
+export function hostRecord(start, end) {
+  if (!start && !end) return null;
+  const seen = new Map();
+  for (const o of [...(start?.others ?? []), ...(end?.others ?? [])]) seen.set(`${o.pid} ${o.cmd}`, o);
+  const strip = (s) => (s ? { at: s.at, load: s.load } : null);
+  return { cores: start?.cores ?? end?.cores ?? null, start: strip(start), end: strip(end), others: [...seen.values()] };
+}
+
+export function hostInvalid(host, limit = LOAD_LIMIT) {
+  if (!host) return [];
+  const reasons = [];
+  if (host.others.length) reasons.push(`another f4x bench was running: ${host.others.map((o) => `${o.pid} ${o.cmd.slice(0, 120)}`).join('; ')}`);
+  const l1 = host.start?.load?.[0];
+  if (l1 != null && l1 > limit) reasons.push(`load ${l1} at start, above ${limit}`);
+  return reasons;
+}
+
 export function agentEnv(env = process.env) {
   return {
     ...env,
@@ -65,6 +117,8 @@ export async function buildEntry(opts, dir) {
     if (!f.path || !existsSync(f.path)) continue;
     files.push(spool.fileRef(f.role, f.name ?? basename(f.path), spool.writeBlob(f.path, dir), dir));
   }
+  const host = opts.host !== undefined ? opts.host : hostRecord(opts.hostStart ?? null, hostNow());
+  const invalid = hostInvalid(host);
   return {
     v: 1,
     id: spool.newId(machine, at),
@@ -81,6 +135,8 @@ export async function buildEntry(opts, dir) {
     world,
     perf: opts.perf ?? null,
     files,
+    host,
+    ...(invalid.length ? { invalid } : {}),
     parent: opts.parent ?? null,
     note: opts.note ?? ''
   };
@@ -146,6 +202,7 @@ export function recordBench(tool, { tree, label, rows, result, profiles = [], en
   }
   return recordRun({
     env,
+    hostStart: AT_IMPORT,
     tool,
     tree,
     scenario,
