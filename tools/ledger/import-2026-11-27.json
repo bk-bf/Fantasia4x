@@ -1,0 +1,55 @@
+{
+  "zone": "Europe/Berlin",
+  "trees": {
+    "lo": { "commit": "83ca8f15", "branch": "test/look-overhaul" },
+    "dev": { "commit": "8623ae45", "branch": "dev" },
+    "d311": { "commit": "d311fc48", "branch": "test/runed-construction" }
+  },
+  "sessions": {
+    "tickHarness": "630e9adf-5a62-4847-9e5a-a281a1018450",
+    "tickProfile": "0de6244f-118a-4802-a260-568b0069ac36",
+    "saveCompat": "f32dadc7-8baf-4712-8767-645b4d7546b3"
+  },
+  "laptopCheckout": "Documents/local/Projects/Fantasia4x",
+  "desktopCheckouts": {
+    "main": "Documents/Projects/Fantasia4x",
+    "painted": "Documents/Projects/Fantasia4x-painted",
+    "worktrees/bench-base": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-base",
+    "worktrees/bench-port": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-port",
+    "worktrees/bench-refactor": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-refactor"
+  },
+  "harnessInputs": {
+    "world-lo/": "colony40-lo.json.gz",
+    "world-dev/": "colony40-dev.json.gz"
+  },
+  "writers": {
+    "f4x-dev-shell-http_127.0.0.1_5174/1795787304736-rhsfz.json.gz": { "commit": "8ee98b78", "by": "the session it was saved in" },
+    "s1546-127/1795563348778-fg1nw.json.gz": { "commit": "a96826d3", "by": "the session it was saved in" },
+    "s1546-127/1795487073763-k3kup.json.gz": { "commit": "8c78d69f", "by": "the session it was saved in" },
+    "s1546-127/1795487004056-ri9cl.json.gz": { "commit": "9c3e5024", "by": "the session it was saved in" },
+    "f4x-dev-shell-http_localhost_5174/1795479981313-htqcx.json.gz": { "commit": "fa3e17e8", "by": "the session it was saved in" },
+    "f4x-dev-shell-http_localhost_5174/1795520367807-0rmd2.json.gz": { "commit": "d311fc48", "by": "the session it was saved in" },
+    "f4x-dev-shell-http_localhost_5174/1795521196872-n3zm0.json.gz": { "commit": "d311fc48", "by": "the session it was saved in" },
+    "f4x-dev-shell-http_localhost_5175/1795219764924-weqt4.json.gz": { "commit": "fce78154", "by": "the session it was saved in" },
+    "f4x-electron-spike-http_127.0.0.1_5174/1790029426931-bkx4g.json.gz": { "commit": "22a7ced6", "by": "its save date" },
+    "f4x-electron-spike-http_127.0.0.1_5173/1782771030064-bzmkc.json.gz": { "commit": "237ab381", "by": "its save date" },
+    "f4x-electron-spike-http_localhost_5174/1782604905593-pu29f.json.gz": { "commit": "bfa96d5d", "by": "its save date" },
+    "colony40-dev.json.gz": { "commit": "8623ae45", "by": "the tick harness that generated it" },
+    "colony40-lo.json.gz": { "commit": "83ca8f15", "by": "the tick harness that generated it" }
+  },
+  "oldFormat": [
+    "f4x-electron-spike-http_127.0.0.1_5173/1782771030064-bzmkc.json.gz",
+    "f4x-electron-spike-http_localhost_5174/1782604905593-pu29f.json.gz",
+    "f4x-electron-spike-http_localhost_5174/_save-0.json.gz",
+    "f4x-electron-spike-http_localhost_5174/_current.json.gz",
+    "fantasia4x-app_bundle_0/1782604905593-pu29f.json.gz",
+    "fantasia4x-app_bundle_0/1795384834384-e6sb.json.gz"
+  ],
+  "benchTools": [
+    ["-frame-cost\\.json$", "frame-cost"],
+    ["-steady\\.json$|steady", "steady"],
+    ["^zo-.*-results\\.json$|zoom", "zoom-out"]
+  ],
+  "notResults": ["package.json", "package-lock.json", "tsconfig.json"],
+  "skipTmp": ["f4xprof-save", "f4xprof-harness"]
+}

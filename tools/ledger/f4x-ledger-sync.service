@@ -1,0 +1,11 @@
+[Unit]
+Description=Fantasia4x playtesting ledger: pull spools and perf logs into the store
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=@CHECKOUT@
+ExecStart=/usr/bin/env node @CHECKOUT@/tools/ledger/cli.mjs sync
+TimeoutStartSec=45min
+Nice=10
+IOSchedulingClass=idle
