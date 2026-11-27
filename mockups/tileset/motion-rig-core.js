@@ -167,7 +167,7 @@ const HELD = {
 };
 const REST = { toes: 4, along: 5, edge: 2, raised: .7, sunk: 2, long: 2, underArms: .97 };
 const RIG_KEEP = { layers: false };
-const SPACE = { flat: .15, pole: [.35, -.25, -.9], least: .12, cam: { s: [.35, 6, 6], f: [-.2, 3, 6], b: [-.2, 3, 6] }, ahead: 1, before: 4.5, carried: 4.5, jut: 1.5, held: .02, shield: .2, chest: 3 };
+const SPACE = { flat: .15, pole: [.35, -.25, -.9], least: .12, cam: { s: [.35, 6, 6], f: [-.2, 3, 6], b: [-.2, 3, 6] }, ahead: 1, before: 4.5, carried: 4.5, hugs: { ahead: 2.5, pole: [.9, -.2, -.4] }, jut: 1.5, held: .02, shield: .2, chest: 3 };
 const add3 = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], mul3 = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
 const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], len3 = a => Math.hypot(a[0], a[1], a[2]), unit3 = a => mul3(a, 1 / (len3(a) || 1));
 const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
