@@ -42,15 +42,12 @@ export class ShaderManager {
         return { success: false, error: made.error };
       }
 
-      const shaderProgram: ShaderProgram = {
-        pipeline: made.pipeline,
-        uniforms: made.uniforms
-      };
+      const shaderProgram: ShaderProgram = { pipeline: made.pipeline };
       this.programs.set(name, shaderProgram);
 
       if (this.debug) {
         console.log(`✅ Shader program "${name}" compiled successfully`);
-        this.logProgramInfo(shaderProgram);
+        this.logProgramInfo();
       }
 
       return { success: true, pipeline: made.pipeline };
@@ -61,10 +58,8 @@ export class ShaderManager {
     }
   }
 
-  private logProgramInfo(shaderProgram: ShaderProgram): void {
+  private logProgramInfo(): void {
     console.group('🔧 Shader Program Info');
-
-    console.log('Uniforms:', Array.from(shaderProgram.uniforms.keys()));
 
     console.log('WebGL Limits:', this.gpu.limits());
 

@@ -45,8 +45,27 @@ describe('the requestAnimationFrame seam', () => {
 
   it('ignores a call named in a comment', () => {
     const root = repoWith({
-      'src/lib/notes.ts': '// requestAnimationFrame(frame) is not called here\nexport const x = 1;\n'
+      'src/lib/notes.ts':
+        '// requestAnimationFrame(frame) is not called here\nexport const x = 1;\n'
     });
     expect(frameLoopCallers(root)).toEqual([]);
+  });
+});
+
+const contextNamers = (root: string): string[] =>
+  seamViolations(root, extractRepo(root))
+    .findings.filter((f: { adr: string }) => f.adr === '#211')
+    .map((f: { where: string }) => f.where);
+
+describe('the webgl2 context seam', () => {
+  it('names a file outside the backend that names the context, and not one inside it', () => {
+    const root = repoWith({
+      'src/lib/gpu/webgl2/device.ts': 'export type Gl = WebGL2RenderingContext;\n',
+      'src/lib/webgl/pass.ts': 'export const ok = (gl: WebGL2RenderingContext) => gl;\n',
+      'src/lib/webgl/notes.ts':
+        '// WebGL2RenderingContext is not named here\nexport const x = 1;\n',
+      'src/tests/fake.ts': 'export type Gl = WebGL2RenderingContext;\n'
+    });
+    expect(contextNamers(root)).toEqual(['src/lib/webgl/pass.ts']);
   });
 });

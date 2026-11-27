@@ -57,5 +57,13 @@
       "src/lib/components/screens/DebugLogScreen.svelte::<top level>"
     ],
     "msg": "starts a new per-frame callback outside the frame loops that exist today (per-frame work belongs in the render loop, where the browser work pins count it, not in a second requestAnimationFrame loop)"
+  },
+  {
+    "adr": "#211",
+    "kind": "name",
+    "target": "WebGL2RenderingContext",
+    "blocks": true,
+    "allow": ["src/lib/gpu/webgl2/", "src/lib/workPins/page.ts"],
+    "msg": "names the WebGL2 context outside the webgl2 backend (draw through the GpuDevice, so a WebGPU backend can take its place)"
   }
 ]

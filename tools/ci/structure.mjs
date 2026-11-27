@@ -51,6 +51,15 @@ export function seamViolations(root, symbols) {
       }
       continue;
     }
+    if (r.kind === 'name') {
+      const named = new RegExp(`\\b${r.target}\\b`);
+      const allowed = (file) =>
+        [...allow].some((a) => (a.endsWith('/') ? file.startsWith(a) : file === a));
+      for (const { file, text } of sources)
+        if (!allowed(file) && named.test(text))
+          findings.push({ adr: r.adr, where: file, detail: r.msg, blocks: r.blocks === true });
+      continue;
+    }
     const re = new RegExp(`(?:\\.|\\b)${r.target}\\s*\\(`);
     for (const s of symbols) {
       const id = `${s.file}::${s.className ? s.className + '.' : ''}${s.name}`;
