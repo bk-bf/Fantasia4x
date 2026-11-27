@@ -98,9 +98,9 @@ export class UniformBlock {
       put(width ? at + Math.floor(i / width) * 4 + (i % width) : at + i, value[i]);
   }
 
-  upload(queue: GpuQueue, buffer: GpuBuffer, offset = 0): void {
+  upload(queue: GpuQueue, buffer: GpuBuffer, offset = 0, size = this.layout.size): void {
     if (!this.dirty) return;
-    queue.writeBuffer(buffer, offset, this.bytes);
+    queue.writeBuffer(buffer, offset, this.bytes, 0, size);
     this.dirty = false;
   }
 }

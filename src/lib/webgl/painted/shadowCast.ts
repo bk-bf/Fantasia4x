@@ -3,12 +3,13 @@ import fragmentSource from '../shaders/paintedShadow.frag.glsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import type { GameGrid, GridUpdateEvent } from '../game-grid.js';
 import type { TileRect } from './lightGrade.js';
-import type { GpuDevice, GpuRenderPass, GpuRenderPipeline, GpuUniform } from '../../gpu/device.js';
+import type { GpuDevice, GpuRenderPass, GpuRenderPipeline } from '../../gpu/device.js';
+import { uniformLayout } from '../../gpu/uniforms.js';
 import { canvasPipeline } from '../canvasPipeline.js';
+import { PASS_GROUP, PassBindings } from '../passBindings.js';
 import { SizedTexture } from '../sizedTexture.js';
 
 const PROGRAM = 'paintedShadow';
-export const CAST_UNIT = 8;
 export const SHADOW_SHADE: [number, number, number] = [0.56, 0.56, 0.68];
 export const SHADOW_DEPTH = 0.75;
 export const MIN_SHADOW_TILE_PX = 6;
@@ -51,11 +52,17 @@ export function castHeights(
   return any;
 }
 
+const CAST = uniformLayout('Cast', [
+  { name: 'u_shade', type: 'vec3', precision: 'highp' },
+  { name: 'u_depth', type: 'float', precision: 'highp' },
+  { name: 'u_origin', type: 'ivec2', precision: 'highp' },
+  { name: 'u_artPerBase', type: 'float', precision: 'highp' },
+  { name: 'u_tileArt', type: 'float', precision: 'highp' }
+]);
+
 export class PaintedShadowCast {
-  private readonly gpu: GpuDevice;
-  private readonly program: GpuRenderPipeline;
   private readonly texture: SizedTexture;
-  private readonly at: Record<string, GpuUniform | null>;
+  private drawn = false;
   private heights = new Uint8Array(0);
   private builtKey = '';
   private builtRect: TileRect | null = null;
@@ -66,6 +73,9 @@ export class PaintedShadowCast {
   private unwatch: (() => void)[] = [];
 
   static create(gpu: GpuDevice, shaders: ShaderManager): PaintedShadowCast | null {
+    const bindings = new PassBindings(gpu, PROGRAM, CAST, [
+      { name: 'u_heights', sampleType: 'unfilterable-float' }
+    ]);
     const made = shaders.createPipeline(
       PROGRAM,
       canvasPipeline(gpu, {
@@ -77,23 +87,27 @@ export class PaintedShadowCast {
           alpha: { srcFactor: 'zero', dstFactor: 'src' }
         },
         depthCompare: 'less',
-        depthWrite: true
+        depthWrite: true,
+        bindings: [bindings]
       })
     );
     const program = made.pipeline;
     if (!made.success || !program) {
+      bindings.destroy();
       console.warn('[painted shadows] cast off:', made.error);
       return null;
     }
-    return new PaintedShadowCast(gpu, program);
+    return new PaintedShadowCast(gpu, program, bindings);
   }
 
-  private constructor(gpu: GpuDevice, program: GpuRenderPipeline) {
-    this.gpu = gpu;
-    this.program = program;
+  private constructor(
+    private readonly gpu: GpuDevice,
+    private readonly program: GpuRenderPipeline,
+    private readonly bindings: PassBindings
+  ) {
     this.texture = new SizedTexture(gpu, 'r8unorm');
-    const names = ['u_artPerBase', 'u_tileArt', 'u_heights', 'u_origin', 'u_shade', 'u_depth'];
-    this.at = Object.fromEntries(names.map((n) => [n, gpu.uniform(program, n)]));
+    bindings.set('u_shade', SHADOW_SHADE);
+    bindings.set('u_depth', SHADOW_DEPTH);
   }
 
   private watch(casters: readonly (GameGrid | null)[]): void {
@@ -142,9 +156,10 @@ export class PaintedShadowCast {
     this.texture.write(this.heights);
   }
 
-  draw(pass: GpuRenderPass, f: CastFrame): number {
+  prepare(f: CastFrame): void {
+    this.drawn = false;
     this.watch(f.casters);
-    if (f.canvas[0] / f.view.w < MIN_SHADOW_TILE_PX) return 0;
+    if (f.canvas[0] / f.view.w < MIN_SHADOW_TILE_PX) return;
     const rect = {
       x: Math.floor(f.view.x) - 1,
       y: Math.floor(f.view.y) - 1,
@@ -152,18 +167,18 @@ export class PaintedShadowCast {
       h: Math.ceil(f.view.h) + 2
     };
     this.rebuild(f, rect);
-    if (!this.casts) return 0;
-    const gpu = this.gpu;
+    if (!this.casts) return;
+    this.bindings.set('u_artPerBase', f.artPerBase);
+    this.bindings.set('u_tileArt', f.artTile);
+    this.bindings.set('u_origin', [rect.x, rect.y]);
+    this.bindings.upload();
+    this.drawn = true;
+  }
+
+  encode(pass: GpuRenderPass): number {
+    if (!this.drawn) return 0;
     pass.setPipeline(this.program);
-    gpu.setTextureSlot(CAST_UNIT);
-    gpu.bindTexture(this.texture.texture);
-    gpu.setTextureSlot(0);
-    gpu.setF32(this.at.u_artPerBase, f.artPerBase);
-    gpu.setF32(this.at.u_tileArt, f.artTile);
-    gpu.setI32(this.at.u_heights, CAST_UNIT);
-    gpu.setVec2i(this.at.u_origin, rect.x, rect.y);
-    gpu.setVec3fv(this.at.u_shade, SHADOW_SHADE);
-    gpu.setF32(this.at.u_depth, SHADOW_DEPTH);
+    pass.setBindGroup(PASS_GROUP, this.bindings.group([this.texture.texture]));
     pass.draw(3);
     return 1;
   }
@@ -172,6 +187,7 @@ export class PaintedShadowCast {
     for (const off of this.unwatch) off();
     this.unwatch = [];
     this.texture.destroy();
+    this.bindings.destroy();
     this.gpu.destroyRenderPipeline(this.program);
   }
 }

@@ -2,13 +2,6 @@
 precision highp float;
 precision highp int;
 
-uniform float u_artPerBase;
-uniform vec3 u_weights;
-uniform vec3 u_timeAmbient[3];
-uniform vec3 u_timeStrength;
-uniform int u_lightCount;
-uniform vec4 u_lights[128];
-
 out vec4 fragColor;
 
 const float LIGHT_STEPS = 7.0;

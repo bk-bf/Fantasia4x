@@ -14,10 +14,12 @@ import {
   type GpuCommandEncoder,
   type GpuDevice,
   type GpuRenderPipeline,
-  type GpuUniform
+  type GpuTexture
 } from '../../gpu/device.js';
+import { uniformLayout } from '../../gpu/uniforms.js';
 import { SizedTexture } from '../sizedTexture.js';
 import { FRAME_GROUP, frameBindings } from '../frameBindings.js';
+import { PASS_GROUP, PassBindings } from '../passBindings.js';
 
 const FIELD_USAGE = TextureUsage.TEXTURE_BINDING | TextureUsage.RENDER_ATTACHMENT;
 
@@ -45,42 +47,51 @@ export interface LightPassFrame {
   time: number;
 }
 
+const LIGHTS = uniformLayout('LightFrame', [
+  { name: 'u_weights', type: 'vec3', precision: 'highp' },
+  { name: 'u_artPerBase', type: 'float', precision: 'highp' },
+  { name: 'u_timeAmbient', type: 'vec3', precision: 'highp', count: 3 },
+  { name: 'u_timeStrength', type: 'vec3', precision: 'highp' },
+  { name: 'u_lightCount', type: 'int', precision: 'highp' },
+  { name: 'u_lights', type: 'vec4', precision: 'highp', count: MAX_LIGHTS * 2 }
+]);
+const LIGHT_BYTES = 32;
+
 export class PaintedLightPass {
-  private readonly gpu: GpuDevice;
-  private readonly program: GpuRenderPipeline;
-  private readonly at: Record<string, GpuUniform | null>;
   private readonly packed = new Float32Array(MAX_LIGHTS * 8);
-  private field: SizedTexture;
+  private readonly field: SizedTexture;
   private fieldSize: [number, number] = [0, 0];
 
   static create(gpu: GpuDevice, shaders: ShaderManager): PaintedLightPass | null {
+    const bindings = new PassBindings(gpu, PROGRAM, LIGHTS);
     const made = shaders.createPipeline(PROGRAM, {
-      glsl: { vertex: vertexSource, fragment: fragmentSource, attributes: {} },
+      glsl: bindings.glsl({ vertex: vertexSource, fragment: fragmentSource, attributes: {} }),
+      layout: [bindings.layout],
       vertex: { buffers: [] },
       primitive: { topology: 'triangle-list' },
       fragment: { targets: [{ format: 'rgba8unorm' }] }
     });
     const program = made.pipeline;
     if (!made.success || !program) {
+      bindings.destroy();
       console.warn('[painted light] off:', made.error);
       return null;
     }
-    return new PaintedLightPass(gpu, program);
+    return new PaintedLightPass(gpu, program, bindings);
   }
 
-  private constructor(gpu: GpuDevice, program: GpuRenderPipeline) {
-    this.gpu = gpu;
-    this.program = program;
+  private constructor(
+    private readonly gpu: GpuDevice,
+    private readonly program: GpuRenderPipeline,
+    private readonly bindings: PassBindings
+  ) {
     this.field = new SizedTexture(gpu, 'rgba8unorm', 1, 1, FIELD_USAGE);
-    const names = [
-      'u_artPerBase',
-      'u_weights',
-      'u_timeAmbient',
-      'u_timeStrength',
-      'u_lightCount',
-      'u_lights'
-    ];
-    this.at = Object.fromEntries(names.map((n) => [n, gpu.uniform(program, n)]));
+    bindings.set('u_timeAmbient', TIME_AMBIENT);
+    bindings.set('u_timeStrength', TIME_STRENGTH);
+  }
+
+  get fieldTexture(): GpuTexture {
+    return this.field.texture;
   }
 
   private sizeField(w: number, h: number): void {
@@ -89,38 +100,36 @@ export class PaintedLightPass {
     this.fieldSize = [w, h];
   }
 
-  private use(f: LightPassFrame): void {
-    const gpu = this.gpu;
-    gpu.setF32(this.at.u_artPerBase, f.artPerBase);
-    gpu.setVec3fv(this.at.u_weights, f.grade.weights);
-    gpu.setVec3fv(this.at.u_timeAmbient, TIME_AMBIENT);
-    gpu.setVec3fv(this.at.u_timeStrength, TIME_STRENGTH);
-  }
-
-  drawField(encoder: GpuCommandEncoder, f: LightPassFrame): number {
-    const gpu = this.gpu;
+  prepare(f: LightPassFrame): void {
     const [w, h] = [Math.max(1, Math.round(f.canvas[0])), Math.max(1, Math.round(f.canvas[1]))];
     this.sizeField(w, h);
     const count = packLights(f.lights, f.view, f.artTile, f.time, this.packed);
-    this.use(f);
-    gpu.setI32(this.at.u_lightCount, count);
-    if (count > 0) gpu.setVec4fv(this.at.u_lights, this.packed, 0, count * 8);
+    this.bindings.set('u_artPerBase', f.artPerBase);
+    this.bindings.set('u_weights', f.grade.weights);
+    this.bindings.set('u_lightCount', count);
+    this.bindings.set('u_lights', this.packed.subarray(0, count * 8));
+    this.bindings.upload(LIGHTS.offsets.u_lights + count * LIGHT_BYTES);
+  }
+
+  encode(encoder: GpuCommandEncoder): number {
     const pass = encoder.beginRenderPass({
       label: 'light field',
       colorAttachments: [{ view: this.field.texture, loadOp: 'load', storeOp: 'store' }]
     });
-    pass.setBindGroup(FRAME_GROUP, frameBindings(gpu).group);
+    pass.setBindGroup(FRAME_GROUP, frameBindings(this.gpu).group);
+    pass.setBindGroup(PASS_GROUP, this.bindings.group());
     pass.setPipeline(this.program);
     pass.draw(3);
     pass.end();
-    gpu.setTextureSlot(LIGHT_FIELD_UNIT);
-    gpu.bindTexture(this.field.texture);
-    gpu.setTextureSlot(0);
+    this.gpu.setTextureSlot(LIGHT_FIELD_UNIT);
+    this.gpu.bindTexture(this.field.texture);
+    this.gpu.setTextureSlot(0);
     return 1;
   }
 
   dispose(): void {
     this.field.destroy();
+    this.bindings.destroy();
     this.gpu.destroyRenderPipeline(this.program);
   }
 }

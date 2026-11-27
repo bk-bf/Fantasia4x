@@ -96,8 +96,8 @@ export class PassBindings implements GroupBindings {
     this.block.set(name, value);
   }
 
-  upload(): void {
-    if (this.block && this.buffer) this.block.upload(this.gpu.queue, this.buffer);
+  upload(size?: number): void {
+    if (this.block && this.buffer) this.block.upload(this.gpu.queue, this.buffer, 0, size);
   }
 
   group(textures: readonly GpuTexture[] = []): GpuBindGroup {

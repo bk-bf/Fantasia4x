@@ -2,12 +2,7 @@
 precision highp float;
 precision highp int;
 
-uniform float u_artPerBase;
-uniform float u_tileArt;
 uniform sampler2D u_heights;
-uniform ivec2 u_origin;
-uniform vec3 u_shade;
-uniform float u_depth;
 
 out vec4 fragColor;
 
