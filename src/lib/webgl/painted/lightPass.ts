@@ -16,7 +16,7 @@ import {
   type GpuRenderPipeline,
   type GpuTexture
 } from '../../gpu/device.js';
-import { uniformLayout } from '../../gpu/uniforms.js';
+import { afterVersion, uniformLayout } from '../../gpu/uniforms.js';
 import { SizedTexture } from '../sizedTexture.js';
 import { FRAME_GROUP, frameBindings } from '../frameBindings.js';
 import { PASS_GROUP, PassBindings } from '../passBindings.js';
@@ -51,10 +51,16 @@ const LIGHTS = uniformLayout('LightFrame', [
   { name: 'u_artPerBase', type: 'float', precision: 'highp' },
   { name: 'u_timeAmbient', type: 'vec3', precision: 'highp', count: 3 },
   { name: 'u_timeStrength', type: 'vec3', precision: 'highp' },
-  { name: 'u_lightCount', type: 'int', precision: 'highp' },
   { name: 'u_lights', type: 'vec4', precision: 'highp', count: MAX_LIGHTS * 2 }
 ]);
 const LIGHT_BYTES = 32;
+const LIGHT_STEP = 4;
+const DARK_LIGHT = new Float32Array([-1e6, -1e6, 1, 0, 0, 0, 0, 0]);
+
+export const lightSlots = (count: number): number => Math.ceil(count / LIGHT_STEP) * LIGHT_STEP;
+
+const withSlots = (source: string, slots: number): string =>
+  afterVersion(source, `const int LIGHT_SLOTS = ${slots};\n`);
 
 export class PaintedLightPass {
   private readonly packed = new Float32Array(MAX_LIGHTS * 8);
@@ -63,25 +69,35 @@ export class PaintedLightPass {
 
   static create(gpu: GpuDevice, shaders: ShaderManager): PaintedLightPass | null {
     const bindings = new PassBindings(gpu, PROGRAM, [LIGHTS]);
-    const made = shaders.createPipeline(PROGRAM, {
-      glsl: bindings.glsl({ vertex: vertexSource, fragment: fragmentSource, attributes: {} }),
-      layout: [bindings.layout],
-      vertex: { buffers: [] },
-      primitive: { topology: 'triangle-list' },
-      fragment: { targets: [{ format: 'rgba8unorm' }] }
-    });
-    const program = made.pipeline;
-    if (!made.success || !program) {
-      bindings.destroy();
-      console.warn('[painted light] off:', made.error);
-      return null;
+    const programs: GpuRenderPipeline[] = [];
+    for (let slots = 0; slots <= MAX_LIGHTS; slots += LIGHT_STEP) {
+      const made = shaders.createPipeline(`${PROGRAM}-${slots}`, {
+        glsl: bindings.glsl({
+          vertex: vertexSource,
+          fragment: withSlots(fragmentSource, slots),
+          attributes: {}
+        }),
+        layout: [bindings.layout],
+        vertex: { buffers: [] },
+        primitive: { topology: 'triangle-list' },
+        fragment: { targets: [{ format: 'rgba8unorm' }] }
+      });
+      if (!made.success || !made.pipeline) {
+        for (const program of programs) gpu.destroyRenderPipeline(program);
+        bindings.destroy();
+        console.warn('[painted light] off:', made.error);
+        return null;
+      }
+      programs.push(made.pipeline);
     }
-    return new PaintedLightPass(gpu, program, bindings);
+    return new PaintedLightPass(gpu, programs, bindings);
   }
+
+  private slots = 0;
 
   private constructor(
     private readonly gpu: GpuDevice,
-    private readonly program: GpuRenderPipeline,
+    private readonly programs: readonly GpuRenderPipeline[],
     private readonly bindings: PassBindings
   ) {
     this.field = new SizedTexture(gpu, 'rgba8unorm', 1, 1, FIELD_USAGE);
@@ -105,9 +121,10 @@ export class PaintedLightPass {
     const count = packLights(f.lights, f.view, f.artTile, f.time, this.packed);
     this.bindings.set('u_artPerBase', f.artPerBase);
     this.bindings.set('u_weights', f.grade.weights);
-    this.bindings.set('u_lightCount', count);
-    this.bindings.set('u_lights', this.packed.subarray(0, count * 8));
-    this.bindings.upload({ [LIGHTS.name]: LIGHTS.offsets.u_lights + count * LIGHT_BYTES });
+    this.slots = lightSlots(count);
+    for (let i = count; i < this.slots; i++) this.packed.set(DARK_LIGHT, i * 8);
+    this.bindings.set('u_lights', this.packed.subarray(0, this.slots * 8));
+    this.bindings.upload({ [LIGHTS.name]: LIGHTS.offsets.u_lights + this.slots * LIGHT_BYTES });
   }
 
   encode(encoder: GpuCommandEncoder): number {
@@ -117,7 +134,7 @@ export class PaintedLightPass {
     });
     pass.setBindGroup(FRAME_GROUP, frameBindings(this.gpu).group);
     pass.setBindGroup(PASS_GROUP, this.bindings.group());
-    pass.setPipeline(this.program);
+    pass.setPipeline(this.programs[this.slots / LIGHT_STEP]);
     pass.draw(3);
     pass.end();
     return 1;
@@ -126,6 +143,6 @@ export class PaintedLightPass {
   dispose(): void {
     this.field.destroy();
     this.bindings.destroy();
-    this.gpu.destroyRenderPipeline(this.program);
+    for (const program of this.programs) this.gpu.destroyRenderPipeline(program);
   }
 }

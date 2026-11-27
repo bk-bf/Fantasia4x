@@ -13,6 +13,7 @@ import {
   packLights,
   stepFalloff
 } from '$lib/webgl/painted/lightGrade';
+import { lightSlots } from '$lib/webgl/painted/lightPass';
 import {
   TICKS_PER_GAME_HOUR,
   getAmbientLight,
@@ -163,5 +164,11 @@ describe('light list', () => {
     const out = new Float32Array(MAX_LIGHTS * 8);
     const many = Array.from({ length: MAX_LIGHTS + 5 }, () => fire);
     expect(packLights(many, { x: 0, y: 0, w: 30, h: 20 }, 32, 0, out)).toBe(MAX_LIGHTS);
+  });
+});
+
+describe('light slots', () => {
+  it('rounds the light count up to a whole step, so a few pipelines cover every count', () => {
+    expect([0, 1, 4, 5, 63, MAX_LIGHTS].map(lightSlots)).toEqual([0, 4, 4, 8, 64, 64]);
   });
 });

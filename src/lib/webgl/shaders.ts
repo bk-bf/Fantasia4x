@@ -1,6 +1,7 @@
 import type { ShaderProgram } from './types.js';
 import type { GpuDevice, GpuRenderPipeline, GpuShaderModule } from '../gpu/device.js';
 import { framed, type FramedPipeline } from './frameBindings.js';
+import { afterVersion } from '../gpu/uniforms.js';
 import { TileShading } from './tileShading.js';
 import vertexShaderSource from './shaders/vertex.glsl?raw';
 import fragmentShaderSource from './shaders/fragment.glsl?raw';
@@ -104,8 +105,7 @@ export interface TileShaders {
   tile: TileShading;
 }
 
-const withPaintedDefine = (source: string): string =>
-  source.replace(/^(#version[^\n]*\n)/, '$1#define PAINTED\n');
+const withPaintedDefine = (source: string): string => afterVersion(source, '#define PAINTED\n');
 
 export const tileFragmentSource = (painted: boolean): string =>
   withTreeParts(

@@ -23,7 +23,7 @@ vec3 graded(vec2 art) {
     float threshold = dither(art);
     vec3 near = vec3(0.0);
     vec3 day = vec3(0.0);
-    for (int i = 0; i < u_lightCount; i++) {
+    for (int i = 0; i < LIGHT_SLOTS; i++) {
         vec4 at = u_lights[i * 2];
         vec4 tone = u_lights[i * 2 + 1];
         float d = length(vec2(art.x - at.x, (art.y - at.y) * LIGHT_SQUASH));

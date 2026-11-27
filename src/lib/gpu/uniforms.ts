@@ -60,10 +60,13 @@ export function glslBlock(layout: UniformLayout): string {
   return `layout(std140) uniform ${layout.name} {\n${lines.join('\n')}\n};\n`;
 }
 
-export function withBlocks(source: string, layouts: readonly UniformLayout[]): string {
-  const text = layouts.map(glslBlock).join('');
+export function afterVersion(source: string, text: string): string {
   const version = source.match(/^#version[^\n]*\n/);
   return version ? version[0] + text + source.slice(version[0].length) : text + source;
+}
+
+export function withBlocks(source: string, layouts: readonly UniformLayout[]): string {
+  return afterVersion(source, layouts.map(glslBlock).join(''));
 }
 
 export class UniformBlock {
