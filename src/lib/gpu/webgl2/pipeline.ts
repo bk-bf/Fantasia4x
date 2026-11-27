@@ -177,10 +177,15 @@ function bindings(
   checkOffsets: boolean
 ): Pick<LinkedProgram, 'blocks' | 'textures'> | { error: string } {
   const blocks: LinkedProgram['blocks'] = [];
+  const maxPoints = Number(gl.getParameter(gl.MAX_UNIFORM_BUFFER_BINDINGS)) || Infinity;
   for (const [name, block] of Object.entries(desc.glsl.blocks ?? {})) {
     const index = gl.getUniformBlockIndex(program, name);
     if (index === INVALID_INDEX) continue;
     const point = uniformPoint(block.slot);
+    if (point >= maxPoints)
+      return {
+        error: `uniform block ${name} needs binding point ${point}, past this context's ${maxPoints}`
+      };
     gl.uniformBlockBinding(program, index, point);
     blocks.push({ slot: block.slot, point });
     if (!checkOffsets) continue;

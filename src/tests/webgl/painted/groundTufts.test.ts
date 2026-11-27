@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { WorldTile } from '$lib/game/core/types';
 import type { TileData } from '$lib/webgl/tile-types';
 import type { FontAtlas } from '$lib/webgl/types';
-import { passOf, tileShaders } from '../tileShaders';
+import { renderGrid, tileShaders } from '../tileShaders';
 import { Webgl2Device } from '$lib/gpu/webgl2/device';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
@@ -143,21 +143,21 @@ describe('tufts in the terrain chunks', () => {
     applyTileToGrid(grid, near, []);
     applyTileToGrid(grid, far, []);
     const tufts = (t: WorldTile) => terrain(t).tufts?.length ?? 0;
-    r.renderGrid(passOf(r), grid, options);
+    renderGrid(r, grid, options);
     expect(uploads.map((u) => u.length / 6 / ROW_FLOATS)).toEqual([tufts(near), tufts(far)]);
 
     uploads.length = 0;
     const cut = grassy(40, 0);
     applyTileToGrid(grid, cut, []);
     r.markTerrainChunksDirty([{ x: 40, y: 2 }]);
-    r.renderGrid(passOf(r), grid, options);
+    renderGrid(r, grid, options);
     expect(r.chunksRebuiltLastRender).toBe(1);
     expect(uploads).toEqual([]);
     expect(tufts(cut)).toBe(0);
 
     applyTileToGrid(grid, far, []);
     r.markTerrainChunksDirty([{ x: 40, y: 2 }]);
-    r.renderGrid(passOf(r), grid, options);
+    renderGrid(r, grid, options);
     expect(r.chunksRebuiltLastRender).toBe(1);
     expect(uploads.map((u) => u.length / 6 / ROW_FLOATS)).toEqual([tufts(far)]);
   });

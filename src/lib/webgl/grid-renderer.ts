@@ -125,12 +125,6 @@ export class GridRenderer {
     this.fontAtlas = atlas;
   }
 
-  renderGrid(pass: GpuRenderPass, grid: GameGrid, options: GridRenderOptions): GridRenderStats {
-    const draw = this.prepareGrid(grid, options);
-    this.encodeGrid(pass, draw);
-    return { ...this.stats };
-  }
-
   encodeGrid(pass: GpuRenderPass, draw: GridDraw): void {
     if (draw.parts.length === 0) return;
     if (!this.tile.use(pass, draw.pipeline, draw.slice)) {
