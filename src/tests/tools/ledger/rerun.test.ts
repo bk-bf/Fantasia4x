@@ -14,6 +14,7 @@ import {
 } from '../../../../tools/ledger/rerun.mjs';
 import { recordRun, recordBench, agentEnv, hostRecord, hostInvalid, snapshot, parseKv } from '../../../../tools/ledger/bench.mjs';
 import { ingestSave, worldIdOf } from '../../../../tools/ledger/ingest.mjs';
+import { FIXES } from '../../../../tools/ledger/invalid.mjs';
 import { listEntries, getEntry, ingestSpool } from '../../../../tools/ledger/store.mjs';
 
 const SHA_DEV = 'a'.repeat(40);
@@ -288,6 +289,20 @@ describe('recording from the bench tools', () => {
     expect(id).toBeNull();
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toMatch(/not recorded/);
+  });
+
+  it('marks a frame-cost run from before the speed fix invalid, alongside the load at its start', async () => {
+    const busy = snapshot(parseKv('cores=16\nload=3.1 2 1\n'), 'a');
+    const quiet = snapshot(parseKv('cores=16\nload=0.5 0.4 0.3\n'), 'b');
+    const git = (commit: string) => ({ branch: 'dev', commit, dirty: 0, refs: [] });
+    const has = (commit: string, fix: string) => commit === 'after' && fix === FIXES['frame-cost'].commit;
+    const record = (commit: string, start: unknown) =>
+      recordRun({ env, tool: 'frame-cost', git: git(commit), host: hostRecord(start, quiet), has, log: () => {} });
+    const before = await record('before', busy);
+    const after = await record('after', quiet);
+    ingestSpool(root, spool, { remove: true });
+    expect(getEntry(root, before).invalid).toEqual(['load 3.1 at start, above 1.5', FIXES['frame-cost'].reason]);
+    expect(getEntry(root, after).invalid).toBeUndefined();
   });
 
   it('records nothing when F4X_LEDGER_OFF is set', async () => {

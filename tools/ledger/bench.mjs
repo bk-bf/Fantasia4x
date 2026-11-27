@@ -6,6 +6,8 @@ import { basename, join, resolve } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
+import { withInvalid } from './invalid.mjs';
+
 const RUNNER = fileURLToPath(new URL('./rerun-remote.sh', import.meta.url));
 export const LOAD_LIMIT = 1.5;
 
@@ -125,7 +127,7 @@ export async function buildEntry(opts, dir) {
   }
   const host = opts.host !== undefined ? opts.host : hostRecord(opts.hostStart ?? null, hostNow());
   const invalid = hostInvalid(host);
-  return {
+  return withInvalid({
     v: 1,
     id: spool.newId(machine, at),
     kind: opts.kind ?? 'bench',
@@ -145,7 +147,7 @@ export async function buildEntry(opts, dir) {
     ...(invalid.length ? { invalid } : {}),
     parent: opts.parent ?? null,
     note: opts.note ?? ''
-  };
+  }, opts.has);
 }
 
 export async function recordRun(opts) {
