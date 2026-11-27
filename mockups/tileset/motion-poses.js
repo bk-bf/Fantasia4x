@@ -186,7 +186,7 @@ const PAWN_ANIMS = {
     return { face: 's', item: null, by: 4, fl: [5, 0], fr: [6, 0], hr: [8, 2 + sn(u) * .8], hl: [8, 3 - sn(u) * .8], lean: 1.4, hd: [1, 0] };
   } },
   tired: { label: 'Tired', group: 'Needs', dur: 3.2, n: 8, pose(u, c) {
-    return keyed(u, { face: 'f', covers: 1, item: null, hl: HANG, hr: HANG, hd: [0, 0], by: 0, mouth: 0, blink: 0 }, [[0, {}], [.2, { hl: [-2, 2], hr: [2, 2] }], [.4, { hl: [-3, -9], hr: [3, -9], hd: [0, -1], by: -1, mouth: 1, blink: 1 }], [.66, { hl: [-4, -8], hr: [4, -8], hd: [0, -1], by: -1, mouth: 1, blink: 1 }], [.85, { hd: [0, 1] }], [1, {}]]);
+    return keyed(u, { face: 'f', covers: 1, item: null, hl: HANG, hr: HANG, hd: [0, 0], by: 0, mouth: 0, blink: 0 }, [[0, {}], [.2, { hl: [-7, 4], hr: [7, 4] }], [.4, { hl: [-3, -9], hr: [3, -9], hd: [0, -1], by: -1, mouth: 1, blink: 1 }], [.66, { hl: [-4, -8], hr: [4, -8], hd: [0, -1], by: -1, mouth: 1, blink: 1 }], [.85, { hd: [0, 1] }], [1, {}]]);
   } },
   cry: { label: 'Crying', group: 'Needs', dur: 1.2, n: 6, pose(u, c) {
     const b = Math.floor(u * 6) & 1;
