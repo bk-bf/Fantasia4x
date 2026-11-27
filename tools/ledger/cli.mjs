@@ -285,8 +285,9 @@ try {
     const opts = { floor: values.floor, maxCalls: values['max-calls'], previous: values.previous };
     console.log(JSON.stringify(await ingestCI(root, opts)));
   }
+  else if (cmd === 'rerun') await (await import('./rerun.mjs')).rerunCli(root, rest);
   else {
-    console.error('usage: pnpm ledger list|show|fetch|record|import|reindex|sync|ingest-raw|ci');
+    console.error('usage: pnpm ledger list|show|fetch|record|import|reindex|sync|ingest-raw|ci|rerun');
     process.exit(2);
   }
 } catch (err) {
