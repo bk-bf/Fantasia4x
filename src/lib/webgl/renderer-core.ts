@@ -28,6 +28,7 @@ import {
 import { resolveSpriteLights } from './painted/spriteLights.js';
 import { PaintedVignette } from './painted/vignette.js';
 import { FRAME_GROUP, frameBindings } from './frameBindings.js';
+import { blankTexture } from './passBindings.js';
 import { PaintedShadowCast, SHADOW_DEPTH, SHADOW_SHADE } from './painted/shadowCast.js';
 import { GroundRings, type GroundRing, type RingInk, type RingSet } from './groundRings.js';
 import {
@@ -509,6 +510,8 @@ export class WebGLRendererCore {
     this.groundRings?.prepare(overlays ? this.rings : null);
     if (overlays && this.rowDepth) this.prepareShadowCast(viewportTilesW, viewportTilesH);
     if (this.lightPass && lightFrame) this.lightPass.prepare(lightFrame);
+    const windSecs = this.wind.tick(performance.now());
+    if (overlays) this.prepareLeaves(gpu, windSecs, viewportTilesW, viewportTilesH, lightFrame);
     const vignette = this.vignetteOn && lightFrame ? this.vignette : null;
     if (vignette && lightFrame)
       vignette.prepare({ strength: lightFrame.grade.vignette, tilePx: this.tileWidth });
@@ -543,7 +546,6 @@ export class WebGLRendererCore {
       lightFrame?.grade.brightness ?? 1
     );
     if (unlit) this.shaderManager.setUniform('tileRenderer', 'u_lightTexture', LIGHT_FIELD_UNIT);
-    const windSecs = this.wind.tick(performance.now());
     if (this.painted) {
       const artTile = this.painted.tileset.tile;
       const wind = this.wind.uniforms(artTile, BASE_TILE_PX / artTile);
@@ -628,7 +630,7 @@ export class WebGLRendererCore {
         if (layer === 'resource' && ROCK_TIERS && this.rowDepth)
           this.drawTiers(pass, gpu, viewportTilesW, viewportTilesH, lightFrame);
       }
-      this.drawLeaves(pass, windSecs, viewportTilesW, viewportTilesH, lightFrame);
+      if (this.leaves) this.stats.drawCalls += this.leaves.encode(pass);
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
     } else {
@@ -738,8 +740,8 @@ export class WebGLRendererCore {
     return undefined;
   };
 
-  private drawLeaves(
-    pass: GpuRenderPass,
+  private prepareLeaves(
+    gpu: GpuDevice,
     secs: number,
     viewportTilesW: number,
     viewportTilesH: number,
@@ -747,8 +749,7 @@ export class WebGLRendererCore {
   ): void {
     if (!this.leaves || !this.painted || !this.shaderManager) return;
     const artTile = this.painted.tileset.tile;
-    this.stats.drawCalls += this.leaves.draw(
-      pass,
+    this.leaves.prepare(
       secs,
       this.wind,
       {
@@ -776,8 +777,12 @@ export class WebGLRendererCore {
           tone: [lightFrame?.grade.saturation ?? 1, lightFrame?.grade.brightness ?? 1]
         }
       },
-      { atlas: 1, light: LIGHT_FIELD_UNIT }
+      { atlas: this.painted.texture, light: this.lightField(gpu, lightFrame) }
     );
+  }
+
+  private lightField(gpu: GpuDevice, lightFrame: LightPassFrame | null): GpuTexture {
+    return this.lightPass && lightFrame ? this.lightPass.fieldTexture : blankTexture(gpu);
   }
 
   private prepareShadowCast(viewportTilesW: number, viewportTilesH: number): void {

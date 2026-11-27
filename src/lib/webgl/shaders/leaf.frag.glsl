@@ -9,10 +9,6 @@ in vec2 v_cell;
 
 uniform sampler2D u_paintAtlas;
 uniform highp sampler2D u_lightTexture;
-uniform float u_fieldLit;
-uniform vec3 u_ambient;
-uniform vec2 u_tone;
-uniform float u_shade;
 
 out vec4 fragColor;
 

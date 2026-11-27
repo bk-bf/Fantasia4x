@@ -12,10 +12,12 @@ import {
   type GpuDevice,
   type GpuRenderPass,
   type GpuRenderPipeline,
-  type GpuUniform,
+  type GpuTexture,
   type VertexBufferLayout
 } from '../../gpu/device.js';
+import { uniformLayout } from '../../gpu/uniforms.js';
 import { canvasPipeline } from '../canvasPipeline.js';
+import { PASS_GROUP, PassBindings } from '../passBindings.js';
 
 const PROGRAM = 'fallingLeaf';
 const FLOATS = BIT_FLOATS;
@@ -194,13 +196,31 @@ const LEAF_LAYOUT: VertexBufferLayout = {
   }))
 };
 
+const LEAF_FRAME = uniformLayout('LeafFrame', [
+  { name: 'u_ambient', type: 'vec3', precision: 'highp' },
+  { name: 'u_basePerArt', type: 'float', precision: 'highp' },
+  { name: 'u_tone', type: 'vec2', precision: 'highp' },
+  { name: 'u_fieldLit', type: 'float', precision: 'highp' },
+  { name: 'u_shade', type: 'float', precision: 'highp' }
+]);
+
+export interface LeafTextures {
+  atlas: GpuTexture;
+  light: GpuTexture;
+}
+
 export class FallingLeaves {
   readonly field = new LeafField();
   readonly bits = new TreeBits();
   private readonly data = new Float32Array((L.max + MAX_BITS) * FLOATS);
-  private readonly at: Record<string, GpuUniform | null>;
+  private count = 0;
+  private textures: LeafTextures | null = null;
 
   static create(gpu: GpuDevice, shaders: ShaderManager): FallingLeaves | null {
+    const bindings = new PassBindings(gpu, PROGRAM, LEAF_FRAME, [
+      { name: 'u_paintAtlas', sampleType: 'unfilterable-float' },
+      { name: 'u_lightTexture', sampleType: 'unfilterable-float' }
+    ]);
     const made = shaders.createPipeline(
       PROGRAM,
       canvasPipeline(gpu, {
@@ -209,44 +229,33 @@ export class FallingLeaves {
         attributes: Object.fromEntries(LEAF_ATTRIBUTES.map(([name], i) => [name, i])),
         buffers: [LEAF_LAYOUT],
         topology: 'triangle-strip',
-        blend: ALPHA_BLEND
+        blend: ALPHA_BLEND,
+        bindings: [bindings]
       })
     );
     const program = made.pipeline;
     if (!made.success || !program) {
+      bindings.destroy();
       console.warn('[falling leaves] off:', made.error);
       return null;
     }
-    return new FallingLeaves(gpu, program);
+    return new FallingLeaves(gpu, program, bindings);
   }
 
   private constructor(
     private readonly gpu: GpuDevice,
     private readonly program: GpuRenderPipeline,
+    private readonly bindings: PassBindings,
     private readonly vbo = gpu.createBuffer({
       size: (L.max + MAX_BITS) * FLOATS * 4,
       usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
     })
   ) {
-    const names = [
-      'u_basePerArt',
-      'u_paintAtlas',
-      'u_lightTexture',
-      'u_fieldLit',
-      'u_ambient',
-      'u_tone',
-      'u_shade'
-    ];
-    this.at = Object.fromEntries(names.map((n) => [n, gpu.uniform(program, n)]));
+    bindings.set('u_shade', SHADE);
   }
 
-  draw(
-    pass: GpuRenderPass,
-    secs: number,
-    wind: WindClock,
-    f: LeafFrame,
-    units: { atlas: number; light: number }
-  ): number {
+  prepare(secs: number, wind: WindClock, f: LeafFrame, textures: LeafTextures): void {
+    this.count = 0;
     this.field.step(secs, wind, f);
     this.bits.step(secs, wind, f);
     let n = this.field.pack(this.data);
@@ -256,23 +265,28 @@ export class FallingLeaves {
       n * FLOATS
     );
     n += Math.min(bits.length, this.data.length - n * FLOATS) / FLOATS;
-    if (n === 0) return 0;
-    const gpu = this.gpu;
+    if (n === 0) return;
+    this.gpu.queue.writeBuffer(this.vbo, 0, this.data, 0, n * FLOATS);
+    this.bindings.set('u_basePerArt', f.basePerArt);
+    this.bindings.set('u_fieldLit', f.light.fieldLit ? 1 : 0);
+    this.bindings.set('u_ambient', f.light.ambient);
+    this.bindings.set('u_tone', f.light.tone);
+    this.bindings.upload();
+    this.textures = textures;
+    this.count = n;
+  }
+
+  encode(pass: GpuRenderPass): number {
+    if (this.count === 0 || !this.textures) return 0;
     pass.setPipeline(this.program);
     pass.setVertexBuffer(0, this.vbo);
-    gpu.queue.writeBuffer(this.vbo, 0, this.data, 0, n * FLOATS);
-    gpu.setF32(this.at.u_basePerArt, f.basePerArt);
-    gpu.setI32(this.at.u_paintAtlas, units.atlas);
-    gpu.setI32(this.at.u_lightTexture, units.light);
-    gpu.setF32(this.at.u_fieldLit, f.light.fieldLit ? 1 : 0);
-    gpu.setVec3fv(this.at.u_ambient, f.light.ambient);
-    gpu.setVec2fv(this.at.u_tone, f.light.tone);
-    gpu.setF32(this.at.u_shade, SHADE);
-    pass.draw(4, n);
+    pass.setBindGroup(PASS_GROUP, this.bindings.group([this.textures.atlas, this.textures.light]));
+    pass.draw(4, this.count);
     return 1;
   }
 
   dispose(): void {
     this.gpu.destroyBuffer(this.vbo);
+    this.bindings.destroy();
   }
 }
