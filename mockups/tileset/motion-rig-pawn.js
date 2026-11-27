@@ -111,7 +111,7 @@ function rigHat(s, o, X, hTop, face, skin, tunic, hd, hh, drape = 2) {
 const WRAP = [P.cloth[2], P.cloth[1]];
 const rimOf = (was, c) => !!(was && c) && c[0] === was[0] * .6 && c[1] === was[1] * .6;
 
-const TURN_MOST = 1.1, REACH = { hip: 3, front: 6, emptyGrip: -3, pole: 18, spread: 3, under: 2 }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3, yoke: -4, yokeHead: 3, yokeGrip: 3, yokeAt: { f: -.45, b: .25 }, byJaw: .29, underShoulders: 1, underHip: 2, underJaw: {}, cradled: { ahead: 5, underChin: 2, under: 2 }, onHands: 1, pastJaw: { game: 1 } }, CLEAR = { ground: 4, shins: 3, hop: 3 }, BEHIND_HEAD = ['game'];
+const TURN_MOST = 1.1, REACH = { hip: 3, front: 6, emptyGrip: -5, pole: 18, spread: 3, under: 2 }, SUNK = { log: 2, game: 8, behind: .34, slung: 11, aside: 2.2, oneHand: .3, yoke: -4, yokeHead: 3, yokeGrip: 3, yokeAt: { f: -.45, b: .25 }, byJaw: .29, underShoulders: 1, underHip: 2, underJaw: {}, cradled: { ahead: 5, underChin: 2, under: 2 }, onHands: 1, pastJaw: { game: 1 } }, CLEAR = { ground: 4, shins: 3, hop: 3 }, BEHIND_HEAD = ['game'];
 function rigPawn(o, p) {
   p = p || {};
   let s = new Spr(RG.W, RG.H, RG.CX, RG.BASE);
@@ -247,7 +247,7 @@ function rigPawn(o, p) {
     let R = solved('R', tR), L = solved('L', tL), aim = null, second = null, from = null;
     const far = TOOL_REACH[kind] || 1, butt = TOOL_BUTT[kind] || 1, head = TOOL_HEAD[kind] || 1;
     if (wielded) {
-      const raw = aimOf(), paired = p.both && gripsOf(kind, face) ? gripsOf(kind, face) : null, grips = [p.grip === undefined ? (paired ? paired[0] : 0) : p.grip, ...(paired ? [paired[1]] : [])], aimed = () => aimSeen(aimGrounded(raw, shoulderZ + R.H[2], far - grips[0], butt + grips[0], head), [R.H[0], R.H[1], shoulderZ + R.H[2]], far - grips[0] + head, face);
+      const raw = aimOf(), paired = p.both && gripsOf(kind, face) ? gripsOf(kind, face) : null, grips = [p.grip === undefined ? (paired ? paired[0] : 0) : p.grip, ...(paired ? [paired[1]] : [])], headAt = view.at([0, SPACE.jut, f.hh / 2 + 1]), headSeen = [headAt[0] + (p.hd ? p.hd[0] : 0), headAt[1] + (p.hd ? p.hd[1] : 0)], gapOf = v => gapTo(headSeen, view.at(sub3(R.H, mul3(v, grips[0] + butt))), view.at(add3(R.H, mul3(v, far - grips[0])))), aimed = () => { const v = aimSeen(aimGrounded(raw, shoulderZ + R.H[2], far - grips[0], butt + grips[0], head), [R.H[0], R.H[1], shoulderZ + R.H[2]], far - grips[0] + head, face); return p.clears ? aimClear(v, face, gapOf, f.hd + HEAD_CLEAR.gap) : v; };
       const paired3 = () => {
         if (grips.length > 1 && !o.oneArm) for (let n = 0; n < 6; n++) {
           const want = add3(R.H, mul3(aim, grips[1]));

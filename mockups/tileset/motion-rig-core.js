@@ -208,6 +208,17 @@ function aimSeen(aim, hand, tip, face) {
   }
   return v;
 }
+const HEAD_CLEAR = { gap: 3.5, step: .04, turns: 40 };
+function gapTo(c, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], t = clamp(((c[0] - a[0]) * dx + (c[1] - a[1]) * dy) / (dx * dx + dy * dy || 1), 0, 1);
+  return Math.hypot(a[0] + dx * t - c[0], a[1] + dy * t - c[1]);
+}
+function aimClear(aim, face, gapOf, least) {
+  const turned = (v, a) => face === 's' ? [v[0], v[1] * Math.cos(a) - v[2] * Math.sin(a), v[1] * Math.sin(a) + v[2] * Math.cos(a)] : [v[0] * Math.cos(a) - v[2] * Math.sin(a), v[1], v[0] * Math.sin(a) + v[2] * Math.cos(a)];
+  let v = aim;
+  for (let n = 0; n < HEAD_CLEAR.turns && gapOf(v) < least; n++) { const l = turned(v, HEAD_CLEAR.step), r = turned(v, -HEAD_CLEAR.step); v = gapOf(l) >= gapOf(r) ? l : r; }
+  return v;
+}
 const FOOT_LINE = { band: -1.5, step: .03, turns: 67, under: 1, lifts: 3 };
 function toolSeen(view, aim) {
   const v = view.at(aim);

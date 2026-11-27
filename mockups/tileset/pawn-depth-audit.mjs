@@ -216,7 +216,7 @@ for (const anim of anims) {
         frames++;
       }
       const longest = Math.max(0, ...lengths.filter(Boolean).map(r => r.all));
-      lengths.forEach((r, i) => { if (r && longest >= RIGID.least && r.all < RIGID.share * longest) { sum.z++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': tool drawn ' + r.all.toFixed(1) + ' px long, longest in the row ' + longest.toFixed(1)); } });
+      lengths.forEach((r, i) => { if (r && !r.sunk && longest >= RIGID.least && r.all < RIGID.share * longest) { sum.z++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': tool drawn ' + r.all.toFixed(1) + ' px long, longest in the row ' + longest.toFixed(1)); } });
       const most = (def.hit ? JUMP.struck : JUMP.held) / (smooth ? 2 : 1) + (smooth ? 1 : 0);
       for (let i = 0; i < n; i++) { const a = arrows[i], b = arrows[(i + 1) % n]; if (i + 1 === n && def.once) continue; const loosed = def.hit && def.hit[1] === 'arrow' && b < a && (i + .5) / n <= def.hit[0] && (i + 1.5) / n > def.hit[0]; if (a !== null && b !== null && Math.abs(a - b) > most && !(def.hit && !b) && !loosed) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': arrow ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }
       for (let i = 0; i < n; i++) { const a = sizes[i], b = sizes[(i + 1) % n]; if (i + 1 === n && def.once) continue; if (a && b && Math.abs(a - b) > most) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': tool ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }

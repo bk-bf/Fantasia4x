@@ -85,14 +85,14 @@ function fbPose(name, u, c) {
   if (back) { for (const k of FBX_KEYS) if (p[k]) p[k] = [-p[k][0], p[k][1]]; if (p.bx) p.bx = -p.bx; }
   return p;
 }
-const UPRIGHT = [1.5, 2, 19], AT_SIDE = { f: 6.5, b: 8.5 };
+const UPRIGHT = [1.5, 2, 19];
 const HANGS = { R: [.5, 1.5, -8.5], L: [-.5, 1.5, -8.5] };
 const QUIVER = { in: [-.5, -1, 2], out: [-.5, -1, 4.5], lies: [0, -3, -19], past: [1.8, 6, -1.5], round: [2.5, 3.5, -2], holds: 14 };
 const BOW_LEADS = 4;
 const POLES3 = ['spear', 'staff', 'hoe'], HAFTS3 = ['axe', 'pick'];
 const spun = (v, deg) => { const c = Math.cos(deg * D2R), n = Math.sin(deg * D2R); return [v[0] * c - v[1] * n, v[0] * n + v[1] * c, v[2]]; };
 const turned3 = (pose, deg) => { const out = { ...pose, turn: deg }; for (const k of ['R', 'L', 'aim', 'shaft', 'elbow']) if (pose[k]) out[k] = spun(pose[k], deg); return out; };
-const SWING_TURN = 30, SWING_OUT = 6, POLE_TURN = 35;
+const POLE_TURN = 35;
 const GUARD3 = {
   one: c => c.face === 'b' ? { R: [4, 5, -3.5], aim: c.tool === 'spear' ? [4, 11, 16] : [7, 12, 14], L: [-4, 6, -3] } : { R: [1, 6, -3.5], aim: c.tool === 'spear' ? [4, 11, 16] : [7, 12, 14], L: [0, 8.5, -3] },
   two: c => c.face !== 's' ? (POLES3.includes(c.tool) ? { R: [6, 4.5, 1], aim: [12, 0, 7], both: 1, mid: 1 } : { R: [7, 3, 0], aim: [9, 0, 17], both: 1, mid: 1 }) : POLES3.includes(c.tool) ? turned3({ R: [-4, 7.5, -3.5], aim: [17, 10, 4], both: 1 }, POLE_TURN) : { R: [-6.5, 5, -2], aim: [3, 8, 17], both: 1 },
@@ -113,20 +113,18 @@ const drawn3 = family => (u, c) => {
   const { both, ...open } = to, held = both && gripsOf(c.tool, c.face) ? gripsOf(c.tool, c.face)[0] : 0, across = both && c.face !== 's';
   return keyed(u / lands, { L: HANGS.L, ...from, grip: 0, turn: 0, mid: 0 }, [[0, {}], ...(both && POLES3.includes(c.tool) && c.face === 's' ? [[.14, { R: [1.5, 4.5, -6], grip: held * .1, aim: [5, 11, 13.5] }, 'l'], [.4, { R: [1.5, 8, -3.5], grip: held * .3, aim: [4, 9, 17] }, 'l'], [.68, { ...turned3({ R: [1, 7.8, -3], aim: [12, 5, 14] }, POLE_TURN * .6), grip: held * .7 }, 'l'], [.92, { ...turned3({ R: [-2.5, 7.8, -3.8], aim: [16, 8, 6] }, POLE_TURN * .9), grip: held * .9 }, 'l']] : [[.4, { R: c.face === 's' ? [1, 6.5, -6.5] : [3.5, 6.5, -4.5], grip: held / 2, ...(from.aim && to.aim ? { aim: from.aim.map((v, i) => (v + to.aim[i]) / 2) } : null), ...(across ? { L: [2, 5, -6], mid: 0 } : null) }, 'l']]), [1, { L: across ? to.R.map((v, i) => v + unit3(to.aim)[i] * (gripsOf(c.tool, c.face) ? gripsOf(c.tool, c.face)[1] : -BARE_GRIP)) : HANGS.L, ...open, grip: held }, 'l']]);
 };
-const swinging = pose => { const q = turned3(pose, SWING_TURN); return { ...q, mid: 1, R: [q.R[0] + SWING_OUT, q.R[1], q.R[2]] }; };
-const BARE_GRIP = 6;
-const beside = pose => { const a = unit3(pose.aim); return { ...pose, mid: 1, L: pose.R.map((v, i) => v - a[i] * BARE_GRIP) }; };
-const swung3 = (rest, up, down, times) => u => keyed(u, { ...rest, both: 1 }, [[0, {}], [times[0], up, 'o'], [times[1], up], [times[2], down, 'i'], [times[3], down], [1, {}]]);
-const LEVEL_CHOP = { rest: { R: [0, 8, -3], aim: [2, 12, -9] }, coils: { R: [9, 3.5, -2], aim: [3, -16, 2] }, back: { R: [9, 2, -2], aim: [3, -16, 5] }, bites: { R: [1, 8, -1], aim: [8, 17, -1] } };
-const LEVEL_CHOP_FB = face => ({ rest: { R: [AT_SIDE[face], 4, -3], aim: [13, 0, -9] }, back: { R: [AT_SIDE[face], 1, 1], aim: [10, -11, 6] }, round: { R: [AT_SIDE[face], 3, 0], aim: [15, -5, 3] }, bites: { R: [AT_SIDE[face], 4, -1], aim: [16, 7, -1] } });
-const CHOP_BEATS = { s: L => [[0, {}], [.14, {}], [.14, L.coils], [.4, L.back, 'o'], [.46, L.back], [.46, L.bites], [.78, L.bites], [1, {}]], fb: L => [[0, {}], [.3, L.back, 'o'], [.42, L.back], [.49, L.round, 'i'], [.55, L.bites, 'l'], [.78, L.bites], [1, {}]] };
-const levelChop = (u, face) => { const L = face === 's' ? LEVEL_CHOP : LEVEL_CHOP_FB(face), pose = keyed(u, { ...L.rest, both: 1, mid: 1 }, CHOP_BEATS[face === 's' ? 's' : 'fb'](L)); return face === 's' ? pose : beside(pose); };
+const OVERHEAD = {
+  s: { rest: { R: [0, 7.8, -3], aim: [0, 15, -9] }, up: { R: [0, 7.8, 2], aim: [0, 5, 16] }, over: { R: [0, 8, 1], aim: [0, 13, 9] }, bites: { R: [0, 8, -3.6], aim: [0, 15, -10] } },
+  f: { rest: { R: [4, 6, -6], aim: [7, 1, -13] }, up: { R: [4.5, 5, 0], aim: [7, 0, 13] }, over: { R: [4.5, 6, -3], aim: [16, 0, 0] }, bites: { R: [4, 6, -6.5], aim: [6, 1, -13] } },
+  b: { rest: { R: [4, 6, -6], aim: [7, 1, -13] }, up: { R: [4.5, 5, 0], aim: [7, 0, 13] }, over: { R: [4.5, 6, -3], aim: [16, 0, 0] }, bites: { R: [4, 6, -6.5], aim: [6, 1, -13] } },
+};
+const overhead = (u, face, at) => { const O = OVERHEAD[face]; return keyed(u, { ...O.rest, both: 1, mid: 1, clears: 1 }, [[0, {}], [at[0], O.up, 'o'], [at[1], O.up], [at[2], O.over, 'i'], [at[3], O.bites, 'l'], [at[4], O.bites], [1, {}]]); };
 const ARMS3 = {
   idle: (u, c) => carried3(c, 0), look: (u, c) => carried3(c, 0), sit: () => null,
   walk: (u, c) => carried3(c, -sn(u)), run: (u, c) => carried3(c, -sn(u) * 1.4), stalk: (u, c) => carried3(c, 0), tuck: (u, c) => carried3(c, -sn(u)), tuckStand: (u, c) => carried3(c, 0),
-  chop: (u, c) => LOOK_STYLE.pieces ? levelChop(u, c.face) : c.face === 's' ? swinging(swung3({ R: [-6.5, 6, -3], aim: [14, 12, -8] }, { R: [-2.6, 7, -1.2], aim: [17, 6, 10] }, { R: [-6.5, 7.3, -3], aim: [9, 13, -12] }, [.3, .4, .58, .8])(u)) : beside(swung3({ R: [AT_SIDE[c.face], 4, -6], aim: [15, 0, -9] }, { R: [AT_SIDE[c.face] - (c.face === 'b' ? -1 : 1), 4, c.face === 'b' ? 0 : 1.5], aim: c.face === 'b' ? [10, 0, 16] : [8, 0, 17] }, { R: [AT_SIDE[c.face], 4, -6.5], aim: [13, 0, -13] }, [.3, .4, .58, .8])(u)),
-  mine: (u, c) => c.face === 's' ? swinging(swung3({ R: [-6.5, 5.5, -3], aim: [14, 12, -6] }, { R: [-.5, 7, -1.2], aim: [17, 6, 10] }, { R: [-6.5, 6.8, -2], aim: [12, 16, -6] }, [.32, .4, .58, .76])(u)) : beside(swung3({ R: [AT_SIDE[c.face], 4, -5.5], aim: [16, 0, -6] }, { R: [AT_SIDE[c.face] - (c.face === 'b' ? -1 : 1), 4, c.face === 'b' ? 0 : 1.5], aim: c.face === 'b' ? [10, 0, 16] : [9, 0, 17] }, { R: [AT_SIDE[c.face], 4, -5], aim: [18, 0, -5] }, [.32, .4, .58, .76])(u)),
-  hoe: (u, c) => c.face === 's' ? swinging(swung3({ R: [0, 5.5, -5], aim: [13.5, 10, 12] }, { R: [0, 6.6, -3], aim: [16, 6, 11] }, { R: [-6.5, 5.5, -3], aim: [14, 11, -11] }, [.3, .36, .52, .72])(u)) : beside(swung3({ R: [AT_SIDE[c.face], 4, -3], aim: [10, 0, 16] }, { R: [AT_SIDE[c.face], 4, -1], aim: [14, 0, 13] }, { R: [AT_SIDE[c.face], 4, -4], aim: [13, 0, -13] }, [.3, .36, .52, .72])(u)),
+  chop: (u, c) => overhead(u, c.face, [.3, .42, .49, .55, .78]),
+  mine: (u, c) => overhead(u, c.face, [.32, .4, .46, .52, .74]),
+  hoe: (u, c) => overhead(u, c.face, [.3, .36, .44, .52, .72]),
   hammer: (u, c) => { const struck = c.face === 's' ? [{ R: [4, 7, -3.5], aim: [6, 13, -13] }, { R: [4, 7, -3], aim: [6, 14, -12] }] : [{ R: [1.5, 5, -5.5], aim: [14, 0, -8] }, { R: [1.5, 5, -5], aim: [14, 0, -7] }]; return keyed(u, { R: [2, 6.5, -5], aim: [8, 13.5, 9], L: [1, 5, -5] }, [[0, {}], [.3, { R: [5, 7.4, 1], aim: [6, 11, 15] }, 'o'], [.38, { R: [5, 7.4, 1], aim: [6, 10, 15] }], [.52, struck[0], 'i'], [.6, struck[1]], [1, {}]]); },
   stir: (u, c) => c.face === 'b' ? { mid: 1, R: [cs(u) * .6, 6 + sn(u) * 1.5, -4], aim: [cs(u) * .3, 3 + sn(u) * 3, -19], L: [-6.5, 1.5, -8] } : { R: [-3 + cs(u) * 1.5, 6 + sn(u) * 1.5, -4], aim: [cs(u) * 3, 3 + sn(u) * 3, -19], L: [1, 4, -6] },
   drink: (u, c) => c.face === 'b' ? keyed(u, { mid: 1, R: [0, 5, -4], aim: [0, 0, 20], L: [-6, 1.5, -8.5], grip: -2 }, [[0, {}], [.28, { R: [0, 6.5, 4], aim: [0, -4, 19], grip: -1 }], [.66, { R: [0, 6.5, 4.5], aim: [0, -12, 16], grip: -1 }], [.82, {}], [1, {}]]) : keyed(u, { R: [-1, 5, -4], aim: [0, 0, 20], L: HANGS.L, grip: -2 }, [[0, {}], [.28, { R: [-4.5, 6.5, 4], aim: [0, -4, 19], grip: -1 }], [.66, { R: [-4.5, 6.5, 4.5], aim: [0, -12, 16], grip: -1 }], [.82, {}], [1, {}]]),
