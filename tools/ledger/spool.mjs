@@ -125,15 +125,30 @@ function canonical(value, out) {
   const record = /** @type {Record<string, unknown>} */ (value);
   out('{');
   let first = true;
-  for (const key of Object.keys(record).sort()) {
+  for (const [key, quoted] of sortedKeys(Object.keys(record))) {
     const v = record[key];
     if (v === undefined || typeof v === 'function' || typeof v === 'symbol') continue;
-    out(first ? `${JSON.stringify(key)}:` : `,${JSON.stringify(key)}:`);
+    out(first ? quoted : `,${quoted}`);
     first = false;
     canonical(v, out);
   }
   out('}');
   return true;
+}
+
+/** @type {Map<string, [string, string][]>} */
+const shapes = new Map();
+
+/** @param {string[]} keys */
+function sortedKeys(keys) {
+  const shape = keys.join('\u0000');
+  let sorted = shapes.get(shape);
+  if (!sorted) {
+    sorted = [...keys].sort().map((k) => /** @type {[string, string]} */ ([k, `${JSON.stringify(k)}:`]));
+    if (shapes.size > 10_000) shapes.clear();
+    shapes.set(shape, sorted);
+  }
+  return sorted;
 }
 
 /** @param {{ dynamic?: unknown, world?: unknown, [field: string]: unknown }} snapshot */
