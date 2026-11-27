@@ -79,6 +79,7 @@ function scratchSpool(): string {
   vi.stubEnv('F4X_LEDGER_SPOOL', spool);
   vi.stubEnv('CLAUDE_CODE_SESSION_ID', 'session-1');
   vi.stubEnv('F4X_MACHINE', 'laptop');
+  vi.stubEnv('GITHUB_ACTIONS', '');
   return spool;
 }
 
