@@ -5,7 +5,6 @@ import type { ShaderManager } from '../shaders.js';
 import { BASE_TILE_PX } from '../tile-types.js';
 import type { LoadedPaintedTileset } from './loader.js';
 import { withRockSurface } from './rockSurface.js';
-import { LIGHT_FIELD_UNIT } from './lightPass.js';
 import { NOISE_SIZE, tierNoiseTexels } from './tierNoise.js';
 import { TIER_FIELDS, TIER_TEXEL, TierTiles, type TileAt } from './tierTiles.js';
 import {
@@ -13,19 +12,16 @@ import {
   type GpuDevice,
   type GpuRenderPass,
   type GpuRenderPipeline,
-  type GpuUniform
+  type GpuTexture
 } from '../../gpu/device.js';
+import { uniformLayout } from '../../gpu/uniforms.js';
 import { canvasPipeline } from '../canvasPipeline.js';
-import { samplersOf } from '../samplers.js';
+import { PASS_GROUP, PassBindings } from '../passBindings.js';
 import { SizedTexture } from '../sizedTexture.js';
 
 const PROGRAM = 'tiers';
 export const TIER_TILE_UNIT = 4;
 export const TIER_NOISE_UNIT = 10;
-const TIER_FIELD_UNIT = 9;
-const ATLAS_UNIT = 1;
-const ROCK_UNIT = 2;
-const VEIN_UNIT = 3;
 
 export interface TierView {
   x0: number;
@@ -44,37 +40,37 @@ export interface TierFrame {
   snow: boolean;
 }
 
-const UNIFORMS = [
-  'u_atlasScale',
-  'u_rect',
-  'u_tierFieldTexture',
-  'u_tierNoiseTexture',
-  'u_tierTileTexture',
-  'u_paintAtlas',
-  'u_rockTexture',
-  'u_veinTexture',
-  'u_rockRamp',
-  'u_snowRamp',
-  'u_snow',
-  'u_rockLift',
-  'u_lightTexture',
-  'u_fieldLit',
-  'u_ambient',
-  'u_saturation',
-  'u_brightness',
-  'u_rowPx',
-  'u_rowDepth'
+const TIER_FRAME = uniformLayout('TierFrame', [
+  { name: 'u_rect', type: 'vec4', precision: 'highp' },
+  { name: 'u_ambient', type: 'vec3', precision: 'mediump' },
+  { name: 'u_atlasScale', type: 'float', precision: 'highp' },
+  { name: 'u_rockRamp', type: 'vec2', precision: 'highp' },
+  { name: 'u_snowRamp', type: 'vec2', precision: 'highp' },
+  { name: 'u_snow', type: 'float', precision: 'mediump' },
+  { name: 'u_rockLift', type: 'float', precision: 'mediump' },
+  { name: 'u_fieldLit', type: 'float', precision: 'mediump' },
+  { name: 'u_saturation', type: 'float', precision: 'mediump' },
+  { name: 'u_brightness', type: 'float', precision: 'mediump' },
+  { name: 'u_rowPx', type: 'float', precision: 'highp' },
+  { name: 'u_rowDepth', type: 'float', precision: 'highp' }
+]);
+
+const TIER_TEXTURES = [
+  { name: 'u_tierFieldTexture', sampleType: 'float', filter: 'linear' },
+  { name: 'u_tierNoiseTexture', sampleType: 'unfilterable-float' },
+  { name: 'u_tierTileTexture', sampleType: 'uint' },
+  { name: 'u_paintAtlas', sampleType: 'unfilterable-float' },
+  { name: 'u_rockTexture', sampleType: 'unfilterable-float' },
+  { name: 'u_veinTexture', sampleType: 'unfilterable-float' },
+  { name: 'u_lightTexture', sampleType: 'unfilterable-float' }
 ] as const;
 
 export class Tiers {
-  private readonly gpu: GpuDevice;
-  private readonly program: GpuRenderPipeline;
-  private readonly painted: LoadedPaintedTileset;
   private readonly tiles = new TierTiles();
   private readonly tileTex: SizedTexture;
   private readonly fieldTex: SizedTexture;
   private readonly noiseTex: SizedTexture;
-  private readonly at: Record<(typeof UNIFORMS)[number], GpuUniform | null>;
+  private drawn: readonly GpuTexture[] | null = null;
   private terrain: GameGrid | null = null;
   private resource: GameGrid | null = null;
   private pendingAll = false;
@@ -85,6 +81,7 @@ export class Tiers {
     shaders: ShaderManager,
     painted: LoadedPaintedTileset
   ): Tiers | null {
+    const bindings = new PassBindings(gpu, PROGRAM, TIER_FRAME, TIER_TEXTURES);
     const made = shaders.createPipeline(
       PROGRAM,
       canvasPipeline(gpu, {
@@ -93,30 +90,29 @@ export class Tiers {
         topology: 'triangle-list',
         blend: ALPHA_BLEND,
         depthCompare: 'less-equal',
-        depthWrite: true
+        depthWrite: true,
+        bindings: [bindings]
       })
     );
     const program = made.pipeline;
     if (!made.success || !program) {
+      bindings.destroy();
       console.error('[tiers] the rock tier shader did not build:', made.error);
       return null;
     }
-    return new Tiers(gpu, program, painted);
+    return new Tiers(gpu, program, painted, bindings);
   }
 
-  private constructor(gpu: GpuDevice, program: GpuRenderPipeline, painted: LoadedPaintedTileset) {
-    this.gpu = gpu;
-    this.program = program;
-    this.painted = painted;
+  private constructor(
+    private readonly gpu: GpuDevice,
+    private readonly program: GpuRenderPipeline,
+    private readonly painted: LoadedPaintedTileset,
+    private readonly bindings: PassBindings
+  ) {
     this.tileTex = new SizedTexture(gpu, 'rgba16uint');
     this.fieldTex = new SizedTexture(gpu, 'rgba8unorm');
-    gpu.bindSampler(TIER_FIELD_UNIT, samplersOf(gpu).linear);
     this.noiseTex = new SizedTexture(gpu, 'rgba8unorm', NOISE_SIZE, NOISE_SIZE);
     this.noiseTex.write(tierNoiseTexels());
-    this.at = Object.fromEntries(UNIFORMS.map((n) => [n, gpu.uniform(program, n)])) as Record<
-      (typeof UNIFORMS)[number],
-      GpuUniform | null
-    >;
   }
 
   setGrids(terrain: GameGrid, resource: GameGrid | null, dirty?: readonly TileAt[]): void {
@@ -175,41 +171,39 @@ export class Tiers {
     gpu.setTextureSlot(0);
   }
 
-  draw(pass: GpuRenderPass, f: TierFrame): number {
+  prepare(f: TierFrame, light: GpuTexture): void {
+    this.drawn = null;
     const top = this.painted.top;
-    if (!top || this.tiles.w === 0) return 0;
-    const gpu = this.gpu;
-    const tile = this.painted.tileset.tile;
-    const u = this.at;
+    if (!top || this.tiles.w === 0) return;
+    const b = this.bindings;
+    b.set('u_atlasScale', this.painted.tileset.tile / BASE_TILE_PX);
+    b.set('u_rect', [f.view.x0, f.view.y0, f.view.x1, f.view.y1]);
+    b.set('u_rockRamp', [top.ramp.x, top.ramp.y]);
+    b.set('u_snowRamp', [top.snow.x, top.snow.y]);
+    b.set('u_snow', f.snow ? 1 : 0);
+    b.set('u_rockLift', top.lift);
+    b.set('u_fieldLit', f.fieldLit ? 1 : 0);
+    b.set('u_ambient', f.ambient);
+    b.set('u_saturation', f.tone[0]);
+    b.set('u_brightness', f.tone[1]);
+    b.set('u_rowPx', f.rowPx);
+    b.set('u_rowDepth', f.rowDepth);
+    b.upload();
+    this.drawn = [
+      this.fieldTex.texture,
+      this.noiseTex.texture,
+      this.tileTex.texture,
+      this.painted.texture,
+      top.texture,
+      top.veins,
+      light
+    ];
+  }
+
+  encode(pass: GpuRenderPass): number {
+    if (!this.drawn) return 0;
     pass.setPipeline(this.program);
-    gpu.setF32(u.u_atlasScale, tile / BASE_TILE_PX);
-    gpu.setVec4f(u.u_rect, f.view.x0, f.view.y0, f.view.x1, f.view.y1);
-    gpu.setVec2f(u.u_rockRamp, top.ramp.x, top.ramp.y);
-    gpu.setVec2f(u.u_snowRamp, top.snow.x, top.snow.y);
-    gpu.setF32(u.u_snow, f.snow ? 1 : 0);
-    gpu.setF32(u.u_rockLift, top.lift);
-    gpu.setF32(u.u_fieldLit, f.fieldLit ? 1 : 0);
-    gpu.setVec3fv(u.u_ambient, f.ambient);
-    gpu.setF32(u.u_saturation, f.tone[0]);
-    gpu.setF32(u.u_brightness, f.tone[1]);
-    gpu.setF32(u.u_rowPx, f.rowPx);
-    gpu.setF32(u.u_rowDepth, f.rowDepth);
-    gpu.setI32(u.u_tierFieldTexture, TIER_FIELD_UNIT);
-    gpu.setI32(u.u_tierNoiseTexture, TIER_NOISE_UNIT);
-    gpu.setI32(u.u_tierTileTexture, TIER_TILE_UNIT);
-    gpu.setI32(u.u_paintAtlas, ATLAS_UNIT);
-    gpu.setI32(u.u_rockTexture, ROCK_UNIT);
-    gpu.setI32(u.u_veinTexture, VEIN_UNIT);
-    gpu.setI32(u.u_lightTexture, LIGHT_FIELD_UNIT);
-    gpu.setTextureSlot(ATLAS_UNIT);
-    gpu.bindTexture(this.painted.texture);
-    gpu.setTextureSlot(ROCK_UNIT);
-    gpu.bindTexture(top.texture);
-    gpu.setTextureSlot(VEIN_UNIT);
-    gpu.bindTexture(top.veins);
-    gpu.setTextureSlot(TIER_FIELD_UNIT);
-    gpu.bindTexture(this.fieldTex.texture);
-    this.bindShared();
+    pass.setBindGroup(PASS_GROUP, this.bindings.group(this.drawn));
     pass.draw(6);
     return 1;
   }
@@ -219,6 +213,7 @@ export class Tiers {
     this.tileTex.destroy();
     this.fieldTex.destroy();
     this.noiseTex.destroy();
+    this.bindings.destroy();
     gpu.destroyRenderPipeline(this.program);
   }
 }

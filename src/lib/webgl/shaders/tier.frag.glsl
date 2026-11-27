@@ -6,15 +6,10 @@ in highp vec2 v_art;
 uniform highp sampler2D u_tierFieldTexture;
 uniform sampler2D u_paintAtlas;
 uniform highp sampler2D u_rockTexture;
-uniform highp vec2 u_rockRamp;
-uniform float u_rockLift;
 uniform highp sampler2D u_lightTexture;
-uniform float u_fieldLit;
-uniform vec3 u_ambient;
-uniform float u_saturation;
-uniform float u_brightness;
-uniform highp float u_rowPx;
-uniform highp float u_rowDepth;
+uniform highp sampler2D u_veinTexture;
+uniform highp usampler2D u_tierTileTexture;
+uniform highp sampler2D u_tierNoiseTexture;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 const uint TIER_REACH = 8u;
