@@ -1,0 +1,70 @@
+2026-11-22T15:43:48.3300660Z ##[group]Run node tools/gungraun/gate.mjs --base "$BASE" --home "$RUNNER_TEMP/gungraun"
+2026-11-22T15:43:48.3301037Z [36;1mnode tools/gungraun/gate.mjs --base "$BASE" --home "$RUNNER_TEMP/gungraun"[0m
+2026-11-22T15:43:48.3328015Z shell: /usr/bin/bash -e {0}
+2026-11-22T15:43:48.3328327Z env:
+2026-11-22T15:43:48.3328475Z   BASE: 50ed760d2d1bdaac269908c68530e1cc81bafea8
+2026-11-22T15:43:48.3328686Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-22T15:43:48.3328881Z   CARGO_HOME: /home/runner/.cargo
+2026-11-22T15:43:48.3329039Z   CARGO_INCREMENTAL: 0
+2026-11-22T15:43:48.3329174Z   CARGO_TERM_COLOR: always
+2026-11-22T15:43:48.3329317Z   CACHE_ON_FAILURE: false
+2026-11-22T15:43:48.3329530Z   DEBUGINFOD_URLS: https://debuginfod.ubuntu.com
+2026-11-22T15:43:48.3329710Z ##[endgroup]
+2026-11-22T15:43:54.5720434Z $ /home/runner/work/Fantasia4x/Fantasia4x/spatial-core/target/release/deps/spatial-ec2a1875b97e70d9 --bench --save-baseline=base
+2026-11-22T15:43:54.9130177Z [32mspatial::spatial::find_path[0m [36mscattered[0m:[1;34m(scattered_route())[0m
+2026-11-22T15:43:54.9130967Z [90m  [0mBaselines:                           [1mbase[0m|base (old)
+2026-11-22T15:43:54.9131640Z [90m  [0mInstructions:                    [1m20791789[0m|N/A                  ([90m*********[0m)
+2026-11-22T15:43:54.9132348Z [90m  [0mL1 Hits:                         [1m27354923[0m|N/A                  ([90m*********[0m)
+2026-11-22T15:43:54.9133371Z [90m  [0mLL Hits:                           [1m141597[0m|N/A                  ([90m*********[0m)
+2026-11-22T15:43:54.9134047Z [90m  [0mRAM Hits:                            [1m6781[0m|N/A                  ([90m*********[0m)
+2026-11-22T15:43:54.9134711Z [90m  [0mTotal read+write:                [1m27503301[0m|N/A                  ([90m*********[0m)
+2026-11-22T15:43:54.9135733Z [90m  [0mEstimated Cycles:                [1m28300243[0m|N/A                  ([90m*********[0m)
+2026-11-22T15:43:57.4245558Z $ /home/runner/work/Fantasia4x/Fantasia4x/spatial-core/target/release/deps/spatial-ec2a1875b97e70d9 --bench --baseline=base --callgrind-limits=ir=5%
+2026-11-22T15:43:57.7992041Z [32mspatial::spatial::find_path[0m [36mscattered[0m:[1;34m(scattered_route())[0m
+2026-11-22T15:43:57.7992678Z [90m  [0mBaselines:                               |base
+2026-11-22T15:43:57.7993304Z [90m  [0mInstructions:                    [1m20791789[0m|20791789             ([90mNo change[0m)
+2026-11-22T15:43:57.7994124Z [90m  [0mL1 Hits:                         [1m27354906[0m|27354923             ([1;92m-0.00006%[0m) [[1;92m-1.00000x[0m]
+2026-11-22T15:43:57.7995019Z [90m  [0mLL Hits:                           [1m141615[0m|141597               ([1;91m+0.01271%[0m) [[1;91m+1.00013x[0m]
+2026-11-22T15:43:57.7995851Z [90m  [0mRAM Hits:                            [1m6780[0m|6781                 ([1;92m-0.01475%[0m) [[1;92m-1.00015x[0m]
+2026-11-22T15:43:57.7996554Z [90m  [0mTotal read+write:                [1m27503301[0m|27503301             ([90mNo change[0m)
+2026-11-22T15:43:57.7997650Z [90m  [0mEstimated Cycles:                [1m28300281[0m|28300243             ([1;91m+0.00013%[0m) [[1;91m+1.00000x[0m]
+2026-11-22T15:44:09.6712338Z $ /home/runner/work/Fantasia4x/Fantasia4x/sim-core/target/release/deps/sim-5a08f0ce449601e9 --bench --save-baseline=base
+2026-11-22T15:44:09.9887778Z [32msim::sim::bench_step[0m [36mcolony[0m:[1;34m(populated(600, 0, 500, 500))[0m
+2026-11-22T15:44:09.9888210Z [90m  [0mBaselines:                           [1mbase[0m|base (old)
+2026-11-22T15:44:09.9888584Z [90m  [0mInstructions:                      [1m709429[0m|N/A                  ([90m*********[0m)
+2026-11-22T15:44:09.9889000Z [90m  [0mL1 Hits:                           [1m913975[0m|N/A                  ([90m*********[0m)
+2026-11-22T15:44:09.9889365Z [90m  [0mLL Hits:                               [1m47[0m|N/A                  ([90m*********[0m)
+2026-11-22T15:44:09.9889714Z [90m  [0mRAM Hits:                              [1m11[0m|N/A                  ([90m*********[0m)
+2026-11-22T15:44:09.9890088Z [90m  [0mTotal read+write:                  [1m914033[0m|N/A                  ([90m*********[0m)
+2026-11-22T15:44:09.9890480Z [90m  [0mEstimated Cycles:                  [1m914595[0m|N/A                  ([90m*********[0m)
+2026-11-22T15:44:15.6600102Z $ /home/runner/work/Fantasia4x/Fantasia4x/sim-core/target/release/deps/sim-5a08f0ce449601e9 --bench --baseline=base --callgrind-limits=ir=5%
+2026-11-22T15:44:15.9776729Z [32msim::sim::bench_step[0m [36mcolony[0m:[1;34m(populated(600, 0, 500, 500))[0m
+2026-11-22T15:44:15.9777253Z [90m  [0mBaselines:                               |base
+2026-11-22T15:44:15.9777655Z [90m  [0mInstructions:                      [1m709429[0m|709429               ([90mNo change[0m)
+2026-11-22T15:44:15.9778122Z [90m  [0mL1 Hits:                           [1m913975[0m|913975               ([90mNo change[0m)
+2026-11-22T15:44:15.9778518Z [90m  [0mLL Hits:                               [1m47[0m|47                   ([90mNo change[0m)
+2026-11-22T15:44:15.9778907Z [90m  [0mRAM Hits:                              [1m11[0m|11                   ([90mNo change[0m)
+2026-11-22T15:44:15.9779320Z [90m  [0mTotal read+write:                  [1m914033[0m|914033               ([90mNo change[0m)
+2026-11-22T15:44:15.9779741Z [90m  [0mEstimated Cycles:                  [1m914595[0m|914595               ([90mNo change[0m)
+2026-11-22T15:44:16.6658317Z spatial-core: base against head, ok
+2026-11-22T15:44:16.6658702Z sim-core: base against head, ok
+2026-11-22T15:44:16.6659049Z flame graphs in /home/runner/work/_temp/gungraun
+2026-11-22T15:44:16.6729421Z ##[group]Run actions/upload-artifact@v7
+2026-11-22T15:44:16.6729602Z with:
+2026-11-22T15:44:16.6729740Z   name: gungraun-flamegraphs
+2026-11-22T15:44:16.6729915Z   path: /home/runner/work/_temp/gungraun/**/*.svg
+2026-11-22T15:44:16.6730109Z   if-no-files-found: ignore
+2026-11-22T15:44:16.6730261Z   compression-level: 6
+2026-11-22T15:44:16.6730399Z   overwrite: false
+2026-11-22T15:44:16.6730681Z   include-hidden-files: false
+2026-11-22T15:44:16.6730833Z   archive: true
+2026-11-22T15:44:16.6730955Z env:
+2026-11-22T15:44:16.6731099Z   BASE: 50ed760d2d1bdaac269908c68530e1cc81bafea8
+2026-11-22T15:44:16.6731306Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-22T15:44:16.6731503Z   CARGO_HOME: /home/runner/.cargo
+2026-11-22T15:44:16.6731658Z   CARGO_INCREMENTAL: 0
+2026-11-22T15:44:16.6731797Z   CARGO_TERM_COLOR: always
+2026-11-22T15:44:16.6731948Z   CACHE_ON_FAILURE: false
+2026-11-22T15:44:16.6732122Z   DEBUGINFOD_URLS: https://debuginfod.ubuntu.com
+2026-11-22T15:44:16.6732322Z ##[endgroup]
+2026-11-22T15:44:17.8187677Z Artifact gungraun-flamegraphs has been successfully uploaded! Final size is 208276 bytes. Artifact ID is 14761625668

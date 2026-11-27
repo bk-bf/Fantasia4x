@@ -1,0 +1,109 @@
+2026-11-25T01:44:01.8272803Z ##[group]Run node tools/work-pins/gate.mjs --base "$BASE"
+2026-11-25T01:44:01.8273345Z [36;1mnode tools/work-pins/gate.mjs --base "$BASE"[0m
+2026-11-25T01:44:01.8294031Z shell: /usr/bin/bash -e {0}
+2026-11-25T01:44:01.8294291Z env:
+2026-11-25T01:44:01.8294525Z   BASE: ddf5a6b3a3df4a86d61923d0695c0907e71020b3
+2026-11-25T01:44:01.8294909Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-25T01:44:01.8295251Z   CARGO_HOME: /home/runner/.cargo
+2026-11-25T01:44:01.8295518Z   CARGO_INCREMENTAL: 0
+2026-11-25T01:44:01.8295741Z   CARGO_TERM_COLOR: always
+2026-11-25T01:44:01.8295975Z   CACHE_ON_FAILURE: false
+2026-11-25T01:44:01.8296214Z   PERF_CHANGE_ACCEPTED: false
+2026-11-25T01:44:01.8296542Z   WORK_PINS_NOTES: /home/runner/work/_temp/work-pins-notes.jsonl
+2026-11-25T01:44:01.8296890Z ##[endgroup]
+2026-11-25T01:44:32.9971709Z ## Work pins: 1 total(s) grew by more than 5%
+2026-11-25T01:44:32.9972294Z 
+2026-11-25T01:44:32.9972683Z Over the 5% budget, which fails the check:
+2026-11-25T01:44:32.9973439Z 
+2026-11-25T01:44:32.9973972Z | scenario | function | file:line | base | head | change |
+2026-11-25T01:44:32.9974842Z |---|---|---|---:|---:|---:|
+2026-11-25T01:44:32.9975654Z | mobs | `counter mob upserts` |  | 18488 | 24249 | +5761 (+31.2%) |
+2026-11-25T01:44:32.9976144Z 
+2026-11-25T01:44:32.9976153Z 
+2026-11-25T01:44:32.9976555Z <details><summary>Totals that changed</summary>
+2026-11-25T01:44:32.9976897Z 
+2026-11-25T01:44:32.9977218Z | scenario | function | file:line | base | head | change |
+2026-11-25T01:44:32.9978036Z |---|---|---|---:|---:|---:|
+2026-11-25T01:44:32.9978591Z | colony | `all calls` |  | 5127161 | 4195632 | -931529 (-18.2%) |
+2026-11-25T01:44:32.9979294Z | dev-save | `all calls` |  | 37996410 | 37061170 | -935240 (-2.5%) |
+2026-11-25T01:44:32.9979967Z | mobs | `all calls` |  | 19067839 | 19694202 | +626363 (+3.3%) |
+2026-11-25T01:44:32.9980661Z | mobs | `counter mob upserts` |  | 18488 | 24249 | +5761 (+31.2%) |
+2026-11-25T01:44:32.9981034Z 
+2026-11-25T01:44:32.9981159Z </details>
+2026-11-25T01:44:32.9981329Z 
+2026-11-25T01:44:32.9981336Z 
+2026-11-25T01:44:32.9981713Z <details><summary>863 count(s) changed; reported, not gated</summary>
+2026-11-25T01:44:32.9982119Z 
+2026-11-25T01:44:32.9982430Z | scenario | function | file:line | base | head | change |
+2026-11-25T01:44:32.9982932Z |---|---|---|---:|---:|---:|
+2026-11-25T01:44:32.9983456Z | mobs | `message bytes snapshot` |  | 14833358 | 13667265 | -1166093 (-7.9%) |
+2026-11-25T01:44:32.9984270Z | mobs | `stepHostile > (anonymous)` | `src/lib/game/services/entity/entityAI.ts:735` | 220811 | 888755 | +667944 (+302.5%) |
+2026-11-25T01:44:32.9985127Z | mobs | `isHealable` | `src/lib/game/core/defs/wounds.ts:339` | 693841 | 253426 | -440415 (-63.5%) |
+2026-11-25T01:44:50.3749274Z ##[group]Run node tools/work-pins/frame-budget.mjs --out "$RUNNER_TEMP/frame-budget"
+2026-11-25T01:44:50.3749942Z [36;1mnode tools/work-pins/frame-budget.mjs --out "$RUNNER_TEMP/frame-budget"[0m
+2026-11-25T01:44:50.3770041Z shell: /usr/bin/bash -e {0}
+2026-11-25T01:44:50.3770302Z env:
+2026-11-25T01:44:50.3770575Z   BASE: ddf5a6b3a3df4a86d61923d0695c0907e71020b3
+2026-11-25T01:44:50.3770937Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-25T01:44:50.3771267Z   CARGO_HOME: /home/runner/.cargo
+2026-11-25T01:44:50.3771534Z   CARGO_INCREMENTAL: 0
+2026-11-25T01:44:50.3771756Z   CARGO_TERM_COLOR: always
+2026-11-25T01:44:50.3771991Z   CACHE_ON_FAILURE: false
+2026-11-25T01:44:50.3772236Z   PERF_CHANGE_ACCEPTED: false
+2026-11-25T01:44:50.3772487Z ##[endgroup]
+2026-11-25T01:52:56.1074245Z ## Absolute budgets, browser frames on large-wilderness: 3 past the limit
+2026-11-25T01:52:56.1075774Z 
+2026-11-25T01:52:56.1076865Z - large-wilderness, phase run-1x: median main-thread time per frame is 192 ms, over its ceiling of 145 ms
+2026-11-25T01:52:56.1078596Z - large-wilderness, phase run-4x: median main-thread time per frame is 196 ms, over its ceiling of 155 ms
+2026-11-25T01:52:56.1080389Z - large-wilderness, phase zoom-out-and-back: longest frame's main-thread time is 2016 ms, over its ceiling of 1200 ms
+2026-11-25T01:52:56.1081202Z 
+2026-11-25T01:52:56.1082098Z | scenario | phase | measure | runs | median | limit | unit |
+2026-11-25T01:52:56.1082825Z |---|---|---|---|---:|---|---|
+2026-11-25T01:52:56.1083634Z | large-wilderness | idle | median main-thread time per frame | 1.87, 2.06, 2.25 | 2.06 | ceiling 4 | ms |
+2026-11-25T01:52:56.1085295Z | large-wilderness | run-1x | median main-thread time per frame | 191, 192, 192 | 192 | ceiling 145 | ms |
+2026-11-25T01:52:56.1086719Z | large-wilderness | run-4x | median main-thread time per frame | 195, 196, 196 | 196 | ceiling 155 | ms |
+2026-11-25T01:52:56.1089305Z | large-wilderness | zoom-out-and-back | longest frame's main-thread time | 2016, 2783, 1603 | 2016 | ceiling 1200 | ms |
+2026-11-25T01:52:56.1090297Z 
+2026-11-25T01:52:56.1090629Z Limits are in `tools/work-pins/budgets.json`.
+2026-11-25T01:52:56.1112416Z ##[error]large-wilderness, phase run-1x: median main-thread time per frame is 192 ms, over its ceiling of 145 ms
+2026-11-25T01:52:56.1116171Z ##[error]large-wilderness, phase run-4x: median main-thread time per frame is 196 ms, over its ceiling of 155 ms
+2026-11-25T01:52:56.1119817Z ##[error]large-wilderness, phase zoom-out-and-back: longest frame's main-thread time is 2016 ms, over its ceiling of 1200 ms
+2026-11-25T01:52:56.1341783Z ##[error]Process completed with exit code 1.
+2026-11-25T01:52:56.1425535Z ##[group]Run actions/upload-artifact@v7
+2026-11-25T01:52:56.1425859Z with:
+2026-11-25T01:52:56.1426064Z   name: frame-budget
+2026-11-25T01:52:56.1426328Z   path: /home/runner/work/_temp/frame-budget
+2026-11-25T01:52:56.1426633Z   if-no-files-found: ignore
+2026-11-25T01:52:56.1426885Z   compression-level: 6
+2026-11-25T01:52:56.1427114Z   overwrite: false
+2026-11-25T01:52:56.1427648Z   include-hidden-files: false
+2026-11-25T01:52:56.1427908Z   archive: true
+2026-11-25T01:52:56.1428113Z env:
+2026-11-25T01:52:56.1428337Z   BASE: ddf5a6b3a3df4a86d61923d0695c0907e71020b3
+2026-11-25T01:52:56.1428710Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-25T01:52:56.1429036Z   CARGO_HOME: /home/runner/.cargo
+2026-11-25T01:52:56.1429328Z   CARGO_INCREMENTAL: 0
+2026-11-25T01:52:56.1429568Z   CARGO_TERM_COLOR: always
+2026-11-25T01:52:56.1429808Z   CACHE_ON_FAILURE: false
+2026-11-25T01:52:56.1430048Z   PERF_CHANGE_ACCEPTED: false
+2026-11-25T01:52:56.1430295Z ##[endgroup]
+2026-11-25T01:52:56.9641554Z Artifact frame-budget has been successfully uploaded! Final size is 21171 bytes. Artifact ID is 14982619167
+2026-11-25T01:52:56.9810461Z ##[group]Run actions/upload-artifact@v7
+2026-11-25T01:52:56.9810775Z with:
+2026-11-25T01:52:56.9810981Z   name: work-pins-notes
+2026-11-25T01:52:56.9811281Z   path: /home/runner/work/_temp/work-pins-notes.jsonl
+2026-11-25T01:52:56.9811607Z   if-no-files-found: ignore
+2026-11-25T01:52:56.9811864Z   compression-level: 6
+2026-11-25T01:52:56.9812089Z   overwrite: false
+2026-11-25T01:52:56.9812323Z   include-hidden-files: false
+2026-11-25T01:52:56.9812573Z   archive: true
+2026-11-25T01:52:56.9812779Z env:
+2026-11-25T01:52:56.9813005Z   BASE: ddf5a6b3a3df4a86d61923d0695c0907e71020b3
+2026-11-25T01:52:56.9813405Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-25T01:52:56.9813725Z   CARGO_HOME: /home/runner/.cargo
+2026-11-25T01:52:56.9814213Z   CARGO_INCREMENTAL: 0
+2026-11-25T01:52:56.9814462Z   CARGO_TERM_COLOR: always
+2026-11-25T01:52:56.9814701Z   CACHE_ON_FAILURE: false
+2026-11-25T01:52:56.9814948Z   PERF_CHANGE_ACCEPTED: false
+2026-11-25T01:52:56.9815192Z ##[endgroup]
+2026-11-25T01:52:57.8075822Z Artifact work-pins-notes has been successfully uploaded! Final size is 613 bytes. Artifact ID is 14982793880
