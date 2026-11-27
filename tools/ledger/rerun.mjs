@@ -160,7 +160,7 @@ function waitQuiet(deps, host, ctx) {
   const until = deps.now() + QUIET_WAIT_MS;
   for (;;) {
     const r = remote(deps, host, ctx, ['quiet'], '60s');
-    if (r.status !== 0) throw new Error(`${host} stopped answering: ${r.stderr.trim().slice(0, 200)}`);
+    if (r.status !== 0) throw new Error(`the quiet check on ${host} exited ${r.status}: ${(r.stderr || r.stdout).trim().slice(0, 300)}`);
     const kv = parseKv(r.stdout);
     const load = Number(String(kv.load ?? '').split(' ')[0]);
     if (!kv.busy.length && !(load > LOAD_LIMIT)) return snapshot(kv, new Date(deps.now()).toISOString());

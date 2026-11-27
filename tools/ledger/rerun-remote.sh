@@ -16,7 +16,7 @@ quiet() {
   own=$(cgroup_of "$self")
   echo "cores=$(nproc)"
   echo "load=$(cut -d' ' -f1-3 /proc/loadavg)"
-  systemctl --user list-units --plain --no-legend --state=running 'f4x-*' 2>/dev/null | while read -r unit _; do
+  { systemctl --user list-units --plain --no-legend --state=running 'f4x-*' 2>/dev/null || true; } | while read -r unit _; do
     case $unit in f4x-ledger-rerun-* | "f4x-gpu-compositor-$self.scope") continue ;; esac
     [ -n "$own" ] && [ "${own##*/}" = "$unit" ] && continue
     pid=$(systemctl --user show -p MainPID --value "$unit" 2>/dev/null || true)
@@ -24,7 +24,7 @@ quiet() {
     [ -n "$pid" ] && [ "$pid" != 0 ] && cmd=$(ps -o args= -p "$pid" 2>/dev/null | cut -c1-200 || true)
     echo "busy=${pid:-0} $unit $cmd"
   done
-  pgrep -af '^[^ ]*node( [^ ]+)* [^ ]*(tools/gpu/[a-z-]+\.mjs|vitest)|ms-playwright/.*/chrome --' | while read -r pid cmd; do
+  { pgrep -af '^[^ ]*node( [^ ]+)* [^ ]*(tools/gpu/[a-z-]+\.mjs|vitest)|ms-playwright/.*/chrome --' || true; } | while read -r pid cmd; do
     case $cmd in *' --type='*) continue ;; esac
     [ "$(cgroup_of "$pid")" = "$own" ] && continue
     case $(cgroup_of "$pid") in *"f4x-gpu-compositor-$self.scope") continue ;; esac
