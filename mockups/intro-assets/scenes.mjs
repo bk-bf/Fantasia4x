@@ -18,7 +18,7 @@ for (const [hour, weather] of SHOTS) {
   await p.waitForFunction(() => document.getElementById('busy').hidden && HUD.map, null, { timeout: 120000 });
   await p.addStyleTag({ content: HIDE });
   await p.waitForTimeout(600);
-  const name = `hud-${String(hour).replace('.', '_').padStart(2, '0')}h-${weather}.png`;
+  const name = `mockup-hud-village-${String(Math.floor(hour)).padStart(2, '0')}h${hour % 1 ? String(Math.round(hour % 1 * 60)).padStart(2, '0') : ''}-${weather}.png`;
   writeFileSync(OUT + name, await p.screenshot());
   console.log('wrote', name);
   await p.close();
