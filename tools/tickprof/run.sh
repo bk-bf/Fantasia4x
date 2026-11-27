@@ -36,8 +36,8 @@ PROF_BRANCH     the branch to record when no branch points at HEAD
 Every result carries commit, branch, dirty, turn, seed, map (WxH), pawns and mobs at the start of
 the run, and endTurn, endPawns and endMobs.
 
-  tools/tickprof/run.sh desktop origin/test/look-overhaul loop PROF_SCENARIO=colony-750-40p
-  tools/tickprof/run.sh desktop origin/test/look-overhaul tick PROF_SCENARIO=save PROF_SAVE=owner-save.json.gz
+  tools/tickprof/run.sh desktop origin/dev loop PROF_SCENARIO=colony-750-40p
+  tools/tickprof/run.sh desktop origin/dev tick PROF_SCENARIO=save PROF_SAVE=owner-save.json.gz
 EOF
 }
 
