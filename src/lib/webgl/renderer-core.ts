@@ -507,12 +507,13 @@ export class WebGLRendererCore {
       this.resourceTallOverlayGrid ||
       this.snowGrid;
     this.groundRings?.prepare(overlays ? this.rings : null);
+    if (overlays && this.rowDepth) this.prepareShadowCast(viewportTilesW, viewportTilesH);
+    if (this.lightPass && lightFrame) this.lightPass.prepare(lightFrame);
     const vignette = this.vignetteOn && lightFrame ? this.vignette : null;
     if (vignette && lightFrame)
       vignette.prepare({ strength: lightFrame.grade.vignette, tilePx: this.tileWidth });
     const encoder = gpu.createCommandEncoder();
-    if (this.lightPass && lightFrame)
-      this.stats.drawCalls += this.lightPass.drawField(encoder, lightFrame);
+    if (this.lightPass && lightFrame) this.stats.drawCalls += this.lightPass.encode(encoder);
     const pass = encoder.beginRenderPass(this.webglState.canvasPass(gpu));
     pass.setBindGroup(FRAME_GROUP, frame.group);
     const unlit = lightFrame !== null;
@@ -607,7 +608,7 @@ export class WebGLRendererCore {
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 0);
       }
       this.drawTreeGround(pass, gpu, flicker, lightTime, lightFrame, viewportTilesW, viewportTilesH);
-      if (this.rowDepth) this.drawShadowCast(pass, viewportTilesW, viewportTilesH);
+      if (this.rowDepth && this.shadowCast) this.stats.drawCalls += this.shadowCast.encode(pass);
       if (this.groundRings) this.stats.drawCalls += this.groundRings.encode(pass);
       this.setCutaway(viewportTilesW, viewportTilesH);
       for (const layer of SPRITE_LAYERS) {
@@ -779,14 +780,10 @@ export class WebGLRendererCore {
     );
   }
 
-  private drawShadowCast(
-    pass: GpuRenderPass,
-    viewportTilesW: number,
-    viewportTilesH: number
-  ): void {
+  private prepareShadowCast(viewportTilesW: number, viewportTilesH: number): void {
     if (!this.shadowCast || !this.painted) return;
     const artTile = this.painted.tileset.tile;
-    this.stats.drawCalls += this.shadowCast.draw(pass, {
+    this.shadowCast.prepare({
       canvas: [this.viewport.width, this.viewport.height],
       artPerBase: artTile / BASE_TILE_PX,
       artTile,
