@@ -210,6 +210,7 @@ export async function rerun(root, o, deps = defaultDeps(), env = process.env) {
   const ids = [];
   try {
     for (const t of targets.values()) {
+      waitQuiet(deps, host, ctx);
       deps.log(`preparing ${t.ref} at ${t.sha.slice(0, 12)} on ${host}`);
       const r = unit(deps, host, ctx, `prepare-${t.sha.slice(0, 12)}`, ['prepare', repo, wtOf(t), t.sha, harness.sha]);
       if (r.status !== 0) throw new Error(`preparing ${t.ref} failed on ${host}:\n${r.stdout.slice(-3000)}`);
