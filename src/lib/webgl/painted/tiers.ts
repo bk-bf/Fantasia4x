@@ -11,6 +11,7 @@ import { TIER_FIELDS, TIER_TEXEL, TierTiles, type TileAt } from './tierTiles.js'
 import {
   ALPHA_BLEND,
   type GpuDevice,
+  type GpuRenderPass,
   type GpuRenderPipeline,
   type GpuUniform
 } from '../../gpu/device.js';
@@ -180,13 +181,13 @@ export class Tiers {
     gpu.setTextureSlot(0);
   }
 
-  draw(f: TierFrame): number {
+  draw(pass: GpuRenderPass, f: TierFrame): number {
     const top = this.painted.top;
     if (!top || this.tiles.w === 0) return 0;
     const gpu = this.gpu;
     const tile = this.painted.tileset.tile;
     const u = this.at;
-    gpu.setPipeline(this.program);
+    pass.setPipeline(this.program);
     gpu.setMat4fv(u.u_projection, f.projection);
     gpu.setVec2fv(u.u_viewOffset, f.viewOffset);
     gpu.setVec2fv(u.u_zoom, f.zoom);
@@ -218,7 +219,7 @@ export class Tiers {
     gpu.setTextureSlot(TIER_FIELD_UNIT);
     gpu.bindTexture(this.fieldTex.texture);
     this.bindShared();
-    gpu.draw(6);
+    pass.draw(6);
     return 1;
   }
 

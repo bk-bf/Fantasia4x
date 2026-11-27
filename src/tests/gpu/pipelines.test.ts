@@ -54,6 +54,12 @@ const pipeline = (over: Partial<RenderPipelineDescriptor> = {}): RenderPipelineD
   ...over
 });
 
+function openPass(gpu: Webgl2Device) {
+  return gpu.createCommandEncoder().beginRenderPass({
+    colorAttachments: [{ view: gpu.canvas.getCurrentTexture(), loadOp: 'load', storeOp: 'store' }]
+  });
+}
+
 function made(gpu: Webgl2Device, desc: RenderPipelineDescriptor) {
   const result = gpu.createRenderPipeline(desc);
   if (!result.ok) throw new Error(result.error);
@@ -81,11 +87,12 @@ describe('webgl2 pipelines', () => {
         depthStencil: { format: 'depth24plus', depthCompare: 'less-equal', depthWriteEnabled: true }
       })
     );
+    const pass = openPass(gpu);
     calls.length = 0;
-    gpu.setPipeline(opaque);
-    gpu.setPipeline(blended);
-    gpu.setPipeline(blended);
-    gpu.setPipeline(opaque);
+    pass.setPipeline(opaque);
+    pass.setPipeline(blended);
+    pass.setPipeline(blended);
+    pass.setPipeline(opaque);
     expect(calls.filter((c) => c[0] !== 'useProgram')).toEqual([
       ['disable', GL.BLEND],
       ['disable', GL.DEPTH_TEST],
@@ -111,14 +118,15 @@ describe('webgl2 pipelines', () => {
     const p = made(gpu, pipeline());
     const a = gpu.createBuffer({ size: 64, usage: BufferUsage.VERTEX });
     const b = gpu.createBuffer({ size: 64, usage: BufferUsage.VERTEX });
+    const pass = openPass(gpu);
     calls.length = 0;
-    gpu.setPipeline(p);
+    pass.setPipeline(p);
     for (const buffer of [a, b, a]) {
-      gpu.setVertexBuffer(0, buffer);
-      gpu.draw(6);
+      pass.setVertexBuffer(0, buffer);
+      pass.draw(6);
     }
-    gpu.setVertexBuffer(0, a, 16);
-    gpu.draw(6);
+    pass.setVertexBuffer(0, a, 16);
+    pass.draw(6);
     expect(calls.filter((c) => c[0] === 'createVertexArray')).toHaveLength(3);
     expect(calls.filter((c) => c[0] === 'vertexAttribPointer').map((c) => c[6])).toEqual([
       0, 0, 16
@@ -136,9 +144,10 @@ describe('webgl2 pipelines', () => {
       gpu,
       pipeline({ vertex: { buffers: [] }, primitive: { topology: 'triangle-strip' } })
     );
-    gpu.setPipeline(p);
-    gpu.draw(4, 9);
+    const pass = openPass(gpu);
+    pass.setPipeline(p);
+    pass.draw(4, 9);
     expect(calls.at(-1)).toEqual(['drawArraysInstanced', GL.TRIANGLE_STRIP, 0, 4, 9]);
-    expect(() => gpu.draw(4, 1, 0, 2)).toThrow(/base instance/);
+    expect(() => pass.draw(4, 1, 0, 2)).toThrow(/base instance/);
   });
 });

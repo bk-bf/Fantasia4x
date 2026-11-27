@@ -2,7 +2,7 @@ import vertexSource from '../shaders/paintedLight.vert.glsl?raw';
 import fragmentSource from '../shaders/paintedVignette.frag.glsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import { clamp, dith } from '../../pixelArt/noise.js';
-import type { GpuDevice, GpuRenderPipeline, GpuUniform } from '../../gpu/device.js';
+import type { GpuDevice, GpuRenderPass, GpuRenderPipeline, GpuUniform } from '../../gpu/device.js';
 import { canvasPipeline } from '../canvasPipeline.js';
 
 const PROGRAM = 'paintedVignette';
@@ -79,14 +79,14 @@ export class PaintedVignette {
     this.uStrength = gpu.uniform(program, 'u_strength');
   }
 
-  draw(f: VignetteFrame): number {
+  draw(pass: GpuRenderPass, f: VignetteFrame): number {
     const strength = f.strength * vignetteAtZoom(f.tilePx);
     if (strength <= 0) return 0;
     const gpu = this.gpu;
-    gpu.setPipeline(this.program);
+    pass.setPipeline(this.program);
     gpu.setVec2fv(this.uCanvas, f.canvas);
     gpu.setF32(this.uStrength, strength);
-    gpu.draw(3);
+    pass.draw(3);
     return 1;
   }
 

@@ -38,6 +38,12 @@ export class Webgl2State {
     }
   }
 
+  allowDepthWrite(): void {
+    if (this.depthWrite === true) return;
+    this.gl.depthMask(true);
+    this.depthWrite = true;
+  }
+
   private toggle(cap: number, on: boolean, was: boolean | null): void {
     if (on === was) return;
     if (on) this.gl.enable(cap);

@@ -1,13 +1,15 @@
 import type {
   BufferDescriptor,
-  ClearDescriptor,
   StencilState,
   GpuBuffer,
+  GpuCanvas,
+  GpuCommandBuffer,
+  GpuCommandEncoder,
   GpuDevice,
   GpuLimits,
   GpuQueue,
+  GpuRenderPass,
   GpuRenderPipeline,
-  GpuRenderTarget,
   GpuSampler,
   GpuShaderModule,
   GpuTexture,
@@ -21,6 +23,7 @@ import { addressMode, filterMode } from './formats.js';
 import { Webgl2Pipelines, type Webgl2Pipeline, type Webgl2Uniform } from './pipeline.js';
 import { Webgl2State } from './state.js';
 import { Webgl2VertexArrays } from './vertexArrays.js';
+import { CANVAS_COLOR, CANVAS_DEPTH, Webgl2Framebuffers } from './passes.js';
 import { Webgl2Buffers } from './buffers.js';
 import { Webgl2Textures } from './textures.js';
 
@@ -51,14 +54,14 @@ const STENCIL_MASK = 0xff;
 
 export class Webgl2Device implements GpuDevice {
   readonly backend = 'webgl2' as const;
-  readonly canvasFormat = 'rgba8unorm' as const;
-  readonly canvasDepthFormat: 'depth24plus' | null;
+  readonly canvas: GpuCanvas;
 
   private readonly textures: Webgl2Textures;
   private readonly buffers: Webgl2Buffers;
   private readonly pipelines: Webgl2Pipelines;
   private readonly state: Webgl2State;
   private readonly vertexArrays: Webgl2VertexArrays;
+  private readonly framebuffers: Webgl2Framebuffers;
   private pipeline: Webgl2Pipeline | null = null;
   readonly queue: GpuQueue;
 
@@ -67,16 +70,39 @@ export class Webgl2Device implements GpuDevice {
     const buffers = new Webgl2Buffers(gl);
     this.textures = textures;
     this.buffers = buffers;
-    this.canvasDepthFormat = gl.getContextAttributes()?.depth === true ? 'depth24plus' : null;
+    const attributes = gl.getContextAttributes();
+    const depthFormat =
+      attributes?.depth !== true
+        ? null
+        : attributes.stencil === true
+          ? 'depth24plus-stencil8'
+          : 'depth24plus';
+    this.canvas = {
+      format: 'rgba8unorm',
+      depthFormat,
+      resize: (width, height) => {
+        gl.canvas.width = width;
+        gl.canvas.height = height;
+      },
+      getCurrentTexture: () => CANVAS_COLOR,
+      getDepthTexture: () => (depthFormat ? CANVAS_DEPTH : null)
+    };
     this.pipelines = new Webgl2Pipelines(gl);
-    this.state = new Webgl2State(gl);
+    const state = new Webgl2State(gl);
+    this.state = state;
     this.vertexArrays = new Webgl2VertexArrays(gl);
+    this.framebuffers = new Webgl2Framebuffers(
+      gl,
+      (texture) => textures.size(texture),
+      () => state.allowDepthWrite()
+    );
     this.queue = {
       writeBuffer: (buffer, offset, data, dataOffset, size) =>
         buffers.write(buffer, offset, data, dataOffset, size),
       writeTexture: (dst, data, layout, size) =>
         textures.write(dst.texture, dst.origin ?? { x: 0, y: 0 }, data, layout.bytesPerRow, size),
-      copyExternalImageToTexture: (src, dst) => textures.copyImage(src.source, dst.texture)
+      copyExternalImageToTexture: (src, dst) => textures.copyImage(src.source, dst.texture),
+      submit: () => {}
     };
   }
 
@@ -124,7 +150,7 @@ export class Webgl2Device implements GpuDevice {
     return uniform as unknown as GpuUniform;
   }
 
-  setPipeline(pipeline: GpuRenderPipeline): void {
+  private setPipeline(pipeline: GpuRenderPipeline): void {
     this.pipeline = this.pipelines.get(pipeline);
     this.state.apply(this.pipeline);
   }
@@ -183,16 +209,14 @@ export class Webgl2Device implements GpuDevice {
     this.buffers.destroy(buffer);
   }
 
-  setVertexBuffer(slot: number, buffer: GpuBuffer, offset = 0): void {
-    this.vertexArrays.set(slot, raw<WebGLBuffer>(buffer), offset);
-  }
-
   createTexture(desc: TextureDescriptor): GpuTexture {
     return this.textures.create(desc);
   }
 
   destroyTexture(texture: GpuTexture | null): void {
-    if (texture) this.textures.destroy(texture);
+    if (!texture) return;
+    this.framebuffers.forget(texture);
+    this.textures.destroy(texture);
   }
 
   setTextureSlot(slot: number): void {
@@ -218,50 +242,43 @@ export class Webgl2Device implements GpuDevice {
     this.gl.bindSampler(slot, raw<WebGLSampler | null>(sampler));
   }
 
-  createRenderTarget(): GpuRenderTarget {
-    return this.gl.createFramebuffer() as unknown as GpuRenderTarget;
-  }
-
-  destroyRenderTarget(target: GpuRenderTarget | null): void {
-    this.gl.deleteFramebuffer(raw<WebGLFramebuffer>(target));
-  }
-
-  beginRenderPass(target: GpuRenderTarget): void {
-    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, raw<WebGLFramebuffer>(target));
-  }
-
-  endRenderPass(): void {
-    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
-  }
-
-  attachColorTexture(target: GpuRenderTarget, texture: GpuTexture): void {
-    const gl = this.gl;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, raw<WebGLFramebuffer>(target));
-    gl.framebufferTexture2D(
-      gl.FRAMEBUFFER,
-      gl.COLOR_ATTACHMENT0,
-      gl.TEXTURE_2D,
-      raw<WebGLTexture>(texture),
-      0
-    );
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  }
-
-  clear(desc: ClearDescriptor): void {
-    const gl = this.gl;
-    const mask =
-      (desc.color ? gl.COLOR_BUFFER_BIT : 0) |
-      (desc.depth ? gl.DEPTH_BUFFER_BIT : 0) |
-      (desc.stencil ? gl.STENCIL_BUFFER_BIT : 0);
-    if (mask) gl.clear(mask);
-  }
-
-  setClearColor(r: number, g: number, b: number, a: number): void {
-    this.gl.clearColor(r, g, b, a);
-  }
-
-  setViewport(x: number, y: number, width: number, height: number): void {
-    this.gl.viewport(x, y, width, height);
+  createCommandEncoder(): GpuCommandEncoder {
+    let open = false;
+    return {
+      beginRenderPass: (desc): GpuRenderPass => {
+        if (open) throw new Error('beginRenderPass: the encoder already has an open pass');
+        open = true;
+        this.framebuffers.begin(desc);
+        let ended = false;
+        const live = () => {
+          if (ended) throw new Error('render pass used after end');
+        };
+        return {
+          setPipeline: (pipeline) => {
+            live();
+            this.setPipeline(pipeline);
+          },
+          setVertexBuffer: (slot, buffer, offset = 0) => {
+            live();
+            this.vertexArrays.set(slot, raw<WebGLBuffer>(buffer), offset);
+          },
+          draw: (vertexCount, instanceCount, firstVertex, firstInstance) => {
+            live();
+            this.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+          },
+          end: () => {
+            live();
+            ended = true;
+            open = false;
+            this.framebuffers.end(desc);
+          }
+        };
+      },
+      finish: () => {
+        if (open) throw new Error('finish: a render pass is still open');
+        return {} as GpuCommandBuffer;
+      }
+    };
   }
 
   setStencil(state: StencilState | null): void {
@@ -279,7 +296,12 @@ export class Webgl2Device implements GpuDevice {
     gl.stencilOp(gl.KEEP, gl.KEEP, state.write ? gl.REPLACE : gl.KEEP);
   }
 
-  draw(vertexCount: number, instanceCount?: number, firstVertex = 0, firstInstance = 0): void {
+  private draw(
+    vertexCount: number,
+    instanceCount?: number,
+    firstVertex = 0,
+    firstInstance = 0
+  ): void {
     const p = this.pipeline;
     if (!p) throw new Error('draw: no pipeline set');
     if (firstInstance !== 0) throw new Error('draw: WebGL2 has no base instance');

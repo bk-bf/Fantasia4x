@@ -10,6 +10,7 @@ import type { TileData } from '$lib/webgl/tile-types';
 import type { FontAtlas } from '$lib/webgl/types';
 import { ShaderManager } from '$lib/webgl/shaders';
 import { tileShaders } from '../tileShaders';
+import { WebGLStateManager } from '$lib/webgl/webgl-state';
 import {
   buildTileset,
   parseManifest,
@@ -209,7 +210,7 @@ function windyCore(
     gridVersion: 1,
     snowVersion: 0,
     stats: { drawCalls: 0, vertexCount: 0, resourceRebuilds: 0, terrainRebuilds: 0 },
-    webglState: { getDevice: () => gpu },
+    webglState: { getDevice: () => gpu, canvasPass: WebGLStateManager.prototype.canvasPass },
     shaderManager: Object.assign(shaders, {
       setUniform: (_p: string, name: string, value: unknown) => uniforms.set(name, value)
     }),

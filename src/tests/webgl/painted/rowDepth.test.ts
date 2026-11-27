@@ -8,10 +8,11 @@ import { ROW_DEPTH_RANGE, WebGLRendererCore } from '$lib/webgl/renderer-core';
 import type { TileData } from '$lib/webgl/tile-types';
 import type { FontAtlas } from '$lib/webgl/types';
 import { TILE_ATTRIBUTES, TILE_PIPELINE, tilePipelines } from '$lib/webgl/tilePipelines';
-import { tileShaders } from '../tileShaders';
+import { passOf, tileShaders } from '../tileShaders';
 import { buildTileset, parseManifest, spriteAt } from '$lib/webgl/painted/manifest';
 import { SHADOW_DEPTH } from '$lib/webgl/painted/shadowCast';
 import { WindClock } from '$lib/webgl/painted/wind';
+import { WebGLStateManager } from '$lib/webgl/webgl-state';
 
 const GLYPH_FLOATS = 24;
 const ROW_FLOATS = 32;
@@ -128,7 +129,7 @@ describe('the row each quad carries for the depth test', () => {
     const prop = { ...tiles[2], animationOffset: { x: 3, y: -8 } };
     grid.setTile(4, 6, { ...prop, overlays: [{ ...prop }, { ...prop }] });
     grid.setTile(8, 6, tiles[2]);
-    r.renderGrid(grid, { ...options, renderAllTiles: true });
+    r.renderGrid(passOf(r), grid, { ...options, renderAllTiles: true });
     const data = uploads[uploads.length - 1];
     const rows = Array.from({ length: data.length / (6 * ROW_FLOATS) }, (_, quad) => [
       ...data.subarray(quad * 6 * ROW_FLOATS, quad * 6 * ROW_FLOATS + 2),
@@ -143,7 +144,7 @@ describe('the row each quad carries for the depth test', () => {
     const { r } = gridRenderer(true, uploads);
     const grid = new GameGrid();
     for (const y of [31, 32]) grid.setTile(5, y, { ...tiles[0], position: { x: 5, y } });
-    r.renderGrid(grid, { ...options, cacheVersion: 1, chunkLayer: 'resource' });
+    r.renderGrid(passOf(r), grid, { ...options, cacheVersion: 1, chunkLayer: 'resource' });
     const rows = uploads.map((data) => data[GLYPH_FLOATS]).sort((a, b) => a - b);
     expect(rows).toEqual([31, 32]);
   });
@@ -153,7 +154,7 @@ describe('the row each quad carries for the depth test', () => {
       const { r, calls } = gridRenderer(rowDepth);
       const grid = new GameGrid();
       grid.setTile(1, 2, tiles[0]);
-      r.renderGrid(grid, { ...options, renderAllTiles: true });
+      r.renderGrid(passOf(r), grid, { ...options, renderAllTiles: true });
       return calls.filter((c) => c[0] === 'vertexAttribPointer');
     };
     const on = pointers(true);
@@ -220,7 +221,7 @@ describe('the row each quad carries for the depth test', () => {
       painted: { ...pine, vein: { x: 7, y: 9, near: 5 } }
     });
     grid.setTile(2, 1, { ...tiles[0], position: { x: 2, y: 1 }, painted: pine });
-    r.renderGrid(grid, options);
+    r.renderGrid(passOf(r), grid, options);
     const data = uploads[uploads.length - 1];
     const veins = Array.from({ length: data.length / ROW_FLOATS }, (_, v) =>
       Array.from(
@@ -271,14 +272,17 @@ function layeredCore(rowDepth: boolean) {
     gridVersion: 0,
     snowVersion: 0,
     stats: { drawCalls: 0, vertexCount: 0, resourceRebuilds: 0 },
-    webglState: { getDevice: () => new Webgl2Device(gl) },
+    webglState: {
+      getDevice: () => new Webgl2Device(gl),
+      canvasPass: WebGLStateManager.prototype.canvasPass
+    },
     shaderManager: {
-      useProgram: () => true,
+      pipeline: () => ({}),
       setUniform: (_p: string, name: string, value: unknown) => uniforms.set(name, value)
     },
     gridRenderer: {
       chunksRebuiltLastRender: 0,
-      renderGrid: (grid: GameGrid, opts: GridRenderOptions) => {
+      renderGrid: (_pass: unknown, grid: GameGrid, opts: GridRenderOptions) => {
         const layer = names.get(grid)!;
         draws.push({
           layer: uniforms.get('u_bgOnly') === 1 ? `${layer} wash` : layer,
@@ -371,7 +375,7 @@ function passesOf(chunked: boolean, rowPasses: boolean): Pass[] {
   const r = new GridRenderer(gpu, shaders, atlas, false, true);
   const grid = new GameGrid();
   grid.setTile(4, 6, tiles[2]);
-  r.renderGrid(grid, {
+  r.renderGrid(passOf(r), grid, {
     ...options,
     rowPasses,
     pipeline: 'overlay',

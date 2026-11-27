@@ -6,7 +6,8 @@ import { samplersOf } from './samplers.js';
 import { ALPHA_CUT, GridRenderer } from './grid-renderer.js';
 import { WebGLStateManager } from './webgl-state.js';
 import type { GameGrid } from './game-grid.js';
-import type { GpuDevice, GpuTexture } from '../gpu/device.js';
+import type { GpuDevice, GpuRenderPass, GpuTexture } from '../gpu/device.js';
+import { TILE_PIPELINE } from './tilePipelines.js';
 import type { FontAtlas } from './types.js';
 import { BASE_TILE_PX } from './tile-types.js';
 import { WORK_PINS } from '../workPins/flag.js';
@@ -476,14 +477,14 @@ export class WebGLRendererCore {
     this.stats.vertexCount = 0;
     this.stats.resourceRebuilds = 0;
     this.gridRenderer?.beginFrame();
-    this.webglState.clear(this.rowDepth);
   }
 
-  private render(): void {
+  private render(): boolean {
     const gpu = this.webglState.getDevice();
     if (!gpu || !this.shaderManager || !this.gridRenderer || !this.fontTexture || !this.gameGrid) {
-      return;
+      return false;
     }
+    if (!this.shaderManager.pipeline(TILE_PIPELINE.terrain)) return false;
 
     const viewportTilesW = Math.ceil(this.viewport.width / this.tileWidth);
     const viewportTilesH = Math.ceil(this.viewport.height / this.tileHeight);
@@ -491,9 +492,10 @@ export class WebGLRendererCore {
       this.lightPass && this.painted
         ? this.lightFrame(this.painted.tileset.tile, viewportTilesW, viewportTilesH)
         : null;
-    if (this.lightPass && lightFrame) this.stats.drawCalls += this.lightPass.drawField(lightFrame);
-
-    if (!this.shaderManager.useProgram('tileRenderer')) return;
+    const encoder = gpu.createCommandEncoder();
+    if (this.lightPass && lightFrame)
+      this.stats.drawCalls += this.lightPass.drawField(encoder, lightFrame);
+    const pass = encoder.beginRenderPass(this.webglState.canvasPass(gpu));
     this.shaderManager.setUniform('tileRenderer', 'u_projection', this.projectionMatrix);
 
     this.shaderManager.setUniform('tileRenderer', 'u_viewOffset', [
@@ -561,13 +563,13 @@ export class WebGLRendererCore {
     this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
     const tTerrain = performance.now();
     if (this.groundBlend)
-      this.drawGroundBlend(this.groundBlend, flicker, lightTime, [
+      this.drawGroundBlend(pass, this.groundBlend, flicker, lightTime, [
         lightFrame?.grade.saturation ?? 1,
         lightFrame?.grade.brightness ?? 1
       ]);
     this.tiers?.bindShared();
     const gridStats = passOn('terrain')
-      ? this.gridRenderer.renderGrid(this.gameGrid, {
+      ? this.gridRenderer.renderGrid(pass, this.gameGrid, {
           tileWidth: BASE_TILE_PX,
           tileHeight: BASE_TILE_PX,
           viewportX: this.viewTileX,
@@ -599,17 +601,18 @@ export class WebGLRendererCore {
       const tOverlay = performance.now();
       if (this.snowGrid && passOn('snow')) {
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 1);
-        this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime);
+        this.drawSnowGrid(pass, viewportTilesW, viewportTilesH, lightTime);
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 0);
       }
-      this.drawTreeGround(gpu, flicker, lightTime, lightFrame, viewportTilesW, viewportTilesH);
-      if (this.rowDepth) this.drawShadowCast(viewportTilesW, viewportTilesH);
-      this.drawGroundRings();
+      this.drawTreeGround(pass, gpu, flicker, lightTime, lightFrame, viewportTilesW, viewportTilesH);
+      if (this.rowDepth) this.drawShadowCast(pass, viewportTilesW, viewportTilesH);
+      this.drawGroundRings(pass);
       this.setCutaway(viewportTilesW, viewportTilesH);
       for (const layer of SPRITE_LAYERS) {
         if (!passOn(LAYER_PASS[layer])) continue;
         const chunk = CHUNKED[layer];
         this.renderGlyphOverlay(
+          pass,
           this.spriteGrid(layer),
           viewportTilesW,
           viewportTilesH,
@@ -618,25 +621,37 @@ export class WebGLRendererCore {
           chunk
         );
         if (layer === 'resource' && this.snowGrid && passOn('snow'))
-          this.drawSnowPieces(gpu, viewportTilesW, viewportTilesH, lightTime);
+          this.drawSnowPieces(pass, gpu, viewportTilesW, viewportTilesH, lightTime);
         if (layer === 'resource' && ROCK_TIERS && this.rowDepth)
-          this.drawTiers(gpu, viewportTilesW, viewportTilesH, lightFrame);
+          this.drawTiers(pass, gpu, viewportTilesW, viewportTilesH, lightFrame);
       }
-      this.drawLeaves(windSecs, viewportTilesW, viewportTilesH, lightFrame);
+      this.drawLeaves(pass, windSecs, viewportTilesW, viewportTilesH, lightFrame);
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
     } else {
       this.stats.overlayMs = 0;
     }
     if (this.vignette && lightFrame && this.vignetteOn)
-      this.stats.drawCalls += this.vignette.draw({
+      this.stats.drawCalls += this.vignette.draw(pass, {
         canvas: [this.viewport.width, this.viewport.height],
         strength: lightFrame.grade.vignette,
         tilePx: this.tileWidth
       });
+    pass.end();
+    gpu.queue.submit([encoder.finish()]);
+    return true;
+  }
+
+  private clearCanvas(): void {
+    const gpu = this.webglState.getDevice();
+    if (!gpu) return;
+    const encoder = gpu.createCommandEncoder();
+    encoder.beginRenderPass(this.webglState.canvasPass(gpu)).end();
+    gpu.queue.submit([encoder.finish()]);
   }
 
   private drawTiers(
+    pass: GpuRenderPass,
     gpu: GpuDevice,
     viewportTilesW: number,
     viewportTilesH: number,
@@ -644,7 +659,7 @@ export class WebGLRendererCore {
   ): void {
     if (!this.tiers || !this.painted || !this.shaderManager || !this.fontTexture) return;
     const art = this.painted.tileset.tile;
-    this.stats.drawCalls += this.tiers.draw({
+    this.stats.drawCalls += this.tiers.draw(pass, {
       view: {
         x0: this.viewTileX * art,
         y0: this.viewTileY * art,
@@ -731,6 +746,7 @@ export class WebGLRendererCore {
   };
 
   private drawLeaves(
+    pass: GpuRenderPass,
     secs: number,
     viewportTilesW: number,
     viewportTilesH: number,
@@ -739,6 +755,7 @@ export class WebGLRendererCore {
     if (!this.leaves || !this.painted || !this.shaderManager) return;
     const artTile = this.painted.tileset.tile;
     this.stats.drawCalls += this.leaves.draw(
+      pass,
       secs,
       this.wind,
       {
@@ -773,19 +790,23 @@ export class WebGLRendererCore {
     );
   }
 
-  private drawGroundRings(): void {
+  private drawGroundRings(pass: GpuRenderPass): void {
     if (!this.groundRings || !this.rings || !this.shaderManager) return;
     const { list, ink } = this.rings;
-    this.stats.drawCalls += this.groundRings.draw(list, ink, [
+    this.stats.drawCalls += this.groundRings.draw(pass, list, ink, [
       this.viewport.width,
       this.viewport.height
     ]);
   }
 
-  private drawShadowCast(viewportTilesW: number, viewportTilesH: number): void {
+  private drawShadowCast(
+    pass: GpuRenderPass,
+    viewportTilesW: number,
+    viewportTilesH: number
+  ): void {
     if (!this.shadowCast || !this.painted) return;
     const artTile = this.painted.tileset.tile;
-    this.stats.drawCalls += this.shadowCast.draw({
+    this.stats.drawCalls += this.shadowCast.draw(pass, {
       canvas: [this.viewport.width, this.viewport.height],
       viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
       zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
@@ -797,6 +818,7 @@ export class WebGLRendererCore {
   }
 
   private drawTreeGround(
+    pass: GpuRenderPass,
     gpu: GpuDevice,
     flicker: number,
     lightTime: number,
@@ -811,16 +833,15 @@ export class WebGLRendererCore {
       lightFrame?.grade.brightness ?? 1
     ];
     gpu.setStencil({ compare: 'always', reference: TREE_GROUND_STENCIL, write: true });
-    if (this.drawGroundBlend(blend, flicker, lightTime, tone, true)) {
+    if (this.drawGroundBlend(pass, blend, flicker, lightTime, tone, true)) {
       this.tiers?.bindShared();
-      this.shaderManager.useProgram('tileRenderer');
       gpu.setTextureSlot(0);
       gpu.bindTexture(this.fontTexture);
     }
     const view = { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH };
     const touched = blend.trees.dressAround(view, DRESS_BUDGET_MS);
     if (touched.length > 0) this.gridRenderer.markDecorChunksDirty(touched);
-    const s = this.gridRenderer.renderGrid(blend.trees.decor, {
+    const s = this.gridRenderer.renderGrid(pass, blend.trees.decor, {
       tileWidth: BASE_TILE_PX,
       tileHeight: BASE_TILE_PX,
       viewportX: this.viewTileX,
@@ -841,6 +862,7 @@ export class WebGLRendererCore {
   }
 
   private drawGroundBlend(
+    pass: GpuRenderPass,
     blend: GroundBlend,
     flicker: number,
     lightTime: number,
@@ -869,7 +891,7 @@ export class WebGLRendererCore {
       lightVersion: this.lightVersion,
       litBounds: this.lightBounds
     };
-    const drawn = winterTrees ? blend.drawWinterTrees(frame) : blend.draw(frame);
+    const drawn = winterTrees ? blend.drawWinterTrees(pass, frame) : blend.draw(pass, frame);
     if (!drawn) return false;
     this.stats.drawCalls++;
     this.stats.vertexCount += 6;
@@ -940,6 +962,7 @@ export class WebGLRendererCore {
   }
 
   private drawSnowPieces(
+    pass: GpuRenderPass,
     gpu: GpuDevice,
     viewportTilesW: number,
     viewportTilesH: number,
@@ -948,18 +971,19 @@ export class WebGLRendererCore {
     const kept = !!this.groundBlend?.trees;
     if (kept)
       gpu.setStencil({ compare: 'not-equal', reference: TREE_GROUND_STENCIL, write: false });
-    this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
+    this.drawSnowGrid(pass, viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
     if (kept) gpu.setStencil(null);
   }
 
   private drawSnowGrid(
+    pass: GpuRenderPass,
     viewportTilesW: number,
     viewportTilesH: number,
     lightTime: number,
     rowPasses = false
   ): void {
     if (!this.snowGrid || !this.gridRenderer) return;
-    const s = this.gridRenderer.renderGrid(this.snowGrid, {
+    const s = this.gridRenderer.renderGrid(pass, this.snowGrid, {
       tileWidth: BASE_TILE_PX,
       tileHeight: BASE_TILE_PX,
       viewportX: this.viewTileX,
@@ -981,6 +1005,7 @@ export class WebGLRendererCore {
   }
 
   private renderGlyphOverlay(
+    pass: GpuRenderPass,
     grid: GameGrid | null,
     viewportTilesW: number,
     viewportTilesH: number,
@@ -989,7 +1014,7 @@ export class WebGLRendererCore {
     chunkLayer?: 'resource' | 'resourceTall'
   ): void {
     if (!grid || !this.gridRenderer) return;
-    const stats = this.gridRenderer.renderGrid(grid, {
+    const stats = this.gridRenderer.renderGrid(pass, grid, {
       tileWidth: BASE_TILE_PX,
       tileHeight: BASE_TILE_PX,
       viewportX: this.viewTileX,
@@ -1012,7 +1037,7 @@ export class WebGLRendererCore {
   }
 
   endFrame(): void {
-    if (passOn('gl')) this.render();
+    if (!passOn('gl') || !this.render()) this.clearCanvas();
     this.stats.frameTime = this.timer.end();
     this.stats.fps = this.timer.updateFPS();
     if (WORK_PINS) addFrameTotals(this.stats);

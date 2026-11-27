@@ -11,9 +11,9 @@ import {
 } from './lightGrade.js';
 import {
   TextureUsage,
+  type GpuCommandEncoder,
   type GpuDevice,
   type GpuRenderPipeline,
-  type GpuRenderTarget,
   type GpuUniform
 } from '../../gpu/device.js';
 import { SizedTexture } from '../sizedTexture.js';
@@ -52,7 +52,6 @@ export class PaintedLightPass {
   private readonly at: Record<string, GpuUniform | null>;
   private readonly packed = new Float32Array(MAX_LIGHTS * 8);
   private field: SizedTexture;
-  private readonly target: GpuRenderTarget;
   private fieldSize: [number, number] = [0, 0];
 
   static create(gpu: GpuDevice, shaders: ShaderManager): PaintedLightPass | null {
@@ -74,7 +73,6 @@ export class PaintedLightPass {
     this.gpu = gpu;
     this.program = program;
     this.field = new SizedTexture(gpu, 'rgba8unorm', 1, 1, FIELD_USAGE);
-    this.target = gpu.createRenderTarget()!;
     const names = [
       'u_canvas',
       'u_viewOffset',
@@ -91,15 +89,12 @@ export class PaintedLightPass {
 
   private sizeField(w: number, h: number): void {
     if (this.fieldSize[0] === w && this.fieldSize[1] === h) return;
-    const gpu = this.gpu;
     this.field.resize(w, h);
-    gpu.attachColorTexture(this.target, this.field.texture);
     this.fieldSize = [w, h];
   }
 
   private use(f: LightPassFrame): void {
     const gpu = this.gpu;
-    gpu.setPipeline(this.program);
     gpu.setVec2fv(this.at.u_canvas, f.canvas);
     gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
     gpu.setVec2fv(this.at.u_zoom, f.zoom);
@@ -109,7 +104,7 @@ export class PaintedLightPass {
     gpu.setVec3fv(this.at.u_timeStrength, TIME_STRENGTH);
   }
 
-  drawField(f: LightPassFrame): number {
+  drawField(encoder: GpuCommandEncoder, f: LightPassFrame): number {
     const gpu = this.gpu;
     const [w, h] = [Math.max(1, Math.round(f.canvas[0])), Math.max(1, Math.round(f.canvas[1]))];
     this.sizeField(w, h);
@@ -117,9 +112,13 @@ export class PaintedLightPass {
     this.use(f);
     gpu.setI32(this.at.u_lightCount, count);
     if (count > 0) gpu.setVec4fv(this.at.u_lights, this.packed, 0, count * 8);
-    gpu.beginRenderPass(this.target);
-    gpu.draw(3);
-    gpu.endRenderPass();
+    const pass = encoder.beginRenderPass({
+      label: 'light field',
+      colorAttachments: [{ view: this.field.texture, loadOp: 'load', storeOp: 'store' }]
+    });
+    pass.setPipeline(this.program);
+    pass.draw(3);
+    pass.end();
     gpu.setTextureSlot(LIGHT_FIELD_UNIT);
     gpu.bindTexture(this.field.texture);
     gpu.setTextureSlot(0);
@@ -127,7 +126,6 @@ export class PaintedLightPass {
   }
 
   dispose(): void {
-    this.gpu.destroyRenderTarget(this.target);
     this.field.destroy();
     this.gpu.destroyRenderPipeline(this.program);
   }

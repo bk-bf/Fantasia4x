@@ -1,4 +1,4 @@
-import type { GpuTexture, TextureDescriptor, TextureFormat } from '../device.js';
+import type { Extent, GpuTexture, TextureDescriptor, TextureFormat } from '../device.js';
 import { bytesPerTexel } from '../device.js';
 import { textureFormat } from './formats.js';
 
@@ -90,6 +90,12 @@ export class Webgl2Textures {
       this.setRowLength(0);
       gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, f.format, f.type, source);
     });
+  }
+
+  size(texture: GpuTexture): Extent {
+    const info = this.info.get(texture as unknown as WebGLTexture);
+    if (!info) throw new Error('not a texture this device created');
+    return { width: info.width, height: info.height };
   }
 
   destroy(texture: GpuTexture): void {

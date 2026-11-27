@@ -18,6 +18,7 @@ import {
   halfFloats,
   type GpuBuffer,
   type GpuDevice,
+  type GpuRenderPass,
   type GpuRenderPipeline,
   type GpuTexture,
   type GpuUniform
@@ -258,7 +259,6 @@ export class GroundBlend {
     this.tideOf = tide;
     this.shoreOf = shore;
     this.stillOf = still;
-    gpu.setPipeline(program);
     gpu.setI32(this.at.u_tide, TIDE_UNIT);
     gpu.setI32(this.at.u_waterField, WATER_UNIT);
     gpu.setI32(this.at.u_ice, ICE_UNIT);
@@ -278,7 +278,6 @@ export class GroundBlend {
     const look = painted.tileset.treeGround;
     this.trees = look ? new TreeGroundLayer(gpu, look, painted.tileset.tile) : null;
     this.soils = look ? treeSoils(look, paintedGroundIds(), (id) => groundLayer(id).water > 0) : [];
-    gpu.setPipeline(this.program);
     gpu.setI32(this.at.u_trees, TREE_UNIT);
     gpu.setI32(this.at.u_treeKinds, look?.kinds.length ?? 0);
     gpu.setVec2i(this.at.u_grassShift, look?.grassShift[0] ?? 0, look?.grassShift[1] ?? 0);
@@ -480,12 +479,12 @@ export class GroundBlend {
     this.lightBuilt = { version: f.lightVersion, sampler: f.lightSampler };
   }
 
-  drawWinterTrees(f: GroundBlendFrame): boolean {
+  drawWinterTrees(pass: GpuRenderPass, f: GroundBlendFrame): boolean {
     if (!this.trees?.winter) return false;
-    return this.draw(f, true);
+    return this.draw(pass, f, true);
   }
 
-  draw(f: GroundBlendFrame, treeOnly = false): boolean {
+  draw(pass: GpuRenderPass, f: GroundBlendFrame, treeOnly = false): boolean {
     const grid = this.grid;
     if (!grid) return false;
     const gpu = this.gpu;
@@ -499,7 +498,7 @@ export class GroundBlend {
     if (f.sea && this.waveStyle) this.syncRivers();
     this.rebuildLight(f);
     this.trees?.sync(this.kinds, this.w, this.h, this.soils);
-    gpu.setPipeline(this.program);
+    pass.setPipeline(this.program);
     gpu.setI32(this.at.u_treeOnly, treeOnly ? 1 : 0);
     gpu.setI32(this.at.u_treeRow, this.trees?.tableRow ?? 0);
     gpu.setMat4fv(this.at.u_projection, f.projection);
@@ -531,8 +530,8 @@ export class GroundBlend {
     this.rivers.bind();
     if (this.trees) this.bindOn(TREE_UNIT, this.trees.texture);
     gpu.setTextureSlot(0);
-    gpu.setVertexBuffer(0, this.vbo);
-    gpu.draw(6);
+    pass.setVertexBuffer(0, this.vbo);
+    pass.draw(6);
     return true;
   }
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { GridRenderer, type GridRenderOptions } from '$lib/webgl/grid-renderer';
 import { GameGrid } from '$lib/webgl/game-grid';
 import type { FontAtlas } from '$lib/webgl/types';
-import { tileShaders } from './tileShaders';
+import { passOf, tileShaders } from './tileShaders';
 import { Webgl2Device } from '$lib/gpu/webgl2/device';
 
 const MAP = 128;
@@ -55,15 +55,15 @@ const view = (size: number, cacheVersion = 0): GridRenderOptions => ({
 });
 
 function frames(r: GridRenderer, grid: GameGrid, n: number, options: GridRenderOptions) {
-  for (let i = 0; i < n; i++) r.renderGrid(grid, options);
+  for (let i = 0; i < n; i++) r.renderGrid(passOf(r), grid, options);
 }
 
 describe('chunks are built in the background and kept', () => {
   it('builds no more than one chunk outside the view per frame', () => {
     const { renderer, grid, uploads } = setup();
-    renderer.renderGrid(grid, view(10));
+    renderer.renderGrid(passOf(renderer), grid, view(10));
     const first = uploads();
-    renderer.renderGrid(grid, view(10));
+    renderer.renderGrid(passOf(renderer), grid, view(10));
     expect(uploads() - first).toBeLessThanOrEqual(1);
   });
 
@@ -71,7 +71,7 @@ describe('chunks are built in the background and kept', () => {
     const { renderer, grid, uploads } = setup();
     frames(renderer, grid, CHUNKS, view(10));
     const before = uploads();
-    renderer.renderGrid(grid, view(MAP));
+    renderer.renderGrid(passOf(renderer), grid, view(MAP));
     expect(uploads() - before).toBe(0);
   });
 
@@ -79,7 +79,7 @@ describe('chunks are built in the background and kept', () => {
     const { renderer, grid, uploads } = setup();
     frames(renderer, grid, 600, view(10));
     const before = uploads();
-    renderer.renderGrid(grid, view(MAP));
+    renderer.renderGrid(passOf(renderer), grid, view(MAP));
     expect(uploads() - before).toBe(0);
   });
 
@@ -88,7 +88,7 @@ describe('chunks are built in the background and kept', () => {
     frames(renderer, grid, CHUNKS, view(10, 0));
     frames(renderer, grid, CHUNKS, view(10, 1));
     const before = uploads();
-    renderer.renderGrid(grid, view(MAP, 1));
+    renderer.renderGrid(passOf(renderer), grid, view(MAP, 1));
     expect(uploads() - before).toBe(0);
   });
 
