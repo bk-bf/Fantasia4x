@@ -306,7 +306,7 @@ describe('the layers the depth test orders', () => {
       { layer: 'gameGrid', pipeline: 'terrain', shadows: false },
       { layer: 'snowGrid wash', pipeline: 'flat', shadows: false },
       { layer: 'resourceOverlayGrid', pipeline: 'overlay', shadows: true },
-      { layer: 'snowGrid', pipeline: 'overlay', shadows: true },
+      { layer: 'snowGrid', pipeline: 'masked', shadows: true },
       { layer: 'buildingOverlayGrid', pipeline: 'overlay', shadows: true },
       { layer: 'itemOverlayGrid', pipeline: 'overlay', shadows: true },
       { layer: 'overlayGrid', pipeline: 'overlay', shadows: true },
@@ -316,21 +316,38 @@ describe('the layers the depth test orders', () => {
     expect(uniforms.get('u_alphaCut')).toBe(ALPHA_CUT);
   });
 
-  it('tests depth only in the overlay and shadow pipelines, and only with the painted flag on', () => {
-    const depth = (rowDepth: boolean) =>
+  it('tests depth only in the overlay, masked and shadow pipelines, and only with the painted flag on', () => {
+    const depth = (format: 'depth24plus' | null) =>
       Object.fromEntries(
-        tilePipelines({ vertex: '', fragment: '' }, 'rgba8unorm', rowDepth).map(([name, d]) => [
+        tilePipelines({ vertex: '', fragment: '' }, 'rgba8unorm', format).map(([name, d]) => [
           name,
           d.depthStencil?.depthCompare ?? 'none'
         ])
       );
-    expect(depth(true)).toEqual({
+    expect(depth('depth24plus')).toEqual({
       [TILE_PIPELINE.terrain]: 'always',
       [TILE_PIPELINE.flat]: 'always',
       [TILE_PIPELINE.overlay]: 'less-equal',
-      [TILE_PIPELINE.shadow]: 'less'
+      [TILE_PIPELINE.shadow]: 'less',
+      [TILE_PIPELINE.marking]: 'always',
+      [TILE_PIPELINE.masked]: 'less-equal'
     });
-    expect(Object.values(depth(false))).toEqual(['none', 'none', 'none', 'none']);
+    expect(Object.values(depth(null)).every((d) => d === 'none')).toBe(true);
+  });
+
+  it('marks and masks the stencil only when the canvas depth carries one', () => {
+    const stencils = (format: 'depth24plus' | 'depth24plus-stencil8') =>
+      Object.fromEntries(
+        tilePipelines({ vertex: '', fragment: '' }, 'rgba8unorm', format).map(([name, d]) => [
+          name,
+          [d.depthStencil?.stencilFront?.compare, d.depthStencil?.stencilBack?.passOp]
+        ])
+      );
+    const marked = stencils('depth24plus-stencil8');
+    expect(marked[TILE_PIPELINE.marking]).toEqual(['always', 'replace']);
+    expect(marked[TILE_PIPELINE.masked]).toEqual(['not-equal', 'keep']);
+    expect(marked[TILE_PIPELINE.overlay]).toEqual([undefined, undefined]);
+    expect(Object.values(stencils('depth24plus')).every(([c]) => c === undefined)).toBe(true);
   });
 
   it('touches no depth state and sets no depth uniform with the painted flag off', () => {

@@ -6,9 +6,10 @@ import type {
   GpuShaderModule,
   RenderPipelineDescriptor,
   RenderPipelineResult,
+  StencilFaceState,
   VertexBufferLayout
 } from '../device.js';
-import { blendFactor, compareFunction, topology } from './formats.js';
+import { blendFactor, compareFunction, stencilOperation, topology } from './formats.js';
 
 function reportShaderErrors(source: string, error: string, name: string): void {
   const lines = source.split('\n');
@@ -85,6 +86,31 @@ export interface Webgl2Pipeline {
   topology: number;
   blend: readonly [number, number, number, number] | null;
   depth: { func: number; write: boolean } | null;
+  stencil: { front: GlStencilFace; back: GlStencilFace } | null;
+}
+
+export interface GlStencilFace {
+  func: number;
+  passOp: number;
+}
+
+const NO_STENCIL: StencilFaceState = { compare: 'always', passOp: 'keep' };
+
+function stencilFace(gl: WebGL2RenderingContext, face: StencilFaceState): GlStencilFace {
+  return { func: compareFunction(gl, face.compare), passOp: stencilOperation(gl, face.passOp) };
+}
+
+function stencilState(
+  gl: WebGL2RenderingContext,
+  depth: RenderPipelineDescriptor['depthStencil']
+): Webgl2Pipeline['stencil'] {
+  if (!depth?.stencilFront && !depth?.stencilBack) return null;
+  if (depth.format !== 'depth24plus-stencil8')
+    throw new Error(`a stencil state needs a depth24plus-stencil8 target, not ${depth.format}`);
+  return {
+    front: stencilFace(gl, depth.stencilFront ?? NO_STENCIL),
+    back: stencilFace(gl, depth.stencilBack ?? NO_STENCIL)
+  };
 }
 
 function link(
@@ -214,7 +240,8 @@ function pipelineState(
       : null,
     depth: testsDepth
       ? { func: compareFunction(gl, depth.depthCompare), write: depth.depthWriteEnabled }
-      : null
+      : null,
+    stencil: stencilState(gl, depth)
   };
 }
 

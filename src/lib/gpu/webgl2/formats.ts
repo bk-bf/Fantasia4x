@@ -4,6 +4,7 @@ import type {
   CompareFunction,
   FilterMode,
   PrimitiveTopology,
+  StencilOperation,
   TextureFormat,
   VertexFormat
 } from '../device.js';
@@ -71,7 +72,13 @@ export function compareFunction(gl: WebGL2RenderingContext, c: CompareFunction):
       return gl.LESS;
     case 'less-equal':
       return gl.LEQUAL;
+    case 'not-equal':
+      return gl.NOTEQUAL;
   }
+}
+
+export function stencilOperation(gl: WebGL2RenderingContext, op: StencilOperation): number {
+  return op === 'replace' ? gl.REPLACE : gl.KEEP;
 }
 
 export function topology(gl: WebGL2RenderingContext, t: PrimitiveTopology): number {

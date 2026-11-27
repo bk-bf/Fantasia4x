@@ -4,6 +4,7 @@ import type {
   GlslSources,
   GpuDevice,
   PrimitiveTopology,
+  StencilFaceState,
   VertexBufferLayout
 } from '../gpu/device.js';
 import type { FramedPipeline } from './frameBindings.js';
@@ -18,6 +19,7 @@ export interface CanvasPipeline {
   blend?: BlendState;
   depthCompare?: CompareFunction;
   depthWrite?: boolean;
+  stencil?: StencilFaceState;
   bindings?: readonly GroupBindings[];
 }
 
@@ -38,7 +40,10 @@ export function canvasPipeline(gpu: GpuDevice, p: CanvasPipeline): FramedPipelin
           depthStencil: {
             format: depth,
             depthCompare: p.depthCompare ?? 'always',
-            depthWriteEnabled: p.depthWrite ?? false
+            depthWriteEnabled: p.depthWrite ?? false,
+            ...(p.stencil && depth === 'depth24plus-stencil8'
+              ? { stencilFront: p.stencil, stencilBack: p.stencil }
+              : {})
           }
         }
       : {})

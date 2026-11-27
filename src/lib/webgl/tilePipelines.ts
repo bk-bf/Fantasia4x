@@ -3,7 +3,9 @@ import {
   FLOAT32_FORMATS,
   type BlendState,
   type CompareFunction,
+  type DepthFormat,
   type GlslSources,
+  type StencilFaceState,
   type TextureFormat,
   type VertexBufferLayout
 } from '../gpu/device.js';
@@ -49,31 +51,40 @@ export function tileVertexLayout(rowDepth: boolean): VertexBufferLayout {
   };
 }
 
-export type TilePipeline = 'terrain' | 'flat' | 'overlay' | 'shadow';
+export type TilePipeline = 'terrain' | 'flat' | 'overlay' | 'shadow' | 'marking' | 'masked';
 
 export const TILE_PIPELINE: Record<TilePipeline, string> = {
   terrain: 'tileRenderer',
   flat: 'tileRenderer.flat',
   overlay: 'tileRenderer.overlay',
-  shadow: 'tileRenderer.shadow'
+  shadow: 'tileRenderer.shadow',
+  marking: 'tileRenderer.marking',
+  masked: 'tileRenderer.masked'
 };
+
+export const MARK: StencilFaceState = { compare: 'always', passOp: 'replace' };
+const UNMARKED: StencilFaceState = { compare: 'not-equal', passOp: 'keep' };
 
 const SHADOW_BLEND: BlendState = {
   color: { srcFactor: 'zero', dstFactor: 'src' },
   alpha: { srcFactor: 'zero', dstFactor: 'src' }
 };
 
-const STATES: Record<TilePipeline, [BlendState | undefined, CompareFunction, boolean]> = {
+type TileState = [BlendState | undefined, CompareFunction, boolean, StencilFaceState?];
+
+const STATES: Record<TilePipeline, TileState> = {
   terrain: [undefined, 'always', false],
   flat: [ALPHA_BLEND, 'always', false],
   overlay: [ALPHA_BLEND, 'less-equal', true],
-  shadow: [SHADOW_BLEND, 'less', true]
+  shadow: [SHADOW_BLEND, 'less', true],
+  marking: [ALPHA_BLEND, 'always', false, MARK],
+  masked: [ALPHA_BLEND, 'less-equal', true, UNMARKED]
 };
 
 export function tilePipelines(
   glsl: Omit<GlslSources, 'attributes'>,
   format: TextureFormat,
-  rowDepth: boolean,
+  depth: DepthFormat | null,
   bindings: readonly GroupBindings[] = []
 ): [string, FramedPipeline][] {
   const sources = bindings.reduce<GlslSources>((s, b) => b.glsl(s), {
@@ -81,17 +92,25 @@ export function tilePipelines(
     attributes: TILE_ATTRIBUTES
   });
   return (Object.keys(STATES) as TilePipeline[]).map((p) => {
-    const [blend, depthCompare, depthWriteEnabled] = STATES[p];
+    const [blend, depthCompare, depthWriteEnabled, stencil] = STATES[p];
+    const marks = stencil && depth === 'depth24plus-stencil8';
     return [
       TILE_PIPELINE[p],
       {
         glsl: sources,
         layout: bindings.map((b) => b.layout),
-        vertex: { buffers: [tileVertexLayout(rowDepth)] },
+        vertex: { buffers: [tileVertexLayout(depth !== null)] },
         primitive: { topology: 'triangle-list' },
         fragment: { targets: [{ format, blend }] },
-        ...(rowDepth
-          ? { depthStencil: { format: 'depth24plus', depthCompare, depthWriteEnabled } }
+        ...(depth
+          ? {
+              depthStencil: {
+                format: depth,
+                depthCompare,
+                depthWriteEnabled,
+                ...(marks ? { stencilFront: stencil, stencilBack: stencil } : {})
+              }
+            }
           : {})
       }
     ];

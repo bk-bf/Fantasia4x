@@ -170,7 +170,14 @@ export const ALPHA_BLEND: BlendState = {
   alpha: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha' }
 };
 
-export type CompareFunction = 'always' | 'less' | 'less-equal';
+export type CompareFunction = 'always' | 'less' | 'less-equal' | 'not-equal';
+
+export type StencilOperation = 'keep' | 'replace';
+
+export interface StencilFaceState {
+  compare: CompareFunction;
+  passOp: StencilOperation;
+}
 
 export type DepthFormat = 'depth24plus' | 'depth24plus-stencil8';
 
@@ -178,12 +185,8 @@ export interface DepthStencilState {
   format: DepthFormat;
   depthWriteEnabled: boolean;
   depthCompare: CompareFunction;
-}
-
-export interface StencilState {
-  compare: 'always' | 'not-equal';
-  reference: number;
-  write: boolean;
+  stencilFront?: StencilFaceState;
+  stencilBack?: StencilFaceState;
 }
 
 export interface ShaderSources {
@@ -276,6 +279,7 @@ export interface GpuRenderPass {
   setPipeline(pipeline: GpuRenderPipeline): void;
   setBindGroup(index: number, group: GpuBindGroup, dynamicOffsets?: readonly number[]): void;
   setVertexBuffer(slot: number, buffer: GpuBuffer, offset?: number): void;
+  setStencilReference(reference: number): void;
   draw(
     vertexCount: number,
     instanceCount?: number,
@@ -320,5 +324,4 @@ export interface GpuDevice {
   createBindGroupLayout(desc: BindGroupLayoutDescriptor): GpuBindGroupLayout;
   createBindGroup(desc: BindGroupDescriptor): GpuBindGroup;
   createCommandEncoder(): GpuCommandEncoder;
-  setStencil(state: StencilState | null): void;
 }
