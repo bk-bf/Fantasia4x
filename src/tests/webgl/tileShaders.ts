@@ -1,13 +1,18 @@
 import type { GpuDevice, GpuRenderPass } from '$lib/gpu/device';
 import { ShaderManager } from '$lib/webgl/shaders';
-import { addTilePipelines } from '$lib/webgl/tilePipelines';
+import { TileShading } from '$lib/webgl/tileShading';
 import { FRAME_GROUP, frameBindings } from '$lib/webgl/frameBindings';
 
-export function tileShaders(gpu: GpuDevice, rowDepth: boolean): ShaderManager {
-  const shaders = new ShaderManager(gpu);
-  const made = addTilePipelines(shaders, { vertex: '', fragment: '' }, gpu.canvas.format, rowDepth);
-  if (!made.success) throw new Error(made.error);
-  return shaders;
+export function tileShaders(gpu: GpuDevice, rowDepth: boolean): TileShading {
+  const made = TileShading.create(
+    gpu,
+    new ShaderManager(gpu),
+    { vertex: '', fragment: '' },
+    gpu.canvas.format,
+    rowDepth
+  );
+  if ('error' in made) throw new Error(made.error);
+  return made;
 }
 
 export function canvasPass(gpu: GpuDevice): GpuRenderPass {

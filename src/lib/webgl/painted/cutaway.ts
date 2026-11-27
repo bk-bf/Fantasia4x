@@ -2,7 +2,6 @@ import type { GameGrid } from '../game-grid.js';
 import { BASE_TILE_PX } from '../tile-types.js';
 
 export const CUT_MAX = 16;
-export const CUT_UNIFORM = 'u_cut[0]';
 const FOLK_FOOT = 27;
 const FOLK_WAIST = 16;
 const CUT_REACH_TILES = 2;

@@ -161,7 +161,12 @@ function windyCore(
 ) {
   const gl = recordingGl(uploads, calls);
   const gpu = new Webgl2Device(gl);
-  const shaders = tileShaders(gpu, true);
+  const shading = tileShaders(gpu, true);
+  const set = shading.set.bind(shading);
+  shading.set = (name, value) => {
+    uniforms.set(name, value);
+    set(name, value);
+  };
   const grids = {
     gameGrid: new GameGrid(),
     resourceOverlayGrid: new GameGrid(),
@@ -212,10 +217,8 @@ function windyCore(
     snowVersion: 0,
     stats: { drawCalls: 0, vertexCount: 0, resourceRebuilds: 0, terrainRebuilds: 0 },
     webglState: { getDevice: () => gpu, canvasPass: WebGLStateManager.prototype.canvasPass },
-    shaderManager: Object.assign(shaders, {
-      setUniform: (_p: string, name: string, value: unknown) => uniforms.set(name, value)
-    }),
-    gridRenderer: new GridRenderer(gpu, shaders, atlas, false, true)
+    tile: shading,
+    gridRenderer: new GridRenderer(gpu, shading, atlas, false, true)
   });
   return core;
 }

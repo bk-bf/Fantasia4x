@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { GridRenderer, type GridRenderOptions } from '$lib/webgl/grid-renderer';
 import type { TileData } from '$lib/webgl/tile-types';
 import type { FontAtlas } from '$lib/webgl/types';
-import type { ShaderManager } from '$lib/webgl/shaders';
+import type { TileShading } from '$lib/webgl/tileShading';
 import { buildTileset, parseManifest, spriteAt } from '$lib/webgl/painted/manifest';
 import { Webgl2Device } from '$lib/gpu/webgl2/device';
 
@@ -21,7 +21,7 @@ const noopGl = new Proxy(
   { get: (_t, key) => (typeof key === 'string' && /^[A-Z_0-9]+$/.test(key) ? 0 : () => ({})) }
 ) as unknown as WebGL2RenderingContext;
 
-const shaders = {} as unknown as ShaderManager;
+const shaders = {} as unknown as TileShading;
 
 const atlas = {
   characters: new Map([

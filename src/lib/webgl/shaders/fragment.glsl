@@ -18,44 +18,13 @@ flat in highp float v_reach;
 
 uniform sampler2D u_fontAtlas;
 uniform sampler2D u_paintAtlas;
-uniform vec2 u_paintTexelSize;
-uniform vec2 u_texelSize;  // (1/atlasWidth, 1/atlasHeight)
-// Global day/night ambient (light * tint). Combined per-fragment with the baked
-// additive point light so ambient changes never rebuild the vertex buffer.
-uniform vec3 u_ambient;
-// Global fire-flicker multiplier (~0.85..1.0). The baked v_light is static, so
-// the flicker is applied here per-fragment — this keeps the terrain vertex buffer
-// stable while a campfire is lit instead of rebaking every tile each frame.
-uniform float u_lightFlicker;
-// Overlay mode: 0 = opaque tile (background fills the cell), 1 = glyph-only
-// (transparent background) so entities composite over the terrain layer below.
-uniform float u_glyphOnly;
-// Background-only mode: 1 = draw ONLY the per-cell background wash, no glyph. Used to split the
-// snow/ice pass — the translucent WASH is drawn beneath the resource glyphs (so grass/tree/wall
-// glyphs render on top of it rather than being flattened to solid white), while the snow SPRITE is
-// drawn glyph-only in a later pass above the resources.
-uniform float u_bgOnly;
-uniform float u_alphaCut;
 uniform sampler2D u_lightAtlas;
 uniform highp sampler2D u_lightTexture;
-uniform float u_fieldLit;
-uniform float u_shadowPass;
-uniform vec3 u_shade;
-uniform highp float u_shadowDepth;
-uniform float u_saturation;
-uniform float u_brightness;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 uniform highp sampler2D u_rockTexture;
-uniform highp vec2 u_rockRamp;
-uniform float u_rockLift;
-uniform highp float u_atlasScale;
-uniform highp float u_rowPx;
-uniform highp float u_rowDepth;
 
 const int CUT_MAX = 16;
-uniform highp vec4 u_cut[CUT_MAX];
-uniform float u_cuts;
 const highp float CUT_EDGE = 34.0;
 const highp float CUT_SOFT = 6.0;
 const float CUT_KEEP = 0.14;
@@ -73,8 +42,6 @@ int rockShade(int rim, highp ivec2 p) {
 uniform highp sampler2D u_veinTexture;
 uniform highp usampler2D u_tierTileTexture;
 uniform highp sampler2D u_tierNoiseTexture;
-uniform highp vec2 u_snowRamp;
-uniform float u_snow;
 #define ROCK_SURFACE_CODE
 #define TREE_PARTS_CODE
 

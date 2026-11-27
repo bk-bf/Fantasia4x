@@ -20,8 +20,6 @@ import { PASS_GROUP, PassBindings } from '../passBindings.js';
 import { SizedTexture } from '../sizedTexture.js';
 
 const PROGRAM = 'tiers';
-export const TIER_TILE_UNIT = 4;
-export const TIER_NOISE_UNIT = 10;
 
 export interface TierView {
   x0: number;
@@ -162,13 +160,12 @@ export class Tiers {
       this.upload(this.fieldTex, this.tiles.fields);
   }
 
-  bindShared(): void {
-    const gpu = this.gpu;
-    gpu.setTextureSlot(TIER_TILE_UNIT);
-    gpu.bindTexture(this.tileTex.texture);
-    gpu.setTextureSlot(TIER_NOISE_UNIT);
-    gpu.bindTexture(this.noiseTex.texture);
-    gpu.setTextureSlot(0);
+  get tileTexture(): GpuTexture {
+    return this.tileTex.texture;
+  }
+
+  get noiseTexture(): GpuTexture {
+    return this.noiseTex.texture;
   }
 
   prepare(f: TierFrame, light: GpuTexture): void {

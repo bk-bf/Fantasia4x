@@ -35,7 +35,6 @@ const TIME_STRENGTH = new Float32Array([
 ]);
 
 const PROGRAM = 'paintedLight';
-export const LIGHT_FIELD_UNIT = 6;
 
 export interface LightPassFrame {
   canvas: [number, number];
@@ -121,9 +120,6 @@ export class PaintedLightPass {
     pass.setPipeline(this.program);
     pass.draw(3);
     pass.end();
-    this.gpu.setTextureSlot(LIGHT_FIELD_UNIT);
-    this.gpu.bindTexture(this.field.texture);
-    this.gpu.setTextureSlot(0);
     return 1;
   }
 
