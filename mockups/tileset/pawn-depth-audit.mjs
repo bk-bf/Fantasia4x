@@ -120,6 +120,7 @@ function audit(now, shown, face) {
   for (const l of stack.filter(SHIELD)) { const side = shieldShows(l, w); if (side && side !== (l.slung && face !== 's' ? SLUNG_SIDE[face] : SHIELD_SIDE[face])) counts.j++; }
   const load = stack.find(isLoad);
   if (load) {
+    const hooked = face === 'b' && !!(now.pose.load && now.pose.load[8]);
     const deep = (x, y) => { for (let dy = -EDGE; dy <= EDGE; dy++) for (let dx = -EDGE; dx <= EDGE; dx++) if (!at(load, (y + dy) * w + x + dx)) return false; return true; };
     for (const name of new Set(stack.filter(isArm).map(l => l.limb))) {
       const segs = stack.filter(l => l.limb === name), path = segs[0].path;
@@ -132,7 +133,7 @@ function audit(now, shown, face) {
           const got = drawn(i), armShown = segs.includes(got);
           if (state === 0 && armShown) state = 1;
           else if (state === 1 && got === load) state = 2;
-          else if (state === 2 && armShown && deep(x, y)) through = true;
+          else if (state === 2 && armShown && deep(x, y) && !(hooked && got.seg === 'hand')) through = true;
         }
       }
       if (through) counts.b++;

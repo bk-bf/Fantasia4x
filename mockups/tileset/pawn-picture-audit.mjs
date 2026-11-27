@@ -1,12 +1,12 @@
-export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K', 'L', 'N', 'O', 'P'];
-export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing shows with no hand showing on it', x: 'held thing against the face', y: 'legs shortened', B: 'arms knotted', C: 'tool in line with the arm', D: 'load cut short', E: 'carried body shows no head', F: 'load over one arm and under the other', G: 'hand on the wide end', H: 'load does not read', K: 'load in the arms shows above the shoulders from behind', L: 'carried person not cradled in both arms', N: 'tool shows shorter than it is drawn', O: 'hand off a two-handed tool', P: 'tool on the wrong side of the head or back' };
+export const PICTURE_KEYS = ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K', 'L', 'N', 'O', 'P', 'R'];
+export const PICTURE_NAMED = { q: 'arm not joined to a hand', r: 'arm tapers to a point', s: 'see-through pixel', t: 'length lost in profile', u: 'below the foot line', v: 'torn tipping outline', w: 'held thing shows with no hand showing on it', x: 'held thing against the face', y: 'legs shortened', B: 'arms knotted', C: 'tool in line with the arm', D: 'load cut short', E: 'carried body shows no head', F: 'load over one arm and under the other', G: 'hand on the wide end', H: 'load does not read', K: 'load in the arms shows above the shoulders from behind', L: 'carried person not cradled in both arms', N: 'tool shows shorter than it is drawn', O: 'hand off a two-handed tool', P: 'tool on the wrong side of the head or back', R: 'load on the shoulders hidden or crossed by the arms' };
 const HAND_BLOCK = 4, TAPER = { long: 5, thin: 1, wide: 3 }, FIN = { out: 4, above: 1 }, PROFILE = .8, BAND = 2, LEGS = .6, TOUCH = 1;
 const LEG_LAYERS = ['legs', 'far leg', 'near leg'], BROW = 6, FRONT = 5, GRASPED = .2;
 const SHOWS = 3, APART = 4, IN_LINE = { cos: .94, reach: 5, tools: ['hammer', 'club', 'axe', 'pick'] }, WHOLE = .6, HEAD_SHOWS = .6, WIDE_END = 1, IN_ARMS = ['chest', 'low', 'cradle'];
 const KEPT_AS_APPROVED = { x: ['shoulder'] };
 const QUIVERED = .9, BODY_HIDES = ['bow', 'arrow'];
 const CRADLE = { palm: 3, across: 2, above: 3, below: 2 };
-const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15, FACE = { dark: .5, marks: 4 };
+const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15, FACE = { dark: .5, marks: 4 }, YOKED = { above: .2 };
 const READS = { bars: s => s.w <= 9 && s.w >= 2 * s.h, bundles: s => s.filled <= .6 * s.w * s.h };
 
 const same = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
@@ -144,6 +144,11 @@ export function pictured(now, face, ink) {
     if (face !== 's' && IN_ARMS.includes(now.pose.carry) && limbs.size === 2) {
       const state = [...limbs.keys()].map(name => { let over = 0, under = 0; for (const seg of stack.filter(s => s.limb === name && s.seg !== 'hand')) { const k = stack.indexOf(seg); for (const i of pixels(seg.spr)) if (l.spr.c[i]) { if (top[i] === k) over++; else if (stack[top[i]] === l) under++; } } return over + under < 2 ? 0 : over > under ? 1 : -1; });
       if (state[0] * state[1] < 0) { counts.F++; said.push('load over one arm and under the other'); }
+    }
+    if (now.pose.load && now.pose.load[8] && !onGround && !(now.pose.cu < 1)) {
+      const shoulders = stack.find(s => s.name === 'torso').anchor[1], all = pixels(l.spr).length, above = showing(l).filter(i => ((i / w) | 0) < shoulders).length, across = stack.filter(s => s.limb && s.seg !== 'hand').flatMap(showing).filter(i => l.spr.c[i]).length;
+      if (face === 'f' && above < YOKED.above * all) { counts.R++; said.push(above + ' of ' + all + ' px of the load show above the shoulders'); }
+      if (face === 'b' && across > LAPPED) { counts.R++; said.push(across + ' px of the arms cross the load on the shoulders'); }
     }
     if (meta.family === 'long' && lay.spr && !onGround) {
       const s = lay.spr, tall = s.h >= s.w, n = tall ? s.h : s.w, wide = k => { let c = 0; for (let j = 0; j < (tall ? s.w : s.h); j++) if (s.c[tall ? k * s.w + j : j * s.w + k]) c++; return c; }, widths = Array.from({ length: n }, (_, k) => wide(k)).filter(v => v).sort((x, y) => x - y), at = wide(lay.grip[tall ? 1 : 0]);
