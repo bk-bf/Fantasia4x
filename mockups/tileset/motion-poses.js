@@ -190,7 +190,7 @@ const PAWN_ANIMS = {
   } },
   cry: { label: 'Crying', group: 'Needs', dur: 1.2, n: 6, pose(u, c) {
     const b = Math.floor(u * 6) & 1;
-    return { face: 'f', covers: 1, item: null, hd: [0, 2], hl: [4, -2 - b * .5], hr: [-4, -2 - b * .5], by: 1 + b * .6, blink: 1 };
+    return { face: 'f', covers: 1, item: null, hd: [0, 2], hl: [3, -4 - b * .5], hr: [-3, -4 - b * .5], by: 1 + b * .6, blink: 1 };
   } },
   talk: { label: 'Talking', group: 'Social', dur: 2.6, n: 8, pose(u, c) {
     const m = Math.floor(u * 10) & 1;
