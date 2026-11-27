@@ -69,7 +69,7 @@ export function mirror(stage, raw) {
     const from = join(stage, name);
     const to = join(raw, name);
     if (existsSync(to) && !sameStart(to, from)) {
-      const kept = `${to}.${sha256Of(readFileSync(to)).slice(0, 12)}`;
+      const kept = `${to}.kept-${sha256Of(readFileSync(to)).slice(0, 12)}`;
       if (!existsSync(kept)) renameSync(to, kept);
       archived.push(kept);
     }
@@ -83,7 +83,7 @@ export function mirror(stage, raw) {
   return archived;
 }
 
-const LIVE = /^perf\.log(\.\d+)?$/;
+export const LIVE = /^perf\.log(\.\d+|\.\d{8}T\d{6}Z(-\d+)?)?$/;
 
 function ingestCheckout(root, machine, checkout, dir, timeZone, report) {
   const files = readdirSync(dir).filter((n) => n.startsWith('perf.log') && !n.endsWith('.tmp'));

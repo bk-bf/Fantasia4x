@@ -5,7 +5,7 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileRef, gitInfo, launchedBy, machineName, newId, spoolDir, writeBlob, writeEntry } from './spool.mjs';
-import { getEntry, listEntries, reindex, storeDir } from './store.mjs';
+import { getEntry, listEntries, reindex, storeDir, withLock } from './store.mjs';
 import { ingestPerfLog, ingestResult, ingestSave } from './ingest.mjs';
 import { assembleSave, resolveSave } from './fetch.mjs';
 
@@ -59,6 +59,7 @@ function line(e) {
     `p${w.pawns ?? '-'} m${w.mobs ?? '-'} T${w.turn ?? '-'}`,
     w.save ? `world ${short(w.save, 12)}` : '',
     tps,
+    tps && e.host?.load ? `load ${e.host.load[0]}` : '',
     ck,
     bad
   ]
@@ -138,7 +139,7 @@ function record(args) {
   });
   const machine = machineName();
   const at = values.at ?? new Date().toISOString();
-  const { world, perf, ...restResult } = result;
+  const { world, perf, host, ...restResult } = result;
   const id = writeEntry(
     {
       v: 1,
@@ -151,6 +152,7 @@ function record(args) {
       tool: values.tool ?? null,
       scenario: values.scenario ?? null,
       world: { save: values.world ?? null, ...(world ?? {}) },
+      host: { load: null, loadEnd: null, cores: null, others: null, ...(host ?? {}) },
       perf: perf ?? restResult,
       files,
       parent: values.parent ?? null,
@@ -258,9 +260,9 @@ try {
       if (out !== '-') console.error(`written to ${out}`);
     }
   } else if (cmd === 'record') record(rest);
-  else if (cmd === 'import') importDir(rest);
-  else if (cmd === 'reindex') console.log(`${reindex(root)} entries indexed`);
-  else if (cmd === 'sync') await (await import('./sync.mjs')).sync();
+  else if (cmd === 'import') withLock(root, () => importDir(rest));
+  else if (cmd === 'reindex') withLock(root, () => console.log(`${reindex(root)} entries indexed`));
+  else if (cmd === 'sync') await withLock(root, async () => (await import('./sync.mjs')).sync());
   else {
     console.error('usage: pnpm ledger list|show|fetch|record|import|reindex|sync');
     process.exit(2);

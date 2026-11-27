@@ -65,7 +65,7 @@ export function ingestPerfLog(root, opts) {
       report.open++;
       continue;
     }
-    const { header, perf } = sessionPerf(session);
+    const { header, perf, host, save } = sessionPerf(session);
     const { start, end } = sessionTimes(session);
     const body = Buffer.from(session.lines.map((l) => l.raw).join('\n') + '\n');
     const sha = putBlob(root, body);
@@ -93,7 +93,7 @@ export function ingestPerfLog(root, opts) {
       tool: 'perf.log',
       scenario: null,
       world: {
-        save: header?.save ?? null,
+        save,
         name: null,
         turn: header?.turn ?? null,
         seed: null,
@@ -103,6 +103,7 @@ export function ingestPerfLog(root, opts) {
         generatedBy: null,
         savedBy: null
       },
+      host,
       perf: { ...perf, end: end == null ? null : new Date(end).toISOString(), checkout },
       files: [fileRef('perf-log', 'perf.log', sha, root)],
       parent: null,
@@ -117,6 +118,10 @@ export function ingestPerfLog(root, opts) {
   return report;
 }
 
+const commitOf = (stamp) => (stamp == null ? null : typeof stamp === 'string' ? stamp : stamp.commit ?? null);
+
+export const noHost = () => ({ load: null, loadEnd: null, cores: null, others: null });
+
 export function describeSave(text) {
   const save = JSON.parse(text);
   const dynamic = save.dynamic ?? {};
@@ -128,8 +133,8 @@ export function describeSave(text) {
     pawns: Array.isArray(dynamic.pawns) ? dynamic.pawns.length : null,
     mobs: Array.isArray(dynamic.mobs) ? dynamic.mobs.length : null,
     map: Array.isArray(world) && Array.isArray(world[0]) ? `${world[0].length}x${world.length}` : null,
-    generatedBy: dynamic.generatedBy ?? save.generatedBy ?? null,
-    savedBy: dynamic.savedBy ?? save.savedBy ?? null
+    generatedBy: commitOf(dynamic.generatedBy ?? save.generatedBy),
+    savedBy: commitOf(dynamic.savedBy ?? save.savedBy)
   };
 }
 
@@ -167,6 +172,7 @@ export function ingestSave(root, opts) {
     tool: opts.tool ?? null,
     scenario: 'save',
     world: { save: worldId, ...info, name: name ?? info.name },
+    host: noHost(),
     perf: null,
     files: [fileRef('save', fileName ?? (opts.path ? basename(opts.path) : `${worldId.slice(0, 12)}.json.gz`), sha, root)],
     parent,
@@ -225,6 +231,8 @@ export function ingestResult(root, opts) {
   const extra = (opts.files ?? []).map((f) => fileRef(f.role, f.name ?? basename(f.path), putBlob(root, f.path), root));
   const map = Array.isArray(result.map) ? result.map.join('x') : result.map ?? null;
   const at = opts.at ?? statSync(path).mtimeMs;
+  const startCounts = result.endMobs !== undefined || result.endPawns !== undefined;
+  const from = opts.saveWorld ?? null;
   const entry = {
     v: 1,
     id: newId(machine, at),
@@ -242,15 +250,21 @@ export function ingestResult(root, opts) {
     world: {
       save: opts.worldId ?? null,
       name: null,
-      turn: result.turn ?? null,
+      turn: startCounts ? result.turn ?? null : from?.turn ?? null,
       seed: result.seed ?? null,
       map,
-      pawns: result.pawns ?? null,
-      mobs: result.mobs ?? null,
+      pawns: startCounts ? result.pawns ?? null : from?.pawns ?? null,
+      mobs: startCounts ? result.mobs ?? null : from?.mobs ?? null,
       generatedBy: opts.generatedBy ?? null,
       savedBy: null
     },
-    perf: { ...harnessPerf(result), ...(opts.perf ?? {}) },
+    host: result.host ?? noHost(),
+    perf: {
+      ...harnessPerf(result),
+      endPawns: startCounts ? result.endPawns ?? null : result.pawns ?? null,
+      endMobs: startCounts ? result.endMobs ?? null : result.mobs ?? null,
+      ...(opts.perf ?? {})
+    },
     files: [fileRef('result', basename(path), sha, root), ...extra],
     parent: opts.parent ?? null,
     note

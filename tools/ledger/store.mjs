@@ -1,6 +1,8 @@
 // @ts-nocheck
 import {
   appendFileSync,
+  closeSync,
+  openSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -16,6 +18,40 @@ import { blobPath, sha256Of, writeBlobAt, writeOnce } from './spool.mjs';
 
 const KINDS = new Set(['play', 'bench', 'harness', 'ci', 'save']);
 const ID = /^(\d{4})(\d{2})\d{2}T\d{6}Z-[a-z0-9-]+-[0-9a-f]{6}$/;
+
+export function withLock(root, fn) {
+  mkdirSync(root, { recursive: true });
+  const lock = join(root, '.lock');
+  let fd;
+  try {
+    fd = openSync(lock, 'wx');
+  } catch (err) {
+    if (err.code !== 'EEXIST') throw err;
+    const pid = Number(readFileSync(lock, 'utf8'));
+    let alive = false;
+    try {
+      process.kill(pid, 0);
+      alive = true;
+    } catch {
+      alive = false;
+    }
+    if (alive) throw new Error(`the store is held by process ${pid}`);
+    rmSync(lock, { force: true });
+    fd = openSync(lock, 'wx');
+  }
+  writeFileSync(fd, String(process.pid));
+  closeSync(fd);
+  const release = () => rmSync(lock, { force: true });
+  try {
+    const out = fn();
+    if (out && typeof out.then === 'function') return out.finally(release);
+    release();
+    return out;
+  } catch (err) {
+    release();
+    throw err;
+  }
+}
 
 export function storeDir(env = process.env) {
   return env.F4X_LEDGER_DIR || join(homedir(), '.local', 'share', 'fantasia4x-ledger');

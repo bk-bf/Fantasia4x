@@ -22,7 +22,8 @@ import {
   verifyBlob
 } from '../../../../tools/ledger/store.mjs';
 import { splitSessions, sessionPerf } from '../../../../tools/ledger/perflog.mjs';
-import { ingestPerfLog, ingestSave } from '../../../../tools/ledger/ingest.mjs';
+import { ingestPerfLog, ingestResult, ingestSave } from '../../../../tools/ledger/ingest.mjs';
+import { LIVE } from '../../../../tools/ledger/sync.mjs';
 import { resolveSave, assembleSave } from '../../../../tools/ledger/fetch.mjs';
 
 const SESSION_A =
@@ -38,17 +39,20 @@ const LOG = [
   '[T06060] [info] tps=60 speed=1x pawns=5 mobs=61',
   '[T06121] [info] tps=61 speed=1x pawns=5 mobs=61',
   SESSION_A,
+  '2026-11-27 01:37:36.000 [T30058] [info] ledger save=start0000 reason=session turn=30058 at=2026-11-27T00:37:35.900Z ms=800 speed=1x bytes=100 entry=20261127T003735Z-laptop-aaaaaa',
   tps('01:37:36.749', 30058, 0, '1x', true),
   tps('01:38:00.100', 30100, 100, '4x'),
   tps('01:38:01.100', 30340, 90, '4x'),
   fps('01:38:01.100', 30340, 92),
-  '2026-11-27 01:38:02.000 [T30500] [info] ledger save=aaaa1111 turn=30500 ms=1500',
+  '2026-11-27 01:38:02.000 [T30500] [info] ledger save=aaaa1111 reason=periodic turn=30500 at=2026-11-27T00:38:00.500Z ms=1500 speed=4x bytes=100 entry=20261127T003800Z-laptop-bbbbbb',
   tps('01:38:02.100', 30560, 5, '4x'),
   tps('01:38:03.100', 30800, 6, '4x'),
   tps('01:38:04.100', 31040, 70, '4x'),
   tps('01:38:05.100', 31280, 72, '4x'),
   '2026-11-27 01:38:06.000 host power=Discharging profile=low-power governor=powersave',
-  '2026-11-27 01:38:07.000 [T31600] [info] ledger save=bbbb2222 turn=31600 ms=200',
+  '2026-11-27 01:38:07.000 [T31600] [info] ledger failed reason=periodic turn=31550 at=2026-11-27T00:38:06.000Z ms=900 speed=4x bytes=100 error="spool full"',
+  tps('01:38:07.050', 31590, 3, '4x'),
+  '2026-11-27 01:38:07.500 [T31600] [info] ledger save=bbbb2222 reason=periodic turn=31600 at=2026-11-27T00:38:07.300Z ms=200 speed=4x bytes=100 entry=20261127T003807Z-laptop-cccccc',
   tps('01:38:08.100', 31700, 4, '4x'),
   tps('01:38:09.100', 31940, 200, '4x'),
   '=== log reset at 2026-11-27T00:40:00.000Z (exceeded 16777216 bytes) ===',
@@ -68,18 +72,22 @@ interface Session {
 }
 interface Perf {
   header: Record<string, unknown> & { host: Record<string, unknown> };
+  save: string;
+  host: { load: number[]; cores: number; power: string; freeGb: string };
   perf: {
     checkpoints: { save: string; turn: number }[];
     stretches: { from: Record<string, unknown>; tps: Record<string, Stats> }[];
     speed: string;
     fps: Stats;
-    host: Record<string, unknown>;
   };
 }
 interface Entry {
   id: string;
   at: string;
   files: { sha256: string }[];
+  world: Record<string, unknown>;
+  perf: Record<string, unknown>;
+  host: Record<string, unknown>;
 }
 const sessionsOf = (text: string) => splitSessions(text, 'Europe/Berlin') as unknown as Session[];
 const perfOf = (i: number) => sessionPerf(splitSessions(LOG, 'Europe/Berlin')[i]) as unknown as Perf;
@@ -174,22 +182,25 @@ describe('perf.log sessions', () => {
   });
 
   it('reads the build and world from the session line and TPS per stretch between checkpoints', () => {
-    const { header, perf } = perfOf(1);
+    const { header, perf, host, save } = perfOf(1);
     expect(header).toMatchObject({ branch: null, commit: 'a96826d3', map: '750x750', pawns: 5, mobs: 1280, turn: 30058, renderer: 'painted' });
     expect(header.host).toMatchObject({ power: 'Charging', freeGb: '4.1/15.3' });
     expect(perf.checkpoints.map((c) => [c.save, c.turn])).toEqual([
+      ['start0000', 30058],
       ['aaaa1111', 30500],
       ['bbbb2222', 31600]
     ]);
+    expect(save).toBe('start0000');
     expect(perf.stretches.map((s) => s.tps['4x'])).toEqual([
+      undefined,
       { median: 100, p10: 90, p90: 100, n: 2 },
       { median: 72, p10: 70, p90: 72, n: 2 },
       { median: 200, p10: 200, p90: 200, n: 1 }
     ]);
-    expect(perf.stretches[1].from).toMatchObject({ save: 'aaaa1111', turn: 30500 });
+    expect(perf.stretches[2].from).toMatchObject({ save: 'aaaa1111', turn: 30500 });
     expect(perf.speed).toBe('4x');
     expect(perf.fps.median).toBe(92);
-    expect(perf.host.power).toBe('Discharging');
+    expect(host).toMatchObject({ load: [1.2, 1, 0.9], cores: 22, power: 'Discharging', freeGb: '4.1/15.3' });
   });
 
   it('treats a log with no capture lines as a session with no checkpoints', () => {
@@ -213,6 +224,8 @@ describe('perf.log sessions', () => {
     expect(plays).toHaveLength(4);
     expect(listEntries(dir, { world: 'bbbb' })).toHaveLength(1);
     const a = plays.find((e) => e.at === '2026-11-27T00:37:35.743Z');
+    expect(a!.host).toMatchObject({ load: [1.2, 1, 0.9], loadEnd: null, cores: 22, others: null });
+    expect(a!.world.save).toBe('start0000');
     expect(readBlob(dir, a!.files[0].sha256).toString().split('\n')[0]).toBe(SESSION_A);
   });
 });
@@ -247,5 +260,29 @@ describe('saves', () => {
     expect(save.world).toMatchObject({ turn: 30058, seed: 7, map: '3x2', pawns: 1, mobs: 2 });
     expect(resolveSave(dir, first.id).id).toBe(first.id);
     expect(assembleSave(dir, save).length).toBeGreaterThan(0);
+  });
+
+  it('takes the start counts from the save and keeps the result counts as the end', () => {
+    const old = join(dir, 'old.json');
+    writeFileSync(old, JSON.stringify({ scenario: 'owner-save', pawns: 5, mobs: 1274, turn: 17736, tps: 40 }));
+    const from = { turn: 17136, pawns: 5, mobs: 1259 };
+    const a = getEntry(dir, ingestResult(dir, { machine: 'desktop', path: old, saveWorld: from }).id) as unknown as Entry;
+    expect(a.world).toMatchObject(from);
+    expect(a.perf).toMatchObject({ endPawns: 5, endMobs: 1274 });
+    expect(a.host).toEqual({ load: null, loadEnd: null, cores: null, others: null });
+    const fresh = join(dir, 'new.json');
+    const host = { load: [0.5, 0.4, 0.3], loadEnd: [1, 1, 1], cores: 16, others: [] };
+    writeFileSync(fresh, JSON.stringify({ scenario: 'owner-save', pawns: 5, mobs: 1259, turn: 17136, endPawns: 4, endMobs: 1200, host }));
+    const b = getEntry(dir, ingestResult(dir, { machine: 'desktop', path: fresh, saveWorld: { turn: 1, pawns: 1, mobs: 1 } }).id) as unknown as Entry;
+    expect(b.world).toMatchObject({ turn: 17136, pawns: 5, mobs: 1259 });
+    expect(b.perf).toMatchObject({ endPawns: 4, endMobs: 1200 });
+    expect(b.host).toEqual(host);
+  });
+});
+
+describe('sync', () => {
+  it('reads perf.log and its rotated names as the live log and keeps older copies apart', () => {
+    for (const n of ['perf.log', 'perf.log.1', 'perf.log.20261127T003735Z', 'perf.log.20261127T003735Z-2']) expect(LIVE.test(n)).toBe(true);
+    for (const n of ['perf.log.kept-0a1b2c3d4e5f', 'perf.log.kept-012345678901', 'perf.log.bak', 'perf.log.20261127T0037Z']) expect(LIVE.test(n)).toBe(false);
   });
 });

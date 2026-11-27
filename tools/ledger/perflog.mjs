@@ -4,7 +4,7 @@ const TAGGED = /^\[T(\d+)\] \[(\w+)\] (.*)$/;
 const RESET = /^=== log reset at (\S+) /;
 const TPS = /^tps=(\d+(?:\.\d+)?) speed=(\S+) pawns=(\d+) mobs=(\d+)/;
 const FPS = /^render fps=(\d+(?:\.\d+)?) /;
-const CAPTURE = /^ledger save=(\S+) turn=(\d+) ms=(\d+(?:\.\d+)?)/;
+const CAPTURE = /^ledger (save=\S+|failed) /;
 const TOKEN = /(\w+)=("(?:[^"]*)"|\S+)/g;
 const HOUR = 3600_000;
 
@@ -161,24 +161,29 @@ export function sessionPerf(session) {
   const tps = [];
   const fps = [];
   let skip = 0;
-  let host = header?.host ?? null;
-  const hostChanges = [];
+  const changes = [];
+  let power = header?.host ?? {};
   for (const line of session.lines) {
     if (line.type === 'capture') {
-      const [, save, turn, ms] = CAPTURE.exec(line.msg);
+      const t = tokens(line.msg);
+      const ms = num(t.ms) ?? 0;
+      skip = Math.max(1, Math.ceil(ms / 1000));
+      if (!t.save) continue;
       checkpoints.push({
-        save,
-        turn: Number(turn),
-        at: line.at == null ? null : new Date(line.at).toISOString(),
-        ms: Number(ms)
+        save: t.save,
+        reason: t.reason ?? null,
+        turn: num(t.turn) ?? line.turn,
+        at: t.at ?? (line.at == null ? null : new Date(line.at).toISOString()),
+        ms,
+        entry: t.entry ?? null
       });
-      skip = Math.max(1, Math.ceil(Number(ms) / 1000));
-    } else if (line.type === 'tps' && running(line)) {
-      const [, value, speed] = TPS.exec(line.msg);
+    } else if (line.type === 'tps') {
       if (skip > 0) {
         skip--;
         continue;
       }
+      if (!running(line)) continue;
+      const [, value, speed] = TPS.exec(line.msg);
       tps.push({ value: Number(value), speed, turn: line.turn, stretch: checkpoints.length });
     } else if (line.type === 'fps') {
       const t = tokens(line.msg.split('|')[1] ?? '');
@@ -188,13 +193,14 @@ export function sessionPerf(session) {
         running: t.paused === 'false'
       });
     } else if (line.type === 'host') {
-      host = { ...(host ?? {}), ...tokens(line.msg) };
-      hostChanges.push({ at: line.at == null ? null : new Date(line.at).toISOString(), ...tokens(line.msg) });
+      power = { ...power, ...tokens(line.msg) };
+      changes.push({ at: line.at == null ? null : new Date(line.at).toISOString(), ...tokens(line.msg) });
     }
   }
   const speeds = bySpeed(tps);
   const speed = dominant(speeds);
   const turns = session.lines.map((l) => l.turn).filter((t) => t != null);
+  const started = checkpoints.find((c) => c.reason === 'session');
   const stretches = [];
   for (let k = 0; k <= checkpoints.length; k++) {
     const inside = tps.filter((s) => s.stretch === k);
@@ -202,14 +208,27 @@ export function sessionPerf(session) {
     const to = checkpoints[k] ?? null;
     if (!checkpoints.length) break;
     stretches.push({
-      from: from ? { save: from.save, turn: from.turn, at: from.at } : { save: header?.save ?? null, turn: header?.turn ?? null, at: null },
+      from: from ? { save: from.save, turn: from.turn, at: from.at } : { save: header?.save ?? started?.save ?? null, turn: header?.turn ?? null, at: null },
       to: to ? { save: to.save, turn: to.turn, at: to.at } : null,
       tps: bySpeed(inside)
     });
   }
   const runningFps = fps.filter((f) => f.running);
+  const loads = (header?.host?.load ?? '').split('/').map(num);
   return {
     header,
+    save: header?.save ?? started?.save ?? null,
+    host: {
+      load: loads.length === 3 && loads.every((l) => l != null) ? loads : null,
+      loadEnd: null,
+      cores: header?.client?.cores ?? null,
+      others: null,
+      power: power.power ?? null,
+      profile: power.profile ?? null,
+      governor: power.governor ?? null,
+      freeGb: header?.host?.freeGb ?? null,
+      changes
+    },
     perf: {
       tps: speed ? speeds[speed] : null,
       speed,
@@ -220,8 +239,6 @@ export function sessionPerf(session) {
       turns: turns.length ? { first: Math.min(...turns), last: Math.max(...turns) } : null,
       renderer: header?.renderer ?? null,
       client: header?.client ?? null,
-      host,
-      hostChanges,
       checkpoints,
       stretches
     }
