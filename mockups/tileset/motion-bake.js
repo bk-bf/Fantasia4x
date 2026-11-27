@@ -112,7 +112,7 @@ function frameOf(A, st, lvl, smooth) {
   let flip = !!st.flip, make, pose;
   if (A.rig === 'pawn') {
     pose = posed(st.anim, def, u, c);
-    if (pose.lie) { const q = { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, out: pose.out ? 1 : 0, bent: pose.bent ? 1 : 0 }, fl = !!st.flip !== (c.face === 'f' && FALLS_OVER.includes(st.anim)), let_go = pose.loose && c.tool ? c.tool : ''; return { s: cachedFrame(A.look + '|lie' + JSON.stringify(q) + (fl ? 'F' : '') + let_go, () => { const lying = A.lookOf ? drawLook(A.lookOf, 's', null, { lie: 1, ...q }, A.gear) : rigPawnLie(A.o, q), s = let_go ? dropped(lying, let_go, 's', 1) : lying; return fl ? mirror(s) : s; }), dx: 0, dy: 0 }; }
+    if (pose.lie) { const q = { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, out: pose.out ? 1 : 0, bent: pose.bent ? 1 : 0 }, fl = !!st.flip !== (c.face === 'f' && FALLS_OVER.includes(st.anim)), let_go = pose.loose && c.tool ? c.tool : ''; return { s: cachedFrame(A.look + '|lie' + JSON.stringify(q) + (fl ? 'F' : '') + let_go, () => { const lying = A.lookOf ? drawLook(A.lookOf, 's', null, { lie: 1, ...q }, A.gear) : rigPawnLie(A.o, q), s = let_go ? dropped(lying, let_go, 's', 1, lainReach(A)) : lying; return fl ? mirror(s) : s; }), dx: 0, dy: 0 }; }
     fitted(A, pose);
     if (pose.face !== 's') flip = false;
     make = () => A.lookOf ? drawLook(A.lookOf, pose.face, null, JSON.parse(key0), A.gear) : rigPawn(A.o, JSON.parse(key0));
@@ -125,12 +125,19 @@ function frameOf(A, st, lvl, smooth) {
   const layer = pose.carry && A.load ? HAUL.layer(A.load, pose.carry, c.face, pose.down > .5) : null;
   if (layer && A.rig === 'pawn') pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0, layer.draped ? 1 : 0, layer.yoked ? 1 : 0, layer.spr.head ? layer.spr.head[1] : -1, layer.under ? 1 : 0, layer.hafted ? 1 : 0];
   const key0 = quant(pose, ang), key = A.look + '|' + lvl + (c.face !== 's' ? c.face : '') + (flip ? 'F' : '') + key0 + (layer ? '|' + layer.key : '');
-  return { s: cachedFrame(key + (pose.loose && c.tool ? '|' + c.tool : ''), () => { const bare = make(), laden = layer && bare.mask ? MOTION_LOAD.put(bare, layer) : bare, leant = pose.tip ? tipped(laden, c.face === 'f' ? -pose.tip : pose.tip) : laden, s = pose.loose && c.tool ? dropped(leant, c.tool, c.face, pose.loose) : leant; if (!s.pts) s.pts = {}; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
+  return { s: cachedFrame(key + (pose.loose && c.tool ? '|' + c.tool : ''), () => { const bare = make(), laden = layer && bare.mask ? MOTION_LOAD.put(bare, layer) : bare, leant = pose.tip ? tipped(laden, c.face === 'f' ? -pose.tip : pose.tip) : laden, s = pose.loose && c.tool ? dropped(leant, c.tool, c.face, pose.loose, lainReach(A)) : leant; if (!s.pts) s.pts = {}; return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
 }
 
-const FALLS_OVER = ['fall', 'down'], DROPPED = { rest: [12, 1], lies: 90, quick: 1.6, from: { s: [7, -9], f: [-8, -9], b: [8, -9] } };
-function dropped(pawn, kind, face, k) {
-  const loose = new Spr(pawn.w, pawn.h, pawn.ax, pawn.ay), from = DROPPED.from[face], side = face === 'f' ? -1 : 1, x = pawn.ax + rnd(mix(from[0], side * DROPPED.rest[0], k)), y = pawn.ay + rnd(mix(from[1], DROPPED.rest[1], Math.min(1, (k * DROPPED.quick) ** 2)));
+const FALLS_OVER = ['fall', 'down'], DROPPED = { rest: [12, 1], clear: 2, lies: 90, quick: 1.6, from: { s: [7, -9], f: [-8, -9], b: [8, -9] } };
+const UNPOSED_LIE = { br: 0, rest: 0, out: 0, bent: 0 };
+function lainReach(A) {
+  const lying = cachedFrame(A.look + '|lain', () => A.lookOf ? drawLook(A.lookOf, 's', null, { lie: 1, ...UNPOSED_LIE }, A.gear) : rigPawnLie(A.o, UNPOSED_LIE));
+  let far = 0;
+  for (let q = 0; q < lying.c.length; q++) if (lying.c[q]) far = Math.max(far, q % lying.w - lying.ax);
+  return { far, room: Math.min(lying.ax, lying.w - 1 - lying.ax) };
+}
+function dropped(pawn, kind, face, k, reach) {
+  const loose = new Spr(pawn.w, pawn.h, pawn.ax, pawn.ay), from = DROPPED.from[face], side = face === 'f' ? -1 : 1, rest = Math.min(Math.max(DROPPED.rest[0], reach.far + 1 + DROPPED.clear + TOOL_BUTT[kind]), reach.room - TOOL_REACH[kind] - 2), x = pawn.ax + rnd(mix(from[0], side * rest, k)), y = pawn.ay + rnd(mix(from[1], DROPPED.rest[1], Math.min(1, (k * DROPPED.quick) ** 2)));
   const held = toolSeen(VIEWS[face], unit3((carried3({ tool: kind }, 0) || {}).aim || [0, 0, 1]));
   toolAt(loose, kind, x, y, mix(held.ang, side * DROPPED.lies, k), { fore: mix(held.fore, 1, k) });
   loose.outline();

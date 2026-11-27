@@ -17,7 +17,7 @@ function load(read, layered, composed) {
   const left = composed ? /^motion\.js$/ : /^motion\.js$|motion-folk|motion-sheet|motion-stage|motion-fell|motion-timeline/, motion = read('motion.html').match(/data-then="([^"]+)"/)[1].split(' ').filter(f => !left.test(f) && !registry.includes(f));
   const source = [...registry, ...motion].map(read).join('\n;');
   const data = JSON.parse(read('catalog-data.json'));
-  return new Function('DATA', 'innerWidth', source + '\nDBX.fromData(DATA); MOTION_LOAD.init(DATA);' + (composed ? 'MOTION_FOLK.init(FOLK_CAST);' : '') + (layered ? 'RIG_KEEP.layers = true;' : '') + '\nreturn { placed: typeof FOLK_PARTS !== "undefined" && !!FOLK_PARTS.rigged && typeof dressedLook === "function", style: typeof LOOK_STYLE === "undefined" ? null : LOOK_STYLE, PAWN_ANIMS, FB_POSES, fbPose, posed, PAWNS, FOLK, TOOLS, SEEN, BOW, rigPawn, rigPawnLie, RG, DBX, fitted, HAUL, MOTION_LOAD, HOLDS, P, mkActor, tipped' + (layered ? ', shade' : '') + (composed ? ', drawLook, SHEET' : '') + ' };')(data.objects, WIDE);
+  return new Function('DATA', 'innerWidth', source + '\nDBX.fromData(DATA); MOTION_LOAD.init(DATA);' + (composed ? 'MOTION_FOLK.init(FOLK_CAST);' : '') + (layered ? 'RIG_KEEP.layers = true;' : '') + '\nreturn { placed: typeof FOLK_PARTS !== "undefined" && !!FOLK_PARTS.rigged && typeof dressedLook === "function", style: typeof LOOK_STYLE === "undefined" ? null : LOOK_STYLE, PAWN_ANIMS, FB_POSES, fbPose, posed, PAWNS, FOLK, TOOLS, SEEN, BOW, rigPawn, rigPawnLie, RG, DBX, fitted, HAUL, MOTION_LOAD, HOLDS, P, mkActor, frameOf, tipped' + (layered ? ', shade' : '') + (composed ? ', drawLook, SHEET' : '') + ' };')(data.objects, WIDE);
 }
 function loadThen(ref) {
   try { return load(fromGit(ref), false); } catch (e) {
@@ -65,7 +65,7 @@ function frame(G, kind, over, anim, face, u, loadId, seed) {
 
 const solid = spr => { let n = 0; for (let i = 0; i < spr.c.length; i++) if (spr.c[i]) n++; return n; };
 const tallOf = s => { let top = -1, low = -1; for (let q = 0; q < s.c.length; q++) if (s.c[q]) { if (top < 0) top = (q / s.w) | 0; low = (q / s.w) | 0; } return low - top + 1; };
-const PICKED_UP = ['lift', 'drop'], SETTLE = .06, LOAD_JUMP = 11, LOAD_STEP = 6, RIGID = { share: .88, least: 10 }, UNDER = 1, PART_ART_UNDER = { fall: ['folk-winged', 'folk-marked'] }, SEATED = ['sit', 'warm', 'eat'], SEATS = ['stool', 'bench', 'chair'], SEAT_REACH = 8;
+const PICKED_UP = ['lift', 'drop'], SETTLE = .06, LOAD_JUMP = 11, LOAD_STEP = 6, RIGID = { share: .88, least: 10 }, UNDER = 1, LET_GO = ['fall', 'down'], CANVAS_EDGE = 2, PART_ART_UNDER = { fall: ['folk-winged', 'folk-marked'] }, SEATED = ['sit', 'warm', 'eat'], SEATS = ['stool', 'bench', 'chair'], SEAT_REACH = 8;
 const alike = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
 const shows = (shown, own) => !!shown && !!own && (shown === own || alike(shown, own) || alike(shown, NOW.shade(own)) || alike(shown, NOW.shade(NOW.shade(own))));
 const isBody = l => BODY.includes(l.name), isArm = l => !!l.limb, isTool = l => l.name === 'tool' || l.name === 'tool butt', isArrow = l => isTool(l) && l.piece === 'arrow', isLoad = l => l.name === 'load';
@@ -179,10 +179,10 @@ function audit(now, shown, face) {
   return counts;
 }
 
-const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', ...PICTURE_KEYS, 'z', 'I', 'J', 'M', 'Q', 'T', 'U'];
+const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', ...PICTURE_KEYS, 'z', 'I', 'J', 'M', 'Q', 'T', 'U', 'Z'];
 const POLE_ROWS = ['guardTwo', 'thrust'], poleSides = new Map();
 const ARROW_RESTS = { rows: ['guardBow'], gap: 2 };
-const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', o: 'held thing behind the body it is in front of', p: 'inside the body', ...PICTURE_NAMED, z: 'rigid thing changes length', I: 'seated with no seat', J: 'lying figure under its ground line', M: 'limb sticks up from a lying figure', Q: 'load jumps between frames', T: 'pole on the other side of the body than in the guard', U: 'resting arrow off the bow hand' };
+const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', o: 'held thing behind the body it is in front of', p: 'inside the body', ...PICTURE_NAMED, z: 'rigid thing changes length', I: 'seated with no seat', J: 'lying figure under its ground line', M: 'limb sticks up from a lying figure', Z: 'let-go weapon against the lying body', Q: 'load jumps between frames', T: 'pole on the other side of the body than in the guard', U: 'resting arrow off the bow hand' };
 const anims = Object.keys(NOW.PAWN_ANIMS).filter(a => !only || new RegExp(only).test(a));
 const totals = Object.fromEntries(KEYS.map(k => [k, 0])), rows = [], notes = [], ground = new Map(), shares = [], seenShare = args.includes('--seen');
 let frames = 0;
@@ -201,6 +201,12 @@ for (const anim of anims) {
         const u = (i + .5) / n, now = frame(NOW, kind, over, anim, face, u, loadId);
         if (now.pose.tip && now.pose.face === face) { const tip = tipping(NOW.tipped(now.spr, face === 'f' ? -now.pose.tip : now.pose.tip), NOW.P.ink, false); const spurs = Math.max(0, tip.spurs - spursOf(now.spr)); if (tip.torn || tip.parts || spurs) { sum.v++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': ' + PICTURE_NAMED.v + ', ' + tip.torn + ' edge pixels not inked, ' + tip.parts + ' loose parts, ' + spurs + ' spurs'); } }
         if (now.lying && face === 's') { let low = 0; for (let q = 0; q < now.lying.c.length; q++) if (now.lying.c[q]) low = (q / now.lying.w) | 0; if (low > NOW.RG.BASE + UNDER && !(PART_ART_UNDER[anim] || []).includes(kind)) { sum.J++; if (noted) notes.push(anim + ' ' + who + ' frame ' + (i + 1) + ': ' + NAMED.J + ', ' + (low - NOW.RG.BASE) + ' px under'); } }
+        if (now.lying && face !== 'b' && LET_GO.includes(anim) && over.tool !== null) {
+          const at = { anim, face, u: (i + .5) / n, t: 0 }, armed = NOW.frameOf(NOW.mkActor('pawn', kind, over), at, 3, smooth).s, bare = NOW.frameOf(NOW.mkActor('pawn', kind, { ...over, tool: null }), at, 3, smooth).s, w = armed.w;
+          const weapon = armed.w === bare.w ? armed.c.map((c, q) => c && !bare.c[q] ? q : -1).filter(q => q >= 0) : [], cols = weapon.map(q => q % w), fits = weapon.length && Math.min(...cols) > CANVAS_EDGE && Math.max(...cols) < w - 1 - CANVAS_EDGE;
+          const against = fits ? weapon.filter(q => [-1, 0, 1].some(dy => [-1, 0, 1].some(dx => bare.c[q + dy * w + dx]))).length : 0;
+          if (against) { sum.Z++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': ' + NAMED.Z + ', ' + against + ' px'); }
+        }
         if (now.lying && tallOf(now.lying) > now.asleep) { sum.M++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': ' + NAMED.M + ', ' + tallOf(now.lying) + ' rows tall, ' + now.asleep + ' asleep'); }
         if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); arrows.push(null); lengths.push(null); continue; }
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId, now.seed) : now).spr.c, face), where = who + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
