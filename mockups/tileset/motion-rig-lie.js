@@ -40,7 +40,7 @@ function rigPawnLie(o, p) {
   const aw = f.aw, armC = (t, k) => { const hand = t > f.tl - 4.5, bare = o.sleeves === 0 || t > 7; return hand || bare ? skin[clamp(sn - 1 - (k === aw - 1 ? 1 : 0), 0, sn)] : pick3(o.sleeve || body, k / aw * .5, 0); };
   const sh0 = [tx0 + 2, gy - (aw >> 1)];
   const limp = len => (t, k) => t > len - 3.5 || o.sleeves === 0 ? skin[clamp(sn - 1 - (k === aw - 1 ? 1 : 0) + (t > len - 1.5 ? 1 : 0), 0, sn)] : pick3(body, k / aw * .5, 0);
-  const flung = [[tx0 + 2, top + 1], [tx0 + 6, top - 1], [tx0 + 9, top + 2]], flopped = cradled ? [[tx0 + 3, gy - 4], [tx0 + CRADLED.back + 4, gy], [tx0 + CRADLED.back + 4, gy + CRADLED.dangles]] : tucked ? [[tx0 + 3, gy - 3], [tx0 + 8, gy - 2], [tx0 + 12, gy - 3]] : [[tx0 + 3, gy - 2], [tx0 + 7, gy], [tx0 + 12, gy]];
+  const flung = [[tx0 + 2, top + 1], [tx0 + 6, top - 1], [tx0 + 9, top + 2]], flopped = cradled ? [[tx0 + 2, gy - 4], [tx0, gy], [tx0, gy + CRADLED.dangles]] : tucked ? [[tx0 + 3, gy - 3], [tx0 + 8, gy - 2], [tx0 + 12, gy - 3]] : [[tx0 + 3, gy - 2], [tx0 + 7, gy], [tx0 + 12, gy]];
   if (out && !tucked) rigLimb(s, flung, aw, (t, k) => dark(limp(lieLength(flung))(t, k), .85));
   else if (!rest && !tucked) {
     rigLimb(s, [[tx0 + 2, top + 1], [tx0 + 7, top - 1], [tx0 + 11, top]], aw, (t, k) => dark(armC(t, k), .85));
