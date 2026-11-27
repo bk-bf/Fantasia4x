@@ -235,17 +235,27 @@ export function keepaliveBodies<T>(entries: readonly T[], limit = KEEPALIVE_BODY
   return bodies;
 }
 
+let _keepaliveInFlight = 0;
+
+export function postMirror(body: string): void {
+  const keepalive = _keepaliveInFlight + body.length <= KEEPALIVE_BODY_LIMIT;
+  if (keepalive) _keepaliveInFlight += body.length;
+  fetch('/api/log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+    keepalive
+  })
+    .catch(() => {})
+    .finally(() => {
+      if (keepalive) _keepaliveInFlight -= body.length;
+    });
+}
+
 function flushMirror(): void {
   _mirrorTimer = null;
   if (_mirrorPending.length === 0) return;
-  for (const body of keepaliveBodies(_mirrorPending.splice(0))) {
-    fetch('/api/log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-      keepalive: true
-    }).catch(() => {});
-  }
+  for (const body of keepaliveBodies(_mirrorPending.splice(0))) postMirror(body);
 }
 
 export function logWork(

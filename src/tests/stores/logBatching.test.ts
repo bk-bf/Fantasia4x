@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { get } from 'svelte/store';
 import {
   activityLog,
@@ -9,6 +9,7 @@ import {
   logDiag,
   logCombatSwing,
   keepaliveBodies,
+  postMirror,
   __resetCombatSessions
 } from '$lib/stores/Log';
 
@@ -145,5 +146,25 @@ describe('keepaliveBodies', () => {
     expect(keepaliveBodies([line(1), line(2)])).toEqual([
       JSON.stringify({ entries: [line(1), line(2)] })
     ]);
+  });
+});
+
+describe('postMirror', () => {
+  it('sends a body as keepalive only while the bodies still in flight leave room for it', async () => {
+    const pending: Array<() => void> = [];
+    const sent: boolean[] = [];
+    vi.stubGlobal('fetch', (_url: string, init: RequestInit) => {
+      sent.push(init.keepalive === true);
+      return new Promise<Response>((done) => pending.push(() => done(new Response(null))));
+    });
+    const body = 'x'.repeat(40_000);
+    postMirror(body);
+    postMirror(body);
+    expect(sent).toEqual([true, false]);
+    pending.splice(0).forEach((done) => done());
+    await new Promise((r) => setTimeout(r, 0));
+    postMirror(body);
+    expect(sent).toEqual([true, false, true]);
+    vi.unstubAllGlobals();
   });
 });
