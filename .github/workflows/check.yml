@@ -56,9 +56,12 @@ jobs:
         run: |
           warn=false
           base="$(git merge-base HEAD origin/dev)"
+          line="$(git rev-list --count --first-parent HEAD ^origin/dev)"
           for t in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/test/); do
             m="$(git merge-base HEAD "$t")"
-            git merge-base --is-ancestor "$m" origin/dev || { warn=true; base="$m"; break; }
+            git merge-base --is-ancestor "$m" origin/dev && continue
+            [ "$(git rev-list --count --first-parent HEAD ^origin/dev "^$t")" = "$line" ] && continue
+            warn=true; base="$m"; break
           done
           case "$GITHUB_EVENT_NAME" in
             push)
