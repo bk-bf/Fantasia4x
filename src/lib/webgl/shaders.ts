@@ -130,7 +130,13 @@ export async function createTileRendererShaders(
     console.log('📋 Vertex shader source length:', shaderSource.vertex.length);
     console.log('📋 Fragment shader source length:', shaderSource.fragment.length);
 
-    const tile = TileShading.create(gpu, shaderManager, shaderSource, gpu.canvas.format, rowDepth);
+    const tile = TileShading.create(
+      gpu,
+      shaderManager,
+      shaderSource,
+      gpu.canvas.format,
+      rowDepth ? (gpu.canvas.depthFormat ?? 'depth24plus') : null
+    );
 
     if (tile instanceof TileShading) {
       console.log('✅ Tile renderer shaders created successfully');

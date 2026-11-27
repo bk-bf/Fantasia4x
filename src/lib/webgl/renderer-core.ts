@@ -543,7 +543,7 @@ export class WebGLRendererCore {
 
     const tOverlay = performance.now();
     const overlaySteps = overlays
-      ? this.prepareOverlays(gpu, grid, viewportTilesW, viewportTilesH, lightTime)
+      ? this.prepareOverlays(grid, viewportTilesW, viewportTilesH, lightTime)
       : [];
     const overlayPrepareMs = performance.now() - tOverlay;
 
@@ -551,6 +551,7 @@ export class WebGLRendererCore {
     if (this.lightPass && lightFrame) this.stats.drawCalls += this.lightPass.encode(encoder);
     const pass = encoder.beginRenderPass(this.webglState.canvasPass(gpu));
     pass.setBindGroup(FRAME_GROUP, frame.group);
+    pass.setStencilReference(TREE_GROUND_STENCIL);
 
     const tTerrainEncode = performance.now();
     if (this.groundBlend?.encode(pass)) {
@@ -574,7 +575,6 @@ export class WebGLRendererCore {
   }
 
   private prepareOverlays(
-    gpu: GpuDevice,
     grid: GridRenderer,
     viewportTilesW: number,
     viewportTilesH: number,
@@ -588,7 +588,7 @@ export class WebGLRendererCore {
       });
     const snowOn = this.snowGrid !== null && passOn('snow');
     if (snowOn) drawGrid(this.prepareSnow(grid, viewportTilesW, viewportTilesH, lightTime, 'wash'));
-    const trees = this.prepareTreeGround(gpu, grid, viewportTilesW, viewportTilesH, lightTime);
+    const trees = this.prepareTreeGround(grid, viewportTilesW, viewportTilesH, lightTime);
     if (trees) steps.push(trees);
     const shadowCast = this.shadowCast;
     if (this.rowDepth && shadowCast) steps.push((pass) => shadowCast.encode(pass));
@@ -608,17 +608,8 @@ export class WebGLRendererCore {
             CHUNKED[layer]
           )
         );
-      if (layer === 'resource' && snowOn) {
-        const pieces = this.prepareSnow(grid, viewportTilesW, viewportTilesH, lightTime, 'overlay');
-        const kept = trees !== null;
-        steps.push((pass) => {
-          if (kept)
-            gpu.setStencil({ compare: 'not-equal', reference: TREE_GROUND_STENCIL, write: false });
-          grid.encodeGrid(pass, pieces);
-          if (kept) gpu.setStencil(null);
-          return 0;
-        });
-      }
+      if (layer === 'resource' && snowOn)
+        drawGrid(this.prepareSnow(grid, viewportTilesW, viewportTilesH, lightTime, 'overlay'));
       const tiers = this.tiers;
       if (layer === 'resource' && ROCK_TIERS && this.rowDepth && tiers)
         steps.push((pass) => tiers.encode(pass));
@@ -858,7 +849,6 @@ export class WebGLRendererCore {
   }
 
   private prepareTreeGround(
-    gpu: GpuDevice,
     grid: GridRenderer,
     viewportTilesW: number,
     viewportTilesH: number,
@@ -869,20 +859,25 @@ export class WebGLRendererCore {
     const view = { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH };
     const touched = blend.trees.dressAround(view, DRESS_BUDGET_MS);
     if (touched.length > 0) grid.markDecorChunksDirty(touched);
-    const decor = this.prepareGrid(grid, blend.trees.decor, viewportTilesW, viewportTilesH, lightTime, {
-      pointLightActive: this.dynamicLight,
-      lightVersion: this.lightVersion,
-      cacheVersion: this.gridVersion,
-      chunkLayer: 'decor',
-      pipeline: 'flat',
-      slice: 'overlay'
-    });
+    const decor = this.prepareGrid(
+      grid,
+      blend.trees.decor,
+      viewportTilesW,
+      viewportTilesH,
+      lightTime,
+      {
+        pointLightActive: this.dynamicLight,
+        lightVersion: this.lightVersion,
+        cacheVersion: this.gridVersion,
+        chunkLayer: 'decor',
+        pipeline: 'marking',
+        slice: 'overlay'
+      }
+    );
     return (pass) => {
-      gpu.setStencil({ compare: 'always', reference: TREE_GROUND_STENCIL, write: true });
       const winter = blend.encodeWinterTrees(pass);
       if (winter) this.stats.vertexCount += 6;
       grid.encodeGrid(pass, decor);
-      gpu.setStencil(null);
       return winter ? 1 : 0;
     };
   }
@@ -964,7 +959,7 @@ export class WebGLRendererCore {
         cacheVersion: this.snowVersion,
         chunkLayer: 'snow',
         rowPasses,
-        pipeline: rowPasses ? 'overlay' : 'flat',
+        pipeline: rowPasses ? 'masked' : 'flat',
         slice
       }
     );

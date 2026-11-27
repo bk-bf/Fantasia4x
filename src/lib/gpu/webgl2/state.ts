@@ -1,4 +1,6 @@
-import type { Webgl2Pipeline } from './pipeline.js';
+import type { GlStencilFace, Webgl2Pipeline } from './pipeline.js';
+
+const STENCIL_MASK = 0xff;
 
 export class Webgl2State {
   private program: WebGLProgram | null = null;
@@ -7,6 +9,10 @@ export class Webgl2State {
   private depthOn: boolean | null = null;
   private depthFunc: number | null = null;
   private depthWrite: boolean | null = null;
+  private stencil: Webgl2Pipeline['stencil'] = null;
+  private stencilOn: boolean | null = null;
+  private stencilKey = '';
+  private reference = 0;
 
   constructor(private readonly gl: WebGL2RenderingContext) {}
 
@@ -25,6 +31,10 @@ export class Webgl2State {
       gl.blendFuncSeparate(p.blend[0], p.blend[1], p.blend[2], p.blend[3]);
       this.blendFuncs = p.blend;
     }
+    this.toggle(gl.STENCIL_TEST, p.stencil !== null, this.stencilOn);
+    this.stencilOn = p.stencil !== null;
+    this.stencil = p.stencil;
+    this.applyStencil();
     this.toggle(gl.DEPTH_TEST, p.depth !== null, this.depthOn);
     this.depthOn = p.depth !== null;
     if (!p.depth) return;
@@ -36,6 +46,26 @@ export class Webgl2State {
       gl.depthMask(p.depth.write);
       this.depthWrite = p.depth.write;
     }
+  }
+
+  setStencilReference(reference: number): void {
+    this.reference = reference;
+    this.applyStencil();
+  }
+
+  private applyStencil(): void {
+    const s = this.stencil;
+    if (!s) return;
+    const key = `${s.front.func},${s.front.passOp},${s.back.func},${s.back.passOp},${this.reference}`;
+    if (key === this.stencilKey) return;
+    this.stencilKey = key;
+    const gl = this.gl;
+    const face = (side: number, f: GlStencilFace) => {
+      gl.stencilFuncSeparate(side, f.func, this.reference, STENCIL_MASK);
+      gl.stencilOpSeparate(side, gl.KEEP, gl.KEEP, f.passOp);
+    };
+    face(gl.FRONT, s.front);
+    face(gl.BACK, s.back);
   }
 
   allowDepthWrite(): void {

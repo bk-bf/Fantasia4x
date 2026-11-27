@@ -4,7 +4,8 @@ import type {
   GpuRenderPass,
   GpuRenderPipeline,
   GpuTexture,
-  TextureFormat
+  TextureFormat,
+  DepthFormat
 } from '../gpu/device.js';
 import { uniformLayout, type Precision, type UniformMember } from '../gpu/uniforms.js';
 import { DRAW_GROUP, DrawSlices } from './drawSlices.js';
@@ -109,12 +110,12 @@ export class TileShading {
     shaders: ShaderManager,
     glsl: Omit<GlslSources, 'attributes'>,
     format: TextureFormat,
-    rowDepth: boolean
+    depth: DepthFormat | null
   ): TileShading | { error: string } {
     const bindings = new PassBindings(gpu, 'tile', [TILE_STATIC, TILE_FRAME], TILE_TEXTURES);
     const draws = new DrawSlices(gpu, 'tile', TILE_DRAW);
     const pipelines = new Map<TilePipeline, GpuRenderPipeline>();
-    for (const [name, desc] of tilePipelines(glsl, format, rowDepth, [bindings, draws])) {
+    for (const [name, desc] of tilePipelines(glsl, format, depth, [bindings, draws])) {
       const made = shaders.createPipeline(name, desc);
       if (!made.success || !made.pipeline) {
         bindings.destroy();

@@ -2,7 +2,6 @@ import type {
   BindGroupDescriptor,
   BindGroupLayoutDescriptor,
   BufferDescriptor,
-  StencilState,
   GpuBindGroup,
   GpuBindGroupLayout,
   GpuBuffer,
@@ -54,8 +53,6 @@ function errorName(gl: WebGL2RenderingContext, error: number): string {
       return `UNKNOWN_ERROR_${error}`;
   }
 }
-
-const STENCIL_MASK = 0xff;
 
 export class Webgl2Device implements GpuDevice {
   readonly backend = 'webgl2' as const;
@@ -224,6 +221,7 @@ export class Webgl2Device implements GpuDevice {
         if (open) throw new Error('beginRenderPass: the encoder already has an open pass');
         open = true;
         this.framebuffers.begin(desc);
+        this.state.setStencilReference(0);
         this.bindGroups.beginPass();
         let ended = false;
         const live = () => {
@@ -242,6 +240,10 @@ export class Webgl2Device implements GpuDevice {
             live();
             this.vertexArrays.set(slot, raw<WebGLBuffer>(buffer), offset);
           },
+          setStencilReference: (reference) => {
+            live();
+            this.state.setStencilReference(reference);
+          },
           draw: (vertexCount, instanceCount, firstVertex, firstInstance) => {
             live();
             this.draw(vertexCount, instanceCount, firstVertex, firstInstance);
@@ -259,21 +261,6 @@ export class Webgl2Device implements GpuDevice {
         return {} as GpuCommandBuffer;
       }
     };
-  }
-
-  setStencil(state: StencilState | null): void {
-    const gl = this.gl;
-    if (!state) {
-      gl.disable(gl.STENCIL_TEST);
-      return;
-    }
-    gl.enable(gl.STENCIL_TEST);
-    gl.stencilFunc(
-      state.compare === 'always' ? gl.ALWAYS : gl.NOTEQUAL,
-      state.reference,
-      STENCIL_MASK
-    );
-    gl.stencilOp(gl.KEEP, gl.KEEP, state.write ? gl.REPLACE : gl.KEEP);
   }
 
   private draw(

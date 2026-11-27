@@ -19,7 +19,8 @@ import {
   type GpuDevice,
   type GpuRenderPass,
   type GpuRenderPipeline,
-  type GpuTexture
+  type GpuTexture,
+  type StencilFaceState
 } from '../../gpu/device.js';
 import { TreeGroundLayer, withTreeGround } from './treeGroundLayer.js';
 import { treeSoils } from './treeGroundTable.js';
@@ -27,6 +28,7 @@ import type { TreeSoil } from './treeGroundManifest.js';
 import { uniformLayout, type UniformMember } from '../../gpu/uniforms.js';
 import { SizedTexture } from '../sizedTexture.js';
 import { canvasPipeline } from '../canvasPipeline.js';
+import { MARK } from '../tilePipelines.js';
 import { PASS_GROUP, PassBindings, blankTexture } from '../passBindings.js';
 import { DRAW_GROUP, DrawSlices } from '../drawSlices.js';
 
@@ -211,8 +213,7 @@ export class GroundBlend {
   ): GroundBlend | null {
     const bindings = new PassBindings(gpu, PROGRAM, [GROUND_STATIC, GROUND_FRAME], GROUND_TEXTURES);
     const draws = new DrawSlices(gpu, PROGRAM, GROUND_DRAW);
-    const made = shaders.createPipeline(
-      PROGRAM,
+    const describe = (stencil?: StencilFaceState) =>
       canvasPipeline(gpu, {
         vertex: vertexSource,
         fragment: withTreeGround(fragmentSource),
@@ -225,14 +226,17 @@ export class GroundBlend {
           }
         ],
         topology: 'triangle-list',
-        bindings: [bindings, draws]
-      })
-    );
+        bindings: [bindings, draws],
+        ...(stencil ? { stencil } : {})
+      });
+    const made = shaders.createPipeline(PROGRAM, describe());
+    const marking = shaders.createPipeline(`${PROGRAM}.marking`, describe(MARK));
     const program = made.pipeline;
-    if (!made.success || !program) {
+    const marks = marking.pipeline;
+    if (!made.success || !program || !marking.success || !marks) {
       bindings.destroy();
       draws.destroy();
-      console.warn('[ground blend] off:', made.error);
+      console.warn('[ground blend] off:', made.error ?? marking.error);
       return null;
     }
     if (!painted.water) {
@@ -241,12 +245,13 @@ export class GroundBlend {
       console.warn('[ground blend] off: the water field did not load');
       return null;
     }
-    return new GroundBlend(gpu, program, bindings, draws, painted, painted.water);
+    return new GroundBlend(gpu, program, marks, bindings, draws, painted, painted.water);
   }
 
   private constructor(
     private readonly gpu: GpuDevice,
     private readonly program: GpuRenderPipeline,
+    private readonly marking: GpuRenderPipeline,
     private readonly bindings: PassBindings,
     private readonly draws: DrawSlices,
     painted: LoadedPaintedTileset,
@@ -525,12 +530,12 @@ export class GroundBlend {
 
   encodeWinterTrees(pass: GpuRenderPass): boolean {
     if (!this.trees?.winter) return false;
-    return this.encode(pass, GROUND_DRAW_TREES);
+    return this.encode(pass, GROUND_DRAW_TREES, this.marking);
   }
 
-  encode(pass: GpuRenderPass, slice = GROUND_DRAW_WHOLE): boolean {
+  encode(pass: GpuRenderPass, slice = GROUND_DRAW_WHOLE, pipeline = this.program): boolean {
     if (!this.drawn) return false;
-    pass.setPipeline(this.program);
+    pass.setPipeline(pipeline);
     pass.setBindGroup(PASS_GROUP, this.bindings.group(this.drawn));
     pass.setBindGroup(DRAW_GROUP, this.draws.group, [this.draws.offset(slice)]);
     pass.setVertexBuffer(0, this.vbo);
@@ -550,5 +555,6 @@ export class GroundBlend {
     this.bindings.destroy();
     this.draws.destroy();
     gpu.destroyRenderPipeline(this.program);
+    gpu.destroyRenderPipeline(this.marking);
   }
 }

@@ -9,7 +9,7 @@ export function tileShaders(gpu: GpuDevice, rowDepth: boolean): TileShading {
     new ShaderManager(gpu),
     { vertex: '', fragment: '' },
     gpu.canvas.format,
-    rowDepth
+    rowDepth ? 'depth24plus' : null
   );
   if ('error' in made) throw new Error(made.error);
   return made;
