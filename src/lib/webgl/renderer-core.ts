@@ -1,12 +1,13 @@
 import { createOrthographicMatrix, PerformanceTimer } from './utils.js';
-import { MissingWgsl, ShaderManager, createTileRendererShaders } from './shaders.js';
+import { ShaderManager, createTileRendererShaders } from './shaders.js';
 import { createSquareCellAtlas, loadBitlandsAtlas } from './font-atlas.js';
 import { TextureManager, uploadFontAtlas } from './texture-manager.js';
 import { ALPHA_CUT, GridRenderer, type GridDraw, type GridRenderOptions } from './grid-renderer.js';
 import type { TileShading } from './tileShading.js';
 import { WebGLStateManager } from './webgl-state.js';
+import { buildWithFallback } from './gpuChoice.js';
 import type { GameGrid } from './game-grid.js';
-import { PipelineBuildFailed, type GpuDevice, type GpuRenderPass, type GpuTexture } from '../gpu/device.js';
+import type { GpuDevice, GpuRenderPass, GpuTexture } from '../gpu/device.js';
 import type { FontAtlas } from './types.js';
 import { BASE_TILE_PX } from './tile-types.js';
 import { WORK_PINS } from '../workPins/flag.js';
@@ -407,24 +408,12 @@ export class WebGLRendererCore {
     }
   }
 
-  private async initialize(): Promise<boolean> {
-    try {
-      return await this.build();
-    } catch (error) {
-      const noWebgpu = error instanceof MissingWgsl || error instanceof PipelineBuildFailed;
-      if (!noWebgpu || !this.webglState.canFallBack) {
-        console.error('❌ WebGL init failed:', error);
-        if (error instanceof PipelineBuildFailed)
-          throw new Error(
-            'WebGPU could not build its shaders. Start with ?gpu=webgl2 to draw with WebGL2.'
-          );
-        throw error;
-      }
-      console.info(`[gpu] ${error.message}, so the automatic choice falls back to WebGL2`);
-      this.forgetPasses();
-      this.webglState.fallBackToWebgl2(error.message);
-      return this.build();
-    }
+  private initialize(): Promise<boolean> {
+    return buildWithFallback(
+      () => this.build(),
+      this.webglState,
+      () => this.forgetPasses()
+    );
   }
 
   private forgetPasses(): void {

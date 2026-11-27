@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { chooseGpu, wgslRule } from '$lib/webgl/gpuChoice';
+import { WEBGPU_SHADERS_FAILED, buildWithFallback, chooseGpu, wgslRule } from '$lib/webgl/gpuChoice';
 import { readGpuSwitch } from '$lib/webgl/passes';
 import { MissingWgsl, ShaderManager } from '$lib/webgl/shaders';
+import { PipelineBuildFailed } from '$lib/gpu/device';
 import type { GpuDevice } from '$lib/gpu/device';
 import type { FramedPipeline } from '$lib/webgl/frameBindings';
 
@@ -79,5 +80,47 @@ describe('the WGSL rule', () => {
       success: false
     });
     expect(createRenderPipeline).not.toHaveBeenCalled();
+  });
+});
+
+describe('starting the renderer', () => {
+  const target = (canFallBack: boolean) => ({ canFallBack, fallBackToWebgl2: vi.fn() });
+  const failingOnce = (error: Error) => {
+    let calls = 0;
+    return vi.fn(async () => {
+      if (calls++ === 0) throw error;
+      return true;
+    });
+  };
+
+  it('falls back to WebGL2 and builds again when a WebGPU pipeline fails under the automatic choice', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+    for (const error of [new PipelineBuildFailed('groundBlend', 'no'), new MissingWgsl('tile')]) {
+      const build = failingOnce(error);
+      const gpu = target(true);
+      const forget = vi.fn();
+      await expect(buildWithFallback(build, gpu, forget)).resolves.toBe(true);
+      expect(build).toHaveBeenCalledTimes(2);
+      expect(forget).toHaveBeenCalledTimes(1);
+      expect(gpu.fallBackToWebgl2).toHaveBeenCalledWith(error.message);
+    }
+  });
+
+  it('shows the WebGPU message and builds nothing more when WebGPU was forced', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const build = failingOnce(new PipelineBuildFailed('groundBlend', 'no'));
+    const gpu = target(false);
+    await expect(buildWithFallback(build, gpu, vi.fn())).rejects.toThrow(WEBGPU_SHADERS_FAILED);
+    expect(build).toHaveBeenCalledTimes(1);
+    expect(gpu.fallBackToWebgl2).not.toHaveBeenCalled();
+  });
+
+  it('never falls back on any other failure', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const gpu = target(true);
+    await expect(
+      buildWithFallback(failingOnce(new Error('Shader init failed')), gpu, vi.fn())
+    ).rejects.toThrow('Shader init failed');
+    expect(gpu.fallBackToWebgl2).not.toHaveBeenCalled();
   });
 });

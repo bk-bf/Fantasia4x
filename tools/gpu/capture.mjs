@@ -68,6 +68,7 @@ function keepDrawingBuffer() {
 }
 
 function keepWebgpuFrames() {
+  const LOSS_GRACE_MS = 1000;
   const w = /** @type {any} */ (globalThis);
   if (!w.GPUCanvasContext) return;
   const proto = w.GPUCanvasContext.prototype;
@@ -128,10 +129,14 @@ function keepWebgpuFrames() {
       return { w: texture.width, h: texture.height, rgba };
     });
     const previous = w.__f4xWebgpuFrame ?? null;
-    w.__f4xWebgpuFrame = done.catch((/** @type {unknown} */ error) => {
-      if (device.__f4xGone) return previous;
-      throw error;
-    });
+    w.__f4xWebgpuFrame = done.catch((/** @type {unknown} */ error) =>
+      device.__f4xGone
+        ? previous
+        : Promise.race([
+            device.lost.then(() => previous),
+            new Promise((_, reject) => setTimeout(() => reject(error), LOSS_GRACE_MS))
+          ])
+    );
     return result;
   };
 }

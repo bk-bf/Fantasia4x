@@ -8,6 +8,7 @@ import { canvasPass } from '../tileShaders';
 import { blankTexture } from '$lib/webgl/passBindings';
 import type { GpuTexture } from '$lib/gpu/device';
 import { wgslInstance } from '$lib/gpu/uniforms';
+import { GL_LIMITS, glLimit } from '../glLimits';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
 vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
@@ -54,12 +55,16 @@ function recordingGl(calls: [string, unknown[]][]): WebGL2RenderingContext {
           : {};
   return new Proxy({} as WebGL2RenderingContext, {
     get: (_, name) =>
-      typeof name !== 'string' || /^[A-Z0-9_]+$/.test(name)
+      typeof name !== 'string'
         ? 0
-        : (...args: unknown[]) => {
-            calls.push([name, args]);
-            return answer(name, args);
-          }
+        : name in GL_LIMITS
+          ? GL_LIMITS[name as keyof typeof GL_LIMITS]
+          : /^[A-Z0-9_]+$/.test(name)
+            ? 0
+            : (...args: unknown[]) => {
+                calls.push([name, args]);
+                return glLimit(name, args) ?? answer(name, args);
+              }
   });
 }
 

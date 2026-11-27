@@ -22,6 +22,7 @@ import WIND from '$lib/webgl/painted/wind.json';
 import { LeafField, leafTarget, type LeafFrame } from '$lib/webgl/painted/leaves';
 import { GROUND_FRAME, GroundBlend, waterTime } from '$lib/webgl/painted/groundBlend';
 import { FLUID_DEFS, FluidClock } from '$lib/webgl/painted/fluids';
+import { GL_LIMITS, glLimit } from '../glLimits';
 
 const GLYPH_FLOATS = 24;
 const ROW_FLOATS = 32;
@@ -54,6 +55,7 @@ const tile = (x: number, y: number, painted?: PaintedSprite, rotation?: 90): Til
 
 function recordingGl(uploads: Float32Array[], calls: [string, unknown[]][] = []) {
   const constants = {
+    ...GL_LIMITS,
     DEPTH_TEST: 0x0b71,
     ARRAY_BUFFER: 0x8892,
     TRIANGLES: 4,
@@ -73,6 +75,8 @@ function recordingGl(uploads: Float32Array[], calls: [string, unknown[]][] = [])
       if (key in target) return target[key as keyof typeof target];
       return (...args: unknown[]) => {
         calls.push([key, args]);
+        const limit = glLimit(key, args);
+        if (limit !== undefined) return limit;
         if (key === 'getUniformLocation') return args[1];
         if (key === 'getUniformBlockIndex') return 0xffffffff;
         if ((key === 'bufferData' || key === 'bufferSubData') && args[1] instanceof Float32Array)

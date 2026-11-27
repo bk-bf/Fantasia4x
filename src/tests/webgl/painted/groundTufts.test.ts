@@ -6,6 +6,7 @@ import type { TileData } from '$lib/webgl/tile-types';
 import type { FontAtlas } from '$lib/webgl/types';
 import { renderGrid, tileShaders } from '../tileShaders';
 import { Webgl2Device } from '$lib/gpu/webgl2/device';
+import { GL_LIMITS, glLimit } from '../glLimits';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
 vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
@@ -100,12 +101,14 @@ describe('grass tufts on the blended ground', () => {
 
 function chunkRenderer(uploads: Float32Array[]) {
   const gl = new Proxy(
-    { ARRAY_BUFFER: 0x8892, TRIANGLES: 4, FLOAT: 0x1406 },
+    { ...GL_LIMITS, ARRAY_BUFFER: 0x8892, TRIANGLES: 4, FLOAT: 0x1406 },
     {
       get: (target, key) => {
         if (typeof key !== 'string') return undefined;
         if (key in target) return target[key as keyof typeof target];
         return (...args: unknown[]) => {
+          const limit = glLimit(key, args);
+          if (limit !== undefined) return limit;
           if (key === 'getUniformBlockIndex') return 0xffffffff;
           if (key === 'bufferData' && args[1] instanceof Float32Array) uploads.push(args[1]);
           if (key === 'bufferSubData' && args[2] instanceof Float32Array) uploads.push(args[2]);

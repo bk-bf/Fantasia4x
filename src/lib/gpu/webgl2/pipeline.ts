@@ -213,8 +213,8 @@ function bindings(
   const named = Object.entries(desc.glsl.textures ?? {}).sort(
     ([, a], [, b]) => a.texture[0] - b.texture[0] || a.texture[1] - b.texture[1]
   );
-  const maxUnits = Number(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS)) || Infinity;
-  if (FIRST_BOUND_UNIT + named.length > maxUnits)
+  const maxUnits = Number(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS));
+  if (named.length > 0 && !(FIRST_BOUND_UNIT + named.length <= maxUnits))
     return {
       error: `${desc.label}: ${named.length} textures from unit ${FIRST_BOUND_UNIT} are past this context's ${maxUnits} texture units`
     };

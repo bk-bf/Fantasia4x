@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Webgl2Device } from '../../lib/gpu/webgl2/device.js';
+import { GL_LIMITS, glLimit } from '../webgl/glLimits';
 import {
   ALPHA_BLEND,
   BufferUsage,
@@ -24,7 +25,8 @@ const GL = {
   ONE_MINUS_SRC_ALPHA: 0x0303,
   LEQUAL: 0x0203,
   ALWAYS: 0x0207,
-  LINK_STATUS: 0x8b82
+  LINK_STATUS: 0x8b82,
+  ...GL_LIMITS
 };
 
 function recording() {
@@ -36,6 +38,8 @@ function recording() {
       if (key in target) return target[key as keyof typeof target];
       return (...args: unknown[]) => {
         calls.push([key, ...args]);
+        const limit = glLimit(key, args);
+        if (limit !== undefined) return limit;
         if (key === 'getProgramParameter') return args[1] === GL.LINK_STATUS ? true : 0;
         if (key === 'getContextAttributes') return { depth: true };
         return { id: ++made };

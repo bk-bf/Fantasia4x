@@ -14,6 +14,7 @@ import { SHADOW_DEPTH } from '$lib/webgl/painted/shadowCast';
 import { WindClock } from '$lib/webgl/painted/wind';
 import { WebGLStateManager } from '$lib/webgl/webgl-state';
 import type { TileSlice } from '$lib/webgl/tileShading';
+import { GL_LIMITS, glLimit } from '../glLimits';
 
 const GLYPH_FLOATS = 24;
 const ROW_FLOATS = 32;
@@ -41,6 +42,7 @@ const pine = spriteAt(tileset.lookup.get('resource')!.get('pine_tree')![0], 4, 6
 
 function recordingGl(uploads: Float32Array[] = []) {
   const constants = {
+    ...GL_LIMITS,
     DEPTH_TEST,
     ARRAY_BUFFER: 0x8892,
     TRIANGLES: 4,
@@ -59,6 +61,8 @@ function recordingGl(uploads: Float32Array[] = []) {
       if (key in target) return target[key as keyof typeof target];
       return (...args: unknown[]) => {
         calls.push([key, ...args]);
+        const limit = glLimit(key, args);
+        if (limit !== undefined) return limit;
         if (key === 'getUniformBlockIndex') return 0xffffffff;
         if (key === 'bufferData' && args[1] instanceof Float32Array) uploads.push(args[1]);
         if (key === 'bufferSubData' && args[2] instanceof Float32Array) uploads.push(args[2]);

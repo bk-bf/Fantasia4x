@@ -393,6 +393,17 @@ describe('webgl2 limits', () => {
       expect(result.error).toMatch(/2 uniform buffers in the vertex stage are past this device's 1/);
   });
 
+  it('refuses any texture on a context that reports no texture units', () => {
+    const { gpu } = recording(undefined, { [GL.MAX_TEXTURE_IMAGE_UNITS]: 0 });
+    const empty = gpu.createBindGroupLayout({ entries: [] });
+    const result = gpu.createRenderPipeline(
+      pipeline([empty], { blocks: {}, textures: { u_a: { texture: [0, 0], sampler: [0, 1] } } })
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok)
+      expect(result.error).toMatch(/1 textures from unit 0 are past this context's 0 texture units/);
+  });
+
   it('refuses a pipeline whose textures need units past the context has', () => {
     const { gpu, calls } = recording(undefined, { [GL.MAX_TEXTURE_IMAGE_UNITS]: 1 });
     const empty = gpu.createBindGroupLayout({ entries: [] });

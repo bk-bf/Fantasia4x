@@ -1,5 +1,6 @@
 import type { GpuSwitch } from './passes.js';
-import type { WgslRule } from './shaders.js';
+import { MissingWgsl, type WgslRule } from './shaders.js';
+import { PipelineBuildFailed } from '../gpu/device.js';
 
 export type GpuChoice =
   | { backend: 'webgpu'; device: GPUDevice; adapter: string; forced: boolean }
@@ -31,4 +32,33 @@ export async function chooseGpu(gpu: GPU | undefined, forced: GpuSwitch): Promis
 export function wgslRule(choice: GpuChoice, glslOnlySkipped: boolean): WgslRule {
   if (choice.backend === 'webgpu') return choice.forced ? 'skip' : 'require';
   return glslOnlySkipped ? 'skip' : 'any';
+}
+
+export const WEBGPU_SHADERS_FAILED =
+  'WebGPU could not build its shaders. Start with ?gpu=webgl2 to draw with WebGL2.';
+
+export interface FallbackTarget {
+  readonly canFallBack: boolean;
+  fallBackToWebgl2(reason: string): void;
+}
+
+export async function buildWithFallback(
+  build: () => Promise<boolean>,
+  target: FallbackTarget,
+  forgetPasses: () => void
+): Promise<boolean> {
+  try {
+    return await build();
+  } catch (error) {
+    const noWebgpu = error instanceof MissingWgsl || error instanceof PipelineBuildFailed;
+    if (!noWebgpu || !target.canFallBack) {
+      console.error('❌ WebGL init failed:', error);
+      if (error instanceof PipelineBuildFailed) throw new Error(WEBGPU_SHADERS_FAILED);
+      throw error;
+    }
+    console.info(`[gpu] ${error.message}, so the automatic choice falls back to WebGL2`);
+    forgetPasses();
+    target.fallBackToWebgl2(error.message);
+    return build();
+  }
 }
