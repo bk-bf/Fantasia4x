@@ -3,7 +3,6 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
-import { createHash } from 'node:crypto';
 import {
   parseRerunArgs,
   plan,
@@ -14,7 +13,7 @@ import {
   syncSpool
 } from '../../../../tools/ledger/rerun.mjs';
 import { recordRun, recordBench, agentEnv, hostRecord, hostInvalid, snapshot, parseKv } from '../../../../tools/ledger/bench.mjs';
-import { ingestSave } from '../../../../tools/ledger/ingest.mjs';
+import { ingestSave, worldIdOf } from '../../../../tools/ledger/ingest.mjs';
 import { listEntries, getEntry, ingestSpool } from '../../../../tools/ledger/store.mjs';
 
 const SHA_DEV = 'a'.repeat(40);
@@ -28,7 +27,7 @@ const saveText = JSON.stringify({
     [0, 0, 0]
   ]
 });
-const worldId = createHash('sha256').update(saveText).digest('hex');
+const worldId = worldIdOf(saveText);
 
 let root: string;
 let spool: string;
@@ -241,23 +240,18 @@ describe('rerun on a machine', () => {
 });
 
 describe('syncing a rerun into the store', () => {
-  it('waits while the sync timer holds the store, then ingests', () => {
+  it('ingests the spool into a free store', async () => {
     ownerSave();
-    mkdirSync(join(spool, 'entries'), { recursive: true });
-    writeFileSync(join(root, '.lock'), String(process.ppid));
-    const slept: number[] = [];
-    const ok = syncSpool(root, spool, (ms: number) => {
-      slept.push(ms);
-      rmSync(join(root, '.lock'));
-    });
-    expect(ok).toBe(true);
-    expect(slept).toEqual([5000]);
+    const id = await recordRun({ env, tool: 'steady', host: null, log: () => {} });
+    expect(syncSpool(root, spool)).toBe(true);
+    expect(getEntry(root, id).tool).toBe('steady');
   });
 
   it('leaves the entry in the spool when the store stays held', () => {
     mkdirSync(root, { recursive: true });
     writeFileSync(join(root, '.lock'), String(process.ppid));
-    expect(syncSpool(root, spool, () => {}, 2)).toBe(false);
+    expect(syncSpool(root, spool, 300)).toBe(false);
+    rmSync(join(root, '.lock'));
   });
 });
 

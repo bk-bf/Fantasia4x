@@ -224,7 +224,7 @@ export async function rerun(root, o, deps = defaultDeps(), env = process.env) {
       writeFileSync(resultPath, got.stdout);
       writeFileSync(logPath, r.stdout);
       const id = await recordRound(root, {
-        o, t, step, result, at, found, harness, hostBefore, hostAfter, batch, env, localSave, resultPath, logPath, machine: host, sleep: deps.sleep
+        o, t, step, result, at, found, harness, hostBefore, hostAfter, batch, env, localSave, resultPath, logPath, machine: host
       });
       ids.push(id);
       deps.log(`recorded ${id}: ${summary(result)}`);
@@ -276,23 +276,18 @@ export async function recordRound(root, c) {
     dir
   );
   const id = writeEntry(entry, dir);
-  syncSpool(root, dir, c.sleep ?? ((ms) => spawnSync('sleep', [String(ms / 1000)])));
+  syncSpool(root, dir);
   return id;
 }
 
-export function syncSpool(root, dir, sleep, tries = 12) {
-  for (let i = 1; ; i++) {
-    try {
-      const report = withLock(root, () => ingestSpool(root, dir, { remove: true }));
-      if (report.errors.length) console.error(`ledger: ${report.errors.join('; ')}`);
-      return true;
-    } catch (err) {
-      if (!/is held by/.test(err.message) || i >= tries) {
-        console.error(`ledger: left in the spool for the sync timer: ${err.message}`);
-        return false;
-      }
-      sleep(5000);
-    }
+export function syncSpool(root, dir, waitMs) {
+  try {
+    const report = withLock(root, () => ingestSpool(root, dir, { remove: true }), waitMs == null ? {} : { waitMs });
+    if (report.errors.length) console.error(`ledger: ${report.errors.join('; ')}`);
+    return true;
+  } catch (err) {
+    console.error(`ledger: left in the spool for the sync timer: ${err.message}`);
+    return false;
   }
 }
 
