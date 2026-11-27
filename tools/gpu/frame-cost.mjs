@@ -33,6 +33,7 @@ const seconds = Number(SECONDS);
 
 function watchSim() {
   window.__f4xTurn = 0;
+  window.__f4xSpeed = null;
   const Native = window.Worker;
   window.Worker = class extends Native {
     constructor(/** @type {string | URL} */ url, /** @type {WorkerOptions | undefined} */ options) {
@@ -41,6 +42,11 @@ function watchSim() {
       this.addEventListener('message', (e) => {
         const d = e.data;
         if (d?.kind === 'snapshot' && typeof d.state?.turn === 'number') window.__f4xTurn = d.state.turn;
+        if (d?.kind === 'simlog')
+          for (const ev of d.events ?? []) {
+            const m = /speed=([\d.]+)x/.exec(ev.message ?? '');
+            if (ev.category === 'perf' && m) window.__f4xSpeed = Number(m[1]);
+          }
       });
     }
   };
@@ -117,15 +123,15 @@ async function runSkipSet(skip, rows) {
     await cdp.send('Performance.enable');
     /** @param {number} speed */
     const setSpeed = (speed) =>
-      speed === MAX_SPEED
-        ? page.evaluate((/** @type {number} */ s) => window.__f4xSim.postMessage({ kind: 'setSpeed', speed: s }), speed)
-        : page.evaluate(
-            (/** @type {number} */ s) =>
-              /** @type {HTMLElement[]} */ ([...document.querySelectorAll('.spd')])
-                .find((b) => (b.textContent ?? '').trim() === `${s}x`)
-                ?.click(),
-            speed
-          );
+      page.evaluate((/** @type {number} */ s) => {
+        window.__f4xSpeed = null;
+        window.__f4xSim.postMessage({ kind: 'setSpeed', speed: s });
+      }, speed);
+    /** @param {number} speed */
+    const assertSpeed = async (speed) => {
+      const running = await page.evaluate(() => window.__f4xSpeed);
+      if (running !== speed) throw new Error(`asked the sim for ${speed}x, it reports ${running ?? 'no'} speed`);
+    };
     for (const [zoom, deltaY, steps] of ZOOMS) {
       await setPaused(true);
       await wheel(deltaY, steps);
@@ -136,12 +142,14 @@ async function runSkipSet(skip, rows) {
         await setPaused(!value);
         await sleep(SETTLE_MS);
         const row = { skipped: skip || 'none', zoom, tilePx, speed, ...(await measureCell(page, cdp)) };
+        if (value) await assertSpeed(value);
         rows.push(row);
         log(`ROW ${JSON.stringify(row)}`);
       }
     }
   } catch (e) {
     log(`FAIL ${e instanceof Error ? e.stack : e}`);
+    process.exitCode = 1;
   }
   await finish();
 }
