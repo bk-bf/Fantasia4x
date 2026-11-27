@@ -36,6 +36,7 @@ const CAST = [
 ];
 const PEOPLE = ['carried_pawn', 'goblin_carcass', 'pawn_carcass'];
 const LOADS = { tote: ['bone_stock', 'steel_cleaver', 'stone_spear'], heft: ['wild_berries', 'copper_bar'], lug: ['granite_block', 'wild_oats'], haul: ['pine_log', 'pine_plank'], bear: ['harpy_carcass', 'bullywug_carcass'], rescue: PEOPLE };
+const SHOWN = ['coney_fur', 'branch', 'linen_gambeson', 'rabbit_carcass', 'giant_olm_carcass', 'steel_bodkin_arrow', 'great_bone'];
 const HANDLING = ['lift', 'drop', 'held'];
 const BODY = ['torso', 'head', 'legs', 'far leg', 'near leg', 'cape', 'pad'];
 const FACES = ['s', 'f', 'b'], NAMES = { s: 'sideways', f: 'toward', b: 'away' };
@@ -57,10 +58,12 @@ function frame(G, kind, over, anim, face, u, loadId, seed) {
   if (layer) pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0, layer.draped ? 1 : 0, layer.yoked ? 1 : 0, layer.spr.head ? layer.spr.head[1] : -1, layer.under ? 1 : 0];
   const rigged = look ? G.drawLook(look, face, null, JSON.parse(quant(pose, TURN)), A.gear) : G.rigPawn(A.o, JSON.parse(quant(pose, TURN)));
   const lying = pose.lie && !look ? G.rigPawnLie(A.o, { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, out: pose.out ? 1 : 0, bent: pose.bent ? 1 : 0 }) : null;
-  return { spr: layer && rigged.mask ? G.MOTION_LOAD.put(rigged, layer) : rigged, rigged, pose, lying, seed: A.seed, fused: !!(layer && layer.fused), level: !!(layer && layer.rows), long: !!(load && (load.family === 'long' || load.slim || load.storage === 'shield')), layer, load: load ? { ...load, figure: load.storage === 'body' || /_carcass$/.test(load.id), person: PEOPLE.includes(load.id) } : null, fullLoad: layer ? solid(G.DBX.built(G.DBX.byId.get(layer.sprite))) : 0 };
+  const asleep = lying ? Math.max(...[0, 1].map(br => tallOf(G.rigPawnLie(A.o, { br, rest: 1, out: 0, bent: 0 })))) : 0;
+  return { spr: layer && rigged.mask ? G.MOTION_LOAD.put(rigged, layer) : rigged, rigged, pose, lying, asleep, seed: A.seed, fused: !!(layer && layer.fused), level: !!(layer && layer.rows), long: !!(load && (load.family === 'long' || load.slim || load.storage === 'shield' || (layer && layer.spr.along))), layer, load: load ? { ...load, figure: load.storage === 'body' || /_carcass$/.test(load.id), person: PEOPLE.includes(load.id) } : null, fullLoad: layer ? solid(G.DBX.built(G.DBX.byId.get(layer.sprite))) : 0 };
 }
 
 const solid = spr => { let n = 0; for (let i = 0; i < spr.c.length; i++) if (spr.c[i]) n++; return n; };
+const tallOf = s => { let top = -1, low = -1; for (let q = 0; q < s.c.length; q++) if (s.c[q]) { if (top < 0) top = (q / s.w) | 0; low = (q / s.w) | 0; } return low - top + 1; };
 const RIGID = { share: .88, least: 10 }, UNDER = 1, SEATED = ['sit', 'warm', 'eat'], SEATS = ['stool', 'bench', 'chair'], SEAT_REACH = 8;
 const alike = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
 const shows = (shown, own) => !!shown && !!own && (shown === own || alike(shown, own) || alike(shown, NOW.shade(own)) || alike(shown, NOW.shade(NOW.shade(own))));
@@ -174,15 +177,16 @@ function audit(now, shown, face) {
   return counts;
 }
 
-const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', ...PICTURE_KEYS, 'z', 'I', 'J'];
-const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', o: 'held thing behind the body it is in front of', p: 'inside the body', ...PICTURE_NAMED, z: 'rigid thing changes length', I: 'seated with no seat', J: 'lying figure under its ground line' };
+const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', ...PICTURE_KEYS, 'z', 'I', 'J', 'M'];
+const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', o: 'held thing behind the body it is in front of', p: 'inside the body', ...PICTURE_NAMED, z: 'rigid thing changes length', I: 'seated with no seat', J: 'lying figure under its ground line', M: 'limb sticks up from a lying figure' };
 const anims = Object.keys(NOW.PAWN_ANIMS).filter(a => !only || new RegExp(only).test(a));
 const totals = Object.fromEntries(KEYS.map(k => [k, 0])), rows = [], notes = [], ground = new Map(), shares = [], seenShare = args.includes('--seen');
 let frames = 0;
 const standing = (kind, over, face) => { const key = kind + JSON.stringify(over) + face; if (!ground.has(key)) { const f = frame(NOW, kind, over, 'idle', face, .1, null); ground.set(key, audit(f, f.spr.c, face).low); } return ground.get(key); };
 for (const anim of anims) {
   const def = NOW.PAWN_ANIMS[anim], n = (def.n || 6) * EACH, hold = LOADS[anim.replace(/Stand$/, '')] ? anim.replace(/Stand$/, '') : null;
-  const runs = hold ? LOADS[hold].map(id => ['woodcutter', {}, id]) : HANDLING.includes(anim) ? Object.values(LOADS).flat().map(id => ['woodcutter', {}, id]) : CAST.map(([k, o]) => [k, o, null]);
+  const shown = SHOWN.filter(id => NOW.MOTION_LOAD.get(id)), carriedAs = id => NOW.HOLDS[NOW.MOTION_LOAD.get(id).hold][0];
+  const runs = hold ? [...LOADS[hold], ...shown.filter(id => carriedAs(id) === hold)].map(id => ['woodcutter', {}, id]) : HANDLING.includes(anim) ? [...Object.values(LOADS).flat(), ...shown].map(id => ['woodcutter', {}, id]) : CAST.map(([k, o]) => [k, o, null]);
   if (folk && FOLK_ROWS[anim]) runs.push(...FOLK_KINDS.map(k => [k, FOLK_ROWS[anim], FOLK_LOAD[anim] || null]));
   for (const face of FACES) {
     const sum = Object.fromEntries(KEYS.map(k => [k, 0])), share = { tool: [0, 0], load: [0, 0] };
@@ -193,6 +197,7 @@ for (const anim of anims) {
         const u = (i + .5) / n, now = frame(NOW, kind, over, anim, face, u, loadId);
         if (now.pose.tip && now.pose.face === face) { const tip = tipping(NOW.tipped(now.spr, face === 'f' ? -now.pose.tip : now.pose.tip), NOW.P.ink, false); const spurs = Math.max(0, tip.spurs - spursOf(now.spr)); if (tip.torn || tip.parts || spurs) { sum.v++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': ' + PICTURE_NAMED.v + ', ' + tip.torn + ' edge pixels not inked, ' + tip.parts + ' loose parts, ' + spurs + ' spurs'); } }
         if (now.lying && face === 's') { let low = 0; for (let q = 0; q < now.lying.c.length; q++) if (now.lying.c[q]) low = (q / now.lying.w) | 0; if (low > NOW.RG.BASE + UNDER) { sum.J++; if (noted) notes.push(anim + ' ' + who + ' frame ' + (i + 1) + ': ' + NAMED.J + ', ' + (low - NOW.RG.BASE) + ' px under'); } }
+        if (now.lying && tallOf(now.lying) > now.asleep) { sum.M++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': ' + NAMED.M + ', ' + tallOf(now.lying) + ' rows tall, ' + now.asleep + ' asleep'); }
         if (now.pose.lie || now.pose.tip || now.pose.face !== face) { sizes.push(null); arrows.push(null); lengths.push(null); continue; }
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId, now.seed) : now).spr.c, face), where = who + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
         const seen = pictured({ ...now, bowHalf: NOW.BOW.half, shade: NOW.shade }, face, NOW.P.ink);

@@ -133,6 +133,7 @@ const HAUL = (() => {
     for (let y = 0; y < t.h; y++) for (let x = 0; x < t.w; x++) if (t.c[y * t.w + x]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
     const s = new Spr(x1 - x0 + 1, y1 - y0 + 1, 0, 0);
     for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) { s.c[y * s.w + x] = t.c[(y0 + y) * t.w + x0 + x]; s.e[y * s.w + x] = t.e[(y0 + y) * t.w + x0 + x]; }
+    s.along = true;
     LAID_ALONG.set(key, s);
     return s;
   }
@@ -155,7 +156,7 @@ const HAUL = (() => {
   const handPlaced = () => typeof LOOK_STYLE !== 'undefined' && LOOK_STYLE.pieces;
   function layer(load, hold, face, resting) {
     const src = load.source, folk = handPlaced();
-    if (resting) { const along = hold === 'shoulder' && face !== 's' && (face === 'f' ? src.toward : src.away), lying = along || (load.figure ? src.flat : src.lying) || src.side, flat = cropped(load.id, lying), turned = hold === 'hip' && face === 'b', spr = turned ? reshaped(load.id + '/' + lying + '/rest/mirrored', flat, (x, y) => [flat.w - 1 - x, y], flat.w, flat.h) : flat, out = { key: load.id + '/' + lying + '/rest' + (turned ? '/mirrored' : ''), sprite: 'item/' + load.id + '/' + lying, spr, grip: [face === 's' ? REST.edge : spr.w >> 1, along && face === 'f' && !src.turned ? 0 : spr.h - 1], hand: hiltAt(spr, turned ? spr.w - 2 : 1), sag: 0 }; if (turned) out.mirrored = true; return out; }
+    if (resting) { const along = hold === 'shoulder' && face !== 's' && (face === 'f' ? src.toward : src.away), lying = along || (load.figure ? src.flat : src.lying) || src.side, flat = cropped(load.id, lying), turned = hold === 'hip' && face === 'b', spr = turned ? reshaped(load.id + '/' + lying + '/rest/mirrored', flat, (x, y) => [flat.w - 1 - x, y], flat.w, flat.h, true) : flat, out = { key: load.id + '/' + lying + '/rest' + (turned ? '/mirrored' : ''), sprite: 'item/' + load.id + '/' + lying, spr, grip: [face === 's' ? REST.edge : spr.w >> 1, along && face === 'f' && !src.turned ? 0 : spr.h - 1], hand: hiltAt(spr, turned ? spr.w - 2 : 1), sag: 0 }; if (turned) out.mirrored = true; return out; }
     const upright = hold === 'hip' && face !== 's' && src.upright, ended = ON_SHOULDER.includes(hold) && face !== 's' && (face === 'f' ? src.toward : src.away);
     const folded = IN_BOTH_ARMS.includes(hold) && face !== 's' && src.folded;
     const variant = upright || (IN_HAND.includes(hold) && src.held) || ended || folded || (folk && src.folded) || (folk && DRAWN_ALONE.includes(load.id) && '0') || src.side, whole = folk && variant === '0' && DRAWN_ALONE.includes(load.id) ? laidAlong(load.id, cropped(load.id, variant)) : cropped(load.id, variant);
@@ -174,7 +175,8 @@ const HAUL = (() => {
     if (yoked) out.yoked = true;
     if (hold === 'game' && face === 's' && !spr.hold) Object.assign(out, slung(spr));
     if (spr.grasp) out.hand = spr.grasp;
-    if (folk && face === 's' && IN_BOTH_ARMS.includes(hold) && hold !== 'cradle' && load.family !== 'long' && !spr.hold && !ended) Object.assign(out, { grip: [out.grip[0], spr.h] }, variant === src.held ? { hand: underside(spr), under: true } : null);
+    if (folk && face === 's' && IN_BOTH_ARMS.includes(hold) && hold !== 'cradle' && load.family !== 'long' && !spr.hold && !ended) out.grip = [out.grip[0], spr.h];
+    if (folk && IN_BOTH_ARMS.includes(hold) && hold !== 'cradle' && load.family !== 'long' && !spr.hold && !ended && variant === src.held) Object.assign(out, { hand: underside(spr), under: true });
     if (hold === 'hip' && face === 's' && load.family === 'long' && !spr.hold) { const x = Math.round(spr.w * (POLES.includes(load.storage) ? HANDLE.pole : HANDLE.haft)); out.grip = hiltAt(spr, x); }
     return out;
   }
