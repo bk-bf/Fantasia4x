@@ -35,7 +35,7 @@ export function nobody(who = null) {
 
 function sessionKey(machine, checkout, session) {
   const start = session.start.stamp
-    ? `${session.start.type}@${session.start.stamp}`
+    ? `${session.start.type}@${session.start.stamp}|T${session.start.turn ?? '-'}`
     : `unstamped:${sha256Of(session.lines.slice(0, 200).map((l) => l.raw).join('\n'))}`;
   return `perf.log|${machine}|${checkout}|${start}`;
 }
