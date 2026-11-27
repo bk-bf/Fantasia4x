@@ -44,6 +44,16 @@ Tell the owner before starting if the desktop is off; he turns it on.
   the main thread. `?validate=1` turns it on in a dev build, read once by `GPU_VALIDATE` in
   `src/lib/webgl/passes.ts`; a frame that writes a buffer or texture a pending draw reads then
   throws. Never measure with it on.
+- `?gpu=webgpu` starts a dev build on WebGPU and draws only the passes that carry WGSL;
+  `?gpu=webgl2` starts it on WebGL2. With neither, the game takes WebGPU only on a hardware adapter
+  and only when every pass it builds carries WGSL, and otherwise WebGL2; the console's `[gpu]` line
+  and `globalThis.__f4xGpu` say which and why. `?skip=glsl-only` turns off the passes without
+  WGSL on WebGL2, so both backends draw the same passes. Chromium on Linux finds a hardware adapter
+  only with the `Vulkan` feature, which `electron/features.cjs` adds to both Electron entry points;
+  `--enable-unsafe-webgpu` alone gives the SwiftShader fallback, which the game refuses.
+  `F4X_GPU=webgpu|webgl2` passes the switch through `tools/dev-shell` and the probes, and
+  `F4X_PASSES=wgsl` adds `glsl-only` to the skip list of `capture.mjs` and `frame-cost.mjs`;
+  `capture.mjs` refuses a run whose backend is not the one asked for.
 - All of them share `tools/gpu/session.mjs`, which starts the nested compositor and the browser.
   The compositor's unit is named after the probe's process, so two probes at once no longer stop
   each other's compositor; still run one at a time when the numbers matter, since they share
@@ -169,6 +179,9 @@ node $T/tools/gpu/compare.mjs ~/captures/<before> ~/captures/<after> ~/captures/
 - `compare.mjs` prints `identical` or `DIFF <n> px, max channel delta <d>` per scene and writes a
   diff image for each scene that differs. A difference is explained only by a capture that makes
   it go away: change one thing on a throwaway commit, capture it, compare it against base.
+
+- To compare the backends, capture the same tree with `-E F4X_PASSES=wgsl` and `-E F4X_GPU=webgl2`,
+  then `-E F4X_GPU=webgpu`, and compare the two; the noise floor is two `webgl2` captures.
 
 ## Reporting
 
