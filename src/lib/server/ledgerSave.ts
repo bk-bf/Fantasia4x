@@ -1,13 +1,16 @@
 import { Worker } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
-import { machineName, newId } from '../../../tools/ledger/spool.mjs';
+import { mkdirSync } from 'node:fs';
+import { machineName } from '../../../tools/ledger/spool.mjs';
+import { captureEntryId } from '../../../tools/ledger/save-thread.mjs';
 import { appendToLog, logDir, logStamp } from './logFiles';
-import type { LedgerCaptureMeta } from '$lib/game/sim/ledgerCapture';
+import { ledgerFailedLine, type LedgerCaptureMeta } from '$lib/game/sim/ledgerCapture';
 
 const SNAPSHOT_HEAD = '{"v":1,"dynamic":';
 const THREAD = fileURLToPath(new URL('../../../tools/ledger/save-thread.mjs', import.meta.url));
 const THREAD_HEAP_MB = 6144;
+const MAX_IN_SPOOL = 2;
 
 export interface SpooledSave {
   save: string;
@@ -15,11 +18,20 @@ export interface SpooledSave {
   blob: string;
 }
 
+type Runner = (job: object, text: ArrayBuffer) => Promise<SpooledSave>;
+
+export interface SpoolOptions {
+  env?: NodeJS.ProcessEnv;
+  checkout?: string;
+  logs?: string;
+  run?: Runner;
+}
+
 export function readCaptureMeta(header: string | null): LedgerCaptureMeta | null {
   if (!header) return null;
   try {
     const meta = JSON.parse(decodeURIComponent(header)) as LedgerCaptureMeta;
-    const named = ['captureId', 'session', 'reason', 'at'] as const;
+    const named = ['captureId', 'session', 'sessionAt', 'reason', 'at'] as const;
     return named.every((k) => typeof meta?.[k] === 'string') ? meta : null;
   } catch {
     return null;
@@ -30,10 +42,10 @@ export function looksLikeSnapshot(text: Uint8Array): boolean {
   return Buffer.from(text.subarray(0, SNAPSHOT_HEAD.length)).toString('utf8') === SNAPSHOT_HEAD;
 }
 
-const sessionEntries = new Map<string, string>();
-let queue: Promise<unknown> = Promise.resolve();
+let queue: Promise<void> = Promise.resolve();
+let inSpool = 0;
 
-type Runner = (job: object, text: ArrayBuffer) => Promise<SpooledSave>;
+export const spoolFull = (): boolean => inSpool >= MAX_IN_SPOOL;
 
 function runThread(job: object, text: ArrayBuffer): Promise<SpooledSave> {
   return new Promise((done, fail) => {
@@ -48,26 +60,46 @@ function runThread(job: object, text: ArrayBuffer): Promise<SpooledSave> {
   });
 }
 
-function logFailure(meta: LedgerCaptureMeta, err: unknown): void {
-  const why = (err instanceof Error ? err.message : String(err)).replace(/"/g, "'");
-  const turn = String(meta.turn).padStart(5, '0');
-  appendToLog(join(logDir(), 'perf.log'), [
-    `${logStamp(new Date())} [T${turn}] [error] ledger failed cap=${meta.captureId} error="${why}"`
-  ]);
+export function logCaptureFailure(
+  meta: LedgerCaptureMeta,
+  err: unknown,
+  logs: string = logDir()
+): void {
+  try {
+    mkdirSync(logs, { recursive: true });
+    const turn = String(meta.turn).padStart(5, '0');
+    appendToLog(join(logs, 'perf.log'), [
+      `${logStamp(new Date())} [T${turn}] [error] ${ledgerFailedLine(meta.captureId, err)}`
+    ]);
+  } catch (logErr) {
+    console.error('[ledger] could not log a failed capture', meta.captureId, err, logErr);
+  }
 }
+
+export const SPOOL_BUSY = 'spool busy: one capture running and one waiting';
 
 export function queueSave(
   text: ArrayBuffer,
   meta: LedgerCaptureMeta,
-  env: NodeJS.ProcessEnv = process.env,
-  checkout = process.cwd(),
-  run: Runner = runThread
-): { entry: string; spooled: Promise<SpooledSave> } {
-  const entry = newId(machineName(env), meta.at);
-  if (meta.reason === 'session') sessionEntries.set(meta.session, entry);
-  const parent = meta.reason === 'session' ? null : (sessionEntries.get(meta.session) ?? null);
-  const job = { text: new Uint8Array(text), meta, entry, parent, env: { ...env }, checkout };
+  {
+    env = process.env,
+    checkout = process.cwd(),
+    logs = logDir(),
+    run = runThread
+  }: SpoolOptions = {}
+): { entry: string; spooled: Promise<SpooledSave> } | null {
+  if (spoolFull()) {
+    logCaptureFailure(meta, SPOOL_BUSY, logs);
+    return null;
+  }
+  inSpool++;
+  const entry = captureEntryId(machineName(env), meta.at, meta.captureId);
+  const job = { text: new Uint8Array(text), meta, entry, env: { ...env }, checkout };
   const spooled = queue.then(() => run(job, text));
-  queue = spooled.catch((err) => logFailure(meta, err));
+  queue = spooled.then(
+    () => {},
+    (err) => logCaptureFailure(meta, err, logs)
+  );
+  void queue.finally(() => inSpool--);
   return { entry, spooled };
 }

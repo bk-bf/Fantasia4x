@@ -1,10 +1,14 @@
 import { isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { gzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   fileRef,
   gitInfo,
   launchedBy,
   machineName,
+  newId,
   spoolDir,
   worldId,
   writeBlob,
@@ -12,17 +16,32 @@ import {
 } from './spool.mjs';
 
 /**
- * @typedef {{ captureId: string, session: string, reason: string, at: string, ms: number, turn: number, seed: number, map: string, pawns: number, mobs: number, speed: number, save: string | null, scenario: string | null, generatedBy: string | null, savedBy: string | null }} CaptureMeta
- * @typedef {{ text: Uint8Array, meta: CaptureMeta, entry: string, parent: string | null, env: NodeJS.ProcessEnv, checkout: string }} SaveJob
+ * @typedef {import('../../src/lib/game/sim/ledgerCapture').LedgerCaptureMeta} CaptureMeta
+ * @typedef {{ text: Uint8Array, meta: CaptureMeta, entry: string, env: NodeJS.ProcessEnv, checkout: string }} SaveJob
  */
 
+/** @param {string} machine @param {string} at @param {string} captureId */
+export function captureEntryId(machine, at, captureId) {
+  const tag = createHash('sha256').update(captureId).digest('hex').slice(0, 6);
+  return newId(machine, at).slice(0, -6) + tag;
+}
+
+/** @param {CaptureMeta} meta @param {string} machine @param {string} dir */
+function sessionParent(meta, machine, dir) {
+  const root = `${meta.session}-0`;
+  if (meta.captureId === root || !meta.sessionAt) return null;
+  const id = captureEntryId(machine, meta.sessionAt, root);
+  return existsSync(join(dir, 'entries', `${id}.json`)) ? id : null;
+}
+
 /** @param {SaveJob} job */
-export function spoolCapture({ text, meta, entry, parent, env, checkout }) {
+export function spoolCapture({ text, meta, entry, env, checkout }) {
   const started = performance.now();
   const bytes = Buffer.from(text.buffer, text.byteOffset, text.byteLength);
   const dir = spoolDir(env);
   const blob = writeBlob(gzipSync(bytes, { level: 6 }), dir);
   const save = worldId(JSON.parse(bytes.toString('utf8')));
+  const parent = sessionParent(meta, machineName(env), dir);
   writeEntry(
     {
       id: entry,
