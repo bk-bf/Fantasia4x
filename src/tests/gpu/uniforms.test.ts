@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { UniformBlock, glslBlock, uniformLayout, withBlocks } from '../../lib/gpu/uniforms.js';
+import {
+  UniformBlock,
+  glslBlock,
+  uniformLayout,
+  wgslBlock,
+  withBlocks
+} from '../../lib/gpu/uniforms.js';
 import type { GpuBuffer, GpuQueue } from '../../lib/gpu/device.js';
 import { VIEW } from '../../lib/webgl/frameBindings.js';
 
@@ -46,6 +52,19 @@ describe('std140 uniform layouts', () => {
     );
     expect(withBlocks('#version 300 es\nvoid main() {}\n', [layout])).toBe(
       '#version 300 es\n' + glslBlock(layout) + 'void main() {}\n'
+    );
+  });
+
+  it('declares the same block as a WGSL struct bound at its group and binding', () => {
+    const layout = uniformLayout('GroundStatic', [
+      { name: 'a', type: 'vec3', precision: 'highp' },
+      { name: 'b', type: 'float', precision: 'highp' },
+      { name: 'c', type: 'ivec4', precision: 'highp', count: 2 },
+      { name: 'd', type: 'mat4', precision: 'highp' }
+    ]);
+    expect(wgslBlock(layout, [1, 2])).toBe(
+      'struct GroundStatic {\n  a: vec3<f32>,\n  b: f32,\n  c: array<vec4<i32>, 2>,\n  d: mat4x4<f32>,\n}\n' +
+        '@group(1) @binding(2) var<uniform> groundStatic: GroundStatic;\n'
     );
   });
 });
