@@ -2283,6 +2283,7 @@
     let lastDrawAt = 0;
     let _rpWinStart = 0;
     let _rpFrames = 0;
+    let _rpDrawn = 0;
     let _rpDtSum = 0;
     let _rpMaxDt = 0;
     let _dbgPrevT = 0;
@@ -2322,10 +2323,12 @@
               `terrain=${st.terrainMs.toFixed(2)}ms overlay=${st.overlayMs.toFixed(2)}ms ` +
               `rebuilds=${st.terrainRebuilds} resourceRebuilds=${st.resourceRebuilds} ` +
               `draws=${st.drawCalls} verts=${st.vertexCount} ` +
-              `mobs=${gs.mobs?.length ?? 0} pawns=${gs.pawns?.length ?? 0}`
+              `mobs=${gs.mobs?.length ?? 0} pawns=${gs.pawns?.length ?? 0} ` +
+              `drawn=${_rpDrawn} gpu=${renderer.getDevice()?.backend ?? 'none'}`
           );
           _rpWinStart = now;
           _rpFrames = 0;
+          _rpDrawn = 0;
           _rpDtSum = 0;
           _rpMaxDt = 0;
         }
@@ -2492,6 +2495,7 @@
           }
           _renderDirty = false;
           lastDrawAt = now;
+          _rpDrawn++;
           if (preview && !_previewPainted) {
             _previewPainted = true;
             menuPreviewRendered.set(true);
