@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screenshots</title>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+<link rel="stylesheet" href="gallery.css">
+</head>
+<body>
+<header id="mock" class="bar">
+  <strong>Screenshots</strong>
+  <span class="grp" data-k="by"><span class="lab">Group</span><button data-v="topic">Subject</button><button data-v="biome">Biome</button><button data-v="time">Time</button></span>
+  <span class="grp" data-k="show"><button data-v="all">All</button><button data-v="world">No HUD</button><button data-v="hud">HUD</button><button data-v="picked">Picked</button></span>
+  <span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span>
+  <span class="pane-picks"><output id="count"></output><button id="copy" type="button">Copy picks</button><button id="clear" type="button">Clear</button></span>
+</header>
+<main id="groups"></main>
+<dialog id="view">
+  <img id="full" alt="">
+  <div class="cap"><span id="vname"></span><span id="vmeta"></span><button id="vpick" type="button"></button><a id="vopen" target="_blank">PNG</a><button id="vclose" type="button">Close</button></div>
+</dialog>
+<script src="gallery.js"></script>
+</body>
+</html>
