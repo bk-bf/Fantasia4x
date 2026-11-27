@@ -81,7 +81,7 @@ export class Tiers {
     shaders: ShaderManager,
     painted: LoadedPaintedTileset
   ): Tiers | null {
-    const bindings = new PassBindings(gpu, PROGRAM, TIER_FRAME, TIER_TEXTURES);
+    const bindings = new PassBindings(gpu, PROGRAM, [TIER_FRAME], TIER_TEXTURES);
     const made = shaders.createPipeline(
       PROGRAM,
       canvasPipeline(gpu, {

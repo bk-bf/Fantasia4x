@@ -1,8 +1,4 @@
 uniform highp sampler2D u_trees;
-uniform int u_treeRow;
-uniform int u_treeKinds;
-uniform int u_treeOnly;
-uniform ivec2 u_grassShift;
 
 const float TG_BED = 0.5;
 const float TG_CORE = 0.86;

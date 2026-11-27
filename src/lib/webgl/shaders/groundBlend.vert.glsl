@@ -2,8 +2,6 @@
 
 in vec2 a_position;
 
-uniform float u_artPerBase;
-
 out highp vec2 v_art;
 
 void main() {

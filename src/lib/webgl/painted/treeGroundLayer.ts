@@ -8,7 +8,6 @@ import { TABLE_W, tableRows, treeGroundTable } from './treeGroundTable.js';
 import type { PaintedTreeGround, TreeSoil } from './treeGroundManifest.js';
 import { placedTuft } from './tufts.js';
 
-export const TREE_UNIT = 8;
 const NEAR = 2;
 const SEASON = { summer: 0, autumn: 1, winter: 2 } as const;
 const FULL = 255;

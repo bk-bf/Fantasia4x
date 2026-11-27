@@ -63,7 +63,7 @@ export class PaintedLightPass {
   private fieldSize: [number, number] = [0, 0];
 
   static create(gpu: GpuDevice, shaders: ShaderManager): PaintedLightPass | null {
-    const bindings = new PassBindings(gpu, PROGRAM, LIGHTS);
+    const bindings = new PassBindings(gpu, PROGRAM, [LIGHTS]);
     const made = shaders.createPipeline(PROGRAM, {
       glsl: bindings.glsl({ vertex: vertexSource, fragment: fragmentSource, attributes: {} }),
       layout: [bindings.layout],
@@ -108,7 +108,7 @@ export class PaintedLightPass {
     this.bindings.set('u_weights', f.grade.weights);
     this.bindings.set('u_lightCount', count);
     this.bindings.set('u_lights', this.packed.subarray(0, count * 8));
-    this.bindings.upload(LIGHTS.offsets.u_lights + count * LIGHT_BYTES);
+    this.bindings.upload({ [LIGHTS.name]: LIGHTS.offsets.u_lights + count * LIGHT_BYTES });
   }
 
   encode(encoder: GpuCommandEncoder): number {

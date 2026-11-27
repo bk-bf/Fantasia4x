@@ -518,11 +518,22 @@ export class WebGLRendererCore {
     const vignette = this.vignetteOn && lightFrame ? this.vignette : null;
     if (vignette && lightFrame)
       vignette.prepare({ strength: lightFrame.grade.vignette, tilePx: this.tileWidth });
+    const unlit = lightFrame !== null;
+    const flickerTime = performance.now() / 1000;
+    const flicker = unlit ? 0 : this.dynamicLight ? fireFlickerGlobal(flickerTime) : 1.0;
+    const lightTime = performance.now() / 1000;
+    if (this.groundBlend)
+      this.prepareGroundBlend(
+        this.groundBlend,
+        flicker,
+        lightTime,
+        [lightFrame?.grade.saturation ?? 1, lightFrame?.grade.brightness ?? 1],
+        this.lightField(gpu, lightFrame)
+      );
     const encoder = gpu.createCommandEncoder();
     if (this.lightPass && lightFrame) this.stats.drawCalls += this.lightPass.encode(encoder);
     const pass = encoder.beginRenderPass(this.webglState.canvasPass(gpu));
     pass.setBindGroup(FRAME_GROUP, frame.group);
-    const unlit = lightFrame !== null;
     this.shaderManager.setUniform(
       'tileRenderer',
       'u_ambient',
@@ -534,8 +545,6 @@ export class WebGLRendererCore {
             this.ambientLight * this.ambientTint[2]
           ]
     );
-    const flickerTime = performance.now() / 1000;
-    const flicker = unlit ? 0 : this.dynamicLight ? fireFlickerGlobal(flickerTime) : 1.0;
     this.shaderManager.setUniform('tileRenderer', 'u_lightFlicker', flicker);
     this.shaderManager.setUniform('tileRenderer', 'u_fieldLit', unlit ? 1 : 0);
     this.shaderManager.setUniform(
@@ -572,15 +581,12 @@ export class WebGLRendererCore {
       this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', ALPHA_CUT);
     }
 
-    const lightTime = performance.now() / 1000;
-
     this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
     const tTerrain = performance.now();
-    if (this.groundBlend)
-      this.drawGroundBlend(pass, this.groundBlend, flicker, lightTime, [
-        lightFrame?.grade.saturation ?? 1,
-        lightFrame?.grade.brightness ?? 1
-      ]);
+    if (this.groundBlend?.encode(pass)) {
+      this.stats.drawCalls++;
+      this.stats.vertexCount += 6;
+    }
     this.tiers?.bindShared();
     const gridStats = passOn('terrain')
       ? this.gridRenderer.renderGrid(pass, this.gameGrid, {
@@ -611,7 +617,7 @@ export class WebGLRendererCore {
         this.drawSnowGrid(pass, viewportTilesW, viewportTilesH, lightTime);
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 0);
       }
-      this.drawTreeGround(pass, gpu, flicker, lightTime, lightFrame, viewportTilesW, viewportTilesH);
+      this.drawTreeGround(pass, gpu, lightTime, viewportTilesW, viewportTilesH);
       if (this.rowDepth && this.shadowCast) this.stats.drawCalls += this.shadowCast.encode(pass);
       if (this.groundRings) this.stats.drawCalls += this.groundRings.encode(pass);
       this.setCutaway(viewportTilesW, viewportTilesH);
@@ -802,23 +808,17 @@ export class WebGLRendererCore {
   private drawTreeGround(
     pass: GpuRenderPass,
     gpu: GpuDevice,
-    flicker: number,
     lightTime: number,
-    lightFrame: LightPassFrame | null,
     viewportTilesW: number,
     viewportTilesH: number
   ): void {
     const blend = this.groundBlend;
     if (!blend?.trees || !this.gridRenderer || !this.shaderManager || !passOn('terrain')) return;
-    const tone: [number, number] = [
-      lightFrame?.grade.saturation ?? 1,
-      lightFrame?.grade.brightness ?? 1
-    ];
     gpu.setStencil({ compare: 'always', reference: TREE_GROUND_STENCIL, write: true });
-    if (this.drawGroundBlend(pass, blend, flicker, lightTime, tone, true)) {
+    if (blend.encodeWinterTrees(pass)) {
+      this.stats.drawCalls++;
+      this.stats.vertexCount += 6;
       this.tiers?.bindShared();
-      gpu.setTextureSlot(0);
-      gpu.bindTexture(this.fontTexture);
     }
     const view = { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH };
     const touched = blend.trees.dressAround(view, DRESS_BUDGET_MS);
@@ -843,15 +843,14 @@ export class WebGLRendererCore {
     this.stats.vertexCount += s.tilesRendered * 6;
   }
 
-  private drawGroundBlend(
-    pass: GpuRenderPass,
+  private prepareGroundBlend(
     blend: GroundBlend,
     flicker: number,
     lightTime: number,
     tone: [number, number],
-    winterTrees = false
-  ): boolean {
-    const frame: GroundBlendFrame = {
+    lightField: GpuTexture
+  ): void {
+    blend.prepare({
       zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
       ambient: this.lightPass
         ? [1, 1, 1]
@@ -869,13 +868,9 @@ export class WebGLRendererCore {
       lightSampler: this.lightSampler ?? undefined,
       lightTime,
       lightVersion: this.lightVersion,
-      litBounds: this.lightBounds
-    };
-    const drawn = winterTrees ? blend.drawWinterTrees(pass, frame) : blend.draw(pass, frame);
-    if (!drawn) return false;
-    this.stats.drawCalls++;
-    this.stats.vertexCount += 6;
-    return true;
+      litBounds: this.lightBounds,
+      lightField
+    });
   }
 
   private seaFrame(): Float32Array {

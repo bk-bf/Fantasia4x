@@ -145,7 +145,8 @@ export class Webgl2Device implements GpuDevice {
       maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
       maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
       maxCombinedTextureImageUnits: gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS),
-      minUniformBufferOffsetAlignment: gl.getParameter(gl.UNIFORM_BUFFER_OFFSET_ALIGNMENT)
+      minUniformBufferOffsetAlignment:
+        Number(gl.getParameter(gl.UNIFORM_BUFFER_OFFSET_ALIGNMENT)) || 0
     };
   }
 

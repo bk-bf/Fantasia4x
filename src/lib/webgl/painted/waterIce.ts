@@ -1,9 +1,7 @@
 import type { GameGrid } from '../game-grid.js';
-import type { GpuDevice } from '../../gpu/device.js';
+import type { GpuDevice, GpuTexture } from '../../gpu/device.js';
 import { SizedTexture } from '../sizedTexture.js';
-import { samplersOf } from '../samplers.js';
 
-export const ICE_UNIT = 13;
 const FULL = 255;
 const TEXEL = 2;
 
@@ -25,7 +23,6 @@ export function iceRect(tiles: ReadonlyArray<Tile>, w: number, h: number) {
 }
 
 export class WaterIce {
-  private readonly gpu: GpuDevice;
   private readonly tex: SizedTexture;
   private levels = new Uint8Array(0);
   private still: Uint8Array = new Uint8Array(0);
@@ -36,9 +33,7 @@ export class WaterIce {
   private dirty: Tile[] = [];
 
   constructor(gpu: GpuDevice) {
-    this.gpu = gpu;
     this.tex = new SizedTexture(gpu, 'rg8unorm');
-    gpu.bindSampler(ICE_UNIT, samplersOf(gpu).linear);
   }
 
   setGrid(grid: GameGrid | null, dirtyTiles?: ReadonlyArray<Tile>): void {
@@ -56,9 +51,8 @@ export class WaterIce {
     this.stale = true;
   }
 
-  bind(): void {
-    this.gpu.setTextureSlot(ICE_UNIT);
-    this.gpu.bindTexture(this.tex.texture);
+  get texture(): GpuTexture {
+    return this.tex.texture;
   }
 
   private levelAt(x: number, y: number): number {

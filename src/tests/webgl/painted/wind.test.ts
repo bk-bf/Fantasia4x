@@ -20,7 +20,7 @@ import {
 import { WindClock, byLevel, gustAt, heading, swayTable } from '$lib/webgl/painted/wind';
 import WIND from '$lib/webgl/painted/wind.json';
 import { LeafField, leafTarget, type LeafFrame } from '$lib/webgl/painted/leaves';
-import { GroundBlend, waterTime } from '$lib/webgl/painted/groundBlend';
+import { GROUND_FRAME, GroundBlend, waterTime } from '$lib/webgl/painted/groundBlend';
 import { FLUID_DEFS, FluidClock } from '$lib/webgl/painted/fluids';
 
 const GLYPH_FLOATS = 24;
@@ -253,7 +253,7 @@ describe('the wind blowing through the painted map', () => {
 });
 
 describe('the water moving through the painted map', () => {
-  it('moves only its time uniform: no chunk is rebuilt and no buffer or texture uploaded', () => {
+  it('moves only its time in the frame block: no chunk is rebuilt and no vertex or texture upload', () => {
     const uploads: Float32Array[] = [];
     const calls: [string, unknown[]][] = [];
     const core = windyCore(uploads, new Map(), calls);
@@ -264,6 +264,13 @@ describe('the water moving through the painted map', () => {
     })!;
     blend.setGrid(core['gameGrid']!);
     Object.assign(core, { groundBlend: blend });
+    const writes = vi.spyOn(gpu.queue, 'writeBuffer');
+    const writtenTime = () => {
+      const block = writes.mock.calls.findLast((c) => c[4] === GROUND_FRAME.size)!;
+      return new Float32Array((block[2] as Uint8Array).buffer)[
+        GROUND_FRAME.offsets.u_waterTime / 4
+      ];
+    };
     core['gridRenderer']!.skipBlendedGround = true;
     let now = 1000;
     vi.spyOn(performance, 'now').mockImplementation(() => now);
@@ -274,12 +281,12 @@ describe('the water moving through the painted map', () => {
     for (let frame = 0; frame < 48; frame++) {
       now += 1000 / 24;
       calls.length = 0;
+      writes.mockClear();
       core['stats'].resourceRebuilds = 0;
       core['render']();
       rebuilt += core['stats'].resourceRebuilds + core['stats'].terrainRebuilds;
       expect(calls.filter(([name]) => /^tex(Sub)?Image2D$/.test(name))).toEqual([]);
-      const time = calls.find(([name, args]) => name === 'uniform1f' && args[0] === 'u_waterTime');
-      frames.add(Math.floor((time![1][1] as number) * 8));
+      frames.add(Math.floor(writtenTime() * 8));
     }
     expect(rebuilt).toBe(0);
     expect(uploads.length).toBe(firstUploads);

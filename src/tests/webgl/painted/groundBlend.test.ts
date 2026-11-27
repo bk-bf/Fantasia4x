@@ -5,6 +5,7 @@ import type { WorldTile } from '$lib/game/core/types';
 import { Webgl2Device } from '$lib/gpu/webgl2/device';
 import { ShaderManager } from '$lib/webgl/shaders';
 import { canvasPass } from '../tileShaders';
+import { blankTexture } from '$lib/webgl/passBindings';
 import type { GpuTexture } from '$lib/gpu/device';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
@@ -15,7 +16,8 @@ const { setPaintedTileset, paintedGroundKind, paintedGroundIds } =
   await import('$lib/webgl/painted/tileset');
 const { applyTileToGrid } = await import('$lib/webgl/fantasia-world');
 const { GameGrid } = await import('$lib/webgl/game-grid');
-const { GroundBlend, groundKindTable, lightRect } = await import('$lib/webgl/painted/groundBlend');
+const { GroundBlend, GROUND_FRAME, groundKindTable, lightRect } =
+  await import('$lib/webgl/painted/groundBlend');
 const { groundLayer } = await import('$lib/webgl/painted/groundLevels');
 const { readGroundBlendFlag } =
   await vi.importActual<typeof import('$lib/webgl/painted/flag')>('$lib/webgl/painted/flag');
@@ -137,11 +139,30 @@ describe('the blend pass tables', () => {
   });
 });
 
+function frameWrites(gpu: Webgl2Device) {
+  const write = vi.spyOn(gpu.queue, 'writeBuffer');
+  return {
+    clear: () => write.mockClear(),
+    sizes: () => write.mock.calls.map((c) => c[4] ?? (c[2] as Uint8Array).byteLength),
+    member: (name: string, count = 1) => {
+      const bytes = write.mock.calls.at(-1)![2] as Uint8Array;
+      const at = GROUND_FRAME.offsets[name] / 4;
+      const type = GROUND_FRAME.members.find((m) => m.name === name)!.type;
+      const view = type === 'int' ? new Int32Array(bytes.buffer) : new Float32Array(bytes.buffer);
+      return [...view.subarray(at, at + count)];
+    }
+  };
+}
+
+const textureUploads = (calls: [string, unknown[]][]) =>
+  calls.filter(([name]) => /^tex(Sub)?Image2D$/.test(name));
+
 describe('the water clock', () => {
-  it('reaches the shader as one uniform and uploads nothing', () => {
+  it('reaches the shader in the frame block, the only upload of a frame', () => {
     const calls: [string, unknown[]][] = [];
     const gpu = new Webgl2Device(recordingGl(calls));
     const blend = GroundBlend.create(gpu, new ShaderManager(gpu), painted)!;
+    const writes = frameWrites(gpu);
     const grid = new GameGrid();
     for (let x = 0; x < 4; x++) applyTileToGrid(grid, tile({ x, y: 0 }), []);
     blend.setGrid(grid);
@@ -154,23 +175,27 @@ describe('the water clock', () => {
       waterTime,
       lightTime: 0,
       lightVersion: 1,
-      litBounds: undefined
+      litBounds: undefined,
+      lightField: blankTexture(gpu)
     });
-    expect(blend.draw(canvasPass(gpu), frame(0))).toBe(true);
+    blend.prepare(frame(0));
+    expect(blend.encode(canvasPass(gpu))).toBe(true);
     calls.length = 0;
-    expect(blend.draw(canvasPass(gpu), frame(1.25))).toBe(true);
-    expect(calls.filter(([name]) => /^(tex(Sub)?Image2D|buffer(Sub)?Data)$/.test(name))).toEqual(
-      []
-    );
-    expect(calls).toContainEqual(['uniform1f', ['u_waterTime', 1.25]]);
+    writes.clear();
+    blend.prepare(frame(1.25));
+    expect(blend.encode(canvasPass(gpu))).toBe(true);
+    expect(textureUploads(calls)).toEqual([]);
+    expect(writes.sizes()).toEqual([GROUND_FRAME.size]);
+    expect(writes.member('u_waterTime')).toEqual([1.25]);
   });
 });
 
 describe('the wave water switch', () => {
-  it('draws the wave water from its sea uniform and uploads nothing per frame', () => {
+  it('draws the wave water from its sea uniforms and uploads only the frame block', () => {
     const calls: [string, unknown[]][] = [];
     const gpu = new Webgl2Device(recordingGl(calls));
     const blend = GroundBlend.create(gpu, new ShaderManager(gpu), painted)!;
+    const writes = frameWrites(gpu);
     const grid = new GameGrid();
     for (let x = 0; x < 4; x++)
       applyTileToGrid(grid, tile({ x, y: 0, subType: x < 2 ? 'grass' : 'water' }), []);
@@ -185,21 +210,21 @@ describe('the wave water switch', () => {
       sea,
       lightTime: 0,
       lightVersion: 1,
-      litBounds: undefined
+      litBounds: undefined,
+      lightField: blankTexture(gpu)
     });
     blend.setWaterStyle(true);
-    blend.draw(canvasPass(gpu), frame(new Float32Array(52)));
+    blend.prepare(frame(new Float32Array(52)));
     calls.length = 0;
+    writes.clear();
     const sea = new Float32Array(52).fill(0.5);
-    blend.draw(canvasPass(gpu), frame(sea));
-    expect(calls.filter(([name]) => /^(tex(Sub)?Image2D|buffer(Sub)?Data)$/.test(name))).toEqual(
-      []
-    );
-    expect(calls).toContainEqual(['uniform1i', ['u_waterStyle', 1]]);
-    expect(calls).toContainEqual(['uniform4fv', ['u_sea[0]', sea]]);
-    calls.length = 0;
+    blend.prepare(frame(sea));
+    expect(textureUploads(calls)).toEqual([]);
+    expect(writes.sizes()).toEqual([GROUND_FRAME.size]);
+    expect(writes.member('u_waterStyle')).toEqual([1]);
+    expect(writes.member('u_sea', 52)).toEqual([...sea]);
     blend.setWaterStyle(false);
-    blend.draw(canvasPass(gpu), frame(sea));
-    expect(calls).toContainEqual(['uniform1i', ['u_waterStyle', 0]]);
+    blend.prepare(frame(sea));
+    expect(writes.member('u_waterStyle')).toEqual([0]);
   });
 });

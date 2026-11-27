@@ -54,7 +54,7 @@ export class PaintedVignette {
   private strength = 0;
 
   static create(gpu: GpuDevice, shaders: ShaderManager): PaintedVignette | null {
-    const bindings = new PassBindings(gpu, PROGRAM, VIGNETTE);
+    const bindings = new PassBindings(gpu, PROGRAM, [VIGNETTE]);
     const made = shaders.createPipeline(
       PROGRAM,
       canvasPipeline(gpu, {

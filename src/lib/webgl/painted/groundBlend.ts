@@ -6,11 +6,10 @@ import { BASE_TILE_PX } from '../tile-types.js';
 import type { LoadedGroundField, LoadedPaintedTileset } from './loader.js';
 import { groundFluid, groundLayer } from './groundLevels.js';
 import { paintedGroundIds } from './tileset.js';
-import { LIGHT_FIELD_UNIT } from './lightPass.js';
 import { DEEP, DIST_STEPS, LAND, SHALLOW, distanceTo, shoreField } from './shoreField.js';
 import { ART_PER_UNIT, waterBlockShift } from './waves.js';
-import { ICE_UNIT, WaterIce } from './waterIce.js';
-import { FLOW_UNIT, RiverTextures, STREAM_UNIT } from './riverTextures.js';
+import { WaterIce } from './waterIce.js';
+import { RiverTextures } from './riverTextures.js';
 import { riverTiles, type RiverTiles } from './riverGrid.js';
 import type { TileData } from '../tile-types.js';
 import {
@@ -20,26 +19,20 @@ import {
   type GpuDevice,
   type GpuRenderPass,
   type GpuRenderPipeline,
-  type GpuTexture,
-  type GpuUniform
+  type GpuTexture
 } from '../../gpu/device.js';
-import { TREE_UNIT, TreeGroundLayer, withTreeGround } from './treeGroundLayer.js';
+import { TreeGroundLayer, withTreeGround } from './treeGroundLayer.js';
 import { treeSoils } from './treeGroundTable.js';
 import type { TreeSoil } from './treeGroundManifest.js';
-import { samplersOf } from '../samplers.js';
+import { uniformLayout, type UniformMember } from '../../gpu/uniforms.js';
 import { SizedTexture } from '../sizedTexture.js';
 import { canvasPipeline } from '../canvasPipeline.js';
+import { PASS_GROUP, PassBindings, blankTexture } from '../passBindings.js';
+import { DRAW_GROUP, DrawSlices } from '../drawSlices.js';
 
 const PROGRAM = 'groundBlend';
 const MAX_KINDS = 64;
 const TEXEL_UPDATE_LIMIT = 64;
-const ATLAS_UNIT = 1;
-const KIND_UNIT = 4;
-const LIGHT_UNIT = 5;
-const TIDE_UNIT = 9;
-const WATER_UNIT = 10;
-const GROUND_UNIT = 11;
-const FAR_UNIT = 12;
 const NO_BLOCK = -1;
 const SHORE_LEVEL = 1.6;
 const DEEP_WATER = 2;
@@ -48,6 +41,61 @@ const WATER_FRAMES = 16;
 const WATER_FPS = 8;
 const TIDE_BYTES = 4;
 const KIND_TIDE_BYTES = 2;
+
+const SEA_VECS = 18;
+const FLUID_VECS = 28;
+
+const high = (name: string, type: UniformMember['type'], count?: number): UniformMember => ({
+  name,
+  type,
+  precision: 'highp',
+  ...(count === undefined ? {} : { count })
+});
+
+const GROUND_STATIC = uniformLayout('GroundStatic', [
+  high('u_patch', 'vec4', MAX_KINDS),
+  high('u_layer', 'vec4', MAX_KINDS),
+  high('u_pieces', 'vec2'),
+  high('u_tileArt', 'float'),
+  high('u_artPerBase', 'float'),
+  high('u_grassShift', 'ivec2'),
+  high('u_treeKinds', 'int')
+]);
+
+export const GROUND_FRAME = uniformLayout('GroundFrame', [
+  high('u_sea', 'vec4', SEA_VECS),
+  high('u_fluid', 'vec4', FLUID_VECS),
+  high('u_ambient', 'vec3'),
+  high('u_artPerPx', 'float'),
+  high('u_mapSize', 'ivec2'),
+  high('u_lightFlicker', 'float'),
+  high('u_fieldLit', 'float'),
+  high('u_saturation', 'float'),
+  high('u_brightness', 'float'),
+  high('u_waterTime', 'float'),
+  high('u_waterStyle', 'int'),
+  high('u_waterBlock', 'int'),
+  high('u_treeRow', 'int')
+]);
+
+const GROUND_DRAW = uniformLayout('GroundDraw', [high('u_treeOnly', 'int')]);
+const GROUND_DRAW_WHOLE = 0;
+const GROUND_DRAW_TREES = 1;
+
+const GROUND_TEXTURES = [
+  { name: 'u_kinds', sampleType: 'uint' },
+  { name: 'u_paintAtlas', sampleType: 'unfilterable-float' },
+  { name: 'u_light', sampleType: 'float', filter: 'linear' },
+  { name: 'u_lightTexture', sampleType: 'unfilterable-float' },
+  { name: 'u_tide', sampleType: 'float', filter: 'linear' },
+  { name: 'u_waterField', sampleType: 'unfilterable-float' },
+  { name: 'u_groundField', sampleType: 'unfilterable-float' },
+  { name: 'u_groundFar', sampleType: 'unfilterable-float' },
+  { name: 'u_ice', sampleType: 'float', filter: 'linear' },
+  { name: 'u_flow', sampleType: 'float', filter: 'linear' },
+  { name: 'u_stream', sampleType: 'unfilterable-float' },
+  { name: 'u_trees', sampleType: 'unfilterable-float' }
+] as const;
 
 type LightSampler = (wx: number, wy: number, time: number) => [number, number, number];
 type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
@@ -67,6 +115,7 @@ export interface GroundBlendFrame {
   lightTime: number;
   lightVersion: number;
   litBounds: Bounds | null | undefined;
+  lightField: GpuTexture;
 }
 
 export function waterTime(nowMs: number): number {
@@ -125,8 +174,6 @@ export function lightRect(bounds: Bounds, w: number, h: number): Rect {
 }
 
 export class GroundBlend {
-  private readonly gpu: GpuDevice;
-  private readonly program: GpuRenderPipeline;
   private readonly atlas: GpuTexture;
   private readonly kindTex: SizedTexture;
   private readonly tideTex: SizedTexture;
@@ -144,7 +191,7 @@ export class GroundBlend {
   private riverData: RiverTiles = riverTiles(0);
   private riverStale = true;
   private readonly vbo: GpuBuffer;
-  private readonly at: Record<string, GpuUniform | null>;
+  private drawn: readonly GpuTexture[] | null = null;
   private kinds = new Uint8Array(0);
   private tides = new Uint8Array(0);
   private w = 0;
@@ -162,6 +209,8 @@ export class GroundBlend {
     shaders: ShaderManager,
     painted: LoadedPaintedTileset
   ): GroundBlend | null {
+    const bindings = new PassBindings(gpu, PROGRAM, [GROUND_STATIC, GROUND_FRAME], GROUND_TEXTURES);
+    const draws = new DrawSlices(gpu, PROGRAM, GROUND_DRAW);
     const made = shaders.createPipeline(
       PROGRAM,
       canvasPipeline(gpu, {
@@ -175,29 +224,34 @@ export class GroundBlend {
             attributes: [{ shaderLocation: 0, format: 'float32x2', offset: 0 }]
           }
         ],
-        topology: 'triangle-list'
+        topology: 'triangle-list',
+        bindings: [bindings, draws]
       })
     );
     const program = made.pipeline;
     if (!made.success || !program) {
+      bindings.destroy();
+      draws.destroy();
       console.warn('[ground blend] off:', made.error);
       return null;
     }
     if (!painted.water) {
+      bindings.destroy();
+      draws.destroy();
       console.warn('[ground blend] off: the water field did not load');
       return null;
     }
-    return new GroundBlend(gpu, program, painted, painted.water);
+    return new GroundBlend(gpu, program, bindings, draws, painted, painted.water);
   }
 
   private constructor(
-    gpu: GpuDevice,
-    program: GpuRenderPipeline,
+    private readonly gpu: GpuDevice,
+    private readonly program: GpuRenderPipeline,
+    private readonly bindings: PassBindings,
+    private readonly draws: DrawSlices,
     painted: LoadedPaintedTileset,
     water: GpuTexture
   ) {
-    this.gpu = gpu;
-    this.program = program;
     this.atlas = painted.texture;
     this.water = water;
     this.field = painted.ground;
@@ -205,8 +259,6 @@ export class GroundBlend {
     this.kindTex = new SizedTexture(gpu, 'r8uint');
     this.tideTex = new SizedTexture(gpu, 'rgba8unorm');
     this.lightTex = new SizedTexture(gpu, 'rgba16float');
-    gpu.bindSampler(TIDE_UNIT, samplersOf(gpu).linear);
-    gpu.bindSampler(LIGHT_UNIT, samplersOf(gpu).linear);
     this.ice = new WaterIce(gpu);
     this.rivers = new RiverTextures(gpu);
     this.unitsPerTile = painted.tileset.tile / ART_PER_UNIT;
@@ -214,68 +266,24 @@ export class GroundBlend {
       size: 12 * 4,
       usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
     });
-    const names = [
-      'u_artPerBase',
-      'u_kinds',
-      'u_paintAtlas',
-      'u_light',
-      'u_mapSize',
-      'u_tileArt',
-      'u_patch',
-      'u_layer',
-      'u_ambient',
-      'u_lightFlicker',
-      'u_lightTexture',
-      'u_fieldLit',
-      'u_saturation',
-      'u_brightness',
-      'u_waterTime',
-      'u_tide',
-      'u_waterField',
-      'u_groundField',
-      'u_groundFar',
-      'u_artPerPx',
-      'u_pieces',
-      'u_waterStyle',
-      'u_waterBlock',
-      'u_sea[0]',
-      'u_fluid[0]',
-      'u_ice',
-      'u_flow',
-      'u_stream',
-      'u_trees',
-      'u_treeRow',
-      'u_treeKinds',
-      'u_treeOnly',
-      'u_grassShift'
-    ];
-    this.at = Object.fromEntries(names.map((n) => [n, gpu.uniform(program, n)]));
     const { patch, layer, tide, shore, still } = groundKindTable(painted);
     this.tideOf = tide;
     this.shoreOf = shore;
     this.stillOf = still;
-    gpu.setI32(this.at.u_tide, TIDE_UNIT);
-    gpu.setI32(this.at.u_waterField, WATER_UNIT);
-    gpu.setI32(this.at.u_ice, ICE_UNIT);
-    gpu.setI32(this.at.u_flow, FLOW_UNIT);
-    gpu.setI32(this.at.u_stream, STREAM_UNIT);
-    gpu.setI32(this.at.u_groundField, GROUND_UNIT);
-    gpu.setI32(this.at.u_groundFar, FAR_UNIT);
     const pieces = painted.tileset.ground?.pieces ?? { x: 0, y: 0 };
-    gpu.setVec2f(this.at.u_pieces, pieces.x, pieces.y);
-    gpu.setI32(this.at.u_paintAtlas, ATLAS_UNIT);
-    gpu.setI32(this.at.u_kinds, KIND_UNIT);
-    gpu.setI32(this.at.u_light, LIGHT_UNIT);
-    gpu.setF32(this.at.u_tileArt, painted.tileset.tile);
-    gpu.setF32(this.at.u_artPerBase, this.artPerBase);
-    gpu.setVec4fv(this.at.u_patch, patch);
-    gpu.setVec4fv(this.at.u_layer, layer);
+    bindings.set('u_pieces', [pieces.x, pieces.y]);
+    bindings.set('u_tileArt', painted.tileset.tile);
+    bindings.set('u_artPerBase', this.artPerBase);
+    bindings.set('u_patch', patch);
+    bindings.set('u_layer', layer);
     const look = painted.tileset.treeGround;
     this.trees = look ? new TreeGroundLayer(gpu, look, painted.tileset.tile) : null;
     this.soils = look ? treeSoils(look, paintedGroundIds(), (id) => groundLayer(id).water > 0) : [];
-    gpu.setI32(this.at.u_trees, TREE_UNIT);
-    gpu.setI32(this.at.u_treeKinds, look?.kinds.length ?? 0);
-    gpu.setVec2i(this.at.u_grassShift, look?.grassShift[0] ?? 0, look?.grassShift[1] ?? 0);
+    bindings.set('u_treeKinds', look?.kinds.length ?? 0);
+    bindings.set('u_grassShift', look?.grassShift ?? [0, 0]);
+    draws.stage(GROUND_DRAW_WHOLE, { u_treeOnly: 0 });
+    draws.stage(GROUND_DRAW_TREES, { u_treeOnly: 1 });
+    draws.upload(2);
   }
 
   setTrees(
@@ -291,11 +299,6 @@ export class GroundBlend {
 
   setWaterStyle(waves: boolean): void {
     this.waveStyle = waves ? 1 : 0;
-  }
-
-  private bindOn(unit: number, tex: GpuTexture): void {
-    this.gpu.setTextureSlot(unit);
-    this.gpu.bindTexture(tex);
   }
 
   setGrid(grid: GameGrid, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
@@ -474,54 +477,62 @@ export class GroundBlend {
     this.lightBuilt = { version: f.lightVersion, sampler: f.lightSampler };
   }
 
-  drawWinterTrees(pass: GpuRenderPass, f: GroundBlendFrame): boolean {
-    if (!this.trees?.winter) return false;
-    return this.draw(pass, f, true);
-  }
-
-  draw(pass: GpuRenderPass, f: GroundBlendFrame, treeOnly = false): boolean {
+  prepare(f: GroundBlendFrame): void {
+    this.drawn = null;
     const grid = this.grid;
-    if (!grid) return false;
-    const gpu = this.gpu;
+    if (!grid) return;
     if (this.stale) {
       this.rebuildKinds(grid);
       this.stale = false;
       this.dirty = [];
     } else if (this.dirty.length > 0) this.updateKindTexels(grid);
-    if (this.w === 0 || this.h === 0) return false;
+    if (this.w === 0 || this.h === 0) return;
     this.ice.sync(this.w, this.h);
     if (f.sea && this.waveStyle) this.syncRivers();
     this.rebuildLight(f);
     this.trees?.sync(this.kinds, this.w, this.h, this.soils);
+    const b = this.bindings;
+    b.set('u_treeRow', this.trees?.tableRow ?? 0);
+    b.set('u_artPerPx', this.artPerBase / f.zoom[0]);
+    b.set('u_ambient', f.ambient);
+    b.set('u_lightFlicker', f.flicker);
+    b.set('u_fieldLit', f.fieldLit ? 1 : 0);
+    b.set('u_saturation', f.tone[0]);
+    b.set('u_brightness', f.tone[1]);
+    b.set('u_waterTime', f.waterTime);
+    b.set('u_waterStyle', f.sea ? this.waveStyle : 0);
+    b.set('u_waterBlock', waterBlockShift(this.artPerBase / f.zoom[0]));
+    if (f.sea) b.set('u_sea', f.sea);
+    if (f.fluid) b.set('u_fluid', f.fluid);
+    b.set('u_mapSize', [this.w, this.h]);
+    b.upload();
+    const blank = blankTexture(this.gpu);
+    this.drawn = [
+      this.kindTex.texture,
+      this.atlas,
+      this.lightTex.texture,
+      f.lightField,
+      this.tideTex.texture,
+      this.water,
+      this.field?.field ?? blank,
+      this.field?.far ?? blank,
+      this.ice.texture,
+      this.rivers.flow,
+      this.rivers.stream,
+      this.trees?.texture ?? blank
+    ];
+  }
+
+  encodeWinterTrees(pass: GpuRenderPass): boolean {
+    if (!this.trees?.winter) return false;
+    return this.encode(pass, GROUND_DRAW_TREES);
+  }
+
+  encode(pass: GpuRenderPass, slice = GROUND_DRAW_WHOLE): boolean {
+    if (!this.drawn) return false;
     pass.setPipeline(this.program);
-    gpu.setI32(this.at.u_treeOnly, treeOnly ? 1 : 0);
-    gpu.setI32(this.at.u_treeRow, this.trees?.tableRow ?? 0);
-    gpu.setF32(this.at.u_artPerPx, this.artPerBase / f.zoom[0]);
-    gpu.setVec3fv(this.at.u_ambient, f.ambient);
-    gpu.setF32(this.at.u_lightFlicker, f.flicker);
-    gpu.setI32(this.at.u_lightTexture, LIGHT_FIELD_UNIT);
-    gpu.setF32(this.at.u_fieldLit, f.fieldLit ? 1 : 0);
-    gpu.setF32(this.at.u_saturation, f.tone[0]);
-    gpu.setF32(this.at.u_brightness, f.tone[1]);
-    gpu.setF32(this.at.u_waterTime, f.waterTime);
-    gpu.setI32(this.at.u_waterStyle, f.sea ? this.waveStyle : 0);
-    gpu.setI32(this.at.u_waterBlock, waterBlockShift(this.artPerBase / f.zoom[0]));
-    if (f.sea) gpu.setVec4fv(this.at['u_sea[0]'], f.sea);
-    if (f.fluid) gpu.setVec4fv(this.at['u_fluid[0]'], f.fluid);
-    gpu.setVec2i(this.at.u_mapSize, this.w, this.h);
-    this.bindOn(ATLAS_UNIT, this.atlas);
-    this.bindOn(KIND_UNIT, this.kindTex.texture);
-    this.bindOn(TIDE_UNIT, this.tideTex.texture);
-    this.bindOn(WATER_UNIT, this.water);
-    if (this.field) {
-      this.bindOn(GROUND_UNIT, this.field.field);
-      this.bindOn(FAR_UNIT, this.field.far);
-    }
-    this.bindOn(LIGHT_UNIT, this.lightTex.texture);
-    this.ice.bind();
-    this.rivers.bind();
-    if (this.trees) this.bindOn(TREE_UNIT, this.trees.texture);
-    gpu.setTextureSlot(0);
+    pass.setBindGroup(PASS_GROUP, this.bindings.group(this.drawn));
+    pass.setBindGroup(DRAW_GROUP, this.draws.group, [this.draws.offset(slice)]);
     pass.setVertexBuffer(0, this.vbo);
     pass.draw(6);
     return true;
@@ -536,6 +547,8 @@ export class GroundBlend {
     this.ice.dispose();
     this.rivers.dispose();
     gpu.destroyBuffer(this.vbo);
+    this.bindings.destroy();
+    this.draws.destroy();
     gpu.destroyRenderPipeline(this.program);
   }
 }
