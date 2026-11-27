@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { LedgerCapturer, type LedgerCaptureMeta } from '$lib/game/sim/ledgerCapture';
+import { LedgerCapturer, serializeSave, type LedgerCaptureMeta } from '$lib/game/sim/ledgerCapture';
 import { fromSnapshot } from '$lib/game/headless/snapshot';
 import type { GameState, WorldTile } from '$lib/game/core/types';
 
@@ -21,10 +21,14 @@ const tile = (x: number): WorldTile =>
 
 const state = {
   turn: 30058,
+  worldPawns: [],
   seed: 4242,
   pawns: [{ id: 'p1' }],
   mobs: [{ id: 'm1' }, { id: 'm2' }],
-  worldMap: [[tile(0), tile(1), tile(2)]],
+  worldMap: [
+    [tile(0), tile(1), tile(2)],
+    [tile(3), tile(4), tile(5)]
+  ],
   generatedBy: { commit: 'a96826d3'.padEnd(40, '0'), branch: 'test/look-overhaul', dirty: 0 }
 } as unknown as GameState;
 
@@ -51,6 +55,13 @@ function rig(fail = false) {
 const on = { on: true, intervalMs: 120_000, save: 'slot-1', scenario: null };
 
 describe('the ledger capture in the sim worker', () => {
+  it('writes the JSON of {v: 1, dynamic, world}, with each tile as the sim holds it', async () => {
+    const { worldMap, ...dynamic } = state;
+    expect(await serializeSave(state).text()).toBe(
+      JSON.stringify({ v: 1, dynamic, world: worldMap })
+    );
+  });
+
   it('sends the whole state as a snapshot the headless loader reads back', async () => {
     const { capturer, posts } = rig();
     capturer.configure(on);
@@ -63,7 +74,7 @@ describe('the ledger capture in the sim worker', () => {
       reason: 'session',
       turn: 30058,
       seed: 4242,
-      map: '3x1',
+      map: '3x2',
       pawns: 1,
       mobs: 2,
       speed: 4,

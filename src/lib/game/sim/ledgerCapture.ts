@@ -1,4 +1,3 @@
-import { toSnapshot } from '../headless/snapshot';
 import type { GameState } from '../core/types';
 
 export type LedgerReason = 'session' | 'manual' | 'periodic';
@@ -46,7 +45,14 @@ export const LEDGER_ENDPOINT = '/api/ledger/save';
 export const LEDGER_META_HEADER = 'x-f4x-ledger';
 
 export function serializeSave(state: GameState): Blob {
-  return new Blob([JSON.stringify(toSnapshot(state))], { type: 'application/json' });
+  const { worldMap, ...dynamic } = state;
+  const parts = ['{"v":1,"dynamic":', JSON.stringify(dynamic), ',"world":['];
+  for (let y = 0; y < worldMap.length; y++) {
+    if (y) parts.push(',');
+    parts.push(JSON.stringify(worldMap[y]));
+  }
+  parts.push(']}');
+  return new Blob(parts, { type: 'application/json' });
 }
 
 export async function postLedgerSave(body: Blob, meta: LedgerCaptureMeta): Promise<LedgerReceipt> {
