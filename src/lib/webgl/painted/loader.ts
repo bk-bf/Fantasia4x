@@ -13,6 +13,7 @@ import { pawnLook, type PawnLookOf, type PawnLookPool } from './pawnLook.js';
 import { atlasTexels, type AtlasTexels } from '../drawnSprites.js';
 import { swayTable } from './wind.js';
 import { TextureUsage, type GpuDevice, type GpuTexture } from '../../gpu/device.js';
+import { decodePng, type DecodedImage } from './png.js';
 
 export const PAINTED_BASE_URL = '/tilesets/painted/';
 const LIGHT_IMAGE = 'atlas-light.png';
@@ -41,44 +42,34 @@ export interface LoadedPaintedTileset {
   cell: (x: number, y: number, w: number, h: number) => Uint8ClampedArray | null;
 }
 
-function loadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    const settle = (done: () => void) => () => {
-      image.onload = image.onerror = null;
-      done();
-    };
-    image.onload = settle(() => resolve(image));
-    image.onerror = settle(() => reject(new Error(`could not load ${url}`)));
-    image.src = url;
-  });
+async function loadImage(url: string): Promise<DecodedImage> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`could not load ${url}: ${res.status}`);
+  return decodePng(new Uint8Array(await res.arrayBuffer()));
 }
 
-function readTexels(image: HTMLImageElement): () => AtlasTexels | null {
-  let texels: AtlasTexels | null | undefined;
-  return () => {
-    if (texels !== undefined) return texels;
-    const canvas = document.createElement('canvas');
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    ctx?.drawImage(image, 0, 0);
-    const data = ctx?.getImageData(0, 0, canvas.width, canvas.height).data;
-    texels = data ? atlasTexels(data, canvas.width, canvas.height) : null;
-    return texels;
-  };
+function region(image: DecodedImage, x: number, y: number, w: number, h: number) {
+  const out = new Uint8ClampedArray(w * h * 4);
+  const x0 = Math.max(x, 0);
+  const x1 = Math.min(x + w, image.width);
+  if (x1 <= x0) return out;
+  for (let row = 0; row < h; row++) {
+    const sy = y + row;
+    if (sy < 0 || sy >= image.height) continue;
+    const from = (sy * image.width + x0) * 4;
+    out.set(image.data.subarray(from, from + (x1 - x0) * 4), (row * w + x0 - x) * 4);
+  }
+  return out;
 }
 
-function readCell(image: HTMLImageElement) {
-  return (x: number, y: number, w: number, h: number): Uint8ClampedArray | null => {
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return null;
-    ctx.drawImage(image, x, y, w, h, 0, 0, w, h);
-    return ctx.getImageData(0, 0, w, h).data;
-  };
+function readTexels(image: DecodedImage): () => AtlasTexels {
+  let texels: AtlasTexels | undefined;
+  return () => (texels ??= atlasTexels(image.data, image.width, image.height));
+}
+
+function readCell(image: DecodedImage) {
+  return (x: number, y: number, w: number, h: number): Uint8ClampedArray =>
+    region(image, x, y, w, h);
 }
 
 async function fetchManifest(url: string): Promise<unknown> {
@@ -98,13 +89,10 @@ async function fetchSway(url: string): Promise<unknown> {
 
 const ATLAS_USAGE = TextureUsage.TEXTURE_BINDING | TextureUsage.COPY_DST;
 
-function uploadAtlas(gpu: GpuDevice, image: HTMLImageElement | ImageBitmap): GpuTexture {
-  const size =
-    image instanceof HTMLImageElement
-      ? { width: image.naturalWidth, height: image.naturalHeight }
-      : { width: image.width, height: image.height };
+function uploadAtlas(gpu: GpuDevice, image: DecodedImage): GpuTexture {
+  const size = { width: image.width, height: image.height };
   const texture = gpu.createTexture({ format: 'rgba8unorm', ...size, usage: ATLAS_USAGE });
-  gpu.queue.copyExternalImageToTexture({ source: image }, { texture }, size);
+  gpu.queue.writeTexture({ texture }, image.data, { bytesPerRow: image.width * 4 }, size);
   return texture;
 }
 
@@ -118,11 +106,11 @@ function unlitTexture(gpu: GpuDevice): GpuTexture {
 interface PaintedSource {
   manifest: PaintedManifest;
   tileset: PaintedTileset;
-  image: HTMLImageElement;
-  light: HTMLImageElement | null;
-  top: { image: HTMLImageElement; veins: HTMLImageElement; piece: PaintedPieceTop } | null;
-  water: HTMLImageElement | null;
-  ground: { field: ImageBitmap; far: ImageBitmap } | null;
+  image: DecodedImage;
+  light: DecodedImage | null;
+  top: { image: DecodedImage; veins: DecodedImage; piece: PaintedPieceTop } | null;
+  water: DecodedImage | null;
+  ground: { field: DecodedImage; far: DecodedImage } | null;
 }
 
 const pieceTop = (tileset: PaintedTileset) =>
@@ -137,7 +125,7 @@ async function readTop(baseUrl: string, piece: PaintedPieceTop | null) {
         [piece.veins, piece.veinSize]
       ].map(async ([name, size]) => {
         const loaded = await loadImage(`${baseUrl}${name}`);
-        if (loaded.naturalWidth !== size || loaded.naturalHeight !== size)
+        if (loaded.width !== size || loaded.height !== size)
           throw new Error(`${name} is not ${size} px square`);
         return loaded;
       })
@@ -153,7 +141,7 @@ async function readWater(baseUrl: string, field: ManifestField | undefined) {
   if (!field) return null;
   try {
     const image = await loadImage(`${baseUrl}${field.image}`);
-    if (image.naturalWidth !== field.size || image.naturalHeight !== field.size)
+    if (image.width !== field.size || image.height !== field.size)
       throw new Error(`${field.image} is not ${field.size} px square`);
     return image;
   } catch (err) {
@@ -162,24 +150,19 @@ async function readWater(baseUrl: string, field: ManifestField | undefined) {
   }
 }
 
-async function readBitmap(baseUrl: string, field: ManifestField): Promise<ImageBitmap> {
-  const res = await fetch(`${baseUrl}${field.image}`);
-  if (!res.ok) throw new Error(`${field.image} answered ${res.status}`);
-  const bitmap = await createImageBitmap(await res.blob(), {
-    premultiplyAlpha: 'none',
-    colorSpaceConversion: 'none'
-  });
-  if (bitmap.width !== field.size || bitmap.height !== field.size)
+async function readField(baseUrl: string, field: ManifestField): Promise<DecodedImage> {
+  const image = await loadImage(`${baseUrl}${field.image}`);
+  if (image.width !== field.size || image.height !== field.size)
     throw new Error(`${field.image} is not ${field.size} px square`);
-  return bitmap;
+  return image;
 }
 
 async function readGroundField(baseUrl: string, ground: PaintedGround | undefined) {
   if (!ground) return null;
   try {
     const [field, far] = await Promise.all([
-      readBitmap(baseUrl, ground.field),
-      readBitmap(baseUrl, ground.far)
+      readField(baseUrl, ground.field),
+      readField(baseUrl, ground.far)
     ]);
     return { field, far };
   } catch (err) {
@@ -191,7 +174,7 @@ async function readGroundField(baseUrl: string, ground: PaintedGround | undefine
 async function readLight(baseUrl: string, manifest: PaintedManifest) {
   try {
     const image = await loadImage(`${baseUrl}${LIGHT_IMAGE}`);
-    if (image.naturalWidth !== manifest.atlas.w || image.naturalHeight !== manifest.atlas.h)
+    if (image.width !== manifest.atlas.w || image.height !== manifest.atlas.h)
       throw new Error(`${LIGHT_IMAGE} is not the size of the atlas`);
     return image;
   } catch (err) {
@@ -210,9 +193,9 @@ async function readSource(baseUrl: string): Promise<PaintedSource | null> {
       fetchSway(`${baseUrl}sway.json`)
     ]);
     const manifest = parseManifest(raw);
-    if (image.naturalWidth !== manifest.atlas.w || image.naturalHeight !== manifest.atlas.h)
+    if (image.width !== manifest.atlas.w || image.height !== manifest.atlas.h)
       throw new Error(
-        `atlas.png is ${image.naturalWidth}x${image.naturalHeight}, the manifest says ${manifest.atlas.w}x${manifest.atlas.h}`
+        `atlas.png is ${image.width}x${image.height}, the manifest says ${manifest.atlas.w}x${manifest.atlas.h}`
       );
     const wind = swayTable(sway, Object.keys(manifest.sprites));
     const { tileset, problems } = buildTileset(manifest, wind);
@@ -281,7 +264,7 @@ function cropSprite(loaded: PaintedSource, spriteId: string | undefined): HTMLCa
   canvas.height = s.h;
   canvas
     .getContext('2d', { willReadFrequently: true })
-    ?.drawImage(loaded.image, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
+    ?.putImageData(new ImageData(region(loaded.image, s.x, s.y, s.w, s.h), s.w, s.h), 0, 0);
   return canvas;
 }
 

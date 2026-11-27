@@ -129,7 +129,6 @@ export class Webgl2Device implements GpuDevice {
         buffers.write(buffer, offset, data, dataOffset, size),
       writeTexture: (dst, data, layout, size) =>
         textures.write(dst.texture, dst.origin ?? { x: 0, y: 0 }, data, layout.bytesPerRow, size),
-      copyExternalImageToTexture: (src, dst) => textures.copyImage(src.source, dst.texture),
       submit: () => validator?.reset()
     };
   }
