@@ -121,7 +121,8 @@ function keepWebgpuFrames() {
       buffer.destroy();
       return { w: texture.width, h: texture.height, rgba };
     });
-    w.__f4xWebgpuFrame = done;
+    const previous = w.__f4xWebgpuFrame ?? null;
+    w.__f4xWebgpuFrame = done.catch(() => previous);
     return result;
   };
 }
