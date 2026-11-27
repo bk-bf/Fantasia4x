@@ -219,7 +219,7 @@ function aimClear(aim, face, gapOf, least) {
   for (let n = 0; n < HEAD_CLEAR.turns && gapOf(v) < least; n++) { const l = turned(v, HEAD_CLEAR.step), r = turned(v, -HEAD_CLEAR.step); v = gapOf(l) >= gapOf(r) ? l : r; }
   return v;
 }
-const FOOT_LINE = { band: -1.5, step: .03, turns: 67, under: 1, lifts: 3 };
+const FOOT_LINE = { band: -1.5, step: .03, turns: 67, under: 0, lifts: 3 };
 function toolSeen(view, aim) {
   const v = view.at(aim);
   return { ang: Math.atan2(v[0], -v[1]) / D2R, fore: Math.hypot(v[0], v[1]) < SPACE.least ? SPACE.least : 1 };

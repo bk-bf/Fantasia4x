@@ -6,7 +6,7 @@ const SHOWS = 3, APART = 4, IN_LINE = { cos: .94, reach: 5, tools: ['hammer', 'c
 const KEPT_AS_APPROVED = { x: ['shoulder'] };
 const QUIVERED = .9, BODY_HIDES = ['bow', 'arrow'];
 const CRADLE = { palm: 3, across: 2, above: 3, below: 2 };
-const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15, FACE = { dark: .5, marks: 4 }, POLES = ['spear', 'staff'], LEVEL = 2, YOKED = { above: .2 }, BLOCK = { wide: 12, tall: 8, under: 2, along: 3 };
+const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15, FACE = { dark: .5, marks: 4 }, POLES = ['spear', 'staff'], LEVEL = 2, UPRIGHT = .7, YOKED = { above: .2 }, BLOCK = { wide: 12, tall: 8, under: 2, along: 3 };
 const READS = { bars: s => s.w <= 9 && s.w >= 2 * s.h, bundles: s => s.filled <= .6 * s.w * s.h };
 
 const same = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
@@ -93,6 +93,7 @@ export function pictured(now, face, ink) {
     const pole = POLES.includes(sp && sp.tool), torso = stack.find(l => l.name === 'torso'), across = torso ? rigid.map(l => [l, pixels(l.spr).filter(i => torso.spr.c[i]).length]).filter(q => q[1]) : [];
     if (pole && face === 's') { const over = across.filter(q => q[0].cam > torso.cam).reduce((t, q) => t + q[1], 0), under = across.reduce((t, q) => t + q[1], 0) - over; counts.poleSide = over >= LAPPED && over > under ? 1 : under >= LAPPED ? -1 : 0; }
     const level = !!(sp && sp.arms && sp.arms.aim) && Math.abs(sp.arms.aim[0]) >= LEVEL * Math.max(Math.abs(sp.arms.aim[1]), Math.abs(sp.arms.aim[2])), shielded = toolPx.filter(i => top[i] >= 0 && stack[top[i]].name === 'shield'), fisted = stack.some(l => l.seg === 'hand' && l.grips === 'tool' && showing(l).length >= SHOWS);
+    if (pole && face !== 's' && !paired && sp.arms.aim && sp.arms.aim[2] >= UPRIGHT) { const rowsOf = px => Math.max(...px.map(i => (i / w) | 0)), feet = stack.filter(l => LEG_LAYERS.includes(l.name)).flatMap(l => pixels(l.spr)); if (feet.length && rowsOf(toolPx) > rowsOf(feet)) { counts.u++; said.push('the upright pole ends ' + (rowsOf(toolPx) - rowsOf(feet)) + ' px below the feet'); } }
     const open = alongAxis([...seen, ...gripped, ...shielded, ...(paired || !level || !fisted ? behindBack : [])], w, ax), lost = paired ? face === 'b' ? [...new Set([...wrongSide(), ...(pole ? underHead : [])])] : underHead : [];
     if ((paired || pole) && counts.rigid.all >= HIDDEN.least && seen.length && open < HIDDEN.share * counts.rigid.all) { counts.N++; said.push('tool shows ' + open.toFixed(1) + ' px of ' + counts.rigid.all.toFixed(1)); }
     if (lost.length >= HIDDEN.head) { counts.P++; said.push(lost.length + (face === 'b' ? ' px of the tool on the wrong side of the body' : ' px of the tool behind the head')); }
