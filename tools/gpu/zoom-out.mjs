@@ -2,6 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { openGpuGame, sleep } from './session.mjs';
 import { startFrameGaps, stopFrameGaps, summarizeGaps } from './frame-gaps.mjs';
+import { recordBench } from '../ledger/bench.mjs';
 
 const [TREE, LABEL, OUT_DIR, ROUNDS = '3'] = process.argv.slice(2);
 const { page, cdp, log, tile, wheel, setPaused, finish } = await openGpuGame({
@@ -36,3 +37,7 @@ try {
 } catch (e) { log(`FAIL ${e.stack}`); }
 writeFileSync(join(OUT_DIR, `${LABEL}-results.json`), JSON.stringify(results, null, 1));
 await finish();
+await recordBench('zoom-out', {
+  tree: TREE, label: LABEL, rows: results, result: join(OUT_DIR, `${LABEL}-results.json`),
+  profiles: results.map((r) => join(OUT_DIR, `${LABEL}-${r.mode}-${r.round}.cpuprofile`))
+});

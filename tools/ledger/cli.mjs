@@ -276,8 +276,9 @@ try {
   else if (cmd === 'reindex') withLock(root, () => console.log(`${reindex(root)} entries indexed`));
   else if (cmd === 'ingest-raw') await withLock(root, async () => console.log(JSON.stringify((await import('./sync.mjs')).ingestRaw(root))));
   else if (cmd === 'sync') await withLock(root, async () => (await import('./sync.mjs')).sync());
+  else if (cmd === 'rerun') await (await import('./rerun.mjs')).rerunCli(root, rest);
   else {
-    console.error('usage: pnpm ledger list|show|fetch|record|import|reindex|sync|ingest-raw');
+    console.error('usage: pnpm ledger list|show|fetch|record|import|reindex|sync|ingest-raw|rerun');
     process.exit(2);
   }
 } catch (err) {
