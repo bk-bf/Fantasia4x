@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mkdtempSync, writeFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -10,7 +10,8 @@ import {
   harnessVars,
   resultName,
   findSave,
-  rerun
+  rerun,
+  syncSpool
 } from '../../../../tools/ledger/rerun.mjs';
 import { recordRun, recordBench, agentEnv, hostRecord, hostInvalid, snapshot, parseKv } from '../../../../tools/ledger/bench.mjs';
 import { ingestSave } from '../../../../tools/ledger/ingest.mjs';
@@ -236,6 +237,27 @@ describe('rerun on a machine', () => {
     await expect(rerun(root, parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev']), deps as unknown as Deps, env)).rejects.toThrow(/round 1/);
     expect(listEntries(root, { kind: 'harness' })).toEqual([]);
     expect(deps.calls.some((c) => c.script.includes("'cleanup'"))).toBe(true);
+  });
+});
+
+describe('syncing a rerun into the store', () => {
+  it('waits while the sync timer holds the store, then ingests', () => {
+    ownerSave();
+    mkdirSync(join(spool, 'entries'), { recursive: true });
+    writeFileSync(join(root, '.lock'), String(process.ppid));
+    const slept: number[] = [];
+    const ok = syncSpool(root, spool, (ms: number) => {
+      slept.push(ms);
+      rmSync(join(root, '.lock'));
+    });
+    expect(ok).toBe(true);
+    expect(slept).toEqual([5000]);
+  });
+
+  it('leaves the entry in the spool when the store stays held', () => {
+    mkdirSync(root, { recursive: true });
+    writeFileSync(join(root, '.lock'), String(process.ppid));
+    expect(syncSpool(root, spool, () => {}, 2)).toBe(false);
   });
 });
 

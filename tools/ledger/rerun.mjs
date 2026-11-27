@@ -9,7 +9,7 @@ import { buildEntry, hostRecord, LOAD_LIMIT, parseKv, snapshot } from './bench.m
 import { resolveSave } from './fetch.mjs';
 import { harnessPerf } from './ingest.mjs';
 import { spoolDir, writeEntry } from './spool.mjs';
-import { allEntries, entryExists, getEntry, ingestSpool, readBlob } from './store.mjs';
+import { allEntries, entryExists, getEntry, ingestSpool, readBlob, withLock } from './store.mjs';
 
 const REPO = new URL('../..', import.meta.url).pathname;
 const ENTRY_ID = /^\d{8}T\d{6}Z-/;
@@ -224,7 +224,7 @@ export async function rerun(root, o, deps = defaultDeps(), env = process.env) {
       writeFileSync(resultPath, got.stdout);
       writeFileSync(logPath, r.stdout);
       const id = await recordRound(root, {
-        o, t, step, result, at, found, harness, hostBefore, hostAfter, batch, env, localSave, resultPath, logPath, machine: host
+        o, t, step, result, at, found, harness, hostBefore, hostAfter, batch, env, localSave, resultPath, logPath, machine: host, sleep: deps.sleep
       });
       ids.push(id);
       deps.log(`recorded ${id}: ${summary(result)}`);
@@ -276,9 +276,24 @@ export async function recordRound(root, c) {
     dir
   );
   const id = writeEntry(entry, dir);
-  const report = ingestSpool(root, dir, { remove: true });
-  if (report.errors.length) console.error(`ledger: ${report.errors.join('; ')}`);
+  syncSpool(root, dir, c.sleep ?? ((ms) => spawnSync('sleep', [String(ms / 1000)])));
   return id;
+}
+
+export function syncSpool(root, dir, sleep, tries = 12) {
+  for (let i = 1; ; i++) {
+    try {
+      const report = withLock(root, () => ingestSpool(root, dir, { remove: true }));
+      if (report.errors.length) console.error(`ledger: ${report.errors.join('; ')}`);
+      return true;
+    } catch (err) {
+      if (!/is held by/.test(err.message) || i >= tries) {
+        console.error(`ledger: left in the spool for the sync timer: ${err.message}`);
+        return false;
+      }
+      sleep(5000);
+    }
+  }
 }
 
 export async function rerunCli(root, args) {
