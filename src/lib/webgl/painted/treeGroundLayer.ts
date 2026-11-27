@@ -82,6 +82,7 @@ export class TreeGroundLayer {
     this.soils = soils;
     if (!this.field || this.field.w !== w || this.field.h !== h) {
       this.field = new TreeField(w, h, this.art, this.look, (tx, ty) => this.soilOf(tx, ty));
+      this.clearDecor();
       this.allocate(w, h, soils);
       this.whole = true;
     }
@@ -112,6 +113,16 @@ export class TreeGroundLayer {
     if (this.stale.length === 0) return;
     for (const rect of this.stale.splice(0)) this.restamp(rect);
     this.winter = [...f.trees.values()].some((t) => t.stand.season === 'winter');
+  }
+
+  private clearDecor(): void {
+    this.dressed.clear();
+    this.dressedView = '';
+    for (const t of [...this.decor.getAllTiles()]) {
+      const { x, y } = t.position;
+      this.decor.removeTile(x, y);
+      this.decorDirty.push({ x, y });
+    }
   }
 
   private soilOf(tx: number, ty: number): TreeSoil | undefined {

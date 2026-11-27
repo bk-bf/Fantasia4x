@@ -139,4 +139,36 @@ describe('tree ground patches', () => {
     expect(uploads).toBe(1);
     expect(layer.dressAround(view, 1000)).toContainEqual({ x: 16, y: 16 });
   });
+
+  it('drops the props of the old map when a map of another size arrives', () => {
+    const gpu = {
+      createTexture: () => ({}),
+      destroyTexture: () => {},
+      setTextureSlot: () => {},
+      bindTexture: () => {},
+      setSampler: () => {},
+      setUnpackAlignment: () => {},
+      writeTexture: () => {},
+      writeSubTexture: () => {}
+    } as unknown as GpuDevice;
+    const layer = new TreeGroundLayer(gpu, look, ART);
+    const oak = tileset.trees.get('oak_tree')!.mature!.summer[0].cells[0];
+    const old = new GameGrid();
+    old.setTile(6, 6, {
+      char: ' ',
+      foreground: { r: 0, g: 0, b: 0 },
+      background: { r: 0, g: 0, b: 0 },
+      position: { x: 6, y: 6 },
+      painted: oak
+    });
+    const soils = [{ gain: 0 }, grass];
+    layer.setTrees([old, null]);
+    layer.sync(new Uint8Array(24 * 24).fill(1), 24, 24, soils);
+    layer.dressAround({ x: 0, y: 0, w: 24, h: 24 }, 1000);
+    expect(layer.decor.getTile(6, 6)).toBeDefined();
+    layer.setTrees([new GameGrid(), null]);
+    layer.sync(new Uint8Array(30 * 30).fill(1), 30, 30, soils);
+    expect(layer.dressAround({ x: 0, y: 0, w: 30, h: 30 }, 1000)).toContainEqual({ x: 6, y: 6 });
+    expect([...layer.decor.getAllTiles()]).toEqual([]);
+  });
 });
