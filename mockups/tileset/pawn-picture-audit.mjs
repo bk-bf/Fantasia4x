@@ -6,7 +6,7 @@ const SHOWS = 3, APART = 4, IN_LINE = { cos: .94, reach: 5, tools: ['hammer', 'c
 const KEPT_AS_APPROVED = { x: ['shoulder'] };
 const QUIVERED = .9, BODY_HIDES = ['bow', 'arrow'];
 const CRADLE = { palm: 3, across: 2, above: 3, below: 2 };
-const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5;
+const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15;
 const READS = { bars: s => s.w <= 9 && s.w >= 2 * s.h, bundles: s => s.filled <= .6 * s.w * s.h };
 
 const same = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
@@ -74,7 +74,7 @@ export function pictured(now, face, ink) {
   }
   const all = box(pixels(now.spr), w);
   if (sp && all && all[3] > sp.groundRow + BAND) { counts.u++; said.push((all[3] - sp.groundRow) + ' px below the foot line'); }
-  const rigid = tools.filter(l => l.piece !== 'arrow' && l.piece !== 'string'), loads = stack.filter(l => l.name === 'load'), onGround = now.pose.down > .5 && !(now.pose.reach >= 1);
+  const rigid = tools.filter(l => l.piece !== 'arrow' && l.piece !== 'string'), loads = stack.filter(l => l.name === 'load'), onGround = now.pose.down > .5 && !(now.pose.reach >= 1) && !now.waited;
   const ownArm = h => { const mine = l => l.limb === h.limb || l.name === 'pad', k = new Set(stack.map((l, i) => mine(l) || l.name === 'tool' || l.name === 'tool butt' ? i : -1)), px = pixels(h.spr); return px.length && 4 * px.filter(i => k.has(top[i])).length >= px.length ? stack.filter(l => mine(l) && l !== h).flatMap(showing) : []; };
   const shaft = now.pose.shaft, quivered = !!shaft && shaft[2] < -QUIVERED * Math.hypot(...shaft);
   const inFront = h => face === 'b' && h.grips === 'load' && (IN_ARMS.includes(now.pose.carry) || now.pose.down > .5) && !showing(h).length ? stack.filter(l => l.limb === h.limb && l !== h).flatMap(showing) : [];
@@ -111,7 +111,7 @@ export function pictured(now, face, ink) {
     if (!meta || !lay) continue;
     const sideOn = face === 's' && IN_ARMS.includes(now.pose.carry);
     if (now.fullLoad && !sideOn && !onGround && placed.length < WHOLE * now.fullLoad) { counts.D++; said.push('load drawn ' + placed.length + ' px of ' + now.fullLoad); }
-    if (meta.figure && !onGround && !(face === 'b' && !meta.person && IN_ARMS.includes(now.pose.carry))) { const h = l.head, disc = h ? placed.filter(i => Math.hypot(i % w - h[0], ((i / w) | 0) - h[1]) <= h[2]) : [], seen = new Set(showing(l)), headSeen = disc.filter(i => seen.has(i)).length; if (!h || !disc.length || headSeen < HEAD_SHOWS * disc.length) { counts.E++; said.push(h ? 'head of the carried body shows ' + headSeen + ' px of ' + disc.length : 'the carried body has no head marked'); } }
+    if (meta.figure && !onGround && !(now.pose.cu < GRABBED) && !(face === 'b' && !meta.person && IN_ARMS.includes(now.pose.carry))) { const h = l.head, disc = h ? placed.filter(i => Math.hypot(i % w - h[0], ((i / w) | 0) - h[1]) <= h[2]) : [], seen = new Set(showing(l)), headSeen = disc.filter(i => seen.has(i)).length; if (!h || !disc.length || headSeen < HEAD_SHOWS * disc.length) { counts.E++; said.push(h ? 'head of the carried body shows ' + headSeen + ' px of ' + disc.length : 'the carried body has no head marked'); } }
     if (meta.person && !onGround && !(now.pose.cu < 1)) {
       const wrong = [], seen = showing(l), torso = now.rigged.pts.torso, shoulderRow = torso[1], hipRow = sp.hipRow, handLayers = stack.filter(s => s.seg === 'hand'), h = l.head, rowOf = i => (i / w) | 0, off = i => i % w - middleX;
       const palmUp = hand => showing(hand).some(i => { for (let d = 1; d <= CRADLE.palm; d++) if (l.spr.c[i - d * w]) return true; return false; });
@@ -168,6 +168,7 @@ export function pictured(now, face, ink) {
     if (legRows.size && legRows.size < LEGS * full) { counts.y++; said.push('legs ' + legRows.size + ' rows of ' + full); }
   }
   counts.said = said;
+  if (loads.length) { const px = pixels(loads[0].spr); counts.loadLow = px.length ? Math.max(...px.map(i => (i / w) | 0)) : null; }
   return counts;
 }
 

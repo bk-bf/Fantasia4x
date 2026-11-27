@@ -46,7 +46,7 @@ const HOLD = {
   cradle: { gait: 'heavy', sink: .4, side: { hr: [6.5, 7.5], hl: [7.5, 7], lean: -2 }, fb: { hl: [1, 9], hr: [-1, 9], fore: ['hl', 'hr'] } },
 };
 const FELL = { lets: .2, gives: .36, lands: .72, leans: 20, flat: 80 };
-const LIFT = { reaches: .22, grips: .45, lands: .9, stands: 24, bends: 8, low: 6, deeper: 1.5 };
+const LIFT = { reaches: .07, grips: .2, lands: .9, stands: 24, bends: 8, low: 6, deeper: 1.5 };
 const stooped = c => clamp((LIFT.stands - (c.tall || 0) - 1) / LIFT.bends, 0, 1), deeper = c => (c.tall || 0) < LIFT.low ? LIFT.deeper : 0;
 const lifted = (u, base, crouch, end) => u >= LIFT.lands ? end : { ...keyed(u / LIFT.lands, base, [[0, {}], [LIFT.reaches, crouch], [LIFT.grips, crouch], [1, { ...end, cu: 1 }, 'o']]), down: u / LIFT.lands < LIFT.grips ? 1 : 0 };
 const BESIDE = { shoulder: 5.5, wrap: 1, reach: 4.5 };

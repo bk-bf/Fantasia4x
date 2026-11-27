@@ -7,7 +7,7 @@ const HAUL = (() => {
   const BULK_OF_ITEM = {};
   const HOLDS = ['hip', 'chest', 'low', 'shoulder', 'game', 'cradle'];
   const HEAVY_HOLD = { logs: 'shoulder', planks: 'shoulder', body: 'cradle', meat: 'game' };
-  const HOLD_OF_BULK = { light: () => 'hip', bulky: () => 'chest', heavy: storage => HEAVY_HOLD[storage] || 'low' }, IN_HAND = ['hip', 'chest', 'low'], FITS = { wide: 18, tall: 15, slim: 10 }, BY_GRIP = ['shield'], SHOULDERED_MOST = { kg: 45, droops: 16 };
+  const HOLD_OF_BULK = { light: () => 'hip', bulky: () => 'chest', heavy: storage => HEAVY_HOLD[storage] || 'low' }, IN_HAND = ['hip', 'chest', 'low'], FITS = { wide: 18, tall: 15, slim: 10 }, BY_GRIP = ['shield'], SHOULDERED_MOST = { kg: 45, droops: 16, tall: 30 };
   const LIMP = { pile: ['meat', 'hides'], long: [], worn: [] };
   const SAG = { hip: 0, chest: 2, low: 2, shoulder: 0, game: 4, cradle: 0, bent: 0, yoked: 3 };
   const ON_SHOULDER = ['shoulder', 'game'];
@@ -52,7 +52,7 @@ const HAUL = (() => {
   function of(o) {
     const k = RULES.classify(o), bulk = bulkOf(o), family = familyOf(k), storage = storageOf(k);
     const source = sourceOf(o, k), cradled = source.side === CRADLED, hold = cradled ? 'cradle' : HOLD_OF_BULK[bulk](storage), figure = o.sub === 'Carcass' || storage === 'body', slung = hold === 'game' ? DBX.built(DBX.byId.get('item/' + o.id + '/' + source.side)) : null;
-    const tooLarge = hold === 'game' && ((o.raw.weightKg || 0) > SHOULDERED_MOST.kg || (slung.droops || 0) > SHOULDERED_MOST.droops);
+    const tooLarge = hold === 'game' && ((o.raw.weightKg || 0) > SHOULDERED_MOST.kg || (slung.droops || 0) > SHOULDERED_MOST.droops || slung.h > SHOULDERED_MOST.tall);
     const load = { id: o.id, name: o.name, bulk, hold, tooLarge, storage, family, source, figure, limp: figure || LIMP[family].includes(storage), stance: stanceOf(o, k) };
     if (IN_HAND.includes(hold) && family !== 'long' && !BY_GRIP.includes(storage)) {
       const shown = ['s', 'f', 'b'].map(face => layer(load, hold, face).spr);

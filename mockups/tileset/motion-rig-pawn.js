@@ -311,6 +311,7 @@ function rigPawn(o, p) {
       grasp = cradled ? [b.left + load[2], b.top + load[3] + 1] : inArms && load[10] ? [b.left + load[4], b.top + load[5]] : inArms ? [b.left + (low === b.bottom ? 1 : 0), low] : [b.left + load[4] + aft, b.top + load[5] - jaw];
       if (cradled) farGrasp = [b.left + load[4], b.top + load[5] + 1];
     }
+    else if (load && fused && cu < 1) { put = between(anchored(ground[0] - REST.edge, base), [sx0 + 1, tTop + 1 - br], cu); const b = boxAt(put); grasp = [b.left + load[4], Math.min(b.top + load[5], sy + TOT - 1)]; }
     if (grasp) { const k = resting ? reached : 1, by = farGrasp || [grasp[0] + 1, grasp[1]]; hr = between(hr || [0, TOT], [grasp[0] - near[0], grasp[1] - near[1]], k); htl = between(htl || [0, TOT], [by[0] - far[0], by[1] - far[1]], k); }
     const bent = hr && hr[0] < 0 && hr[1] < 0 ? -1 : 1;
     const held3 = fused ? null : armed(p.R && !p.carry ? handFor('R') : spaceOf(hr ? [near[0] + hr[0], near[1] + hr[1]] : [near[0], near[1] + TOT], 1), p.L && !p.carry ? handFor('L') : spaceOf(htl ? [far[0] + htl[0], far[1] + htl[1]] : [far[0], far[1] + TOT], -1));
