@@ -65,7 +65,7 @@ function frame(G, kind, over, anim, face, u, loadId, seed) {
 
 const solid = spr => { let n = 0; for (let i = 0; i < spr.c.length; i++) if (spr.c[i]) n++; return n; };
 const tallOf = s => { let top = -1, low = -1; for (let q = 0; q < s.c.length; q++) if (s.c[q]) { if (top < 0) top = (q / s.w) | 0; low = (q / s.w) | 0; } return low - top + 1; };
-const PICKED_UP = ['lift', 'drop'], SETTLE = .06, LOAD_JUMP = 11, RIGID = { share: .88, least: 10 }, UNDER = 1, SEATED = ['sit', 'warm', 'eat'], SEATS = ['stool', 'bench', 'chair'], SEAT_REACH = 8;
+const PICKED_UP = ['lift', 'drop'], SETTLE = .06, LOAD_JUMP = 11, LOAD_STEP = 6, RIGID = { share: .88, least: 10 }, UNDER = 1, SEATED = ['sit', 'warm', 'eat'], SEATS = ['stool', 'bench', 'chair'], SEAT_REACH = 8;
 const alike = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
 const shows = (shown, own) => !!shown && !!own && (shown === own || alike(shown, own) || alike(shown, NOW.shade(own)) || alike(shown, NOW.shade(NOW.shade(own))));
 const isBody = l => BODY.includes(l.name), isArm = l => !!l.limb, isTool = l => l.name === 'tool' || l.name === 'tool butt', isArrow = l => isTool(l) && l.piece === 'arrow', isLoad = l => l.name === 'load';
@@ -225,6 +225,7 @@ for (const anim of anims) {
       const longest = Math.max(0, ...lengths.filter(Boolean).map(r => r.all));
       lengths.forEach((r, i) => { if (r && !r.sunk && longest >= RIGID.least && r.all < RIGID.share * longest) { sum.z++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frame ' + (i + 1) + ': tool drawn ' + r.all.toFixed(1) + ' px long, longest in the row ' + longest.toFixed(1)); } });
       for (let i = 0, step = smooth ? 3 : 1; i + step < n; i++) { const a = spots[i], b = spots[i + step]; if (a != null && b != null && Math.abs(a - b) > LOAD_JUMP) { sum.Q++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + (loadId ? ' ' + loadId : '') + ' frames ' + (i + 1) + ' to ' + (i + step + 1) + ': load moves ' + Math.abs(a - b) + ' rows'); } }
+      if (smooth) for (let i = 0; i + 1 < n; i++) { const a = spots[i], b = spots[i + 1]; if (a != null && b != null && Math.abs(a - b) > LOAD_STEP) { sum.Q++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + (loadId ? ' ' + loadId : '') + ' frames ' + (i + 1) + ' to ' + (i + 2) + ': load steps ' + Math.abs(a - b) + ' rows'); } }
       const most = (def.hit ? JUMP.struck : JUMP.held) / (smooth ? 2 : 1) + (smooth ? 1 : 0);
       for (let i = 0; i < n; i++) { const a = arrows[i], b = arrows[(i + 1) % n]; if (i + 1 === n && def.once) continue; const loosed = def.hit && def.hit[1] === 'arrow' && b < a && (i + .5) / n <= def.hit[0] && (i + 1.5) / n > def.hit[0]; if (a !== null && b !== null && Math.abs(a - b) > most && !(def.hit && !b) && !loosed) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': arrow ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }
       for (let i = 0; i < n; i++) { const a = sizes[i], b = sizes[(i + 1) % n]; if (i + 1 === n && def.once) continue; if (a && b && Math.abs(a - b) > most) { sum.g++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + who + ' frames ' + (i + 1) + ' to ' + ((i + 1) % n + 1) + ': tool ' + a.toFixed(0) + ' px to ' + b.toFixed(0) + ' px'); } }

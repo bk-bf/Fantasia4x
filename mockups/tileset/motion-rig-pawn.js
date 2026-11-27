@@ -349,7 +349,7 @@ function rigPawn(o, p) {
     if (held3) space.arms = { R: held3.R, L: held3.L, aim: held3.aim, second: held3.second, from: held3.from };
     hand = [nh[0], nh[1] + 1];
     holds = { hip: hand, chest: nh, low: nh, shoulder: [sx0 + 1, tTop + 1 - br], game: [sx0 - 1 - aft, tTop + 2 + jaw - br], cradle: nh };
-    if (put) { put = [rnd(put[0] + nh[0] - rnd(grasp[0])), Math.min(rnd(put[1] + nh[1] - rnd(grasp[1])), base - (load[1] - 1 - load[3]))]; if (cradled) { const b = boxAt(put), behind = sx0 + SUNK.cradled.ahead - (b.left + b.right) / 2; if (behind > 0) put = [put[0] + Math.ceil(behind), put[1]]; } if (underChin !== null && chestTop(put) < underChin && boxAt(put).left <= head[1]) put = [put[0], put[1] + underChin - chestTop(put)]; if (faceRow !== null && boxAt(put).top < faceRow && boxAt(put).left <= head[1]) put = [put[0], put[1] + faceRow - boxAt(put).top]; hand = put; holds[p.carry] = put; }
+    if (put) { const drawn = p.carry === 'game' ? cu : 1; put = [rnd(put[0] + (nh[0] - rnd(grasp[0])) * drawn), Math.min(rnd(put[1] + (nh[1] - rnd(grasp[1])) * drawn), base - (load[1] - 1 - load[3]))]; if (cradled) { const b = boxAt(put), behind = sx0 + SUNK.cradled.ahead - (b.left + b.right) / 2; if (behind > 0) put = [put[0] + Math.ceil(behind), put[1]]; } if (underChin !== null && chestTop(put) < underChin && boxAt(put).left <= head[1]) put = [put[0], put[1] + underChin - chestTop(put)]; if (faceRow !== null && boxAt(put).top < faceRow && boxAt(put).left <= head[1]) put = [put[0], put[1] + faceRow - boxAt(put).top]; hand = put; holds[p.carry] = put; }
     pts.hand = nh; pts.hands = [nh]; pts.mouth = [HX + f.hd + 2, hTop + Math.floor(f.hh * .5) + 3]; pts.head = [HX + (shaped ? 0 : 1), hTop - 3];
     pts.feet = [[cx + fl[0], base - fl[1]], [cx - 1 + fr[0], base - fr[1]]];
   } else {
@@ -402,7 +402,7 @@ function rigPawn(o, p) {
     if (shaped && bowing && back && p.bow >= 1) limbs[toolSide].cams.upper = Math.max(limbs[toolSide].cams.upper, D.head + SPACE.held);
     if (put && !resting && (IN_BOTH_ARMS.includes(p.carry) || cu < 1)) { const on = [0, 1].filter(i => grasps[i]), miss = on.reduce((m, i) => [m[0] + handsAt[i][0] - rnd(grasps[i][0]), m[1] + handsAt[i][1] - rnd(grasps[i][1])], [0, 0]); put = [rnd(put[0] + miss[0] / on.length), rnd(put[1] + miss[1] / on.length)]; }
     if (put && !resting && IN_BOTH_ARMS.includes(p.carry) && !cradled && !back && boxAt(put).top < chin) put = [put[0], put[1] + chin - boxAt(put).top];
-    if (put && !resting && IN_BOTH_ARMS.includes(p.carry) && back && cu >= 1) { const b = boxAt(put), lower = Math.min(tTop + SUNK.underShoulders - br - b.top, cradled || load[0] > REACH.pole ? Infinity : legTop + SUNK.underHip - b.bottom); if (lower > 0) put = [put[0], put[1] + lower]; }
+    if (put && !resting && IN_BOTH_ARMS.includes(p.carry) && back) { const b = boxAt(put), lower = Math.min(tTop + SUNK.underShoulders - br - b.top, cradled || load[0] > REACH.pole ? Infinity : legTop + SUNK.underHip - b.bottom); if (lower > 0) put = [put[0], put[1] + lower]; }
     if (put && !resting && p.carry === 'shoulder') { const b = boxAt(put); if (b.top <= chinRow && b.left <= head[1] && b.right >= head[0]) put = [back ? head[1] + 1 + load[2] : head[0] - load[0] + load[2], put[1]]; }
     const seen = i => paths[i];
     const carrying = p.carry ? (p.carry === 'hip' ? [toolSide] : ON_ONE_SHOULDER.includes(p.carry) && !heaved && !(load && load[8]) ? [laden] : [0, 1]) : [];
@@ -455,7 +455,7 @@ function rigPawn(o, p) {
   s.front = owner.map(n => n && order[n - 1].cam > headCam ? 1 : 0);
   const bare = p.carry ? { c: s.c.slice(), e: s.e.slice() } : null;
   s.outline();
-  if (p.carry) Object.assign(s, { bare, mask: owner.map(n => n && order[n - 1].cam > held.at ? 1 : 0), loadCam: held.at, floor: face === 'b' && p.cu < REST.raised ? base : null, tilt: resting ? 0 : p.tilt || 0, hung: resting ? 0 : cu, clipRow: tTop + 1 - br });
+  if (p.carry) Object.assign(s, { bare, mask: owner.map(n => n && order[n - 1].cam > held.at ? 1 : 0), loadCam: held.at, floor: face === 'b' && p.cu < REST.raised ? base : null, ground: p.carry === 'game' && !resting && cu < 1 ? base : null, tilt: resting ? 0 : p.tilt || 0, hung: resting ? 0 : cu, clipRow: tTop + 1 - br });
   s.sh = { rx: 9, ry: 3.4, dx: 4, dy: 0 };
   return s;
 }

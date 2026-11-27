@@ -11,8 +11,10 @@ const MOTION_LOAD = (() => {
     s.c = under.c.slice(); s.e = under.e.slice(); s.sh = pawn.sh; s.pts = { ...pawn.pts };
     const half = Math.max(grip[0], spr.w - 1 - grip[0], 1), whole = new Spr(pawn.w, pawn.h, pawn.ax, pawn.ay);
     const dropAt = i => Math.round(sag * ((i - grip[0]) / half) ** 2) + Math.round((i - grip[0]) * pawn.tilt / TILT_SPAN);
+    const lowest = i => { let j = spr.h - 1; while (j >= 0 && !spr.c[(layer.upside ? spr.h - 1 - j : j) * spr.w + i]) j--; return j < 0 ? -Infinity : ay - grip[1] + j + dropAt(i); };
+    const sunk = pawn.ground == null ? 0 : Math.max(0, ...Array.from({ length: spr.w }, (_, i) => lowest(i) - pawn.ground));
     for (let i = 0; i < spr.w; i++) {
-      const X = ax - grip[0] + i, drop = dropAt(i);
+      const X = ax - grip[0] + i, drop = dropAt(i) - sunk;
       for (let j = 0; j < spr.h; j++) {
         const row = layer.upside ? spr.h - 1 - j : j, c = spr.c[row * spr.w + i], Y = ay - grip[1] + j + drop, q = Y * s.w + X;
         const there = c && s.ok(X, Y) && !(layer.rows && (j < layer.rows[0] || j >= layer.rows[1])) && !(pawn.floor != null && Y > pawn.floor) && !(layer.fused && edged(spr, i, row));
