@@ -1,4 +1,4 @@
-import { createWebgl2Device, isWebGL2Supported } from '../gpu/webgl2/context.js';
+import { createWebgl2Device } from '../gpu/webgl2/context.js';
 import type { GpuDevice, RenderPassDescriptor } from '../gpu/device.js';
 import { Webgl2Device } from '../gpu/webgl2/device.js';
 import { crashBreadcrumb } from './crashLog.js';
@@ -33,10 +33,6 @@ export class WebGLStateManager {
       console.log('🔄 Starting WebGL2 context initialization...');
     }
 
-    if (!isWebGL2Supported()) {
-      throw new Error('WebGL2 is not supported in this browser');
-    }
-
     const defaultAttributes: WebGLContextAttributes = {
       alpha: false,
       depth: false,
@@ -57,7 +53,7 @@ export class WebGLStateManager {
     const device = createWebgl2Device(this.canvas, attributes);
 
     if (!device) {
-      throw new Error('Failed to create WebGL2 context');
+      throw new Error('WebGL2 is not supported in this browser');
     }
     if (WORK_PINS) countGl(Webgl2Device.rawContextForInstrumentation(device));
     this.device = device;
