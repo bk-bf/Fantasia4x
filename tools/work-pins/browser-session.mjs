@@ -14,6 +14,7 @@ import { chromium } from 'playwright';
 const FRAME_MS = 16;
 export const DEFAULT_FIXTURE = 'tools/work-pins/fixtures/dev-save.json.gz';
 export const MAP = '[aria-label="World map"]';
+const MAP_ERROR = `${MAP} > .error`;
 const EPOCH_MS = 1_700_000_000_000;
 const PAUSE_AT_MS = EPOCH_MS + 24 * 3600 * 1000;
 const VIEWPORT = { width: 1280, height: 800 };
@@ -258,6 +259,8 @@ export async function openGame({
     await seedSave(page, origin, body, log);
     await loadGame(page, origin, query);
     await networkQuiet(NETWORK_QUIET_MS);
+    const mapError = await page.evaluate((sel) => document.querySelector(sel)?.textContent ?? null, MAP_ERROR);
+    if (mapError !== null) throw new Error(`the map did not start: ${mapError.trim()}`);
     log('game ready');
     return { page, cdp: await context.newCDPSession(page), errors, close };
   } catch (e) {
