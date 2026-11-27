@@ -20,6 +20,8 @@ interface TileIndex {
   ids: string[];
 }
 
+const SCANS_BEFORE_INDEX = 8;
+
 function onGrid(x: number, y: number, width: number, height: number): boolean {
   return Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < width && y < height;
 }
@@ -34,9 +36,16 @@ class OccupancyServiceImpl implements OccupancyService {
   private _tiles: TileIndex | null = null;
   private _head = new Int32Array(0);
   private _written: number[] = [];
+  private _pinned: GameState | null = null;
+  private _scans = 0;
 
   indexTiles(state: GameState): void {
     this._tiles = null;
+    this._pinned = state;
+    this._scans = 0;
+  }
+
+  private buildTiles(state: GameState): void {
     const height = state.worldMap.length;
     const width = state.worldMap[0]?.length ?? 0;
     let head = this._head;
@@ -90,6 +99,7 @@ class OccupancyServiceImpl implements OccupancyService {
 
   dropTileIndex(): void {
     this._tiles = null;
+    this._pinned = null;
   }
 
   blockedTilesShared(state: GameState): Set<number> {
@@ -142,6 +152,16 @@ class OccupancyServiceImpl implements OccupancyService {
   }
 
   isBlocked(state: GameState, x: number, y: number, excludeId?: string): boolean {
+    const pinned = this._pinned;
+    if (
+      pinned &&
+      pinned.pawns === state.pawns &&
+      pinned.mobs === state.mobs &&
+      ++this._scans > SCANS_BEFORE_INDEX
+    ) {
+      this._pinned = null;
+      this.buildTiles(pinned);
+    }
     const ix = this._tiles;
     if (
       ix &&

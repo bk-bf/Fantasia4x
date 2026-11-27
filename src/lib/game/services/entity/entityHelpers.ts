@@ -215,15 +215,21 @@ function nearestPredators(allMobs: Mob[]): NearestPredators {
   return _predNearestCache;
 }
 
+const LOOKUPS_BEFORE_INDEX = 8;
+
 let _stepMobs: Mob[] | null = null;
 let _idMap: Map<string, Mob> | null = null;
+let _idLookups = 0;
 let _preyGrid: PreyGrid | null = null;
+let _preyLookups = 0;
 
 export function indexStep(state: GameState): void {
   occupancyService.indexTiles(state);
   _stepMobs = state.mobs ?? null;
   _idMap = null;
+  _idLookups = 0;
   _preyGrid = null;
+  _preyLookups = 0;
 }
 
 export function dropStepIndex(): void {
@@ -234,7 +240,8 @@ export function dropStepIndex(): void {
 }
 
 export function mobById(allMobs: Mob[], id: string): Mob | undefined {
-  if (allMobs !== _stepMobs) return allMobs.find((m) => m.id === id);
+  if (allMobs !== _stepMobs || (!_idMap && ++_idLookups <= LOOKUPS_BEFORE_INDEX))
+    return allMobs.find((m) => m.id === id);
   let map = _idMap;
   if (!map) {
     map = new Map();
@@ -262,6 +269,7 @@ function preyGrid(allMobs: Mob[]): PreyGrid | null {
   if (allMobs !== _stepMobs) return null;
   const prey = mobThreatSubsets(allMobs).prey;
   if (_preyGrid && _preyGrid.prey === prey) return _preyGrid;
+  if (++_preyLookups <= LOOKUPS_BEFORE_INDEX) return null;
   const corpses: number[] = [];
   const cells = new Map<number, number[]>();
   for (let i = 0; i < prey.length; i++) {
