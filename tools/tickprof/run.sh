@@ -92,6 +92,7 @@ profile() {
   fi
   grep -E '^stress' "$log" || true
   node tools/tickprof/summary.mjs "$file"
+  [ ! -f tools/ledger/bench.mjs ] || node tools/ledger/bench.mjs harness "$file" "$log" || true
 }
 
 desktop() {
