@@ -82,7 +82,6 @@ export interface Webgl2Pipeline {
   linked: LinkedProgram;
   layout: GpuBindGroupLayout[];
   buffers: VertexBufferLayout[];
-  layoutKey: string;
   topology: number;
   blend: readonly [number, number, number, number] | null;
   depth: { func: number; write: boolean } | null;
@@ -228,7 +227,6 @@ function pipelineState(
     linked,
     layout: desc.layout,
     buffers: desc.vertex.buffers,
-    layoutKey: JSON.stringify(desc.vertex.buffers),
     topology: topology(gl, desc.primitive.topology),
     blend: blend
       ? [
