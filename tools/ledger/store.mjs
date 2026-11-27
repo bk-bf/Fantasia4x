@@ -113,7 +113,11 @@ const matches = (value, wanted) =>
   wanted == null || (value != null && String(value).toLowerCase().includes(String(wanted).toLowerCase()));
 
 export function listEntries(root, f = {}) {
-  return allEntries(root).filter(
+  const all = allEntries(root);
+  const savedFrom = new Set(
+    f.world == null ? [] : all.filter((e) => e.kind === 'save' && (e.world?.save ?? '').startsWith(f.world) && e.parent).map((e) => e.parent)
+  );
+  return all.filter(
     (e) =>
       (f.machine == null || e.machine === f.machine) &&
       (f.kind == null || e.kind === f.kind) &&
@@ -123,6 +127,7 @@ export function listEntries(root, f = {}) {
       matches(f.scenario && e.scenario, f.scenario) &&
       (f.world == null ||
         (e.world?.save ?? '').startsWith(f.world) ||
+        savedFrom.has(e.id) ||
         (e.perf?.checkpoints ?? []).some((c) => (c.save ?? '').startsWith(f.world))) &&
       (f.since == null || (e.at ?? '') >= f.since)
   );

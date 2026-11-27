@@ -66,7 +66,7 @@ export function ingestPerfLog(root, opts) {
       continue;
     }
     const { header, perf } = sessionPerf(session);
-    const { start } = sessionTimes(session);
+    const { start, end } = sessionTimes(session);
     const body = Buffer.from(session.lines.map((l) => l.raw).join('\n') + '\n');
     const sha = putBlob(root, body);
     const notes = [note];
@@ -103,7 +103,7 @@ export function ingestPerfLog(root, opts) {
         generatedBy: null,
         savedBy: null
       },
-      perf: { ...perf, checkout },
+      perf: { ...perf, end: end == null ? null : new Date(end).toISOString(), checkout },
       files: [fileRef('perf-log', 'perf.log', sha, root)],
       parent: null,
       note: notes.filter(Boolean).join('; ')
@@ -179,14 +179,14 @@ export function ingestSave(root, opts) {
 export function sessionFor(root, machine, info, savedAt) {
   if (info.turn == null) return null;
   const hits = allEntries(root).filter((e) => {
-    if (e.kind !== 'play' || e.machine !== machine || !e.perf?.turns) return false;
-    if (info.map && e.world?.map && e.world.map !== info.map) return false;
+    if (e.kind !== 'play' || e.machine !== machine || !e.perf?.turns || !e.world?.map) return false;
+    if (info.map && e.world.map !== info.map) return false;
     if (info.turn < e.perf.turns.first || info.turn > e.perf.turns.last + 600) return false;
-    if (savedAt == null || !e.at) return true;
-    return Date.parse(e.at) <= savedAt;
+    if (savedAt == null) return true;
+    if (!e.at || !e.perf.end) return false;
+    return Date.parse(e.at) <= savedAt && savedAt <= Date.parse(e.perf.end) + 10 * 60_000;
   });
-  if (!hits.length) return null;
-  return hits.sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))[0].id;
+  return hits.length === 1 || (savedAt != null && hits.length) ? hits.sort((a, b) => b.at.localeCompare(a.at))[0].id : null;
 }
 
 export function saveEntryFor(root, worldId) {

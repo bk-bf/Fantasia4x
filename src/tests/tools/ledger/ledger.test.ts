@@ -218,6 +218,22 @@ describe('perf.log sessions', () => {
 });
 
 describe('saves', () => {
+  it('links a save to the session it was written in', () => {
+    const log = join(dir, 'perf.log');
+    writeFileSync(log, LOG + '\n');
+    ingestPerfLog(dir, { machine: 'laptop', checkout: 'c', paths: [log], timeZone: 'Europe/Berlin', now: Date.parse('2026-11-28T00:00:00Z') });
+    const session = (listEntries(dir, { kind: 'play' }) as unknown as Entry[]).find((e) => e.at === '2026-11-27T00:37:35.743Z');
+    const text = JSON.stringify({ dynamic: { turn: 31800, pawns: [], mobs: [] }, world: Array.from({ length: 750 }, () => Array(750).fill(0)) });
+    const path = join(dir, 'end.json.gz');
+    writeFileSync(path, gzipSync(text));
+    const saved = ingestSave(dir, { machine: 'laptop', path, at: Date.parse('2026-11-27T00:42:00Z') });
+    expect(getEntry(dir, saved.id).parent).toBe(session!.id);
+    const early = join(dir, 'early.json.gz');
+    writeFileSync(early, gzipSync(text.replace('31800', '31801')));
+    expect(getEntry(dir, ingestSave(dir, { machine: 'laptop', path: early, at: Date.parse('2026-11-26T00:00:00Z') }).id).parent).toBeNull();
+    expect((listEntries(dir, { world: saved.worldId.slice(0, 12) }) as unknown as Entry[]).map((e) => e.id)).toContain(session!.id);
+  });
+
   it('keys a save by its uncompressed JSON and fetches it back', () => {
     const text = JSON.stringify({ dynamic: { turn: 30058, seed: 7, pawns: [{}], mobs: [{}, {}] }, world: [[{}, {}, {}], [{}, {}, {}]] });
     const path = join(dir, 'save.json.gz');

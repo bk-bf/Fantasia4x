@@ -74,13 +74,13 @@ async function readOrigin(chromium, idbDir, base, scratch, spare, outDir) {
   }
 }
 
-export async function extractSaves(idbDir, outDir, { playwright, scratch }) {
+export async function extractSaves(idbDir, outDir, { playwright, scratch, only = null }) {
   const require = createRequire(playwright);
   const { chromium } = require('playwright');
   mkdirSync(outDir, { recursive: true });
   const found = [];
   let spare = 5390;
-  for (const base of readdirSync(idbDir).filter((d) => d.endsWith('.indexeddb.leveldb')).sort()) {
+  for (const base of readdirSync(idbDir).filter((d) => d.endsWith('.indexeddb.leveldb') && (!only || only.includes(d))).sort()) {
     const r = await readOrigin(chromium, idbDir, base, scratch, spare++, outDir);
     for (const s of r.saves) {
       writeFileSync(`${s.file}.meta`, JSON.stringify({ origin: r.url, id: s.id, worldId: s.worldId, meta: s.meta }) + '\n');

@@ -95,6 +95,8 @@ function show([id]) {
   console.log(JSON.stringify(e, null, 2));
   const lines = stretchLines(e);
   if (lines.length) console.log(`\nstretches between checkpoints:\n${lines.join('\n')}`);
+  const children = listEntries(root, {}).filter((c) => c.parent === e.id);
+  if (children.length) console.log(`\nlinked back to this entry:\n${children.map((c) => `  ${line(c)}`).join('\n')}`);
 }
 
 function fetch(args) {
