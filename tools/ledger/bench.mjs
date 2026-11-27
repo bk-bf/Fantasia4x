@@ -45,15 +45,21 @@ export function hostRecord(start, end) {
   if (!start && !end) return null;
   const seen = new Map();
   for (const o of [...(start?.others ?? []), ...(end?.others ?? [])]) seen.set(`${o.pid} ${o.cmd}`, o);
-  const strip = (s) => (s ? { at: s.at, load: s.load } : null);
-  return { cores: start?.cores ?? end?.cores ?? null, start: strip(start), end: strip(end), others: [...seen.values()] };
+  return {
+    load: start?.load ?? null,
+    loadEnd: end?.load ?? null,
+    cores: start?.cores ?? end?.cores ?? null,
+    others: [...seen.values()],
+    at: start?.at ?? null,
+    atEnd: end?.at ?? null
+  };
 }
 
 export function hostInvalid(host, limit = LOAD_LIMIT) {
   if (!host) return [];
   const reasons = [];
   if (host.others.length) reasons.push(`another f4x bench was running: ${host.others.map((o) => `${o.pid} ${o.cmd.slice(0, 120)}`).join('; ')}`);
-  const l1 = host.start?.load?.[0];
+  const l1 = host.load?.[0];
   if (l1 != null && l1 > limit) reasons.push(`load ${l1} at start, above ${limit}`);
   return reasons;
 }

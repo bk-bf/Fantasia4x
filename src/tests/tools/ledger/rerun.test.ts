@@ -201,7 +201,7 @@ describe('rerun on a machine', () => {
       expect(e).toMatchObject({ kind: 'harness', tool: 'tick-harness', machine: 'desktop', parent: saveId, scenario: 'save' });
       expect(e.world).toMatchObject({ save: worldId, pawns: 2, mobs: 3, turn: 120, map: '3x2', name: 'Fen' });
       expect(e.perf).toMatchObject({ tps: { median: 190 }, speed: '4x', harnessCommit: SHA_LO, enginePatched: true });
-      expect(e.host).toMatchObject({ cores: 16, start: { load: [0.2, 0.3, 0.4] }, end: { load: [0.2, 0.3, 0.4] }, others: [] });
+      expect(e.host).toMatchObject({ load: [0.2, 0.3, 0.4], loadEnd: [0.2, 0.3, 0.4], cores: 16, others: [] });
       expect(e.invalid).toBeUndefined();
       expect(e.launchedBy).toMatchObject({ who: 'agent', session: 'sess-1', thread: 'thread-1' });
       expect(e.files.map((f: { role: string }) => f.role).sort()).toEqual(['log', 'result', 'save']);
@@ -218,7 +218,7 @@ describe('rerun on a machine', () => {
     const deps = fakeDesktop({ busyChecks: 2 });
     const [id] = await rerun(root, parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev']), deps, env);
     expect(deps.slept).toEqual([30_000, 30_000]);
-    expect(getEntry(root, id).host.start.load).toEqual([0.2, 0.3, 0.4]);
+    expect(getEntry(root, id).host.load).toEqual([0.2, 0.3, 0.4]);
   });
 
   it('keeps the worktrees with --keep and still clears the run directory', async () => {
@@ -245,7 +245,14 @@ describe('the measuring machine', () => {
     const busy = snapshot(parseKv('cores=16\nload=3.1 2 1\nbusy=42 node tools/gpu/frame-cost.mjs /t x /o 8\n'), 'b');
     expect(hostInvalid(hostRecord(quiet, quiet))).toEqual([]);
     const host = hostRecord(quiet, busy);
-    expect(host).toEqual({ cores: 16, start: { at: 'a', load: [0.5, 0.4, 0.3] }, end: { at: 'b', load: [3.1, 2, 1] }, others: [{ pid: 42, cmd: 'node tools/gpu/frame-cost.mjs /t x /o 8' }] });
+    expect(host).toEqual({
+      load: [0.5, 0.4, 0.3],
+      loadEnd: [3.1, 2, 1],
+      cores: 16,
+      others: [{ pid: 42, cmd: 'node tools/gpu/frame-cost.mjs /t x /o 8' }],
+      at: 'a',
+      atEnd: 'b'
+    });
     expect(hostInvalid(host)).toEqual(['another f4x bench was running: 42 node tools/gpu/frame-cost.mjs /t x /o 8']);
     expect(hostInvalid(hostRecord(busy, quiet), 2.5)[1]).toBe('load 3.1 at start, above 2.5');
   });
