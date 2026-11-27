@@ -2,8 +2,10 @@ import vertexSource from '../shaders/paintedLight.vert.glsl?raw';
 import fragmentSource from '../shaders/paintedVignette.frag.glsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import { clamp, dith } from '../../pixelArt/noise.js';
-import type { GpuDevice, GpuRenderPass, GpuRenderPipeline, GpuUniform } from '../../gpu/device.js';
+import type { GpuDevice, GpuRenderPass, GpuRenderPipeline } from '../../gpu/device.js';
+import { uniformLayout } from '../../gpu/uniforms.js';
 import { canvasPipeline } from '../canvasPipeline.js';
+import { PASS_GROUP, PassBindings } from '../passBindings.js';
 
 const PROGRAM = 'paintedVignette';
 export const VIGNETTE_START = 0.62;
@@ -44,12 +46,15 @@ export interface VignetteFrame {
   tilePx: number;
 }
 
+const VIGNETTE = uniformLayout('Vignette', [
+  { name: 'u_strength', type: 'float', precision: 'highp' }
+]);
+
 export class PaintedVignette {
-  private readonly gpu: GpuDevice;
-  private readonly program: GpuRenderPipeline;
-  private readonly uStrength: GpuUniform | null;
+  private strength = 0;
 
   static create(gpu: GpuDevice, shaders: ShaderManager): PaintedVignette | null {
+    const bindings = new PassBindings(gpu, PROGRAM, VIGNETTE);
     const made = shaders.createPipeline(
       PROGRAM,
       canvasPipeline(gpu, {
@@ -59,34 +64,42 @@ export class PaintedVignette {
         blend: {
           color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha' },
           alpha: { srcFactor: 'zero', dstFactor: 'one' }
-        }
+        },
+        bindings: [bindings]
       })
     );
     const program = made.pipeline;
     if (!made.success || !program) {
+      bindings.destroy();
       console.warn('[painted vignette] off:', made.error);
       return null;
     }
-    return new PaintedVignette(gpu, program);
+    return new PaintedVignette(gpu, program, bindings);
   }
 
-  private constructor(gpu: GpuDevice, program: GpuRenderPipeline) {
-    this.gpu = gpu;
-    this.program = program;
-    this.uStrength = gpu.uniform(program, 'u_strength');
+  private constructor(
+    private readonly gpu: GpuDevice,
+    private readonly program: GpuRenderPipeline,
+    private readonly bindings: PassBindings
+  ) {}
+
+  prepare(f: VignetteFrame): void {
+    this.strength = f.strength * vignetteAtZoom(f.tilePx);
+    if (this.strength <= 0) return;
+    this.bindings.set('u_strength', this.strength);
+    this.bindings.upload();
   }
 
-  draw(pass: GpuRenderPass, f: VignetteFrame): number {
-    const strength = f.strength * vignetteAtZoom(f.tilePx);
-    if (strength <= 0) return 0;
-    const gpu = this.gpu;
+  encode(pass: GpuRenderPass): number {
+    if (this.strength <= 0) return 0;
     pass.setPipeline(this.program);
-    gpu.setF32(this.uStrength, strength);
+    pass.setBindGroup(PASS_GROUP, this.bindings.group());
     pass.draw(3);
     return 1;
   }
 
   dispose(): void {
     this.gpu.destroyRenderPipeline(this.program);
+    this.bindings.destroy();
   }
 }

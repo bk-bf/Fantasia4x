@@ -2,8 +2,6 @@
 precision highp float;
 precision highp int;
 
-uniform float u_strength;
-
 out vec4 fragColor;
 
 const float VIGNETTE_START = 0.62;
