@@ -38,6 +38,8 @@ import {
   mobInLiveRegion,
   liveRegion,
   packCorpses,
+  indexStep,
+  dropStepIndex,
   isThinkTick,
   entityName
 } from './entityHelpers';
@@ -270,6 +272,16 @@ function traceMobTick(
 }
 
 export function stepEntities(state: GameState): GameState {
+  if (!state.mobs || state.mobs.length === 0) return state;
+  indexStep(state);
+  try {
+    return stepAllEntities(state);
+  } finally {
+    dropStepIndex();
+  }
+}
+
+function stepAllEntities(state: GameState): GameState {
   const mobs = state.mobs;
   if (!mobs || mobs.length === 0) return state;
   const turn = state.turn;

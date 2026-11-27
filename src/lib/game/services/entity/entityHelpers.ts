@@ -215,6 +215,14 @@ function nearestPredators(allMobs: Mob[]): NearestPredators {
   return _predNearestCache;
 }
 
+export function indexStep(state: GameState): void {
+  occupancyService.indexTiles(state);
+}
+
+export function dropStepIndex(): void {
+  occupancyService.dropTileIndex();
+}
+
 export function findNearestPrey(
   mob: Mob,
   allMobs: Mob[],
