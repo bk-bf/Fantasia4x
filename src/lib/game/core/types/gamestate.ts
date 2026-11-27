@@ -22,6 +22,12 @@ export interface FoodSettings {
   allowedFoodItemIds?: string[];
 }
 
+export interface BuildStamp {
+  commit: string;
+  branch: string | null;
+  dirty: number;
+}
+
 export type DisableableNeed =
   | 'hunger'
   | 'fatigue'
@@ -35,6 +41,7 @@ export type DisableableNeed =
 export interface GameState {
   seed: number;
   turn: number;
+  generatedBy?: BuildStamp;
   culture: Culture;
   culturePool: Culture[];
   cultureRelations: CultureRelation[];
