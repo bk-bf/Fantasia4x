@@ -19,12 +19,14 @@ function branchName(): string {
   return remote[0] ?? 'detached';
 }
 
-export type World = { turn: number; seed: number; map: string };
+export type World = { turn: number; seed: number; map: string; pawns: number; mobs: number };
 
 export const worldOf = (state: GameState): World => ({
   turn: state.turn,
   seed: state.seed,
-  map: `${state.worldMap[0]?.length ?? 0}x${state.worldMap.length}`
+  map: `${state.worldMap[0]?.length ?? 0}x${state.worldMap.length}`,
+  pawns: state.pawns.length,
+  mobs: (state.mobs ?? []).length
 });
 
 export function provenance(start: World, end: GameState) {
@@ -36,7 +38,9 @@ export function provenance(start: World, end: GameState) {
     endTurn: end.turn,
     seed: start.seed,
     map: start.map,
-    pawns: end.pawns.length,
-    mobs: (end.mobs ?? []).length
+    pawns: start.pawns,
+    mobs: start.mobs,
+    endPawns: end.pawns.length,
+    endMobs: (end.mobs ?? []).length
   };
 }

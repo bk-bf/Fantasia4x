@@ -33,7 +33,8 @@ PROF_DUMP       tick: also write the built scenario as a snapshot to this file
 PROF_EXECARGV   extra node flags, such as "--cpu-prof --cpu-prof-dir=/tmp/prof"
 PROF_BRANCH     the branch to record when no branch points at HEAD
 
-Every result carries commit, branch, dirty, turn, seed, map (WxH), pawns and mobs.
+Every result carries commit, branch, dirty, turn, seed, map (WxH), pawns and mobs at the start of
+the run, and endTurn, endPawns and endMobs.
 
   tools/tickprof/run.sh desktop origin/test/look-overhaul loop PROF_SCENARIO=colony-750-40p
   tools/tickprof/run.sh desktop origin/test/look-overhaul tick PROF_SCENARIO=save PROF_SAVE=owner-save.json.gz
@@ -53,7 +54,7 @@ prepare() {
       git@github.com:bk-bf/Fantasia4x.git "$dir"
   fi
   cd "$dir"
-  git fetch -q origin
+  git fetch -q --prune origin
   git checkout -q --detach "$sha"
   toolchain
   if [ ! -f .git/tickprof-ready ]; then
@@ -120,8 +121,10 @@ desktop() {
     timeout 20m scp -q "$save" "desktop:$dir.saves/"
   fi
   timeout 20m ssh desktop "$dir/tools/tickprof/run.sh $kind $(printf '%q ' "${args[@]}")"
+  local file
+  file=$(for a in "${args[@]}"; do export "$a"; done; PROF_OUT=tools/tickprof/out result_file "$kind")
   mkdir -p "$out"
-  timeout 20m scp -q "desktop:$dir/tools/tickprof/out/*.json" "$out/"
+  timeout 20m scp -q "desktop:$dir/$file" "$out/"
   echo "results in $out"
 }
 

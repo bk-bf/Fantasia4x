@@ -5,7 +5,9 @@ import { basename } from 'node:path';
 
 const TEST_HOSTNAME = 'ubuntuserver';
 const TEST_TOOLS = new Set(['vitest', 'svelte-check', 'eslint', 'knip', 'jscpd', 'playwright', 'tsc']);
-const HARNESS = /^(\.\/)?tools\/(work-pins|bench|gungraun)\/|node_modules\/\.bin\//;
+const HARNESS = /^(\.\/)?tools\/(work-pins|bench|gungraun)\/|^(\.\/)?tools\/tickprof\/kernel\.mjs|node_modules\/\.bin\//;
+const TICKPROF = /^(\.\/)?tools\/tickprof\/run\.sh$/;
+const TICKPROF_LOCAL = new Set(['tick', 'loop', 'kernel']);
 const WRAPPERS = new Set(['bgr', 'nice', 'ionice', 'env', 'time', 'sudo', 'command', 'exec']);
 const SHELLS = new Set(['sh', 'bash', 'zsh']);
 
@@ -21,6 +23,8 @@ function localTest(segment) {
   const exe = basename(w[0]);
   if (exe === 'ssh') return false;
   if (SHELLS.has(exe) && w[1] === '-c') return localTests(w.slice(2).join(' '));
+  if (SHELLS.has(exe) && TICKPROF.test(w[1] ?? '')) return TICKPROF_LOCAL.has(w[2]);
+  if (TICKPROF.test(w[0])) return TICKPROF_LOCAL.has(w[1]);
   if (TEST_TOOLS.has(exe)) return true;
   if ((exe === 'pnpm' || exe === 'npx' || exe === 'pnpx') && w.some((x) => TEST_TOOLS.has(x)))
     return !w.includes('tools/remote/run.mjs');
