@@ -1,4 +1,5 @@
 import type { GameGrid } from '../game-grid.js';
+import type { GpuDevice, GpuTexture } from '../../gpu/device.js';
 
 export const ICE_UNIT = 13;
 const FULL = 255;
@@ -22,8 +23,8 @@ export function iceRect(tiles: ReadonlyArray<Tile>, w: number, h: number) {
 }
 
 export class WaterIce {
-  private readonly gl: WebGL2RenderingContext;
-  private readonly tex: WebGLTexture;
+  private readonly gpu: GpuDevice;
+  private readonly tex: GpuTexture;
   private levels = new Uint8Array(0);
   private still: Uint8Array = new Uint8Array(0);
   private w = 0;
@@ -32,15 +33,17 @@ export class WaterIce {
   private stale = true;
   private dirty: Tile[] = [];
 
-  constructor(gl: WebGL2RenderingContext) {
-    this.gl = gl;
-    this.tex = gl.createTexture()!;
+  constructor(gpu: GpuDevice) {
+    this.gpu = gpu;
+    this.tex = gpu.createTexture()!;
     this.bind();
-    for (const p of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
-      gl.texParameteri(gl.TEXTURE_2D, p, gl.LINEAR);
-    for (const p of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
-      gl.texParameteri(gl.TEXTURE_2D, p, gl.CLAMP_TO_EDGE);
-    gl.activeTexture(gl.TEXTURE0);
+    gpu.setSampler({
+      minFilter: 'linear',
+      magFilter: 'linear',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge'
+    });
+    gpu.setTextureSlot(0);
   }
 
   setGrid(grid: GameGrid | null, dirtyTiles?: ReadonlyArray<Tile>): void {
@@ -59,8 +62,8 @@ export class WaterIce {
   }
 
   bind(): void {
-    this.gl.activeTexture(this.gl.TEXTURE0 + ICE_UNIT);
-    this.gl.bindTexture(this.gl.TEXTURE_2D, this.tex);
+    this.gpu.setTextureSlot(ICE_UNIT);
+    this.gpu.bindTexture(this.tex);
   }
 
   private levelAt(x: number, y: number): number {
@@ -68,7 +71,7 @@ export class WaterIce {
   }
 
   sync(w: number, h: number): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
     if (w !== this.w || h !== this.h) {
       this.w = w;
       this.h = h;
@@ -76,7 +79,7 @@ export class WaterIce {
       this.stale = true;
     }
     if (!this.stale && this.dirty.length === 0) return;
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gpu.setUnpackAlignment(1);
     this.bind();
     if (this.stale) {
       this.levels.fill(0);
@@ -86,7 +89,7 @@ export class WaterIce {
           this.levels[(y * w + x) * TEXEL] = this.levelAt(x, y);
       }
       for (let i = 0; i < w * h; i++) this.levels[i * TEXEL + 1] = this.still[i] ?? 0;
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG8, w, h, 0, gl.RG, gl.UNSIGNED_BYTE, this.levels);
+      gpu.writeTexture({ format: 'rg8unorm', width: w, height: h }, this.levels);
     } else {
       const rect = iceRect(this.dirty, w, h);
       if (rect) {
@@ -100,26 +103,19 @@ export class WaterIce {
               (j * rect.w + i) * TEXEL
             );
           }
-        gl.texSubImage2D(
-          gl.TEXTURE_2D,
-          0,
-          rect.x,
-          rect.y,
-          rect.w,
-          rect.h,
-          gl.RG,
-          gl.UNSIGNED_BYTE,
+        gpu.writeSubTexture(
+          { format: 'rg8unorm', x: rect.x, y: rect.y, width: rect.w, height: rect.h },
           part
         );
       }
     }
     this.stale = false;
     this.dirty = [];
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-    gl.activeTexture(gl.TEXTURE0);
+    gpu.setUnpackAlignment(4);
+    gpu.setTextureSlot(0);
   }
 
   dispose(): void {
-    this.gl.deleteTexture(this.tex);
+    this.gpu.destroyTexture(this.tex);
   }
 }

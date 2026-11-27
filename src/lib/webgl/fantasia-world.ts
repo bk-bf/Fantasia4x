@@ -23,10 +23,16 @@ import {
   paintedPieces,
   paintedScenery,
   paintedTile,
+  paintedElder,
+  paintedTree,
+  paintedTreeTurns,
   paintedTileset
 } from './painted/tileset.js';
 import { groundTufts } from './painted/tufts.js';
 import { hiddenUnderFluid } from './painted/fluids.js';
+import { shorePlantAt } from './painted/shorePlants.js';
+import { treeAgeIn, treeSeason } from './painted/treeAge.js';
+import { isWet } from '$lib/game/world/shores.js';
 import type { PaintedPieces, PaintedSprite } from './painted/manifest.js';
 
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
@@ -284,6 +290,14 @@ function recomputeExteriorComponent(
 }
 
 const DIRT_BG = (SUBTERRAINS['dirt']?.bg ?? [0.08, 0.06, 0.03]) as [number, number, number];
+const NO_COLOUR: RGB = Object.freeze({ r: 0, g: 0, b: 0 });
+const sharedColours = new WeakMap<readonly number[], RGB>();
+
+function sharedRgb(c: readonly number[]): RGB {
+  let rgb = sharedColours.get(c);
+  if (!rgb) sharedColours.set(c, (rgb = Object.freeze({ r: c[0], g: c[1], b: c[2] })));
+  return rgb;
+}
 const GLOWING_GROVE_SPRITE_SALT = 53;
 const REED_BANK = 'riverbank';
 const REED_SHARE = 0.2;
@@ -361,8 +375,8 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
   if (hiddenMask[tile.y]?.[tile.x]) {
     grid.setTile(tile.x, tile.y, {
       char: ' ',
-      foreground: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
-      background: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
+      foreground: sharedRgb(DIRT_BG),
+      background: sharedRgb(DIRT_BG),
       position: { x: tile.x, y: tile.y },
       ...(PAINTED_TILES ? { painted: paintedTile('subterrain', 'cave', tile.x, tile.y) } : null)
     });
@@ -379,8 +393,8 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     : undefined;
   grid.setTile(tile.x, tile.y, {
     char,
-    foreground: { r: fg[0], g: fg[1], b: fg[2] },
-    background: { r: bg[0], g: bg[1], b: bg[2] },
+    foreground: sharedRgb(fg),
+    background: sharedRgb(bg),
     position: { x: tile.x, y: tile.y },
     ...(PAINTED_TILES ? { painted } : null),
     ...(GROUND_BLEND && painted ? blendedGround(tile) : null)
@@ -458,6 +472,7 @@ export function buildSnowOverlay(worldMap: WorldTile[][], hiddenMask?: boolean[]
 }
 
 const ROCK_PIECES = 'rock';
+const MOUNTAIN_ROOF = 'mountain_roof';
 
 function rockMass(
   hiddenMask: boolean[][],
@@ -514,6 +529,12 @@ function bankReeds(tile: WorldTile): PaintedSprite | undefined {
   return paintedScenery('reeds', tile.x, tile.y);
 }
 
+function shoreScenery(tile: WorldTile, worldMap?: WorldTile[][]): PaintedSprite | undefined {
+  if (!PAINTED_TILES || !worldMap || !isWet(tile)) return bankReeds(tile);
+  const plant = shorePlantAt(worldMap, tile.x, tile.y);
+  return plant ? paintedScenery(plant, tile.x, tile.y) : undefined;
+}
+
 export function applyResourceToGrid(
   gridShort: GameGrid,
   gridTall: GameGrid,
@@ -525,30 +546,32 @@ export function applyResourceToGrid(
   const blank = (g: GameGrid) =>
     g.setTile(tile.x, tile.y, {
       char: ' ',
-      foreground: { r: 0, g: 0, b: 0 },
-      background: { r: 0, g: 0, b: 0 },
+      foreground: NO_COLOUR,
+      background: NO_COLOUR,
       position: { x: tile.x, y: tile.y }
     });
   const clear = () => {
     blank(gridShort);
     blank(gridTall);
   };
-  const paintOnly = (painted: PaintedSprite | undefined, scenery: boolean) => {
+  const paintOnly = (painted: PaintedSprite | undefined, scenery: boolean, rock = false) => {
     if (!painted) return clear();
     blank(gridTall);
     gridShort.setTile(tile.x, tile.y, {
       char: ' ',
-      foreground: { r: 0, g: 0, b: 0 },
-      background: { r: 0, g: 0, b: 0 },
+      foreground: NO_COLOUR,
+      background: NO_COLOUR,
       position: { x: tile.x, y: tile.y },
       painted,
-      ...(scenery ? { scenery } : null)
+      ...(scenery ? { scenery } : null),
+      ...(rock ? { rock } : null)
     });
   };
-  if (hiddenMask[tile.y]?.[tile.x]) return paintOnly(rockPiece(tile, hiddenMask, worldMap), false);
+  if (hiddenMask[tile.y]?.[tile.x])
+    return paintOnly(rockPiece(tile, hiddenMask, worldMap), false, true);
   const active = resolveActiveResource(tile);
   if (!active || (PAINTED_TILES && hiddenUnderFluid(active.resDef.id)))
-    return paintOnly(bankReeds(tile), true);
+    return paintOnly(shoreScenery(tile, worldMap), true);
   const { resDef, scale: stageScale } = active;
   const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
   const variant = season ? resDef.seasonVariants?.[season] : undefined;
@@ -561,19 +584,28 @@ export function applyResourceToGrid(
   const scale = drawScale !== 1 ? drawScale : undefined;
   const piece = rockPiece(tile, hiddenMask, worldMap);
   const painted = PAINTED_TILES
-    ? (piece ?? paintedTile('resource', resDef.id, tile.x, tile.y))
+    ? (piece ??
+      paintedTree(
+        resDef.id,
+        treeAgeIn(tile, worldMap, paintedTileset() ? paintedElder : null),
+        treeSeason(season),
+        tile.x,
+        tile.y
+      ) ??
+      paintedTile('resource', resDef.id, tile.x, tile.y))
     : undefined;
   const tall = rs !== undefined && rs > 1;
   blank(tall ? gridShort : gridTall);
-  const detail = baseDetail ? { r: baseDetail[0], g: baseDetail[1], b: baseDetail[2] } : undefined;
+  const detail = baseDetail ? sharedRgb(baseDetail) : undefined;
   (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
     char: pool[h],
-    foreground: { r: baseFg[0], g: baseFg[1], b: baseFg[2] },
-    background: { r: 0, g: 0, b: 0 },
+    foreground: sharedRgb(baseFg),
+    background: NO_COLOUR,
     position: { x: tile.x, y: tile.y },
     detail,
     scale: painted ? (stageScale !== 1 ? stageScale : undefined) : scale,
-    ...(painted ? { painted } : null)
+    ...(painted ? { painted } : null),
+    ...(piece ? { rock: true } : null)
   });
 }
 
@@ -581,6 +613,7 @@ export function resourceSeasonChanges(tile: WorldTile, a: Season, b: Season): bo
   const active = resolveActiveResource(tile);
   if (!active) return false;
   const { resDef } = active;
+  if (PAINTED_TILES && paintedTreeTurns(resDef.id, treeSeason(a), treeSeason(b))) return true;
   if (!resDef.seasonVariants) return false;
   const va = resDef.seasonVariants[a];
   const vb = resDef.seasonVariants[b];
@@ -605,7 +638,7 @@ export function buildResourceOverlay(
       if (
         (tile.resources && Object.keys(tile.resources).length > 0) ||
         (PAINTED_TILES && mask[tile.y]?.[tile.x]) ||
-        bankReeds(tile)
+        shoreScenery(tile, worldMap)
       )
         applyResourceToGrid(short, tall, tile, mask, season, worldMap);
   return { short, tall };
@@ -664,7 +697,8 @@ export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding, _tile?: W
           g: t.background.g * ROOF_SHADE_BG,
           b: t.background.b * ROOF_SHADE_BG
         },
-        position: { x: b.x, y: b.y }
+        position: { x: b.x, y: b.y },
+        ...(b.type === MOUNTAIN_ROOF ? { underRock: true } : null)
       });
     }
     return;

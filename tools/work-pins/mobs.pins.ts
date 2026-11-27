@@ -2,4 +2,4 @@ import { it } from 'vitest';
 import { runWorkPins } from './harness';
 import { mobs } from './scenarios';
 
-it('mobs', () => runWorkPins(mobs), 600_000);
+it('mobs-50', () => runWorkPins(mobs), 600_000);

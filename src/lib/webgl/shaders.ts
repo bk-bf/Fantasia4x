@@ -1,6 +1,9 @@
 import type { ShaderProgram } from './types.js';
+import type { GpuDevice, GpuPipeline, GpuShaderModule } from '../gpu/device.js';
 import vertexShaderSource from './shaders/vertex.glsl?raw';
 import fragmentShaderSource from './shaders/fragment.glsl?raw';
+import { withRockSurface } from './painted/rockSurface.js';
+import { withTreeParts } from './painted/treeParts.js';
 
 export const TILE_PROGRAM = 'tileRenderer';
 export const POSED_TILE_PROGRAM = 'tileRendererPosed';
@@ -10,6 +13,7 @@ type UniformValue = number | number[] | Float32Array;
 interface Queued {
   value: number | Float32Array;
   waiting: boolean;
+  vec4s: boolean;
 }
 
 export interface ShaderSource {
@@ -19,22 +23,22 @@ export interface ShaderSource {
 
 export interface ShaderCompilationResult {
   success: boolean;
-  program?: WebGLProgram;
+  program?: GpuPipeline;
   error?: string;
   warnings?: string[];
 }
 
 export class ShaderManager {
-  private gl: WebGL2RenderingContext;
+  private gpu: GpuDevice;
   private programs: Map<string, ShaderProgram> = new Map();
-  private shaderCache: Map<string, WebGLShader> = new Map();
+  private shaderCache: Map<string, GpuShaderModule> = new Map();
   private debug: boolean;
   private twins = new Map<string, string>();
   private queued = new Map<string, Map<string, Queued>>();
   private bound: string | null = null;
 
-  constructor(gl: WebGL2RenderingContext, debug: boolean = false) {
-    this.gl = gl;
+  constructor(gpu: GpuDevice, debug: boolean = false) {
+    this.gpu = gpu;
     this.debug = debug;
   }
 
@@ -65,158 +69,36 @@ export class ShaderManager {
     fragmentSource: string,
     attributeLocations?: ReadonlyMap<string, number>
   ): ShaderCompilationResult {
-    const gl = this.gl;
-
     try {
-      const vertexShader = this.compileShader(gl.VERTEX_SHADER, vertexSource, `${name}_vertex`);
-      if (!vertexShader) {
-        return { success: false, error: 'Vertex shader compilation failed' };
+      const made = this.gpu.createRenderPipeline({
+        label: name,
+        glsl: { vertex: vertexSource, fragment: fragmentSource },
+        attributeLocations,
+        debug: this.debug
+      });
+      for (const { label, module } of made.modules) this.shaderCache.set(label, module);
+      if (!made.ok) {
+        return { success: false, error: made.error };
       }
 
-      const fragmentShader = this.compileShader(
-        gl.FRAGMENT_SHADER,
-        fragmentSource,
-        `${name}_fragment`
-      );
-      if (!fragmentShader) {
-        gl.deleteShader(vertexShader);
-        return { success: false, error: 'Fragment shader compilation failed' };
-      }
-
-      const program = gl.createProgram();
-      if (!program) {
-        gl.deleteShader(vertexShader);
-        gl.deleteShader(fragmentShader);
-        return { success: false, error: 'Failed to create shader program' };
-      }
-
-      gl.attachShader(program, vertexShader);
-      gl.attachShader(program, fragmentShader);
-      attributeLocations?.forEach((at, attribute) => gl.bindAttribLocation(program, at, attribute));
-      gl.linkProgram(program);
-
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        const error = gl.getProgramInfoLog(program);
-        gl.deleteProgram(program);
-        gl.deleteShader(vertexShader);
-        gl.deleteShader(fragmentShader);
-        return {
-          success: false,
-          error: `Shader program linking failed: ${error}`
-        };
-      }
-
-      gl.validateProgram(program);
-      if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-        const warning = gl.getProgramInfoLog(program);
-        if (this.debug) {
-          console.warn(`Shader program validation warning: ${warning}`);
-        }
-      }
-
-      const shaderProgram = this.cacheLocations(program, name);
+      const shaderProgram: ShaderProgram = {
+        program: made.pipeline,
+        uniforms: made.uniforms,
+        attributes: made.attributes
+      };
       this.programs.set(name, shaderProgram);
-
-      gl.deleteShader(vertexShader);
-      gl.deleteShader(fragmentShader);
 
       if (this.debug) {
         console.log(`✅ Shader program "${name}" compiled successfully`);
         this.logProgramInfo(shaderProgram);
       }
 
-      return { success: true, program };
+      return { success: true, program: made.pipeline };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`❌ Shader compilation error for "${name}":`, errorMessage);
       return { success: false, error: errorMessage };
     }
-  }
-
-  private compileShader(type: number, source: string, name: string): WebGLShader | null {
-    const gl = this.gl;
-    const shader = gl.createShader(type);
-
-    if (!shader) {
-      console.error(`Failed to create shader: ${name}`);
-      return null;
-    }
-
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      const error = gl.getShaderInfoLog(shader);
-      const shaderType = type === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT';
-
-      console.error(`❌ ${shaderType} shader compilation failed (${name}):`);
-      console.error(error);
-
-      this.reportShaderErrors(source, error || '', name);
-
-      gl.deleteShader(shader);
-      return null;
-    }
-
-    this.shaderCache.set(name, shader);
-    return shader;
-  }
-
-  private cacheLocations(program: WebGLProgram, name: string): ShaderProgram {
-    const gl = this.gl;
-    const uniforms = new Map<string, WebGLUniformLocation>();
-    const attributes = new Map<string, number>();
-
-    const numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-    const numAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
-
-    for (let i = 0; i < numUniforms; i++) {
-      const uniformInfo = gl.getActiveUniform(program, i);
-      if (uniformInfo) {
-        const location = gl.getUniformLocation(program, uniformInfo.name);
-        if (location !== null) {
-          uniforms.set(uniformInfo.name, location);
-        }
-      }
-    }
-
-    for (let i = 0; i < numAttributes; i++) {
-      const attributeInfo = gl.getActiveAttrib(program, i);
-      if (attributeInfo) {
-        const location = gl.getAttribLocation(program, attributeInfo.name);
-        if (location !== -1) {
-          attributes.set(attributeInfo.name, location);
-        }
-      }
-    }
-
-    return {
-      program,
-      uniforms,
-      attributes
-    };
-  }
-
-  private reportShaderErrors(source: string, error: string, name: string): void {
-    const lines = source.split('\n');
-
-    console.group(`🔍 Shader Error Details: ${name}`);
-
-    const errorLines = error.split('\n');
-    const lineRegex = /ERROR: \d+:(\d+):/;
-
-    errorLines.forEach((errorLine) => {
-      const match = errorLine.match(lineRegex);
-      if (match) {
-        const lineNum = parseInt(match[1]) - 1;
-        if (lineNum >= 0 && lineNum < lines.length) {
-          console.error(`Line ${lineNum + 1}: ${lines[lineNum]}`);
-        }
-      }
-      console.error(errorLine);
-    });
-
-    console.groupEnd();
   }
 
   private logProgramInfo(shaderProgram: ShaderProgram): void {
@@ -225,12 +107,7 @@ export class ShaderManager {
     console.log('Uniforms:', Array.from(shaderProgram.uniforms.keys()));
     console.log('Attributes:', Array.from(shaderProgram.attributes.keys()));
 
-    const gl = this.gl;
-    console.log('WebGL Limits:', {
-      maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
-      maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
-      maxCombinedTextureImageUnits: gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-    });
+    console.log('WebGL Limits:', this.gpu.limits());
 
     console.groupEnd();
   }
@@ -246,14 +123,15 @@ export class ShaderManager {
       return false;
     }
 
-    this.gl.useProgram(shaderProgram.program);
+    this.gpu.setPipeline(shaderProgram.program);
     this.bound = name;
     const queued = this.queued.get(name);
     if (queued)
       for (const [uniformName, q] of queued) {
         if (!q.waiting) continue;
         q.waiting = false;
-        this.write(shaderProgram, name, uniformName, q.value);
+        if (q.vec4s) this.writeVec4s(shaderProgram, uniformName, q.value as Float32Array);
+        else this.write(shaderProgram, name, uniformName, q.value);
       }
     return true;
   }
@@ -277,18 +155,23 @@ export class ShaderManager {
     return this.write(program, target, uniformName, value);
   }
 
-  private queue(programName: string, uniformName: string, value: UniformValue): void {
+  private queue(
+    programName: string,
+    uniformName: string,
+    value: UniformValue,
+    vec4s: boolean = false
+  ): void {
     const queued = this.queued.get(programName)!;
     const q = queued.get(uniformName);
     if (typeof value === 'number') {
       if (q) {
         q.value = value;
         q.waiting = true;
-      } else queued.set(uniformName, { value, waiting: true });
+      } else queued.set(uniformName, { value, waiting: true, vec4s });
     } else if (q && q.value instanceof Float32Array && q.value.length === value.length) {
       q.value.set(value);
       q.waiting = true;
-    } else queued.set(uniformName, { value: Float32Array.from(value), waiting: true });
+    } else queued.set(uniformName, { value: Float32Array.from(value), waiting: true, vec4s });
   }
 
   private write(
@@ -305,7 +188,7 @@ export class ShaderManager {
       return false;
     }
 
-    const gl = this.gl;
+    const gpu = this.gpu;
 
     if (typeof value === 'number') {
       if (
@@ -314,26 +197,26 @@ export class ShaderManager {
           uniformName.includes('Texture') ||
           uniformName.includes('sampler'))
       ) {
-        gl.uniform1i(location, value);
+        gpu.setI32(location, value);
       } else {
-        gl.uniform1f(location, value);
+        gpu.setF32(location, value);
       }
     } else if (Array.isArray(value) || value instanceof Float32Array) {
       switch (value.length) {
         case 1:
-          gl.uniform1f(location, value[0]);
+          gpu.setF32(location, value[0]);
           break;
         case 2:
-          gl.uniform2fv(location, value);
+          gpu.setVec2fv(location, value);
           break;
         case 3:
-          gl.uniform3fv(location, value);
+          gpu.setVec3fv(location, value);
           break;
         case 4:
-          gl.uniform4fv(location, value);
+          gpu.setVec4fv(location, value);
           break;
         case 16:
-          gl.uniformMatrix4fv(location, false, value);
+          gpu.setMat4fv(location, value);
           break;
         default:
           console.error(`Unsupported uniform array length: ${value.length}`);
@@ -344,6 +227,21 @@ export class ShaderManager {
       return false;
     }
 
+    return true;
+  }
+
+  setUniformVec4s(programName: string, uniformName: string, value: Float32Array): boolean {
+    const twin = this.twins.get(programName);
+    const target = twin !== undefined && this.bound === twin ? twin : programName;
+    if (twin !== undefined) this.queue(target === twin ? programName : twin, uniformName, value, true);
+    const program = this.programs.get(target);
+    return program ? this.writeVec4s(program, uniformName, value) : false;
+  }
+
+  private writeVec4s(program: ShaderProgram, uniformName: string, value: Float32Array): boolean {
+    const location = program.uniforms.get(uniformName);
+    if (!location) return false;
+    this.gpu.setVec4fv(location, value);
     return true;
   }
 
@@ -381,14 +279,14 @@ export class ShaderManager {
   }
 
   dispose(): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
 
     this.programs.forEach(({ program }) => {
-      gl.deleteProgram(program);
+      gpu.destroyPipeline(program);
     });
 
     this.shaderCache.forEach((shader) => {
-      gl.deleteShader(shader);
+      gpu.destroyShaderModule(shader);
     });
 
     this.programs.clear();
@@ -401,15 +299,15 @@ export class ShaderManager {
 }
 
 const withPaintedPath = (source: string): string =>
-  source.replace(/^(#version[^\n]*\n)/, '$1#define PAINTED\n');
+  withTreeParts(withRockSurface(source.replace(/^(#version[^\n]*\n)/, '$1#define PAINTED\n')));
 
 export async function createTileRendererShaders(
-  gl: WebGL2RenderingContext,
+  gpu: GpuDevice,
   debug: boolean = false,
   painted: boolean = false
 ): Promise<ShaderManager | null> {
   console.log('🔄 Creating tile renderer shaders...');
-  const shaderManager = new ShaderManager(gl, debug);
+  const shaderManager = new ShaderManager(gpu, debug);
 
   try {
     const shaderSource: ShaderSource = {

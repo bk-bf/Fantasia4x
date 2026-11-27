@@ -6,6 +6,7 @@ export const WIND_SHAPE = WIND;
 const IDLE_PERIOD = 8 * Math.PI;
 const MAX_STEP = 0.25;
 const GUST_PERIOD = 256;
+const FX_PERIOD = 2048;
 
 export interface Heading {
   x: number;
@@ -26,6 +27,22 @@ export interface WindUniforms {
   u_windPhase: [number, number, number, number];
   u_basePerArt: number;
   u_swayReach: number;
+  u_treeWind: [number, number, number, number];
+  u_treeTime: [number, number, number, number];
+  u_treeVeil: [number, number, number];
+}
+
+const T = WIND.trees;
+
+export function byLevel(strength: number, table: readonly number[]): number {
+  const at = T.levels;
+  if (strength <= at[0]) return table[0];
+  for (let i = 1; i < at.length; i++)
+    if (strength <= at[i]) {
+      const k = (strength - at[i - 1]) / (at[i] - at[i - 1]);
+      return table[i - 1] + (table[i] - table[i - 1]) * k;
+    }
+  return table[table.length - 1];
 }
 
 export class WindClock {
@@ -33,6 +50,7 @@ export class WindClock {
   dir: Heading = { x: 1, y: 0 };
   scroll = 0;
   idle = 0;
+  clock = 0;
   private target = { strength: 0, dir: { x: 1, y: 0 } as Heading };
   private last: number | null = null;
 
@@ -59,11 +77,13 @@ export class WindClock {
     const pace = 0.5 + 0.5 * Math.min(1, this.scale);
     this.scroll = (this.scroll + WIND.gust.speed * pace * secs) % GUST_PERIOD;
     this.idle = (this.idle + secs) % IDLE_PERIOD;
+    this.clock = (this.clock + secs) % FX_PERIOD;
     return secs;
   }
 
   uniforms(artTile: number, basePerArt: number): WindUniforms {
     const [a, b] = WIND.gustNoise;
+    const pace = 0.5 + 0.5 * Math.min(1, this.scale);
     return {
       u_wind: [this.scale, this.scroll, this.idle, artTile],
       u_windDir: [this.dir.x, this.dir.y],
@@ -72,7 +92,20 @@ export class WindClock {
       u_gustNoise: [a.fx, a.fy, b.fx, b.fy],
       u_windPhase: [WIND.phase[0], WIND.phase[1], WIND.gust.along, WIND.gust.across],
       u_basePerArt: basePerArt,
-      u_swayReach: WIND.maxScale * (WIND.sway.idle + WIND.sway.gust)
+      u_swayReach: WIND.maxScale * (WIND.sway.idle + WIND.sway.gust),
+      u_treeWind: [
+        byLevel(this.strength, T.flutter),
+        byLevel(this.strength, T.flutterBig),
+        byLevel(this.strength, T.bob),
+        byLevel(this.strength, T.trunk)
+      ],
+      u_treeTime: [
+        (this.scroll - WIND.gust.speed * pace * T.lag + GUST_PERIOD) % GUST_PERIOD,
+        (this.idle - T.lag + IDLE_PERIOD) % IDLE_PERIOD,
+        T.lagScale,
+        this.clock
+      ],
+      u_treeVeil: [T.veil[0], T.veil[1], T.veil[2]]
     };
   }
 }
@@ -113,6 +146,20 @@ export function gustAt(x: number, y: number, clock: Pick<WindClock, 'dir' | 'scr
   return s * s;
 }
 
+export function leanAt(
+  x: number,
+  y: number,
+  amp: number,
+  clock: Pick<WindClock, 'dir' | 'scroll' | 'scale' | 'idle'>
+): number {
+  if (!clock.scale) return 0;
+  const ph = x * WIND.phase[0] + y * WIND.phase[1];
+  const g = gustAt(x, y, clock) * WIND.sway.gust;
+  const flutter = (1 - Math.abs(clock.dir.x)) * Math.sin(clock.idle * WIND.sway.flutterRate + ph);
+  const idle = Math.sin(clock.idle * WIND.sway.idleRate + ph) * WIND.sway.idle;
+  return amp * clock.scale * (idle + g * (clock.dir.x + flutter));
+}
+
 export function swayTable(raw: unknown, spriteIds: Iterable<string>): PaintedWind {
   const table = (raw ?? {}) as Partial<PaintedWind>;
   const sway: Record<string, number> = { ...(table.sway ?? {}) };
@@ -122,5 +169,5 @@ export function swayTable(raw: unknown, spriteIds: Iterable<string>): PaintedWin
     const match = grass.find(([prefix]) => id.startsWith(prefix));
     if (match) sway[id] = match[1];
   }
-  return { sway, leafy: table.leafy ?? [] };
+  return { sway, leafy: table.leafy ?? [], trees: table.trees ?? {}, fx: table.fx ?? {} };
 }

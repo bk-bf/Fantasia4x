@@ -12,28 +12,30 @@ import { setPaintedTileset } from './tileset.js';
 import { pawnLook, type PawnLookOf, type PawnLookPool } from './pawnLook.js';
 import { atlasTexels, type AtlasTexels } from '../drawnSprites.js';
 import { swayTable } from './wind.js';
+import type { GpuDevice, GpuTexture } from '../../gpu/device.js';
 
 export const PAINTED_BASE_URL = '/tilesets/painted/';
 const LIGHT_IMAGE = 'atlas-light.png';
 
 export interface LoadedPieceTop {
-  texture: WebGLTexture;
-  veins: WebGLTexture;
+  texture: GpuTexture;
+  veins: GpuTexture;
   lift: number;
   ramp: { x: number; y: number };
+  snow: { x: number; y: number };
 }
 
 export interface LoadedGroundField {
-  field: WebGLTexture;
-  far: WebGLTexture;
+  field: GpuTexture;
+  far: GpuTexture;
 }
 
 export interface LoadedPaintedTileset {
   tileset: PaintedTileset;
-  texture: WebGLTexture;
-  light: WebGLTexture;
+  texture: GpuTexture;
+  light: GpuTexture;
   top: LoadedPieceTop | null;
-  water: WebGLTexture | null;
+  water: GpuTexture | null;
   ground: LoadedGroundField | null;
   texels: () => AtlasTexels | null;
   cell: (x: number, y: number, w: number, h: number) => Uint8ClampedArray | null;
@@ -94,39 +96,30 @@ async function fetchSway(url: string): Promise<unknown> {
   }
 }
 
-function uploadAtlas(gl: WebGL2RenderingContext, image: TexImageSource): WebGLTexture {
-  const texture = gl.createTexture();
+function uploadAtlas(gpu: GpuDevice, image: TexImageSource): GpuTexture {
+  const texture = gpu.createTexture();
   if (!texture) throw new Error('could not create the painted atlas texture');
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-  gl.bindTexture(gl.TEXTURE_2D, null);
+  gpu.bindTexture(texture);
+  gpu.setUnpackPremultiplyAlpha(false);
+  gpu.setUnpackFlipY(false);
+  gpu.setSampler({
+    minFilter: 'nearest',
+    magFilter: 'nearest',
+    addressModeU: 'clamp-to-edge',
+    addressModeV: 'clamp-to-edge'
+  });
+  gpu.writeTextureImage('legacy-rgba', image);
+  gpu.bindTexture(null);
   return texture;
 }
 
-function unlitTexture(gl: WebGL2RenderingContext): WebGLTexture {
-  const texture = gl.createTexture();
+function unlitTexture(gpu: GpuDevice): GpuTexture {
+  const texture = gpu.createTexture();
   if (!texture) throw new Error('could not create the painted light texture');
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,
-    gl.RGBA,
-    1,
-    1,
-    0,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    new Uint8Array([0, 0, 0, 255])
-  );
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  gl.bindTexture(gl.TEXTURE_2D, null);
+  gpu.bindTexture(texture);
+  gpu.writeTexture({ format: 'legacy-rgba', width: 1, height: 1 }, new Uint8Array([0, 0, 0, 255]));
+  gpu.setSampler({ minFilter: 'nearest', magFilter: 'nearest' });
+  gpu.bindTexture(null);
   return texture;
 }
 
@@ -248,7 +241,7 @@ async function readSource(baseUrl: string): Promise<PaintedSource | null> {
 }
 
 export async function loadPaintedTileset(
-  gl: WebGL2RenderingContext,
+  gpu: GpuDevice,
   baseUrl = PAINTED_BASE_URL
 ): Promise<LoadedPaintedTileset | null> {
   source ??= readSource(baseUrl);
@@ -256,19 +249,20 @@ export async function loadPaintedTileset(
   setPaintedTileset(null);
   if (!loaded) return null;
   try {
-    const texture = uploadAtlas(gl, loaded.image);
+    const texture = uploadAtlas(gpu, loaded.image);
     const top = loaded.top
       ? {
-          texture: uploadAtlas(gl, loaded.top.image),
-          veins: uploadAtlas(gl, loaded.top.veins),
+          texture: uploadAtlas(gpu, loaded.top.image),
+          veins: uploadAtlas(gpu, loaded.top.veins),
           lift: loaded.top.piece.lift,
-          ramp: loaded.top.piece.ramp
+          ramp: loaded.top.piece.ramp,
+          snow: loaded.top.piece.snow
         }
       : null;
-    const light = loaded.light ? uploadAtlas(gl, loaded.light) : unlitTexture(gl);
-    const water = loaded.water ? uploadAtlas(gl, loaded.water) : null;
+    const light = loaded.light ? uploadAtlas(gpu, loaded.light) : unlitTexture(gpu);
+    const water = loaded.water ? uploadAtlas(gpu, loaded.water) : null;
     const ground = loaded.ground
-      ? { field: uploadAtlas(gl, loaded.ground.field), far: uploadAtlas(gl, loaded.ground.far) }
+      ? { field: uploadAtlas(gpu, loaded.ground.field), far: uploadAtlas(gpu, loaded.ground.far) }
       : null;
     setPaintedTileset(loaded.tileset);
     return {

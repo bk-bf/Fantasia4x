@@ -1,4 +1,5 @@
 import { FLOW_RES, riverField, type RiverInput } from './riverFlow.js';
+import type { GpuDevice, GpuTexture, FilterMode } from '../../gpu/device.js';
 
 export const FLOW_UNIT = 14;
 export const STREAM_UNIT = 15;
@@ -33,29 +34,31 @@ export function riverKey(input: RiverInput, active: Uint8Array | null): number {
 }
 
 export class RiverTextures {
-  private readonly gl: WebGL2RenderingContext;
-  private readonly flowTex: WebGLTexture;
-  private readonly streamTex: WebGLTexture;
+  private readonly gpu: GpuDevice;
+  private readonly flowTex: GpuTexture;
+  private readonly streamTex: GpuTexture;
   private key: number | null = null;
   private active: Uint8Array | null = null;
 
-  constructor(gl: WebGL2RenderingContext) {
-    this.gl = gl;
-    this.flowTex = this.make(FLOW_UNIT, gl.LINEAR);
-    this.streamTex = this.make(STREAM_UNIT, gl.NEAREST);
+  constructor(gpu: GpuDevice) {
+    this.gpu = gpu;
+    this.flowTex = this.make(FLOW_UNIT, 'linear');
+    this.streamTex = this.make(STREAM_UNIT, 'nearest');
     this.clear();
   }
 
-  private make(unit: number, filter: number): WebGLTexture {
-    const gl = this.gl;
-    const tex = gl.createTexture()!;
-    gl.activeTexture(gl.TEXTURE0 + unit);
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    for (const p of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
-      gl.texParameteri(gl.TEXTURE_2D, p, filter);
-    for (const p of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
-      gl.texParameteri(gl.TEXTURE_2D, p, gl.CLAMP_TO_EDGE);
-    gl.activeTexture(gl.TEXTURE0);
+  private make(unit: number, filter: FilterMode): GpuTexture {
+    const gpu = this.gpu;
+    const tex = gpu.createTexture()!;
+    gpu.setTextureSlot(unit);
+    gpu.bindTexture(tex);
+    gpu.setSampler({
+      minFilter: filter,
+      magFilter: filter,
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge'
+    });
+    gpu.setTextureSlot(0);
     return tex;
   }
 
@@ -67,16 +70,16 @@ export class RiverTextures {
     w: number,
     h: number
   ) {
-    const gl = this.gl;
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    gl.activeTexture(gl.TEXTURE0 + FLOW_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.flowTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, fw, fh, 0, gl.RGBA, gl.UNSIGNED_BYTE, flow);
-    gl.activeTexture(gl.TEXTURE0 + STREAM_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.streamTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, stream);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-    gl.activeTexture(gl.TEXTURE0);
+    const gpu = this.gpu;
+    gpu.setUnpackAlignment(1);
+    gpu.setTextureSlot(FLOW_UNIT);
+    gpu.bindTexture(this.flowTex);
+    gpu.writeTexture({ format: 'rgba8unorm', width: fw, height: fh }, flow);
+    gpu.setTextureSlot(STREAM_UNIT);
+    gpu.bindTexture(this.streamTex);
+    gpu.writeTexture({ format: 'rgba32float', width: w, height: h }, stream);
+    gpu.setUnpackAlignment(4);
+    gpu.setTextureSlot(0);
   }
 
   private clear(): void {
@@ -94,15 +97,15 @@ export class RiverTextures {
   }
 
   bind(): void {
-    const gl = this.gl;
-    gl.activeTexture(gl.TEXTURE0 + FLOW_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.flowTex);
-    gl.activeTexture(gl.TEXTURE0 + STREAM_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.streamTex);
+    const gpu = this.gpu;
+    gpu.setTextureSlot(FLOW_UNIT);
+    gpu.bindTexture(this.flowTex);
+    gpu.setTextureSlot(STREAM_UNIT);
+    gpu.bindTexture(this.streamTex);
   }
 
   dispose(): void {
-    this.gl.deleteTexture(this.flowTex);
-    this.gl.deleteTexture(this.streamTex);
+    this.gpu.destroyTexture(this.flowTex);
+    this.gpu.destroyTexture(this.streamTex);
   }
 }

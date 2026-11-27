@@ -32,6 +32,7 @@ export type WorkerToMain =
       drops?: EntitySync<DroppedItem>;
       worldMap?: GameState['worldMap'];
       worldMapDelta?: Array<{ y: number; x: number; tile: Partial<WorldTile> }>;
+      snowDelta?: Float64Array;
       flush: boolean;
       commit?: boolean;
     }

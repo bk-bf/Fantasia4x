@@ -6,6 +6,7 @@ import type { TileData } from '$lib/webgl/tile-types';
 import type { FontAtlas } from '$lib/webgl/types';
 import type { ShaderManager } from '$lib/webgl/shaders';
 import type { CharacterRenderer } from '$lib/webgl/character-renderer';
+import { Webgl2Device } from '$lib/gpu/webgl2/device';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
 vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
@@ -24,7 +25,7 @@ const { tileset } = buildTileset(parseManifest(raw));
 const ground = tileset.ground!;
 const GRASS = [...ground.grass];
 const TUFTED = [...ground.kinds].filter(([, k]) => k.tufts).map(([id]) => id);
-const ROW_FLOATS = 31;
+const ROW_FLOATS = 32;
 
 beforeAll(() => setPaintedTileset(tileset));
 
@@ -117,7 +118,14 @@ function chunkRenderer(uploads: Float32Array[]) {
     useProgram: () => true
   } as unknown as ShaderManager;
   const atlas = { characters: new Map(), atlasWidth: 64, atlasHeight: 64 } as unknown as FontAtlas;
-  const r = new GridRenderer(gl, shaders, {} as CharacterRenderer, atlas, false, true);
+  const r = new GridRenderer(
+    new Webgl2Device(gl),
+    shaders,
+    {} as CharacterRenderer,
+    atlas,
+    false,
+    true
+  );
   r.skipBlendedGround = true;
   return r;
 }

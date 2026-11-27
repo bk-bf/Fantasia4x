@@ -1,6 +1,19 @@
 import type { TileData, RGB, Vec2, Viewport } from './tile-types.js';
 import { GridCoords, TileFactory, TilePerformance } from './tile-types.js';
 
+const KEY_SPAN = 65536;
+const KEY_HALF = KEY_SPAN / 2;
+
+const cellKey = (x: number, y: number): number | string =>
+  x >= -KEY_HALF && x < KEY_HALF ? y * KEY_SPAN + x : GridCoords.toKey(x, y);
+
+const cells: Vec2[][] = [];
+
+function gridCell(x: number, y: number): Vec2 {
+  const row = (cells[y] ??= []);
+  return (row[x] ??= Object.freeze({ x, y }));
+}
+
 export interface GridUpdateEvent {
   type: 'single' | 'batch' | 'clear';
   tiles: TileData[];
@@ -19,15 +32,13 @@ export interface BatchUpdate {
 export interface GridStats {
   totalTiles: number;
   visibleTiles: number;
-  dirtyTiles: number;
   memoryUsageMB: number;
   lastUpdateTime: number;
   operationsPerSecond: number;
 }
 
 export class GameGrid {
-  private tiles: Map<string, TileData> = new Map();
-  private dirtyTiles: Set<string> = new Set();
+  private tiles: Map<number | string, TileData> = new Map();
   private lastUpdateTime = 0;
   private operationCount = 0;
   private operationStartTime = Date.now();
@@ -40,42 +51,34 @@ export class GameGrid {
   constructor() {}
 
   setTile(x: number, y: number, tile: TileData): void {
-    const key = GridCoords.toKey(x, y);
+    tile.position = gridCell(x, y);
 
-    tile.position = { x, y };
-    tile.dirty = true;
-    tile.lastUpdated = Date.now();
-
-    this.tiles.set(key, tile);
-    this.dirtyTiles.add(key);
+    this.tiles.set(cellKey(x, y), tile);
 
     this.updateBounds(x, y);
 
     TilePerformance.recordUpdate();
     this.recordOperation();
 
-    this.notifyListeners({
-      type: 'single',
-      tiles: [tile]
-    });
+    if (this.listeners.length > 0)
+      this.notifyListeners({
+        type: 'single',
+        tiles: [tile]
+      });
   }
 
   getTile(x: number, y: number): TileData | undefined {
-    const key = GridCoords.toKey(x, y);
-    return this.tiles.get(key);
+    return this.tiles.get(cellKey(x, y));
   }
 
   hasTile(x: number, y: number): boolean {
-    const key = GridCoords.toKey(x, y);
-    return this.tiles.has(key);
+    return this.tiles.has(cellKey(x, y));
   }
 
   removeTile(x: number, y: number): boolean {
-    const key = GridCoords.toKey(x, y);
-    const removed = this.tiles.delete(key);
+    const removed = this.tiles.delete(cellKey(x, y));
 
     if (removed) {
-      this.dirtyTiles.delete(key);
       this.boundsDirty = true;
       this.recordOperation();
     }
@@ -98,34 +101,11 @@ export class GameGrid {
     return visibleTiles;
   }
 
-  getDirtyTiles(): TileData[] {
-    const dirty: TileData[] = [];
-
-    for (const key of this.dirtyTiles) {
-      const tile = this.tiles.get(key);
-      if (tile) {
-        dirty.push(tile);
-      }
-    }
-
-    return dirty;
-  }
-
-  clearDirtyFlags(): void {
-    for (const key of this.dirtyTiles) {
-      const tile = this.tiles.get(key);
-      if (tile) {
-        tile.dirty = false;
-      }
-    }
-    this.dirtyTiles.clear();
-  }
-
   batchUpdate(updates: BatchUpdate[]): void {
     const updatedTiles: TileData[] = [];
 
     for (const update of updates) {
-      const key = GridCoords.toKey(update.x, update.y);
+      const key = cellKey(update.x, update.y);
       let tile = this.tiles.get(key);
 
       if (!tile) {
@@ -138,11 +118,7 @@ export class GameGrid {
       if (update.background) tile.background = update.background;
       if (update.animationOffset) tile.animationOffset = update.animationOffset;
 
-      tile.dirty = true;
-      tile.lastUpdated = Date.now();
-
       this.tiles.set(key, tile);
-      this.dirtyTiles.add(key);
       updatedTiles.push(tile);
 
       this.updateBounds(update.x, update.y);
@@ -190,7 +166,6 @@ export class GameGrid {
     const clearedTiles = hasListeners ? Array.from(this.tiles.values()) : [];
 
     this.tiles.clear();
-    this.dirtyTiles.clear();
     this.bounds = null;
     this.boundsDirty = false;
     this.recordOperation();
@@ -237,7 +212,6 @@ export class GameGrid {
     return {
       totalTiles: this.tiles.size,
       visibleTiles: 0,
-      dirtyTiles: this.dirtyTiles.size,
       memoryUsageMB: this.estimateMemoryUsage(),
       lastUpdateTime: this.lastUpdateTime,
       operationsPerSecond: timeSinceStart > 0 ? this.operationCount / timeSinceStart : 0
@@ -373,7 +347,7 @@ export class GameGrid {
       return;
     }
 
-    const coords = Array.from(this.tiles.keys()).map(GridCoords.fromKey);
+    const coords = Array.from(this.tiles.values(), (tile) => tile.position);
     this.bounds = GridCoords.getBounds(coords);
   }
 

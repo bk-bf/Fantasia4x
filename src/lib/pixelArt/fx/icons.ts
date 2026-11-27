@@ -8,7 +8,7 @@ import { art, keys, lit, stamp } from './iconArt';
 import { AILMENTS } from './conditionArt/ailments';
 import { FACES } from './conditionArt/faces';
 import { FARE } from './conditionArt/fare';
-import { GEMS } from './conditionArt/gems';
+import { BOONS } from './conditionArt/boons';
 import { TRAITS } from './conditionArt/traits';
 import { MOTIFS, type MotifId } from './motifs';
 
@@ -275,7 +275,7 @@ const MOCK_ICONS: Record<MockIconId, () => Spr> = {
     )
 };
 
-const CONDITION_ART = { ...AILMENTS, ...FACES, ...FARE, ...GEMS, ...TRAITS };
+const CONDITION_ART = { ...AILMENTS, ...BOONS, ...FACES, ...FARE, ...TRAITS };
 
 export type IconId = MockIconId | MotifId | keyof typeof CONDITION_ART;
 

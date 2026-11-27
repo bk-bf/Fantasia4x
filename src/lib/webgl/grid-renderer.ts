@@ -3,10 +3,15 @@ import { withOverlays, type TileData, type Viewport } from './tile-types.js';
 import type { CharacterRenderer } from './character-renderer.js';
 import { POSED_TILE_PROGRAM, TILE_PROGRAM, type ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
-import { checkWebGLError } from './utils.js';
 import { mirrored, tileQuad } from './drawnSprites.js';
 import { tuftTiles } from './painted/tufts.js';
 import { POSE_PAD, isPosed, poseSway } from './pose.js';
+import {
+  FLOAT32_FORMATS,
+  type GpuBuffer,
+  type GpuDevice,
+  type GpuVertexLayout
+} from '../gpu/device.js';
 
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
 const ZERO_LIGHT: [number, number, number] = [0, 0, 0];
@@ -14,7 +19,7 @@ const NO_OUTLINE = [0, 0, 0];
 const PAINTED_UV_SHIFT = 2;
 const corners = [0, 0, 0, 0];
 const GLYPH_VERTEX_FLOATS = 24;
-const ROW_VERTEX_FLOATS = 31;
+const ROW_VERTEX_FLOATS = 32;
 const NO_VEIN = { x: -1, y: -1, near: 0 };
 export { ALPHA_CUT } from './drawnSprites.js';
 
@@ -44,8 +49,8 @@ export interface GridRenderStats {
 }
 
 interface TerrainChunk {
-  vao: WebGLVertexArrayObject | null;
-  vbo: WebGLBuffer | null;
+  vao: GpuVertexLayout | null;
+  vbo: GpuBuffer | null;
   count: number;
   builtVersion: number;
   builtLight: number;
@@ -59,7 +64,7 @@ interface WarmState {
 }
 
 export class GridRenderer {
-  private gl: WebGL2RenderingContext;
+  private gpu: GpuDevice;
   private shaderManager: ShaderManager;
   private characterRenderer: CharacterRenderer;
   private fontAtlas: FontAtlas;
@@ -67,8 +72,8 @@ export class GridRenderer {
   private vertexFloats: number;
   private drawnChunks: TerrainChunk[] = [];
 
-  private gridVAO: WebGLVertexArrayObject | null = null;
-  private gridVBO: WebGLBuffer | null = null;
+  private gridVAO: GpuVertexLayout | null = null;
+  private gridVBO: GpuBuffer | null = null;
   private currentVertexCount: number = 0;
 
   private static readonly CHUNK_SIZE = 32;
@@ -96,14 +101,14 @@ export class GridRenderer {
   };
 
   constructor(
-    gl: WebGL2RenderingContext,
+    gpu: GpuDevice,
     shaderManager: ShaderManager,
     characterRenderer: CharacterRenderer,
     fontAtlas: FontAtlas,
     debug = false,
     rowDepth = false
   ) {
-    this.gl = gl;
+    this.gpu = gpu;
     this.shaderManager = shaderManager;
     this.characterRenderer = characterRenderer;
     this.fontAtlas = fontAtlas;
@@ -261,10 +266,10 @@ export class GridRenderer {
       if (!chunk) return 0;
     }
     if (chunk.count > 0 && chunk.vao) {
-      const gl = this.gl;
-      gl.bindVertexArray(chunk.vao);
-      gl.drawArrays(gl.TRIANGLES, 0, chunk.count);
-      gl.bindVertexArray(null);
+      const gpu = this.gpu;
+      gpu.setVertexLayout(chunk.vao);
+      gpu.draw('triangle-list', chunk.count);
+      gpu.setVertexLayout(null);
       this.drawnChunks.push(chunk);
       return chunk.count;
     }
@@ -281,7 +286,7 @@ export class GridRenderer {
     dirtyStamp: number,
     chunks: Map<string, TerrainChunk>
   ): TerrainChunk | undefined {
-    const gl = this.gl;
+    const gpu = this.gpu;
     const CS = GridRenderer.CHUNK_SIZE;
     const key = `${cx}:${cy}`;
     let chunk = chunks.get(key);
@@ -308,16 +313,16 @@ export class GridRenderer {
     } else {
       const data = this.generateBatchVertexData(tiles, options);
       if (!chunk.vao || !chunk.vbo) {
-        chunk.vao = gl.createVertexArray();
-        chunk.vbo = gl.createBuffer();
+        chunk.vao = gpu.createVertexLayout();
+        chunk.vbo = gpu.createBuffer();
         if (!chunk.vao || !chunk.vbo) {
           console.error('❌ Failed to create terrain chunk VAO/VBO');
           return undefined;
         }
         this.setupGridAttribs(chunk.vao, chunk.vbo);
       }
-      gl.bindBuffer(gl.ARRAY_BUFFER, chunk.vbo);
-      gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      gpu.setVertexBuffer(chunk.vbo);
+      gpu.writeBuffer(data, 'static');
       chunk.count = data.length / this.vertexFloats;
     }
     chunk.builtVersion = version;
@@ -366,23 +371,23 @@ export class GridRenderer {
   }
 
   private redrawChunks(): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
     for (const chunk of this.drawnChunks) {
-      gl.bindVertexArray(chunk.vao);
-      gl.drawArrays(gl.TRIANGLES, 0, chunk.count);
+      gpu.setVertexLayout(chunk.vao);
+      gpu.draw('triangle-list', chunk.count);
     }
-    gl.bindVertexArray(null);
+    gpu.setVertexLayout(null);
   }
 
   private drawShadows(draw: () => void): void {
-    const gl = this.gl;
-    gl.depthFunc(gl.LESS);
-    gl.blendFunc(gl.ZERO, gl.SRC_COLOR);
+    const gpu = this.gpu;
+    gpu.setDepthCompare('less');
+    gpu.setBlendFunc('zero', 'src');
     this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 1);
     draw();
     this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 0);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.depthFunc(gl.LEQUAL);
+    gpu.setBlendFunc('src-alpha', 'one-minus-src-alpha');
+    gpu.setDepthCompare('less-equal');
   }
 
   private uploadAndDraw(vertexData: Float32Array, rowPasses = false): void {
@@ -392,28 +397,28 @@ export class GridRenderer {
     }
     if (vertexData.length === 0) return;
 
-    const gl = this.gl;
+    const gpu = this.gpu;
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.gridVBO);
-    gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.DYNAMIC_DRAW);
+    gpu.setVertexBuffer(this.gridVBO);
+    gpu.writeBuffer(vertexData, 'dynamic');
 
     if (!this.shaderManager.useProgram(this.batchPosed ? POSED_TILE_PROGRAM : TILE_PROGRAM)) {
       console.error('❌ Failed to use tile renderer shader');
       return;
     }
 
-    gl.bindVertexArray(this.gridVAO);
+    gpu.setVertexLayout(this.gridVAO);
 
     const vertexCount = vertexData.length / this.vertexFloats;
-    gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
-    if (rowPasses) this.drawShadows(() => gl.drawArrays(gl.TRIANGLES, 0, vertexCount));
+    gpu.draw('triangle-list', vertexCount);
+    if (rowPasses) this.drawShadows(() => gpu.draw('triangle-list', vertexCount));
 
-    gl.bindVertexArray(null);
+    gpu.setVertexLayout(null);
 
     this.currentVertexCount = vertexCount;
 
     if (this.debug) {
-      checkWebGLError(gl, 'grid batch rendering');
+      gpu.checkError('grid batch rendering');
     }
   }
 
@@ -723,6 +728,7 @@ export class GridRenderer {
           : tile.rotation
             ? 0
             : (painted?.sway ?? 0);
+        const tree = tile.rotation ? 0 : (painted?.tree ?? 0);
         for (let v = 0; v < 6; v++) {
           const at = o + v * ROW_VERTEX_FLOATS;
           for (let f = 0; f < GLYPH_VERTEX_FLOATS; f++)
@@ -734,6 +740,7 @@ export class GridRenderer {
           out[at + GLYPH_VERTEX_FLOATS + 4] = tile.position.y;
           out[at + GLYPH_VERTEX_FLOATS + 5] = vein.near;
           out[at + GLYPH_VERTEX_FLOATS + 6] = sway;
+          out[at + GLYPH_VERTEX_FLOATS + 7] = tree;
         }
       }
       o += FLOATS_PER_TILE;
@@ -743,10 +750,10 @@ export class GridRenderer {
   }
 
   private initializeGridRendering(): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
 
-    this.gridVAO = gl.createVertexArray();
-    this.gridVBO = gl.createBuffer();
+    this.gridVAO = gpu.createVertexLayout();
+    this.gridVBO = gpu.createBuffer();
     if (!this.gridVAO || !this.gridVBO) throw new Error('Failed to create grid VAO/VBO');
     this.setupGridAttribs(this.gridVAO, this.gridVBO);
 
@@ -755,10 +762,10 @@ export class GridRenderer {
     }
   }
 
-  private setupGridAttribs(vao: WebGLVertexArrayObject, vbo: WebGLBuffer): void {
-    const gl = this.gl;
-    gl.bindVertexArray(vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+  private setupGridAttribs(vao: GpuVertexLayout, vbo: GpuBuffer): void {
+    const gpu = this.gpu;
+    gpu.setVertexLayout(vao);
+    gpu.setVertexBuffer(vbo);
     const stride = this.vertexFloats * 4;
     const attribs: [string, number, number][] = [
       ['a_position', 2, 0],
@@ -775,16 +782,16 @@ export class GridRenderer {
         ['a_row', 1, GLYPH_VERTEX_FLOATS],
         ['a_vein', 4, GLYPH_VERTEX_FLOATS + 1],
         ['a_veinNear', 1, GLYPH_VERTEX_FLOATS + 5],
-        ['a_sway', 1, GLYPH_VERTEX_FLOATS + 6]
+        ['a_sway', 1, GLYPH_VERTEX_FLOATS + 6],
+        ['a_tree', 1, GLYPH_VERTEX_FLOATS + 7]
       );
     for (const [name, size, offset] of attribs) {
       const loc = this.shaderManager.getAttributeLocation('tileRenderer', name);
       if (loc >= 0) {
-        gl.enableVertexAttribArray(loc);
-        gl.vertexAttribPointer(loc, size, gl.FLOAT, false, stride, offset * 4);
+        gpu.vertexAttribute(loc, { format: FLOAT32_FORMATS[size - 1], stride, offset: offset * 4 });
       }
     }
-    gl.bindVertexArray(null);
+    gpu.setVertexLayout(null);
   }
 
   private estimateCulledTiles(grid: GameGrid, viewport: Viewport): number {
@@ -799,21 +806,21 @@ export class GridRenderer {
   }
 
   dispose(): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
 
     if (this.gridVBO) {
-      gl.deleteBuffer(this.gridVBO);
+      gpu.destroyBuffer(this.gridVBO);
       this.gridVBO = null;
     }
 
     if (this.gridVAO) {
-      gl.deleteVertexArray(this.gridVAO);
+      gpu.destroyVertexLayout(this.gridVAO);
       this.gridVAO = null;
     }
 
     for (const chunk of this.terrainChunks.values()) {
-      if (chunk.vbo) gl.deleteBuffer(chunk.vbo);
-      if (chunk.vao) gl.deleteVertexArray(chunk.vao);
+      if (chunk.vbo) gpu.destroyBuffer(chunk.vbo);
+      if (chunk.vao) gpu.destroyVertexLayout(chunk.vao);
     }
     this.terrainChunks.clear();
 

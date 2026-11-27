@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GridRenderer } from '$lib/webgl/grid-renderer';
+import { Webgl2Device } from '$lib/gpu/webgl2/device';
 import { GameGrid } from '$lib/webgl/game-grid';
 import { POSED_TILE_PROGRAM, ShaderManager, TILE_PROGRAM, withDefine } from '$lib/webgl/shaders';
 import type { TileData } from '$lib/webgl/tile-types';
@@ -57,7 +58,7 @@ function fakeGl() {
 
 function pairedManager() {
   const { gl, calls } = fakeGl();
-  const shaders = new ShaderManager(gl);
+  const shaders = new ShaderManager(new Webgl2Device(gl));
   shaders.createProgram(TILE_PROGRAM, 'v', 'f');
   shaders.createProgram(POSED_TILE_PROGRAM, 'v', 'f', shaders.getProgram(TILE_PROGRAM)!.attributes);
   shaders.pairPrograms(TILE_PROGRAM, POSED_TILE_PROGRAM);
@@ -167,7 +168,7 @@ describe('the program a batch is drawn with', () => {
       getAttributeLocation: () => 1,
       useProgram: (name: string) => used.push(name) > 0
     } as unknown as ShaderManager;
-    const r = new GridRenderer(fakeGl().gl, shaders, {} as CharacterRenderer, atlas, false, true);
+    const r = new GridRenderer(new Webgl2Device(fakeGl().gl), shaders, {} as CharacterRenderer, atlas, false, true);
     r.setPaintTexel(1 / 256, 1 / 128);
     const grid = new GameGrid();
     for (const t of tiles) grid.setTile(t.position.x, t.position.y, t);

@@ -39,6 +39,7 @@ export interface ManifestPieceTop {
   veinSize: number;
   lift: number;
   ramp: string;
+  snow: string;
 }
 
 export interface ManifestPieces {
@@ -76,6 +77,14 @@ export interface ManifestDrops {
   cover: Record<string, string>;
 }
 
+export const TREE_AGES = ['young', 'mature', 'elder'] as const;
+export type TreeAge = (typeof TREE_AGES)[number];
+const EVERY_TREE_HAS: readonly TreeAge[] = ['young', 'mature'];
+export const TREE_SEASONS = ['summer', 'autumn', 'winter'] as const;
+export type TreeSeason = (typeof TREE_SEASONS)[number];
+export type ManifestTree = Partial<Record<TreeAge, Record<TreeSeason, string[]>>>;
+export type PaintedTree = Partial<Record<TreeAge, Record<TreeSeason, PaintedVariant[]>>>;
+
 export interface PaintedManifest {
   tile: number;
   atlas: { w: number; h: number };
@@ -83,6 +92,7 @@ export interface PaintedManifest {
   map: Partial<Record<PaintedKind, Record<string, string[]>>>;
   pieces?: Record<string, ManifestPieces>;
   drops?: ManifestDrops;
+  trees?: Record<string, ManifestTree>;
   water?: ManifestField;
   ground?: ManifestGround;
 }
@@ -106,14 +116,41 @@ export interface PaintedSprite {
   vein?: PaintedVein;
   sway?: number;
   leafy?: boolean;
+  tree?: number;
+  fx?: TreeFx;
+}
+
+export type TreeFxKind =
+  | 'ember'
+  | 'moon'
+  | 'frost'
+  | 'apple'
+  | 'spore'
+  | 'bark'
+  | 'wisp'
+  | 'hollow';
+
+export interface TreeFx {
+  fx: TreeFxKind[];
+  age: 'young' | 'mature' | 'elder';
+  h: number;
+  w: number;
+  box: [number, number, number, number];
+  leaves: number[];
+  bright?: number[];
+  edges?: number[];
+  orbs?: number[];
+  hollow?: number[];
 }
 
 export interface PaintedWind {
   sway: Readonly<Record<string, number>>;
   leafy: readonly string[];
+  trees: Readonly<Record<string, number>>;
+  fx: Readonly<Record<string, TreeFx>>;
 }
 
-const STILL: PaintedWind = { sway: {}, leafy: [] };
+const STILL: PaintedWind = { sway: {}, leafy: [], trees: {}, fx: {} };
 
 export interface PaintedRamp {
   x: number;
@@ -137,6 +174,7 @@ export interface PaintedPieceTop {
   veinSize: number;
   lift: number;
   ramp: { x: number; y: number; length: number };
+  snow: { x: number; y: number; length: number };
 }
 
 export interface PaintedPieces {
@@ -189,9 +227,14 @@ export interface PaintedTileset {
   scenery: Map<string, PaintedVariant[]>;
   ground?: PaintedGround;
   drops?: PaintedDrops;
+  trees: Map<string, PaintedTree>;
 }
 
-const SCENERY: Readonly<Record<string, string>> = { reeds: 'plant/reeds/' };
+const SCENERY: Readonly<Record<string, string>> = {
+  reeds: 'plant/reeds/',
+  ...Object.fromEntries([1, 2, 3].map((n) => [`reedbed/${n}`, `plant/reedbed/${n}/`])),
+  ...Object.fromEntries([5, 6, 7, 8].map((n) => [`lilies/${n}`, `plant/lilies/${n}/`]))
+};
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -271,12 +314,17 @@ function readPieces(set: string, raw: unknown): ManifestPieces {
 
 function readTop(set: string, raw: unknown): ManifestPieceTop {
   if (!isObject(raw)) throw new Error(`pieces.${set}.top is not an object`);
-  const { image, veins, size, veinSize, lift, ramp } = raw;
-  if (typeof image !== 'string' || typeof veins !== 'string' || typeof ramp !== 'string')
-    throw new Error(`pieces.${set}.top does not name its images and ramp`);
+  const { image, veins, size, veinSize, lift, ramp, snow } = raw;
+  if (
+    typeof image !== 'string' ||
+    typeof veins !== 'string' ||
+    typeof ramp !== 'string' ||
+    typeof snow !== 'string'
+  )
+    throw new Error(`pieces.${set}.top does not name its images and ramps`);
   if (!isInt(size) || size <= 0 || !isInt(veinSize) || veinSize <= 0 || !isInt(lift) || lift < 0)
     throw new Error(`pieces.${set}.top has a bad size or lift`);
-  return { image, veins, size, veinSize, lift, ramp };
+  return { image, veins, size, veinSize, lift, ramp, snow };
 }
 
 function readField(name: string, raw: unknown): ManifestField {
@@ -336,6 +384,25 @@ function readDrop(id: string, raw: unknown): ManifestDrop {
   return out;
 }
 
+function readTree(id: string, raw: unknown): ManifestTree {
+  if (!isObject(raw)) throw new Error(`trees.${id} is not an object`);
+  const out = {} as ManifestTree;
+  for (const age of TREE_AGES) {
+    const bySeason = raw[age];
+    if (bySeason === undefined && !EVERY_TREE_HAS.includes(age)) continue;
+    if (!isObject(bySeason)) throw new Error(`trees.${id}.${age} is not an object`);
+    const seasons = {} as Record<TreeSeason, string[]>;
+    for (const season of TREE_SEASONS) {
+      const ids = bySeason[season];
+      if (!isStrings(ids) || ids.length === 0)
+        throw new Error(`trees.${id}.${age}.${season} is not a list of sprites`);
+      seasons[season] = ids;
+    }
+    out[age] = seasons;
+  }
+  return out;
+}
+
 function readDrops(raw: unknown): ManifestDrops {
   if (!isObject(raw) || !isObject(raw.grass) || !isObject(raw.items) || !isObject(raw.cover))
     throw new Error('manifest drops names no grass, items or cover');
@@ -356,7 +423,7 @@ function readDrops(raw: unknown): ManifestDrops {
 
 export function parseManifest(raw: unknown): PaintedManifest {
   if (!isObject(raw)) throw new Error('manifest is not an object');
-  const { tile, atlas, sprites, map, pieces, drops, water, ground } = raw;
+  const { tile, atlas, sprites, map, pieces, drops, trees, water, ground } = raw;
   if (!isInt(tile) || tile <= 0) throw new Error('manifest tile is not a positive integer');
   if (!isObject(atlas) || !isInt(atlas.w) || !isInt(atlas.h) || atlas.w <= 0 || atlas.h <= 0)
     throw new Error('manifest atlas size is missing');
@@ -383,6 +450,11 @@ export function parseManifest(raw: unknown): PaintedManifest {
     for (const [set, p] of Object.entries(pieces)) out.pieces[set] = readPieces(set, p);
   }
   if (drops !== undefined) out.drops = readDrops(drops);
+  if (trees !== undefined) {
+    if (!isObject(trees)) throw new Error('manifest trees is not an object');
+    out.trees = {};
+    for (const [id, t] of Object.entries(trees)) out.trees[id] = readTree(id, t);
+  }
   if (water !== undefined) out.water = readField('water', water);
   if (ground !== undefined) out.ground = readGround(ground);
   return out;
@@ -439,6 +511,10 @@ export function buildTileset(
       const sway = wind.sway[sid];
       if (sway) for (const c of v.cells) c.sway = sway;
       if (leafy.has(sid)) for (const c of v.cells) c.leafy = true;
+      const tree = wind.trees[sid];
+      if (tree) for (const c of v.cells) c.tree = tree;
+      const fx = wind.fx[sid];
+      if (fx) for (const c of v.cells) c.fx = fx;
       resolved.set(sid, v);
     }
     return v;
@@ -466,8 +542,9 @@ export function buildTileset(
       continue;
     }
     const ramp = p.top ? m.sprites[p.top.ramp] : undefined;
-    if (p.top && !ramp) {
-      problems.push(`pieces.${set}.top names unknown sprite ${p.top.ramp}`);
+    const snow = p.top ? m.sprites[p.top.snow] : undefined;
+    if (p.top && (!ramp || !snow)) {
+      problems.push(`pieces.${set}.top names unknown sprite ${ramp ? p.top.snow : p.top.ramp}`);
       continue;
     }
     const veins = new Map<string, PaintedRamp>();
@@ -481,8 +558,14 @@ export function buildTileset(
       neighbours: p.neighbours,
       layouts: layouts as PaintedVariant[],
       veins,
-      ...(p.top && ramp
-        ? { top: { ...p.top, ramp: { x: ramp.x, y: ramp.y, length: ramp.w } } }
+      ...(p.top && ramp && snow
+        ? {
+            top: {
+              ...p.top,
+              ramp: { x: ramp.x, y: ramp.y, length: ramp.w },
+              snow: { x: snow.x, y: snow.y, length: snow.w }
+            }
+          }
         : null)
     });
   }
@@ -496,6 +579,26 @@ export function buildTileset(
   }
   const ground = m.ground && resolveGround(m, m.ground, problems);
   const drops = m.drops && resolveDrops(m, m.drops, problems);
+  const trees = new Map<string, PaintedTree>();
+  for (const [id, t] of Object.entries(m.trees ?? {})) {
+    const tree = {} as PaintedTree;
+    let whole = true;
+    for (const age of TREE_AGES) {
+      const named = t[age];
+      if (!named) continue;
+      const seasons = {} as Record<TreeSeason, PaintedVariant[]>;
+      for (const season of TREE_SEASONS) {
+        const variants = named[season].flatMap((sid) => variantOf(sid) ?? []);
+        if (variants.length !== named[season].length) {
+          problems.push(`trees.${id}.${age}.${season} names an unknown sprite`);
+          whole = false;
+        }
+        seasons[season] = variants;
+      }
+      tree[age] = seasons;
+    }
+    if (whole) trees.set(id, tree);
+  }
   return {
     tileset: {
       tile: m.tile,
@@ -506,6 +609,7 @@ export function buildTileset(
       sprites: resolved,
       pieces,
       scenery,
+      trees,
       ...(ground ? { ground } : null),
       ...(drops ? { drops } : null)
     },

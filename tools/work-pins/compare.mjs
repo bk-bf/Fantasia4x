@@ -91,13 +91,93 @@ function functionRows(scenario, base, head) {
 }
 
 const totalCalls = (run) => Object.values(run.functions ?? {}).reduce((s, f) => s + f.count, 0);
-const overBudget = (t) => (t.base === 0 ? t.head > 0 : t.head > t.base * (1 + THRESHOLD));
+/** @typedef {{ name: string, file: string, line: number, count: number }} Pin */
+/** @typedef {{ family?: string, placed: number, added: number, alive: number }} Creatures */
+/** @typedef {{ scenario: string, functions?: Record<string, Pin>, counters?: Record<string, number>, creatures: Creatures }} CreatureRun */
+/** @typedef {{ scenario: string, fn: string, where: string, base: number, head: number, largerGrew?: boolean }} Total */
+
+const CREATURE_CODE = 'src/lib/game/services/entity/';
+/** @param {number} n @param {number} places */
+const roundTo = (n, places) => Math.round(n * 10 ** places) / 10 ** places;
+
+/** @param {CreatureRun} run @returns {Record<string, number>} */
+function creatureMeasures(run) {
+  const calls = Object.values(run.functions ?? {})
+    .filter((f) => f.file.startsWith(CREATURE_CODE))
+    .reduce((s, f) => s + f.count, 0);
+  const counters = Object.entries(run.counters ?? {}).map(([k, v]) => [`counter ${k}`, v]);
+  return Object.fromEntries([['creature calls', calls], ...counters]);
+}
+
+/** @param {CreatureRun} run @returns {Record<string, number>} */
+const perCreature = (run) =>
+  Object.fromEntries(
+    Object.entries(creatureMeasures(run)).map(([k, v]) => [k, roundTo(v / run.creatures.placed, 2)])
+  );
+
+/** @param {string} scenario @param {CreatureRun} b @param {CreatureRun} h @returns {Total[]} */
+function creatureTotals(scenario, b, h) {
+  const base = creatureMeasures(b);
+  const basePer = perCreature(b);
+  const headPer = perCreature(h);
+  return Object.entries(creatureMeasures(h)).flatMap(([key, head]) => [
+    ...(key.startsWith('counter ') ? [] : [{ scenario, fn: key, where: '', base: base[key] ?? 0, head }]),
+    { scenario, fn: `${key} per creature`, where: '', base: basePer[key] ?? 0, head: headPer[key] }
+  ]);
+}
+
+/** @param {[CreatureRun, CreatureRun][]} pairs @returns {Total[]} */
+function familyRatios(pairs) {
+  /** @type {Map<string, [CreatureRun, CreatureRun][]>} */
+  const families = new Map();
+  for (const [b, h] of pairs) {
+    const family = h.creatures.family;
+    if (!family) continue;
+    families.set(family, [...(families.get(family) ?? []), [b, h]]);
+  }
+  /** @type {Total[]} */
+  const totals = [];
+  for (const members of families.values()) {
+    if (members.length < 2) continue;
+    members.sort(([, x], [, y]) => x.creatures.placed - y.creatures.placed);
+    const [[bSmall, hSmall], [bLarge, hLarge]] = [members[0], members[members.length - 1]];
+    /** @param {CreatureRun} large @param {CreatureRun} small @returns {Record<string, number>} */
+    const ratio = (large, small) => {
+      const l = perCreature(large);
+      const s = perCreature(small);
+      return Object.fromEntries(Object.keys(l).map((k) => [k, s[k] ? roundTo(l[k] / s[k], 3) : 0]));
+    };
+    const base = ratio(bLarge, bSmall);
+    const head = ratio(hLarge, hSmall);
+    const largeBase = perCreature(bLarge);
+    const largeHead = perCreature(hLarge);
+    const scenario = `${hLarge.scenario} / ${hSmall.scenario}`;
+    for (const [key, value] of Object.entries(head))
+      totals.push({
+        scenario,
+        fn: `${key} per creature`,
+        where: '',
+        base: base[key] ?? 0,
+        head: value,
+        largerGrew: largeHead[key] > (largeBase[key] ?? 0)
+      });
+  }
+  return totals;
+}
+/** @param {Total} t */
+const overBudget = (t) =>
+  t.largerGrew !== false && (t.base === 0 ? t.head > 0 : t.head > t.base * (1 + THRESHOLD));
 
 export function compareRuns(baseRuns, headRuns) {
   const rows = [];
   const moved = [];
   const notes = [];
+  /** @type {Total[]} */
   const totals = [];
+  /** @type {{ counts: { scenario: string, base: Creatures, head: Creatures }[], rows: Total[] }} */
+  const creatures = { counts: [], rows: [] };
+  /** @type {[CreatureRun, CreatureRun][]} */
+  const creaturePairs = [];
   for (const scenario of new Set([...baseRuns.keys(), ...headRuns.keys()])) {
     const b = baseRuns.get(scenario);
     const h = headRuns.get(scenario);
@@ -120,15 +200,26 @@ export function compareRuns(baseRuns, headRuns) {
     totals.push({ scenario, fn: 'all calls', where: '', base: totalCalls(b), head: totalCalls(h) });
     for (const [key, head] of Object.entries(h.counters ?? {}))
       totals.push({ scenario, fn: `counter ${key}`, where: '', base: b.counters?.[key] ?? 0, head });
+    if (b.creatures && h.creatures) {
+      for (const key of ['placed', 'added', 'alive'])
+        if (b.creatures[key] !== h.creatures[key])
+          rows.push({ scenario, fn: `creatures ${key}`, where: '', base: b.creatures[key], head: h.creatures[key] });
+      creatures.counts.push({ scenario, base: b.creatures, head: h.creatures });
+      creaturePairs.push([b, h]);
+      creatures.rows.push(...totals.filter((t) => t.scenario === scenario && t.fn !== 'all calls'));
+      creatures.rows.push(...creatureTotals(scenario, b, h));
+    }
   }
+  creatures.rows.push(...familyRatios(creaturePairs));
+  totals.push(...creatures.rows.filter((r) => !totals.includes(r)));
   rows.sort(
     (x, y) => Math.abs(y.head - y.base) - Math.abs(x.head - x.base) || x.fn.localeCompare(y.fn)
   );
-  return { rows, moved, notes, totals, over: totals.filter(overBudget) };
+  return { rows, moved, notes, totals, creatures, over: totals.filter(overBudget) };
 }
 
 function change(r) {
-  const d = r.head - r.base;
+  const d = roundTo(r.head - r.base, 3);
   const pct = r.base === 0 ? 'new' : `${d > 0 ? '+' : ''}${((d / r.base) * 100).toFixed(1)}%`;
   return `${d > 0 ? '+' : ''}${d} (${pct})`;
 }
@@ -156,7 +247,16 @@ function renderMoved(moved) {
   );
 }
 
-function render({ rows, moved, notes, totals, over }, rowLimit) {
+/** @param {{ counts: { scenario: string, base: Creatures, head: Creatures }[], rows: Total[] }} creatures */
+function renderCreatures({ counts, rows }) {
+  if (!counts.length) return '';
+  /** @param {Creatures} c */
+  const count = (c) => `${c.placed} placed, ${c.added} added, ${c.alive} alive at the end`;
+  const placed = counts.map((c) => `- ${c.scenario}: base ${count(c.base)}; head ${count(c.head)}`);
+  return ['', '### Creature cost, total and per creature', '', ...placed, '', renderTable(rows), ''].join('\n');
+}
+
+function render({ rows, moved, notes, totals, creatures, over }, rowLimit) {
   const budget = `${Math.round(THRESHOLD * 100)}%`;
   const heading = over.length
     ? `## Work pins: ${over.length} total(s) grew by more than ${budget}${ACCEPTED ? ', allowed by the "perf change accepted" label' : ''}`
@@ -166,6 +266,7 @@ function render({ rows, moved, notes, totals, over }, rowLimit) {
     parts.push(
       `\nOver the ${budget} budget${ACCEPTED ? ', allowed through by the label' : ', which fails the check'}:\n\n${renderTable(over)}\n`
     );
+  parts.push(renderCreatures(creatures));
   const changedTotals = totals.filter((t) => t.head !== t.base);
   if (changedTotals.length) parts.push(details('Totals that changed', renderTable(changedTotals)));
   if (rows.length) {

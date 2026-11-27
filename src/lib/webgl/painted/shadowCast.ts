@@ -3,6 +3,13 @@ import fragmentSource from '../shaders/paintedShadow.frag.glsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import type { GameGrid, GridUpdateEvent } from '../game-grid.js';
 import type { TileRect } from './lightGrade.js';
+import type {
+  GpuDevice,
+  GpuPipeline,
+  GpuTexture,
+  GpuUniform,
+  GpuVertexLayout
+} from '../../gpu/device.js';
 
 const PROGRAM = 'paintedShadow';
 export const CAST_UNIT = 8;
@@ -51,11 +58,11 @@ export function castHeights(
 }
 
 export class PaintedShadowCast {
-  private readonly gl: WebGL2RenderingContext;
-  private readonly program: WebGLProgram;
-  private readonly vao: WebGLVertexArrayObject;
-  private readonly texture: WebGLTexture;
-  private readonly at: Record<string, WebGLUniformLocation | null>;
+  private readonly gpu: GpuDevice;
+  private readonly program: GpuPipeline;
+  private readonly vao: GpuVertexLayout;
+  private readonly texture: GpuTexture;
+  private readonly at: Record<string, GpuUniform | null>;
   private heights = new Uint8Array(0);
   private builtKey = '';
   private builtRect: TileRect | null = null;
@@ -65,21 +72,21 @@ export class PaintedShadowCast {
   private watched: (GameGrid | null)[] = [];
   private unwatch: (() => void)[] = [];
 
-  static create(gl: WebGL2RenderingContext, shaders: ShaderManager): PaintedShadowCast | null {
+  static create(gpu: GpuDevice, shaders: ShaderManager): PaintedShadowCast | null {
     const made = shaders.createProgram(PROGRAM, vertexSource, fragmentSource);
     const program = shaders.getProgram(PROGRAM)?.program;
     if (!made.success || !program) {
       console.warn('[painted shadows] cast off:', made.error);
       return null;
     }
-    return new PaintedShadowCast(gl, program);
+    return new PaintedShadowCast(gpu, program);
   }
 
-  private constructor(gl: WebGL2RenderingContext, program: WebGLProgram) {
-    this.gl = gl;
+  private constructor(gpu: GpuDevice, program: GpuPipeline) {
+    this.gpu = gpu;
     this.program = program;
-    this.vao = gl.createVertexArray()!;
-    this.texture = gl.createTexture()!;
+    this.vao = gpu.createVertexLayout()!;
+    this.texture = gpu.createTexture()!;
     const names = [
       'u_canvas',
       'u_viewOffset',
@@ -91,7 +98,7 @@ export class PaintedShadowCast {
       'u_shade',
       'u_depth'
     ];
-    this.at = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(program, n)]));
+    this.at = Object.fromEntries(names.map((n) => [n, gpu.uniform(program, n)]));
   }
 
   private watch(casters: readonly (GameGrid | null)[]): void {
@@ -136,27 +143,19 @@ export class PaintedShadowCast {
     if (this.heights.length !== rect.w * rect.h) this.heights = new Uint8Array(rect.w * rect.h);
     this.casts = castHeights(f.casters, rect, this.heights);
     if (!this.casts) return;
-    const gl = this.gl;
-    gl.activeTexture(gl.TEXTURE0 + CAST_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.texture);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.R8,
-      rect.w,
-      rect.h,
-      0,
-      gl.RED,
-      gl.UNSIGNED_BYTE,
-      this.heights
-    );
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.activeTexture(gl.TEXTURE0);
+    const gpu = this.gpu;
+    gpu.setTextureSlot(CAST_UNIT);
+    gpu.bindTexture(this.texture);
+    gpu.setUnpackAlignment(1);
+    gpu.writeTexture({ format: 'r8unorm', width: rect.w, height: rect.h }, this.heights);
+    gpu.setUnpackAlignment(4);
+    gpu.setSampler({
+      minFilter: 'nearest',
+      magFilter: 'nearest',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge'
+    });
+    gpu.setTextureSlot(0);
   }
 
   draw(f: CastFrame): number {
@@ -170,31 +169,31 @@ export class PaintedShadowCast {
     };
     this.rebuild(f, rect);
     if (!this.casts) return 0;
-    const gl = this.gl;
-    gl.useProgram(this.program);
-    gl.activeTexture(gl.TEXTURE0 + CAST_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.texture);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.uniform2fv(this.at.u_canvas, f.canvas);
-    gl.uniform2fv(this.at.u_viewOffset, f.viewOffset);
-    gl.uniform2fv(this.at.u_zoom, f.zoom);
-    gl.uniform1f(this.at.u_artPerBase, f.artPerBase);
-    gl.uniform1f(this.at.u_tileArt, f.artTile);
-    gl.uniform1i(this.at.u_heights, CAST_UNIT);
-    gl.uniform2i(this.at.u_origin, rect.x, rect.y);
-    gl.uniform3fv(this.at.u_shade, SHADOW_SHADE);
-    gl.uniform1f(this.at.u_depth, SHADOW_DEPTH);
-    gl.bindVertexArray(this.vao);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-    gl.bindVertexArray(null);
+    const gpu = this.gpu;
+    gpu.setPipeline(this.program);
+    gpu.setTextureSlot(CAST_UNIT);
+    gpu.bindTexture(this.texture);
+    gpu.setTextureSlot(0);
+    gpu.setVec2fv(this.at.u_canvas, f.canvas);
+    gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
+    gpu.setVec2fv(this.at.u_zoom, f.zoom);
+    gpu.setF32(this.at.u_artPerBase, f.artPerBase);
+    gpu.setF32(this.at.u_tileArt, f.artTile);
+    gpu.setI32(this.at.u_heights, CAST_UNIT);
+    gpu.setVec2i(this.at.u_origin, rect.x, rect.y);
+    gpu.setVec3fv(this.at.u_shade, SHADOW_SHADE);
+    gpu.setF32(this.at.u_depth, SHADOW_DEPTH);
+    gpu.setVertexLayout(this.vao);
+    gpu.draw('triangle-list', 3);
+    gpu.setVertexLayout(null);
     return 1;
   }
 
   dispose(): void {
     for (const off of this.unwatch) off();
     this.unwatch = [];
-    this.gl.deleteTexture(this.texture);
-    this.gl.deleteVertexArray(this.vao);
-    this.gl.deleteProgram(this.program);
+    this.gpu.destroyTexture(this.texture);
+    this.gpu.destroyVertexLayout(this.vao);
+    this.gpu.destroyPipeline(this.program);
   }
 }

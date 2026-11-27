@@ -29,6 +29,7 @@ import {
   rockVeins
 } from './rock.mjs';
 import { WATER_IMAGE, WATER_SIZE, waterField } from './water.mjs';
+import { shoreSprites } from './shoreArt.mjs';
 import {
   FAR_IMAGE,
   FAR_SIZE,
@@ -44,7 +45,7 @@ import {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', '..', 'static', 'tilesets', 'painted');
 const EXPORTS =
-  '({ TREES, mkTree, PLANTS, mkPlant, CROPS, mkCrop, ROCKS, mkRock, BUILDS, mkBuild, PAWNS, mkPawn, BEASTS, OTHER, mkBeast, GROUND, TILES, ORE, covAt, soilShade, grassShade, rockTop, rockTone, rockFace, oreAt, veinAt, waterBase, waterCol, decal, dith, hash, clamp, wrap, pn, rp, lit, dark, P })';
+  '({ treeArt, Spr, R, LV, noise, rng, TREES, mkTree, PLANTS, mkPlant, CROPS, mkCrop, ROCKS, mkRock, BUILDS, mkBuild, PAWNS, mkPawn, BEASTS, OTHER, mkBeast, GROUND, TILES, ORE, covAt, soilShade, grassShade, rockTop, rockTone, rockFace, oreAt, veinAt, waterBase, waterCol, decal, dith, hash, clamp, wrap, pn, rp, lit, dark, P })';
 
 const TILE = 32;
 const PATCH = 4;
@@ -52,7 +53,14 @@ const SIDE = TILE * PATCH;
 const ATLAS_W = 4096;
 const TOP_IMAGE = 'rock-top.png';
 export const LIGHT_IMAGE = 'atlas-light.png';
-const SHADED = 255;
+const SHADED = 128;
+const PART_BITS = 15;
+const STRAND = new Set([4, 7, 9, 12]);
+const FRONT = 64;
+
+export const partPhase = (kind = 0, ph = 0) =>
+  STRAND.has(kind & PART_BITS) ? (ph >> 6 ? FRONT : 0) | (ph & 63) : ph >> 1;
+export const ATLAS_MAX = 4096;
 const VEIN_IMAGE = 'rock-veins.png';
 const TOP_DEFLATE = 6;
 
@@ -64,6 +72,186 @@ export const art = (period = 0) =>
 const A = art(SIDE);
 
 export const ROCK = rockArt(A);
+
+export const TREE_SEASONS = ['summer', 'autumn', 'winter'];
+export const TREE_AGES = { young: 4, mature: 2, elder: 1 };
+const TREE_SEED = { young: (v = 0) => v, mature: (v = 0) => 3 + v * 5, elder: (v = 0) => 41 + v };
+
+const treeSpecies = () =>
+  Object.entries(MAP.resource).flatMap(([id, refs]) => {
+    const m = refs.length === 1 && /^tree\/(\w+)\/\*$/.exec(refs[0]);
+    return m ? [[id, m[1]]] : [];
+  });
+
+const treeSprite = (kind = '', age = '', season = '', v = 0) =>
+  age === 'young' && season === 'summer'
+    ? `tree/${kind}/${v}`
+    : `trees/${kind}/${age}/${season}/${v}`;
+
+export const TREE_FLAGS = {
+  parts: 1,
+  curtain: 2,
+  heart: 4,
+  pulse: 8,
+  soul: 16,
+  frost: 32,
+  iron: 64,
+  mature: 128
+};
+
+/**
+ * @typedef {{
+ *   age?: string, box: number[], heart?: boolean, soul?: boolean, frost?: boolean, iron?: boolean,
+ *   ember?: boolean, moon?: boolean, apple?: boolean, witch?: boolean, bone?: boolean,
+ *   hollow?: string[] | null, hollowAt?: number[] | null, orbs?: number[][]
+ * }} TreeAnim
+ */
+
+/** @param {{ kind?: Uint8Array, anim?: Partial<TreeAnim> }} s */
+export function treeFlags(s = { kind: new Uint8Array(0), anim: { age: '' } }) {
+  const a = s.anim ?? {};
+  const strands = [...(s.kind ?? [])].some((k) => STRAND.has(k & PART_BITS));
+  /** @type {Record<string, boolean>} */
+  const on = {
+    parts: Boolean(s.kind),
+    curtain: strands,
+    heart: Boolean(a.heart),
+    pulse: a.age === 'elder' || Boolean(a.heart),
+    soul: Boolean(a.soul),
+    frost: Boolean(a.frost),
+    iron: Boolean(a.iron),
+    mature: a.age !== undefined && a.age !== 'young'
+  };
+  return Object.entries(TREE_FLAGS).reduce((n, [k, bit]) => (on[k] ? n | bit : n), 0);
+}
+
+const TREE_FOOT = { x: 16, y: 23 };
+const FX_SAMPLE = 48;
+const BRIGHT = 175;
+
+const sampled = (pts = [0], n = FX_SAMPLE) => {
+  const count = pts.length / 2;
+  if (count <= n) return pts;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const at = Math.floor((i * count) / n) * 2;
+    out.push(pts[at], pts[at + 1]);
+  }
+  return out;
+};
+
+const hexRgb = (h = '#000000') => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+
+/** @param {{ w: number, h: number, ax: number, ay: number, c: number[][], kind?: Uint8Array, anim?: TreeAnim }} s */
+export function treeFx(
+  s = {
+    w: 0,
+    h: 0,
+    ax: 0,
+    ay: 0,
+    c: [[0, 0, 0]],
+    kind: new Uint8Array(0),
+    anim: { age: '', box: [0, 0, 0, 0] }
+  }
+) {
+  const a = s.anim;
+  if (!a || !s.kind) return null;
+  const mature = a.age !== 'young';
+  const elder = a.age === 'elder';
+  const fx = [
+    a.ember && 'ember',
+    a.moon && 'moon',
+    a.frost && 'frost',
+    a.apple && 'apple',
+    a.witch && mature && 'spore',
+    a.bone && mature && 'bark',
+    a.soul && elder && 'wisp',
+    a.hollow && a.hollowAt && 'hollow'
+  ].filter(Boolean);
+  if (!fx.length) return null;
+  const dx = TREE_FOOT.x - s.ax,
+    dy = TREE_FOOT.y - s.ay;
+  const leaves = [],
+    bright = [],
+    edges = [];
+  for (let y = 0; y < s.h; y++)
+    for (let x = 0; x < s.w; x++) {
+      const i = y * s.w + x,
+        c = s.c[i],
+        k = s.kind[i] & PART_BITS;
+      if (!c || ![3, 5].includes(k)) continue;
+      leaves.push(x + dx, y + dy);
+      if (c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11 > BRIGHT) bright.push(x + dx, y + dy);
+      if (a.ember && k === 3 && (y === 0 || !s.c[i - s.w])) edges.push(x + dx, y + dy);
+    }
+  const [x0, y0, x1, y1] = a.box;
+  return {
+    fx,
+    age: a.age,
+    h: s.h,
+    w: s.w,
+    box: [x0 + dx, y0 + dy, x1 + dx, y1 + dy],
+    leaves: sampled(leaves),
+    ...(bright.length ? { bright: sampled(bright) } : null),
+    ...(edges.length ? { edges } : null),
+    ...(a.orbs?.length ? { orbs: a.orbs.flatMap(([x, y, ph]) => [x + dx, y + dy, ph]) } : null),
+    ...(a.hollow && a.hollowAt
+      ? {
+          hollow: [
+            a.hollowAt[0] + dx,
+            a.hollowAt[1] + dy,
+            ...hexRgb(a.hollow[a.hollow.length - 1]),
+            ...hexRgb(a.hollow[a.hollow.length - 3])
+          ]
+        }
+      : null)
+  };
+}
+
+export function treeSet(A = art()) {
+  const kinds = Object.keys(A.TREES);
+  const F = A.treeArt(A);
+  const drawn = [
+    { id: '', sprite: A.mkTree('oak', 0, 'summer'), sway: 0, flags: 0, fx: treeFx(), leafy: false }
+  ].slice(1);
+  const map = Object.fromEntries(
+    treeSpecies().map(([resource, kind]) => {
+      if (!kinds.includes(kind)) throw new Error(`${resource} names no tree ${kind}`);
+      const k = A.TREES[kind];
+      const ages = Object.entries(TREE_AGES).flatMap(([age, count]) => {
+        if (age === 'elder' && !F.MAGIC.has(kind)) return [];
+        const bySeason = TREE_SEASONS.map((season) => {
+          const own = season !== 'autumn' || !k.ever;
+          const look = own ? season : 'summer';
+          for (let v = 0; own && v < count; v++) {
+            const seed =
+              TREE_SEED[age === 'young' ? 'young' : age === 'mature' ? 'mature' : 'elder'](v);
+            const s =
+              age === 'young'
+                ? F.young(kind, seed, season)
+                : age === 'mature'
+                  ? F.mature(kind, seed, season)
+                  : F.elder(kind, seed, season);
+            drawn.push({
+              id: treeSprite(kind, age, season, v),
+              sprite: s,
+              sway: s.sway ?? s.anim.sway,
+              flags: treeFlags(s),
+              fx: treeFx(s),
+              leafy:
+                Boolean(s.leaf) ||
+                (age !== 'young' && k.shape !== 'dead' && !(season === 'winter' && !k.ever))
+            });
+          }
+          return [season, Array.from({ length: count }, (_, v) => treeSprite(kind, age, look, v))];
+        });
+        return [[age, Object.fromEntries(bySeason)]];
+      });
+      return [resource, Object.fromEntries(ages)];
+    })
+  );
+  return { drawn, map };
+}
 
 const refList = (entries = [['', ['']]].slice(1)) => Object.fromEntries(entries);
 
@@ -123,6 +311,7 @@ function pieceSprites(
   }
 ) {
   add('rock/ramp', ramp(A.P.rock));
+  add('snow/ramp', ramp(A.P.snow));
   for (const [ore, colours] of Object.entries(A.ORE)) add(`vein/${ore}`, ramp(colours));
   const veins = Object.fromEntries(
     Object.entries(MAP.resource)
@@ -160,7 +349,8 @@ function pieceSprites(
           size: TOP_SIZE,
           veinSize: VEIN_SIZE,
           lift: LIFT,
-          ramp: 'rock/ramp'
+          ramp: 'rock/ramp',
+          snow: 'snow/ramp'
         },
         veins,
         layouts: Array.from({ length: 1 << NEIGHBOURS.length }, (_, m) =>
@@ -219,7 +409,15 @@ function object(s = A.mkPawn({}), footX = 0, footY = 0, contact = [{ x: 0, y: 0 
   for (let j = 0; j < s.h; j++)
     for (let i = 0; i < s.w; i++) {
       const c = s.c[j * s.w + i];
-      if (c) pts.push({ x: footX - s.ax + i, y: footY - s.ay + j, c, e: s.e?.[j * s.w + i] ?? 0 });
+      if (c)
+        pts.push({
+          x: footX - s.ax + i,
+          y: footY - s.ay + j,
+          c,
+          e: s.e?.[j * s.w + i] ?? 0,
+          k: s.kind?.[j * s.w + i] ?? 0,
+          p: partPhase(s.kind?.[j * s.w + i], s.ph?.[j * s.w + i])
+        });
     }
   const sh = s.sh;
   const shade = [
@@ -234,15 +432,17 @@ function object(s = A.mkPawn({}), footX = 0, footY = 0, contact = [{ x: 0, y: 0 
     h = Math.max(...all.map((p) => p.y)) - y0 + 1;
   const px = new Uint8ClampedArray(w * h * 4);
   const light = new Uint8ClampedArray(w * h * 4);
-  for (const { x, y, c, e } of pts) {
+  for (const { x, y, c, e, k, p } of pts) {
     const i = ((y - y0) * w + (x - x0)) * 4;
     px[i] = c[0];
     px[i + 1] = c[1];
     px[i + 2] = c[2];
     px[i + 3] = 255;
     light[i] = e;
+    light[i + 1] = p;
+    light[i + 2] = k;
   }
-  for (const { x, y } of shade) light[((y - y0) * w + (x - x0)) * 4 + 1] = SHADED;
+  for (const { x, y } of shade) light[((y - y0) * w + (x - x0)) * 4 + 1] |= SHADED;
   const e = s.emit;
   const emit = e
     ? {
@@ -297,10 +497,11 @@ function sprites(ground = groundSprites(A, [], [])) {
         return A.oreAt(ramp, 5, x, y, c) ?? c;
       }, [])
     );
-  for (const k of Object.keys(A.TREES))
-    for (let v = 0; v < 4; v++) add(`tree/${k}/${v}`, object(A.mkTree(k, v, 'summer'), 16, 23));
+  const trees = treeSet(A);
+  for (const { id, sprite: s } of trees.drawn) add(id, object(s, 16, 23));
   for (const k of Object.keys(A.PLANTS))
     for (let v = 0; v < 3; v++) add(`plant/${k}/${v}`, object(A.mkPlant(k, v, 'summer'), 16, 23));
+  for (const { id, sprite: s } of shoreSprites(A)) add(id, object(s, 16, 23));
   for (const k of Object.keys(A.CROPS))
     for (let v = 0; v < 3; v++) add(`crop/${k}/${v}`, object(A.mkCrop(k, v, 'summer'), 16, 31));
   for (const k of Object.keys(A.ROCKS))
@@ -323,7 +524,15 @@ function sprites(ground = groundSprites(A, [], [])) {
   const grass = DBX.list
     .filter((e = DBX.list[0]) => e.cat === 'plant' && e.layer === 'cover')
     .map((e = DBX.list[0]) => e.dbId);
-  return { all: out, roles, extra, pieces, drops, grass: [...new Set(grass)].sort() };
+  return {
+    all: out,
+    roles,
+    extra,
+    pieces,
+    drops,
+    trees: trees.map,
+    grass: [...new Set(grass)].sort()
+  };
 }
 
 function grassRamps() {
@@ -548,11 +757,13 @@ function ground() {
 
 export function bake() {
   const laid = ground();
-  const { all, roles, extra, pieces, drops, grass } = sprites(laid);
+  const { all, roles, extra, pieces, drops, trees, grass } = sprites(laid);
   const order = [...all].sort(
     ([a, sa], [b, sb]) => sb.patch - sa.patch || sb.h - sa.h || (a < b ? -1 : 1)
   );
   const { placed, h } = pack(order);
+  if (h > ATLAS_MAX)
+    throw new Error(`atlas is ${h} px tall, past the ${ATLAS_MAX} px a texture may be`);
   const atlas = new Uint8Array(ATLAS_W * h * 4);
   const light = new Uint8Array(ATLAS_W * h * 4);
   for (const { s, x, y } of placed)
@@ -586,6 +797,7 @@ export function bake() {
     map: resolveMap(all, roles, extra),
     pieces,
     drops,
+    trees,
     water: { image: WATER_IMAGE, size: WATER_SIZE },
     ground: {
       field: { image: FIELD_IMAGE, size: FIELD_SIZE },

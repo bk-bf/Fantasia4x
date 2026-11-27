@@ -23,7 +23,9 @@
   } from '$lib/webgl/fantasia-world.js';
   import {
     drainRenderTileDeltas,
-    drainSnowRenderTileDeltas,
+    queueSnowRenderTiles,
+    pendingSnowRenderChunks,
+    takeSnowRenderChunk,
     clearRenderTileDeltas
   } from '$lib/components/UI/canvas/mainTileDeltas';
   import { fullRebuildTerrain } from '$lib/components/UI/canvas/terrainPaint';
@@ -201,8 +203,6 @@
   let _resourceTallGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
   let _snowGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
   let _snowDirty = false;
-  let _snowPendingChunks = new Map<string, { x: number; y: number }[]>();
-  const SNOW_CHUNK_SIZE = 32;
   const SNOW_CHUNKS_PER_FRAME = 1;
   let _heavyRenderReason = '';
   const HEAVY_RENDER_TILES = 4000;
@@ -326,8 +326,9 @@
     renderer?.setLightVersion(lightingService.getEmittersVersion());
     renderer?.setLightBounds(lightingService.getLitBounds());
   }
-  $: {
-    buildings;
+  let _litBuildings: PlacedBuilding[] | null = null;
+  $: if (buildings !== _litBuildings) {
+    _litBuildings = buildings;
     refreshEmitters();
   }
 
@@ -1148,7 +1149,6 @@
     _emitterMap = built.emitterMap;
     resourceGlowEmitters = built.emitters;
     clearRenderTileDeltas();
-    _snowPendingChunks.clear();
     refreshEmitters(buildingList);
 
     _blueprintRoofSupport = null;
@@ -1269,38 +1269,19 @@
     drawDesignations();
   }
 
-  function _queueSnowDeltas() {
-    const coords = drainSnowRenderTileDeltas();
-    if (!coords || coords.length === 0 || !_snowGrid) return;
-    const CS = SNOW_CHUNK_SIZE;
-    for (const c of coords) {
-      const key = Math.floor(c.x / CS) + ':' + Math.floor(c.y / CS);
-      let cells = _snowPendingChunks.get(key);
-      if (!cells) {
-        cells = [];
-        _snowPendingChunks.set(key, cells);
-      }
-      cells.push(c);
-    }
-  }
-
   function repaintSnowNow(map: WorldTile[][]) {
     if (!renderer?.isReady() || !_snowGrid || map.length === 0) return;
-    if (_snowPendingChunks.size === 0) return;
-    beat(`snow:chunks ${_snowPendingChunks.size}`);
+    if (pendingSnowRenderChunks() === 0) return;
+    beat(`snow:chunks ${pendingSnowRenderChunks()}`);
+    const grid = _snowGrid;
     const due: { x: number; y: number }[] = [];
-    let chunks = SNOW_CHUNKS_PER_FRAME;
-    for (const [key, cells] of _snowPendingChunks) {
-      _snowPendingChunks.delete(key);
-      for (const c of cells) {
-        const t = map[c.y]?.[c.x];
-        if (t) {
-          applySnowToGrid(_snowGrid, t, hiddenMask);
-          due.push({ x: c.x, y: c.y });
-        }
-      }
-      if (--chunks <= 0) break;
-    }
+    for (let chunks = SNOW_CHUNKS_PER_FRAME; chunks > 0 && pendingSnowRenderChunks() > 0; chunks--)
+      takeSnowRenderChunk((x, y) => {
+        const t = map[y]?.[x];
+        if (!t) return;
+        applySnowToGrid(grid, t, hiddenMask);
+        due.push({ x, y });
+      });
     if (due.length > 0) {
       renderer.setSnowGrid(_snowGrid, due);
       markRenderDirty();
@@ -2432,9 +2413,9 @@
         if (_snowDirty && now - _lastSnowBuild >= TERRAIN_REBUILD_MIN_MS) {
           _snowDirty = false;
           _lastSnowBuild = now;
-          _queueSnowDeltas();
+          if (_snowGrid) queueSnowRenderTiles();
         }
-        if (_snowPendingChunks.size > 0) repaintSnowNow(map);
+        if (pendingSnowRenderChunks() > 0) repaintSnowNow(map);
         if (_foliagePending.length > 0) {
           beat(`foliage ${_foliagePending.length - _foliageIdx}`);
           _processFoliageTransition(map);

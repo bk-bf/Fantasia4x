@@ -2,11 +2,19 @@ import vertexSource from '../shaders/leaf.vert.glsl?raw';
 import fragmentSource from '../shaders/leaf.frag.glsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import type { AtlasTexels } from '../drawnSprites.js';
-import type { PaintedSprite } from './manifest.js';
+import type { PaintedSprite, TreeFx } from './manifest.js';
 import { gustAt, WIND_SHAPE, type WindClock } from './wind.js';
+import { BIT_FLOATS, SHAPE, TreeBits } from './treeBits.js';
+import {
+  FLOAT32_FORMATS,
+  type GpuDevice,
+  type GpuPipeline,
+  type GpuUniform
+} from '../../gpu/device.js';
 
 const PROGRAM = 'fallingLeaf';
-const FLOATS = 5;
+const FLOATS = BIT_FLOATS;
+const MAX_BITS = 1500;
 const SOLID = 1;
 const SHADE = 0.7;
 const PICKS = 8;
@@ -31,6 +39,7 @@ export interface LeafFrame {
   view: LeafView;
   season: string | undefined;
   treeAt: (x: number, y: number) => PaintedSprite | undefined;
+  fxAt: (x: number, y: number) => (PaintedSprite & { fx: TreeFx }) | undefined;
   texels: AtlasTexels | null;
   light: { fieldLit: boolean; ambient: [number, number, number]; tone: [number, number] };
 }
@@ -155,6 +164,11 @@ export class LeafField {
       out[o + 2] = p.tx;
       out[o + 3] = p.ty;
       out[o + 4] = p.z > 0 && Math.floor(this.t * FLUTTER + p.ph) & 1 ? 1 : 0;
+      out[o + 5] = 0;
+      out[o + 6] = 0;
+      out[o + 7] = 0;
+      out[o + 8] = 1;
+      out[o + 9] = SHAPE.leaf;
       n++;
     }
     return n;
@@ -163,24 +177,25 @@ export class LeafField {
 
 export class FallingLeaves {
   readonly field = new LeafField();
-  private readonly data = new Float32Array(L.max * FLOATS);
-  private readonly at: Record<string, WebGLUniformLocation | null>;
+  readonly bits = new TreeBits();
+  private readonly data = new Float32Array((L.max + MAX_BITS) * FLOATS);
+  private readonly at: Record<string, GpuUniform | null>;
 
-  static create(gl: WebGL2RenderingContext, shaders: ShaderManager): FallingLeaves | null {
+  static create(gpu: GpuDevice, shaders: ShaderManager): FallingLeaves | null {
     const made = shaders.createProgram(PROGRAM, vertexSource, fragmentSource);
     const program = shaders.getProgram(PROGRAM)?.program;
     if (!made.success || !program) {
       console.warn('[falling leaves] off:', made.error);
       return null;
     }
-    return new FallingLeaves(gl, program);
+    return new FallingLeaves(gpu, program);
   }
 
   private constructor(
-    private readonly gl: WebGL2RenderingContext,
-    private readonly program: WebGLProgram,
-    private readonly vao = gl.createVertexArray()!,
-    private readonly vbo = gl.createBuffer()!
+    private readonly gpu: GpuDevice,
+    private readonly program: GpuPipeline,
+    private readonly vao = gpu.createVertexLayout()!,
+    private readonly vbo = gpu.createBuffer()!
   ) {
     const names = [
       'u_canvas',
@@ -194,19 +209,27 @@ export class FallingLeaves {
       'u_tone',
       'u_shade'
     ];
-    this.at = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(program, n)]));
-    gl.bindVertexArray(vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, this.data.byteLength, gl.DYNAMIC_DRAW);
-    const leaf = gl.getAttribLocation(program, 'a_leaf');
-    const turn = gl.getAttribLocation(program, 'a_turn');
-    gl.enableVertexAttribArray(leaf);
-    gl.vertexAttribPointer(leaf, 4, gl.FLOAT, false, FLOATS * 4, 0);
-    gl.vertexAttribDivisor(leaf, 1);
-    gl.enableVertexAttribArray(turn);
-    gl.vertexAttribPointer(turn, 1, gl.FLOAT, false, FLOATS * 4, 16);
-    gl.vertexAttribDivisor(turn, 1);
-    gl.bindVertexArray(null);
+    this.at = Object.fromEntries(names.map((n) => [n, gpu.uniform(program, n)]));
+    gpu.setVertexLayout(vao);
+    gpu.setVertexBuffer(vbo);
+    gpu.writeBuffer(this.data.byteLength, 'dynamic');
+    const attribs: [string, number, number][] = [
+      ['a_leaf', 4, 0],
+      ['a_turn', 1, 4],
+      ['a_rgb', 2, 5],
+      ['a_look', 3, 7]
+    ];
+    for (const [name, size, at] of attribs) {
+      const loc = gpu.attribute(program, name);
+      if (loc < 0) continue;
+      gpu.vertexAttribute(loc, {
+        format: FLOAT32_FORMATS[size - 1],
+        stride: FLOATS * 4,
+        offset: at * 4,
+        stepMode: 'instance'
+      });
+    }
+    gpu.setVertexLayout(null);
   }
 
   draw(
@@ -216,33 +239,40 @@ export class FallingLeaves {
     units: { atlas: number; light: number }
   ): number {
     this.field.step(secs, wind, f);
-    const n = this.field.pack(this.data);
+    this.bits.step(secs, wind, f);
+    let n = this.field.pack(this.data);
+    const bits = this.bits.pack(wind, f);
+    this.data.set(
+      bits.subarray(0, Math.min(bits.length, this.data.length - n * FLOATS)),
+      n * FLOATS
+    );
+    n += Math.min(bits.length, this.data.length - n * FLOATS) / FLOATS;
     if (n === 0) return 0;
-    const gl = this.gl;
-    const depth = gl.isEnabled(gl.DEPTH_TEST);
-    gl.disable(gl.DEPTH_TEST);
-    gl.useProgram(this.program);
-    gl.bindVertexArray(this.vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data, 0, n * FLOATS);
-    gl.uniform2fv(this.at.u_canvas, f.canvas);
-    gl.uniform2fv(this.at.u_viewOffset, f.viewOffset);
-    gl.uniform2fv(this.at.u_zoom, f.zoom);
-    gl.uniform1f(this.at.u_basePerArt, f.basePerArt);
-    gl.uniform1i(this.at.u_paintAtlas, units.atlas);
-    gl.uniform1i(this.at.u_lightTexture, units.light);
-    gl.uniform1f(this.at.u_fieldLit, f.light.fieldLit ? 1 : 0);
-    gl.uniform3fv(this.at.u_ambient, f.light.ambient);
-    gl.uniform2fv(this.at.u_tone, f.light.tone);
-    gl.uniform1f(this.at.u_shade, SHADE);
-    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, n);
-    gl.bindVertexArray(null);
-    if (depth) gl.enable(gl.DEPTH_TEST);
+    const gpu = this.gpu;
+    const depth = gpu.depthTestEnabled();
+    gpu.setDepthTest(false);
+    gpu.setPipeline(this.program);
+    gpu.setVertexLayout(this.vao);
+    gpu.setVertexBuffer(this.vbo);
+    gpu.writeSubBuffer(0, this.data, 0, n * FLOATS);
+    gpu.setVec2fv(this.at.u_canvas, f.canvas);
+    gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
+    gpu.setVec2fv(this.at.u_zoom, f.zoom);
+    gpu.setF32(this.at.u_basePerArt, f.basePerArt);
+    gpu.setI32(this.at.u_paintAtlas, units.atlas);
+    gpu.setI32(this.at.u_lightTexture, units.light);
+    gpu.setF32(this.at.u_fieldLit, f.light.fieldLit ? 1 : 0);
+    gpu.setVec3fv(this.at.u_ambient, f.light.ambient);
+    gpu.setVec2fv(this.at.u_tone, f.light.tone);
+    gpu.setF32(this.at.u_shade, SHADE);
+    gpu.drawInstanced('triangle-strip', 4, n);
+    gpu.setVertexLayout(null);
+    if (depth) gpu.setDepthTest(true);
     return 1;
   }
 
   dispose(): void {
-    this.gl.deleteBuffer(this.vbo);
-    this.gl.deleteVertexArray(this.vao);
+    this.gpu.destroyBuffer(this.vbo);
+    this.gpu.destroyVertexLayout(this.vao);
   }
 }

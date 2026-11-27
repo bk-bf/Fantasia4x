@@ -6,7 +6,8 @@ export const BAKE_ART = [
   'ground.js',
   'flora.js',
   'build.js',
-  'actors.js'
+  'actors.js',
+  'bigtrees.js'
 ];
 
 export const REGISTRY_ART = [
@@ -110,6 +111,6 @@ export const COLONY_ART = [
   'scene.js'
 ];
 
-export const HAND_PORTED = ['periodic.js', 'world.js', 'ground.js'];
+export const HAND_PORTED = ['periodic.js', 'world.js', 'ground.js', 'bigtrees.js'];
 
 export const mockupName = (artPath = '') => artPath.replace(/^registry\//, '');

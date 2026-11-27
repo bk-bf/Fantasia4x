@@ -1,3 +1,5 @@
+import type { GpuPipeline, GpuUniform } from '../gpu/device.js';
+
 export interface RGB {
   r: number;
   g: number;
@@ -39,8 +41,8 @@ export interface RendererOptions {
 }
 
 export interface ShaderProgram {
-  program: WebGLProgram;
-  uniforms: Map<string, WebGLUniformLocation>;
+  program: GpuPipeline;
+  uniforms: Map<string, GpuUniform>;
   attributes: Map<string, number>;
 }
 

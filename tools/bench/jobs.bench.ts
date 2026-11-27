@@ -7,7 +7,7 @@ import * as plant from '../../src/lib/game/services/jobs/plant';
 import { reservePendingOrders } from '../../src/lib/game/services/jobs/craft';
 import { jobService } from '../../src/lib/game/services/JobService';
 import { designationService } from '../../src/lib/game/services/DesignationService';
-import { colony, mobs } from '../work-pins/scenarios';
+import { colony, generatedMap } from '../work-pins/scenarios';
 import { ROLLING, warmSession } from './session';
 
 function vessel(id: string, x: number, y: number, stored: boolean): DroppedItem {
@@ -100,7 +100,7 @@ function unsuppliedOrders(drops: number, orders: number): GameState {
 
 const colonyState = (await warmSession(colony, 300)).getState();
 
-const harvestSession = await warmSession(mobs, 100);
+const harvestSession = await warmSession(generatedMap, 100);
 {
   const { worldMap } = harvestSession.getState();
   const tiles: [number, number][] = [];
