@@ -70,8 +70,9 @@ function rigPawnLie(o, p) {
   else if (f.beard || o.beard) { const n = f.beard ? 7 : 4; for (let i = 0; i < n; i++) for (let j = 0; j < 4 - (i >> 1) + 1; j++) s.set(x0 + f.hh - 2 + i, hTop + 1 + j, hair[clamp(hn - 1 - (j === 0 ? 0 : 1) - (i % 3 === 2 ? 1 : 0), 0, hn)]); }
   if (out && f.snout) { s.rect(x0 + f.hh - 2, cy - 2, 4, 4, skin[sn - 1]); s.rect(x0 + f.hh - 2, cy - 2, 4, 1, skin[sn]); s.set(x0 + f.hh + 1, cy - 1, P.ink); }
   else if (f.snout) { s.rect(x0 + f.hh - 1, hTop + 1, 3, 3, skin[sn - 1]); s.set(x0 + f.hh + 1, hTop + 1, P.ink); }
-  if (f.ears || f.bigears || f.pointears) for (let k = 0; k < (f.bigears ? 4 : 2); k++) s.rect(x0 + Math.round(f.hh * .45) - (k >> 1), hTop + headH - 1 + k, 2, 1, skin[sn - 2]);
-  if (out) lieLolledFace(s, f, o, x0, ex, cy, skin, noHair ? skin[1] : hair[Math.max(0, hn - 3)]);
+  if (!(cradled && (f.bigears || f.pointears)) && (f.ears || f.bigears || f.pointears)) for (let k = 0; k < (f.bigears ? 4 : 2); k++) s.rect(x0 + Math.round(f.hh * .45) - (k >> 1), hTop + headH - 1 + k, 2, 1, skin[sn - 2]);
+  if (cradled && (f.bigears || f.pointears)) for (let k = 0; k < CRADLED.ear; k++) for (const [y, c] of [[hTop - 1 - k, sn - 1], [hTop + headH + k, sn - 2]]) s.rect(x0 + Math.round(f.hh * .4) - k, y, k < CRADLED.ear - 1 ? 2 : 1, 1, skin[c]);
+  if (out) lieLolledFace(s, f, o, x0, ex, cy, skin, noHair ? skin[1] : hair[Math.max(0, hn - 3)], cradled ? dark(skin[0], CRADLED.shut) : null);
   if (out && !noHair) { for (let x = x0 + 1; x < x0 + Math.round(f.hh * .45); x++) s.set(x, hTop + headH - 1, hair[hn - 2]); for (let y = hTop + 1; y < hTop + headH - 1; y++) if (hash(y, 3, o.seed || 1) > .45) s.set(x0 + 3, y, hair[hn - 1]); }
   if (f.tusks && out) { s.set(ex + 2, cy - 3, P.bone[5]); s.set(ex + 2, cy + 2, P.bone[4]); }
   else if (f.tusks) s.rect(x0 + f.hh - 3, hTop - 1, 1, 2, P.bone[5]);
@@ -90,6 +91,7 @@ function rigPawnLie(o, p) {
     rigLimb(s, [sh0, [tx0 + 6, gy - 1], [tx0 + 10, top + 1 - br]], aw, armC, shade);
   }
   if (out) rigLimb(s, flopped, aw, limp(lieLength(flopped)), shade);
+  if (cradled) { const rested = [[tx0 + 3, top + 2], [tx0 + 7, top + 3], [tx0 + 10, top + 2]]; rigLimb(s, rested, aw, limp(lieLength(rested)), shade); }
   if (cradled) lieSagged(s, x0 + f.hh, lx0, CRADLED.sags);
   s.outline();
   s.sh = out ? { rx: (L >> 1) + 5, ry: 4, dx: 0, dy: 1 } : { rx: (L >> 1) + 3, ry: 3.6, dx: 2, dy: 0 };
@@ -100,7 +102,7 @@ function rigPawnLie(o, p) {
   s.head = [x0 + (f.hh >> 1), hTop + f.hd, f.hd];
   return s;
 }
-const CRADLED = { deep: 1.3, sags: 3, dangles: 4, back: 3, knee: 5, thigh: .45, shin: .65 };
+const CRADLED = { deep: 1.3, sags: 3, dangles: 4, back: 3, knee: 8, thigh: .45, shin: .65, ear: 3, shut: .5 };
 const rigPawnCradled = o => rigPawnLie(o, { out: 1, tucked: 1, cradled: 1 });
 function lieSagged(s, from, to, sag) {
   const c = s.c.slice(), e = s.e.slice();
@@ -123,9 +125,9 @@ function lieSprawledLegs(s, f, pants, lx0, top, gy, w, boots = P.leather) {
   rigLimb(s, straight, w, leg(lieLength(straight), false), c => dark(c, .72));
   s.rect(lx0 + f.legs - 1, ny - h - 1, 2, 2, boots[2]); s.set(lx0 + f.legs - 1, ny - h - 1, boots[3]);
 }
-function lieLolledFace(s, f, o, x0, ex, cy, skin, lid) {
+function lieLolledFace(s, f, o, x0, ex, cy, skin, lid, marked) {
   const sn = skin.length - 1;
-  const shut = skin[Math.max(0, sn - 3)];
+  const shut = marked || skin[Math.max(0, sn - 3)];
   s.rect(ex, cy - 3, 1, 2, shut); s.rect(ex, cy + 1, 1, 2, shut); s.set(ex - 1, cy - 3, lid); s.set(ex - 1, cy + 2, lid);
   s.set(ex + 2, cy - 1, skin[sn]); s.set(ex + 2, cy, skin[Math.max(0, sn - 2)]);
   s.rect(ex + 3, cy - 1, 1, 2, dark(skin[0], .5));

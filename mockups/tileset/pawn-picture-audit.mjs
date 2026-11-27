@@ -6,7 +6,7 @@ const SHOWS = 3, APART = 4, IN_LINE = { cos: .94, reach: 5, tools: ['hammer', 'c
 const KEPT_AS_APPROVED = { x: ['shoulder'] };
 const QUIVERED = .9, BODY_HIDES = ['bow', 'arrow'];
 const CRADLE = { palm: 3, across: 2, above: 3, below: 2 };
-const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15;
+const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15, FACE = { dark: .5, marks: 4 };
 const READS = { bars: s => s.w <= 9 && s.w >= 2 * s.h, bundles: s => s.filled <= .6 * s.w * s.h };
 
 const same = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
@@ -111,7 +111,7 @@ export function pictured(now, face, ink) {
     if (!meta || !lay) continue;
     const sideOn = face === 's' && IN_ARMS.includes(now.pose.carry);
     if (now.fullLoad && !sideOn && !onGround && placed.length < WHOLE * now.fullLoad) { counts.D++; said.push('load drawn ' + placed.length + ' px of ' + now.fullLoad); }
-    if (meta.figure && !onGround && !(now.pose.cu < GRABBED) && !(face === 'b' && !meta.person && IN_ARMS.includes(now.pose.carry))) { const h = l.head, disc = h ? placed.filter(i => Math.hypot(i % w - h[0], ((i / w) | 0) - h[1]) <= h[2]) : [], seen = new Set(showing(l)), headSeen = disc.filter(i => seen.has(i)).length; if (!h || !disc.length || headSeen < HEAD_SHOWS * disc.length) { counts.E++; said.push(h ? 'head of the carried body shows ' + headSeen + ' px of ' + disc.length : 'the carried body has no head marked'); } }
+    if (meta.figure && !onGround && !(now.pose.cu < GRABBED) && !(face === 'b' && !meta.person && IN_ARMS.includes(now.pose.carry))) { const h = l.head, disc = h ? placed.filter(i => Math.hypot(i % w - h[0], ((i / w) | 0) - h[1]) <= h[2]) : [], seen = new Set(showing(l)), headSeen = disc.filter(i => seen.has(i)).length; if (!h || !disc.length || headSeen < HEAD_SHOWS * disc.length) { counts.E++; said.push(h ? 'head of the carried body shows ' + headSeen + ' px of ' + disc.length : 'the carried body has no head marked'); } else if (now.pose.carry === 'cradle') { const tones = disc.filter(i => seen.has(i) && !isInk(shown[i])).map(i => lumaOf(shown[i])).sort((a, b) => a - b), marks = tones.filter(t => t < FACE.dark * tones[tones.length >> 1]).length; if (marks < FACE.marks) { counts.E++; said.push('the carried head shows ' + marks + ' dark face pixels'); } } }
     if (meta.person && !onGround && !(now.pose.cu < 1)) {
       const wrong = [], seen = showing(l), torso = now.rigged.pts.torso, shoulderRow = torso[1], hipRow = sp.hipRow, handLayers = stack.filter(s => s.seg === 'hand'), h = l.head, rowOf = i => (i / w) | 0, off = i => i % w - middleX;
       const palmUp = hand => showing(hand).some(i => { for (let d = 1; d <= CRADLE.palm; d++) if (l.spr.c[i - d * w]) return true; return false; });
