@@ -6,5 +6,5 @@
     MOTION_FX.stars({ put: (x, y, c, glow) => s.set(x, y, c, glow) }, ...s.pts.daze, STILL);
     return s;
   }
-  WORLD_GEAR.add({ carried_pawn: { kind: 'body', tuck: 'low', figure: unconscious, carried: { 'map-carry': () => rigPawnLie(COLONIST, { out: 1, tucked: 1 }) } } });
+  WORLD_GEAR.add({ carried_pawn: { kind: 'body', tuck: 'low', figure: unconscious, carried: { 'map-carry': () => rigPawnLie(COLONIST, { out: 1, tucked: 1 }), 'map-carry-cradled': () => rigPawnCradled(COLONIST) } } });
 })();

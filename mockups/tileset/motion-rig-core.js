@@ -20,13 +20,13 @@ function limbStrip(s, a, b, w, j0, j1, col) {
     if (c) s.set(X, Y, c);
   }
 }
-function limbJoint(s, at, w, j, col) {
+function limbJoint(s, at, w, j, col, top = -Infinity) {
   const half = w >> 1;
-  for (let ky = 0; ky < w; ky++) for (let k = 0; k < w; k++) { const corner = w > 2 && (k === 0 || k === w - 1) && (ky === 0 || ky === w - 1), X = rnd(at[0] - half + k), Y = rnd(at[1] - half + ky), c = !corner && s.ok(X, Y) ? col(j, k, true, X, Y) : null; if (c) s.set(X, Y, c); }
+  for (let ky = 0; ky < w; ky++) for (let k = 0; k < w; k++) { const corner = w > 2 && (k === 0 || k === w - 1) && (ky === 0 || ky === w - 1), X = rnd(at[0] - half + k), Y = rnd(at[1] - half + ky), c = !corner && Y >= top && s.ok(X, Y) ? col(j, k, true, X, Y) : null; if (c) s.set(X, Y, c); }
 }
-function limbDrawn(s, seg, path, w, zones, col) {
+function limbDrawn(s, seg, path, w, zones, col, capless) {
   const [S, E, H] = path, back = Math.hypot(H[0] - E[0], H[1] - E[1]) || 1, wrist = [H[0] - (H[0] - E[0]) / back * Math.min(back, LIMB.hand), H[1] - (H[1] - E[1]) / back * Math.min(back, LIMB.hand)];
-  if (seg === 'upper') { limbJoint(s, S, w, zones.upper[0], col); limbStrip(s, S, E, w, zones.upper[0], zones.upper[1], col); limbJoint(s, E, w, zones.upper[1], col); }
+  if (seg === 'upper') { limbJoint(s, S, w, zones.upper[0], col, capless ? S[1] : -Infinity); limbStrip(s, S, E, w, zones.upper[0], zones.upper[1], col); limbJoint(s, E, w, zones.upper[1], col); }
   else if (seg === 'fore') { limbJoint(s, E, w, zones.fore[0], col); limbStrip(s, E, wrist, w, zones.fore[0], zones.fore[1], col); }
   else { limbStrip(s, wrist, H, w, zones.hand[0], zones.hand[1], col); limbJoint(s, H, Math.max(w, LIMB.block), zones.block, col); }
 }
@@ -151,14 +151,14 @@ const BOW = { half: 11, sag: 4, nock: 10, grip: 4.5 };
 const SIDE_DEPTH = { far: -3, farHeld: -2.9, farHand: -2.85, shield: -2.8, cape: -2, tail: -1.9, farLeg: -1, nearLeg: -.9, torso: 0, over: .25, head: .3, pad: .9, tucked: .9, near: 1, tool: 1.5, hand: 1.6, fingers: 1.7 };
 const TOWARD_DEPTH = { slung: -3.5, cape: -1.3, tail: -1.25, legs: -.3, torso: -.2, head: .3, upper: 1, pad: 1.5, fore: 2, shield: 2.5, hand: 3, butt: -.5, step: .05 };
 const AWAY_DEPTH = { shield: -3.5, hand: -3, fore: -2, upper: -1, tail: -.4, legs: -.3, torso: -.2, pad: -.15, cape: -.12, slung: .2, head: .3, butt: 3.2, step: .05 };
-const ON_ONE_SHOULDER = ['shoulder', 'game', 'drape'], IN_BOTH_ARMS = ['chest', 'low'], HELD_LOW = { chest: 8, low: 10 };
+const ON_ONE_SHOULDER = ['shoulder', 'game'], IN_BOTH_ARMS = ['chest', 'low', 'cradle'], HELD_LOW = { chest: 8, low: 10, cradle: 10 };
 const HELD = {
   hip: { s: { at: .95, palm: 'around' }, f: { at: 2.95, palm: 'around' }, b: { at: -3.05, palm: 'around' } },
   chest: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'around' }, b: { at: -6, palm: 'around' } },
   low: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'under' }, b: { at: -6, palm: 'under' } },
-  shoulder: { s: { at: .28, palm: 'under' }, f: { at: 7, palm: 'under' }, b: { at: 7, palm: 'under' } },
+  shoulder: { s: { at: .95, palm: 'around' }, f: { at: 7, palm: 'under' }, b: { at: 7, palm: 'under' } },
   game: { s: { at: .2, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: .35, palm: 'around' } },
-  drape: { s: { at: .25, palm: 'around' }, f: { at: .25, palm: 'around' }, b: { at: .35, palm: 'around' } },
+  cradle: { s: { at: .95, palm: 'under' }, f: { at: 6, palm: 'under' }, b: { at: -6, palm: 'under' } },
   rest: { s: { at: .95, palm: 'around' }, f: { at: 6, palm: 'under' }, b: { at: -6, palm: 'under' } },
 };
 const REST = { toes: 4, along: 5, edge: 2, raised: .7, sunk: 2, long: 2, underArms: .97 };

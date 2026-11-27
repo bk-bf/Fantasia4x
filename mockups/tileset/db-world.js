@@ -35,7 +35,7 @@
     const creature = o.id.replace(/_carcass$/, ''), beast = CARCASS_RIG[creature], race = CARCASS_FOLK[creature];
     if (beast) return [['map-carry-draped', () => quadDraped(beast)]];
     const whole = () => bloodless(X.built(X.byId.get('item/' + o.id + '/0')));
-    if (race) return [['map-carry-slung', whole]];
+    if (race) return [['map-carry-flat', whole], ['map-carry-cradled', () => rigPawnCradled({ race })]];
     const toned = () => ({ a: PROPS.rampOf(toneOf(X.bake(X.byId.get('item/' + o.id + '/0')))) });
     return [['map-carry-draped', whole], ['map-carry-held', () => PROPS.carried('quarry', toned(), 1)]];
   }

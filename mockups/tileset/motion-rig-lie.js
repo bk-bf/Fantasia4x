@@ -2,7 +2,7 @@
 function rigPawnLie(o, p) {
   p = p || {};
   const f = FOLK[o.race || 'human'], s = new Spr(RG.W, RG.H, RG.CX, RG.BASE), skin = o.skin || f.skin, sn = skin.length - 1, tunic = o.tunic || (o.bare ? skin : P.cloth), pants = o.pants || (o.bare ? skin : P.leather), body = o.armor || tunic, boots = o.boots || (o.bare ? skin : P.leather), belted = o.belt === undefined ? !o.bare || !!(o.tunic || o.armor) : !!o.belt, hair = o.hair || P.furBrown, hn = hair.length - 1;
-  const rest = !!p.rest, out = !!p.out, tucked = !!p.tucked, br = p.br ? 1 : 0, gy = RG.BASE - 1, th = Math.round(f.hw * 1.7), L = f.hh + f.tl + f.legs, x0 = RG.CX - (L >> 1), tx0 = x0 + f.hh - 1, lx0 = tx0 + f.tl, top = gy - th + 1, legH = Math.max(3, th >> 1);
+  const rest = !!p.rest, out = !!p.out, tucked = !!p.tucked, cradled = !!p.cradled, br = p.br ? 1 : 0, gy = RG.BASE - 1, th = Math.round(f.hw * (cradled ? CRADLED.deep : 1.7)), L = f.hh + f.tl + f.legs, x0 = RG.CX - (L >> 1), tx0 = x0 + f.hh - 1, lx0 = tx0 + f.tl, top = gy - th + 1, legH = Math.max(3, th >> 1);
   const headH = 2 * f.hd, hTop = gy - headH + 1 - (rest ? 1 : 0) + (out ? 1 : 0), noHair = o.bald || f.bald, rowU = y => clamp((y - top) / Math.max(1, th - 1), 0, 1);
   if (rest) {
     for (let x = x0 - 4; x <= x0 + L + 3; x++) for (let y = gy - 3; y <= gy + 1; y++) { const e = x === x0 - 4 || x === x0 + L + 3 || y === gy + 1; s.set(x, y, P.cloth[e ? 1 : y === gy - 3 ? 3 : 2 - ((x + y) % 7 === 0 ? 1 : 0)]); }
@@ -17,9 +17,11 @@ function rigPawnLie(o, p) {
     const tx = lx0 + f.legs - 2;
     s.rect(tx, y0 - 2, 2, 2, far ? dark(boots[2], .82) : boots[3]); s.set(tx + 1, y0 - 2, boots[1]);
   };
-  if (out && !tucked) lieSprawledLegs(s, f, pants, lx0, top, gy, legH, boots);
+  if (cradled) lieHungLegs(s, f, pants, lx0, top, legH, boots);
+  else if (out && !tucked) lieSprawledLegs(s, f, pants, lx0, top, gy, legH, boots);
   else legRow(top + 1, top + legH, true);
-  if (out && !tucked) s.rect(lx0 - 1, top + 1, 2, th - 1, pick3(pants, .5, -1));
+  if (cradled) s.rect(lx0 - 1, top + 1, 2, th - 1, pick3(pants, .5, -1));
+  else if (out && !tucked) s.rect(lx0 - 1, top + 1, 2, th - 1, pick3(pants, .5, -1));
   else if (rest || tucked || !p.bent) legRow(top + legH + 1, gy, false);
   else {
     const w = legH, hip = [lx0, gy - (w >> 1)], knee = [lx0 + 4, top - 2], ft = [lx0 + 8, gy - (w >> 1)];
@@ -38,7 +40,7 @@ function rigPawnLie(o, p) {
   const aw = f.aw, armC = (t, k) => { const hand = t > f.tl - 4.5, bare = o.sleeves === 0 || t > 7; return hand || bare ? skin[clamp(sn - 1 - (k === aw - 1 ? 1 : 0), 0, sn)] : pick3(o.sleeve || body, k / aw * .5, 0); };
   const sh0 = [tx0 + 2, gy - (aw >> 1)];
   const limp = len => (t, k) => t > len - 3.5 || o.sleeves === 0 ? skin[clamp(sn - 1 - (k === aw - 1 ? 1 : 0) + (t > len - 1.5 ? 1 : 0), 0, sn)] : pick3(body, k / aw * .5, 0);
-  const flung = [[tx0 + 2, top + 1], [tx0 + 6, top - 1], [tx0 + 9, top + 2]], flopped = tucked ? [[tx0 + 3, gy - 3], [tx0 + 8, gy - 2], [tx0 + 12, gy - 3]] : [[tx0 + 3, gy - 2], [tx0 + 7, gy], [tx0 + 12, gy]];
+  const flung = [[tx0 + 2, top + 1], [tx0 + 6, top - 1], [tx0 + 9, top + 2]], flopped = cradled ? [[tx0 + 3, gy - 4], [tx0 + CRADLED.back + 4, gy], [tx0 + CRADLED.back + 4, gy + CRADLED.dangles]] : tucked ? [[tx0 + 3, gy - 3], [tx0 + 8, gy - 2], [tx0 + 12, gy - 3]] : [[tx0 + 3, gy - 2], [tx0 + 7, gy], [tx0 + 12, gy]];
   if (out && !tucked) rigLimb(s, flung, aw, (t, k) => dark(limp(lieLength(flung))(t, k), .85));
   else if (!rest && !tucked) {
     rigLimb(s, [[tx0 + 2, top + 1], [tx0 + 7, top - 1], [tx0 + 11, top]], aw, (t, k) => dark(armC(t, k), .85));
@@ -88,13 +90,29 @@ function rigPawnLie(o, p) {
     rigLimb(s, [sh0, [tx0 + 6, gy - 1], [tx0 + 10, top + 1 - br]], aw, armC, shade);
   }
   if (out) rigLimb(s, flopped, aw, limp(lieLength(flopped)), shade);
+  if (cradled) lieSagged(s, x0 + f.hh, lx0, CRADLED.sags);
   s.outline();
   s.sh = out ? { rx: (L >> 1) + 5, ry: 4, dx: 0, dy: 1 } : { rx: (L >> 1) + 3, ry: 3.6, dx: 2, dy: 0 };
   s.pts = { head: [x0 + (f.hh >> 1), hTop - 9], mouth: [x0 + f.hh, hTop + 3], body: [tx0 + (f.tl >> 1), top], feet: [], lie: [x0, hTop, top, gy, out ? ex : x0, out ? cy : hTop] };
   if (out) s.pts.daze = [x0 + (f.hh >> 1), hTop - 10];
   if (tucked) s.hold = [RG.CX, gy + 1];
+  if (cradled) { const under = x => { let low = top; for (let y = top; y < s.h; y++) if (s.c[y * s.w + x]) low = y; return [x, low]; }; s.hold = under(tx0 + CRADLED.back); s.grasp = under(lx0 + Math.max(0, Math.round(f.legs * CRADLED.thigh) - CRADLED.knee)); }
   s.head = [x0 + (f.hh >> 1), hTop + f.hd, f.hd];
   return s;
+}
+const CRADLED = { deep: 1.3, sags: 3, dangles: 4, back: 3, knee: 5, thigh: .45, shin: .65 };
+const rigPawnCradled = o => rigPawnLie(o, { out: 1, tucked: 1, cradled: 1 });
+function lieSagged(s, from, to, sag) {
+  const c = s.c.slice(), e = s.e.slice();
+  s.c.fill(null); s.e.fill(0);
+  for (let i = c.length - 1; i >= 0; i--) if (c[i]) { const q = i + Math.round(sag * clamp((i % s.w - from) / (to - from), 0, 1)) * s.w; s.c[q] = c[i]; s.e[q] = e[i]; }
+}
+function lieHungLegs(s, f, pants, lx0, top, w, boots) {
+  const h = w >> 1, thigh = Math.round(f.legs * CRADLED.thigh), shin = Math.round(f.legs * CRADLED.shin), far = [[lx0 - 1, top + h + 1], [lx0 + thigh, top + h - 1], [lx0 + thigh + 1, top + h - 1 + shin]], near = far.map(q => [q[0] + 1, q[1] + w - 1]);
+  const leg = (len, dim) => (t, k) => { const c = pick3(t > len - 3.5 ? boots : pants, k / Math.max(1, w - 1) * .9, 0); return dim ? dark(c, .86) : c; };
+  rigLimb(s, far, w, leg(lieLength(far), true));
+  rigLimb(s, near, w, leg(lieLength(near), false), c => dark(c, .72));
+  for (const [foot, dim] of [[far[2], true], [near[2], false]]) s.rect(foot[0] + h, foot[1] - 1, 2, 2, dim ? dark(boots[2], .86) : boots[2]);
 }
 const lieLength = pts => pts.slice(1).reduce((sum, q, i) => sum + Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]), 0);
 function lieSprawledLegs(s, f, pants, lx0, top, gy, w, boots = P.leather) {

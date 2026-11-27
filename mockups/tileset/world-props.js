@@ -460,7 +460,7 @@ const PROPS = (() => {
       s.oval(CX + .5, B - 3, 4, 3.7, (px, py, nx, ny) => { const q = Math.hypot(nx, ny); return q > .8 ? at(r.a, 2) : q < .3 ? at(r.b, 2) : at(r.b, q < .6 ? 5 : 4); });
     },
     planks(s, r) {
-      const rows = 1;
+      const rows = SHOULDERED.recedes;
       for (let j = 0; j < rows; j++) for (let i = -3; i <= 4; i++) s.set(CX + i, B - 2 - rows + j, at(r.a, i === -1 || i === 2 ? 4 : 5));
       s.rect(CX - 3, B - 1, 8, 2, at(r.a, 3)); s.rect(CX - 3, B, 8, 1, at(r.a, 1));
     },
