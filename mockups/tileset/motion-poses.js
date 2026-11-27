@@ -211,7 +211,7 @@ const PAWN_ANIMS = {
     return keyed(u, { face: 's', two: 9, hr: [1, 4], tool: 78, lean: 1, by: 1, bx: 0, fl: [-3, 0], fr: [3, 0] }, [[0, {}], [.3, { hr: [-4 - x, 4], tool: 82, lean: -1 - x, bx: -1 - x }, 'o'], [.45, { hr: [5, 3], tool: 88, lean: 3 + x, bx: 2 + x, fr: [7, 0] }, 'i'], [.62, { hr: [5, 3], tool: 88, lean: 3, bx: 2, fr: [7, 0] }], [1, {}]]);
   } },
   block: { label: 'Blocking', group: 'Combat', dur: .85, n: 6, pose(u, c) {
-    return keyed(u, { face: 's', hl: [6, 3], hr: [7, 4], tool: 42, lean: 1, by: 1, bx: 0, fl: [-3, 0], fr: [3, 0] }, [[0, {}], [.3, { hl: [8, 0], lean: 1.5, by: 1.5 }], [.48, { hl: [8, 0], lean: 1.5, by: 1.5 }], [.56, { hl: [6, 0], lean: -1.5, bx: -2, by: 2 }, 'o'], [.8, { hl: [8, 1], lean: 1, bx: 0 }], [1, {}]]);
+    return keyed(u, { face: 's', hl: [6, 3], hr: [7, 4], tool: 42, lean: 1, by: 1, bx: 0, fl: [-3, 0], fr: [3, 0] }, [[0, {}], [.3, { hl: [8, 0], lean: 1.5, by: 1.5 }], [.48, { hl: [8, 0], lean: 1.5, by: 1.5 }], [.56, { hl: [8, 1], lean: -1.5, bx: -2, by: 2 }, 'o'], [.8, { hl: [8, 1], lean: 1, bx: 0 }], [1, {}]]);
   } },
   shoot: { label: 'Loosing an arrow', group: 'Combat', dur: 2.2, n: 10, hit: [.76, 'arrow'], pose(u, c) {
     const tr = c.lvl > 2 && u > .6 && u < .75 ? (Math.floor(u * 40) & 1) * .5 : 0;
