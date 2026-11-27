@@ -21,8 +21,8 @@ fn fs(@builtin(position) frag: vec4f) -> @location(0) vec4f {
     if (onRing(p)) {
         return vec4f(ringFrame.u_color, 1.0);
     }
-    if (onRing(p - ringFrame.u_offset)) {
-        return vec4f(ringFrame.u_shadow, 1.0);
+    if (!onRing(p - ringFrame.u_offset)) {
+        discard;
     }
-    discard;
+    return vec4f(ringFrame.u_shadow, 1.0);
 }
