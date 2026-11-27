@@ -7,9 +7,12 @@ export interface LedgerSettings {
   intervalMs: number;
   save: string | null;
   scenario: string | null;
+  session: string;
 }
 
 export interface LedgerCaptureMeta {
+  captureId: string;
+  session: string;
   reason: LedgerReason;
   at: string;
   ms: number;
@@ -23,11 +26,10 @@ export interface LedgerCaptureMeta {
   scenario: string | null;
   generatedBy: string | null;
   savedBy: string | null;
-  parent: string | null;
 }
 
 export interface LedgerReceipt {
-  save: string;
+  captureId: string;
   entry: string;
 }
 
@@ -72,17 +74,23 @@ function mapSize(state: GameState): string {
   return `${state.worldMap?.[0]?.length ?? 0}x${state.worldMap?.length ?? 0}`;
 }
 
+const OFF: LedgerSettings = { on: false, intervalMs: 0, save: null, scenario: null, session: '' };
+
 export class LedgerCapturer {
-  private settings: LedgerSettings = { on: false, intervalMs: 0, save: null, scenario: null };
+  private settings = OFF;
   private runMs = 0;
-  private sessionEntry: string | null = null;
+  private seq = 0;
 
   constructor(private deps: LedgerDeps) {}
 
   configure(settings: LedgerSettings): void {
     this.settings = settings;
     this.runMs = 0;
-    this.sessionEntry = null;
+    this.seq = 0;
+  }
+
+  reset(): void {
+    this.configure(OFF);
   }
 
   ran(ms: number): void {
@@ -101,7 +109,10 @@ export class LedgerCapturer {
     const state = this.deps.state();
     const body = serializeSave(state);
     const ms = Math.round(this.deps.now() - start);
+    const { session } = this.settings;
     const meta: LedgerCaptureMeta = {
+      captureId: `${session}-${this.seq++}`,
+      session,
       reason,
       at,
       ms,
@@ -114,18 +125,20 @@ export class LedgerCapturer {
       save: save ?? this.settings.save,
       scenario: this.settings.scenario,
       generatedBy: state.generatedBy?.commit ?? null,
-      savedBy: this.deps.savedBy,
-      parent: reason === 'session' ? null : this.sessionEntry
+      savedBy: this.deps.savedBy
     };
-    const window = `reason=${reason} turn=${state.turn} at=${at} ms=${ms} speed=${meta.speed}x bytes=${body.size}`;
+    this.deps.log(
+      state.turn,
+      `ledger save cap=${meta.captureId} reason=${reason} turn=${state.turn} at=${at} ms=${ms} speed=${meta.speed}x bytes=${body.size}`
+    );
     return this.deps.post(body, meta).then(
-      (receipt) => {
-        if (reason === 'session') this.sessionEntry = receipt.entry;
-        this.deps.log(state.turn, `ledger save=${receipt.save} ${window} entry=${receipt.entry}`);
-      },
+      () => {},
       (err: unknown) => {
         const why = err instanceof Error ? err.message : String(err);
-        this.deps.log(state.turn, `ledger failed ${window} error="${why.replace(/"/g, "'")}"`);
+        this.deps.log(
+          state.turn,
+          `ledger failed cap=${meta.captureId} error="${why.replace(/"/g, "'")}"`
+        );
       }
     );
   }

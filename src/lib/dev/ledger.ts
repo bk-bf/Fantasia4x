@@ -18,7 +18,8 @@ export function readLedgerSettings(
   storage: Reader | null,
   automated: boolean,
   save: string | null,
-  scenario: string | null
+  scenario: string | null,
+  session: string
 ): LedgerSettings {
   const mode = read(storage, LEDGER_SWITCH);
   const raw = read(storage, LEDGER_INTERVAL_SWITCH);
@@ -28,10 +29,16 @@ export function readLedgerSettings(
     on: mode === 'on' || (mode !== 'off' && !automated),
     intervalMs: intervalS * 1000,
     save,
-    scenario
+    scenario,
+    session
   };
 }
 
+export function newLedgerSession(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(4));
+  return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function ledgerSettingsLine(settings: LedgerSettings): string {
-  return `ledger capture=${settings.on ? 'on' : 'off'} interval=${settings.intervalMs / 1000}s`;
+  return `ledger capture=${settings.on ? 'on' : 'off'} interval=${settings.intervalMs / 1000}s session=${settings.session}`;
 }

@@ -13,7 +13,7 @@ import './simLogBridge';
 import { vlog, simLog } from '$lib/game/core/util/logSink';
 import { describeSession } from '$lib/dev/sessionHeader';
 import { stampGenerated } from '$lib/dev/buildStamp';
-import { readLedgerSettings, ledgerSettingsLine } from '$lib/dev/ledger';
+import { readLedgerSettings, ledgerSettingsLine, newLedgerSession } from '$lib/dev/ledger';
 import { setPerfContextProvider } from '$lib/dev/perfContext';
 import {
   environmentService,
@@ -57,7 +57,8 @@ import {
   setActiveSave,
   mintActiveSave,
   ensureActiveSave,
-  setActiveCommitted
+  setActiveCommitted,
+  isActiveCommitted
 } from './saveManager';
 import { defaultGameSpeed, autoPauseOnThreat, autoPauseOnDeath, debugMode } from './uiPrefs';
 import { clearActivityLog, reloadActivityLogForActiveSave, activityLog } from './Log';
@@ -290,15 +291,15 @@ function startAutoTurns() {
   simAccumulatorMs = 0;
   if (!browser || sessionLogged) return;
   sessionLogged = true;
-  logSession(get(gameState) as GameState);
   const scenario = new URLSearchParams(location.search).get('scenario');
+  logSession(get(gameState) as GameState, !scenario && isActiveCommitted());
   if (scenario)
-    loadScenarioPreset(scenario).then((ok) => ok && logSession(get(gameState) as GameState));
+    loadScenarioPreset(scenario).then((ok) => ok && logSession(get(gameState) as GameState, true));
 }
 
-function logSession(gs: GameState) {
+function logSession(gs: GameState, played: boolean) {
   if (browser) vlog('perf', gs.turn, () => describeSession(gs, gameSpeedValue));
-  if (browser && import.meta.env.DEV && USE_SIM_WORKER) startLedgerSession(gs);
+  if (browser && import.meta.env.DEV && played) startLedgerSession(gs);
 }
 
 function startLedgerSession(gs: GameState) {
@@ -306,7 +307,8 @@ function startLedgerSession(gs: GameState) {
     localStorage,
     navigator.webdriver === true,
     ensureActiveSave(),
-    new URLSearchParams(location.search).get('scenario')
+    new URLSearchParams(location.search).get('scenario'),
+    newLedgerSession()
   );
   simLog.logEvent({ category: 'perf', turn: gs.turn, message: ledgerSettingsLine(settings) });
   simWorkerBridge.ledger(settings);
@@ -314,7 +316,7 @@ function startLedgerSession(gs: GameState) {
 }
 
 function ledgerManualSave(id: string) {
-  if (browser && import.meta.env.DEV && USE_SIM_WORKER) simWorkerBridge.ledgerCapture('manual', id);
+  if (browser && import.meta.env.DEV) simWorkerBridge.ledgerCapture('manual', id);
 }
 
 setPerfContextProvider(() => {
@@ -474,7 +476,7 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
   if (dev) next = applyDevWorld(next, itemQty);
   next = stampGenerated(entityService.seedInitialEntities(next));
   loadStateIntoWorker(next);
-  logSession(next);
+  logSession(next, true);
 }
 
 function restoreWorld(snapshot: GameState) {
@@ -591,6 +593,7 @@ function resetGame() {
   fresh = workService.ensureDefaultWorkAssignments(fresh);
   fresh = stampGenerated(entityService.seedInitialEntities(fresh));
   loadStateIntoWorker(fresh);
+  logSession(fresh, true);
   console.info('[GameState] Game reset to initial state.');
 }
 

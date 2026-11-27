@@ -480,6 +480,7 @@ self.onmessage = async (e: MessageEvent) => {
       setVerboseLogging(!!msg.verbose);
       gameEngine.setGameStateManager(new GameStateManager(msg.state));
       gameEngine.setPreviewMode(!!msg.preview);
+      ledger.reset();
       gameEngine.setOutputSink(publish);
       gameEngine.setCommitSink((s) => publish(s, true, true));
       await pathfinderService.init();

@@ -35,6 +35,7 @@ const state = {
 function rig(fail = false) {
   const lines: string[] = [];
   const posts: { text: string; meta: LedgerCaptureMeta }[] = [];
+  const answers: Array<() => void> = [];
   let clock = 1000;
   const capturer = new LedgerCapturer({
     state: () => state,
@@ -46,13 +47,20 @@ function rig(fail = false) {
     post: async (body, meta) => {
       if (fail) throw new Error('status 500');
       posts.push({ text: await body.text(), meta });
-      return { save: `world-${posts.length}`, entry: `entry-${posts.length}` };
+      await new Promise<void>((done) => answers.push(done));
+      return { captureId: meta.captureId, entry: `entry-${posts.length}` };
     }
   });
-  return { capturer, lines, posts };
+  const answer = () => answers.splice(0).forEach((done) => done());
+  const settle = async (capture: Promise<void>) => {
+    await new Promise((r) => setTimeout(r, 0));
+    answer();
+    await capture;
+  };
+  return { capturer, lines, posts, answer, settle };
 }
 
-const on = { on: true, intervalMs: 120_000, save: 'slot-1', scenario: null };
+const on = { on: true, intervalMs: 120_000, save: 'slot-1', scenario: null, session: '1a2b3c4d' };
 
 describe('the ledger capture in the sim worker', () => {
   it('writes the JSON of {v: 1, dynamic, world}, with each tile as the sim holds it', async () => {
@@ -63,14 +71,16 @@ describe('the ledger capture in the sim worker', () => {
   });
 
   it('sends the whole state as a snapshot the headless loader reads back', async () => {
-    const { capturer, posts } = rig();
+    const { capturer, posts, settle } = rig();
     capturer.configure(on);
-    await capturer.capture('session');
+    await settle(capturer.capture('session'));
     const back = fromSnapshot(JSON.parse(posts[0].text));
     expect(back.turn).toBe(30058);
     expect(back.mobs).toHaveLength(2);
     expect(back.worldMap[0]).toHaveLength(3);
     expect(posts[0].meta).toMatchObject({
+      captureId: '1a2b3c4d-0',
+      session: '1a2b3c4d',
       reason: 'session',
       turn: 30058,
       seed: 4242,
@@ -80,38 +90,60 @@ describe('the ledger capture in the sim worker', () => {
       speed: 4,
       save: 'slot-1',
       generatedBy: state.generatedBy?.commit,
-      savedBy: 'b'.repeat(40),
-      parent: null
+      savedBy: 'b'.repeat(40)
     });
+    expect(posts[0].meta).not.toHaveProperty('parent');
   });
 
-  it('logs the world id with the turn, the start time and how long the capture held the sim', async () => {
-    const { capturer, lines, posts } = rig();
+  it('logs the capture with its id, turn, start time and stall the moment it is taken, before the server answers', async () => {
+    const { capturer, lines, posts, settle } = rig();
     capturer.configure(on);
-    await capturer.capture('session');
+    const capture = capturer.capture('session');
     expect(lines).toEqual([
-      `ledger save=world-1 reason=session turn=30058 at=2026-11-27T01:37:00.000Z ms=7 speed=4x bytes=${posts[0].text.length} entry=entry-1`
+      `ledger save cap=1a2b3c4d-0 reason=session turn=30058 at=2026-11-27T01:37:00.000Z ms=7 speed=4x bytes=${serializeSave(state).size}`
+    ]);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(posts).toHaveLength(1);
+    await settle(capture);
+    expect(lines).toHaveLength(1);
+  });
+
+  it('numbers the captures of a session in order and starts again for the next session', async () => {
+    const { capturer, posts, settle } = rig();
+    capturer.configure(on);
+    await settle(capturer.capture('session'));
+    await settle(capturer.capture('manual', 'slot-2'));
+    capturer.configure({ ...on, session: '99887766' });
+    await settle(capturer.capture('session'));
+    expect(posts.map((p) => p.meta.captureId)).toEqual(['1a2b3c4d-0', '1a2b3c4d-1', '99887766-0']);
+    expect(posts[1].meta).toMatchObject({ reason: 'manual', save: 'slot-2', session: '1a2b3c4d' });
+  });
+
+  it('keeps each capture under the session it was taken in, whichever answer comes back first', async () => {
+    const { capturer, posts, answer } = rig();
+    capturer.configure(on);
+    const first = capturer.capture('session');
+    capturer.configure({ ...on, session: '99887766' });
+    const second = capturer.capture('session');
+    await new Promise((r) => setTimeout(r, 0));
+    answer();
+    await Promise.all([first, second]);
+    expect(posts.map((p) => [p.meta.session, p.meta.captureId])).toEqual([
+      ['1a2b3c4d', '1a2b3c4d-0'],
+      ['99887766', '99887766-0']
     ]);
   });
 
   it('captures periodically only once the game has run for the whole interval', async () => {
-    const { capturer, posts } = rig();
+    const { capturer, posts, answer } = rig();
     capturer.configure(on);
     capturer.ran(60_000);
     capturer.ran(59_000);
     expect(posts).toHaveLength(0);
     capturer.ran(1_000);
-    await Promise.resolve();
     await new Promise((r) => setTimeout(r, 0));
+    answer();
     expect(posts.map((p) => p.meta.reason)).toEqual(['periodic']);
-  });
-
-  it('ties later captures of a session to the capture the session began with', async () => {
-    const { capturer, posts } = rig();
-    capturer.configure(on);
-    await capturer.capture('session');
-    await capturer.capture('manual', 'slot-2');
-    expect(posts[1].meta).toMatchObject({ reason: 'manual', save: 'slot-2', parent: 'entry-1' });
   });
 
   it('captures nothing when switched off, and no periodic capture with a zero interval', async () => {
@@ -124,10 +156,24 @@ describe('the ledger capture in the sim worker', () => {
     expect(posts).toHaveLength(0);
   });
 
-  it('logs a capture that could not be spooled', async () => {
+  it('stops capturing and forgets the running time once reset for a new world', async () => {
+    const { capturer, posts, lines } = rig();
+    capturer.configure(on);
+    capturer.ran(119_000);
+    capturer.reset();
+    capturer.ran(119_000);
+    await capturer.capture('manual');
+    capturer.configure(on);
+    capturer.ran(119_000);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(posts).toHaveLength(0);
+    expect(lines).toHaveLength(0);
+  });
+
+  it('logs a capture that could not be spooled under its capture id', async () => {
     const { capturer, lines } = rig(true);
     capturer.configure(on);
     await capturer.capture('periodic');
-    expect(lines[0]).toMatch(/^ledger failed reason=periodic turn=30058 .* error="status 500"$/);
+    expect(lines[1]).toBe('ledger failed cap=1a2b3c4d-0 error="status 500"');
   });
 });
