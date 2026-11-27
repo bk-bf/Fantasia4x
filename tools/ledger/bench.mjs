@@ -197,6 +197,7 @@ export const BENCH_PERF = {
   }
 };
 
+/** @param {string} tool @param {{ tree: string, label: string, rows: any[], result: string, profiles?: string[], env?: NodeJS.ProcessEnv }} opts */
 export function recordBench(tool, { tree, label, rows, result, profiles = [], env = process.env }) {
   const fixture = env.F4X_FIXTURE || null;
   const scenario = tool === 'frame-cost' ? env.F4X_SCENARIO || (fixture ? 'save' : 'large-wilderness') : fixture ? 'save' : 'dev-save';
