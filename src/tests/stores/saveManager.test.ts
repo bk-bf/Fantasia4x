@@ -76,3 +76,35 @@ describe('loading a save', () => {
     expect(loaded?.worldMap[0][1].walkable).toBe(true);
   });
 });
+
+describe('the builds a save names', () => {
+  const writer = {
+    commit: 'beefcaf',
+    sha: 'beefcafe00000000000000000000000000000001',
+    branch: 'test/look-overhaul',
+    refs: '',
+    dirty: 1,
+    serverStarted: '2026-11-27T16:00:00.000Z'
+  };
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('keeps the build that generated the world and records the one that wrote the save', async () => {
+    vi.stubGlobal('__F4X_BUILD__', writer);
+    const generatedBy = { commit: 'a'.repeat(40), branch: 'dev', dirty: 0 };
+    setActiveSave('stamp-1');
+    await saveGameNow({ ...world(), generatedBy } as GameState);
+    expect(stored.get('meta:stamp-1')).toMatchObject({
+      savedBy: { commit: writer.sha, branch: 'test/look-overhaul', dirty: 1 }
+    });
+    const loaded = await loadSave('stamp-1');
+    expect(loaded?.generatedBy).toEqual(generatedBy);
+  });
+
+  it('loads a save written before saves named any build', async () => {
+    stored.set('save:old-1', { turn: 77, seed: 3, pawns: [] });
+    stored.set('world:old-1', [[tile(0)]]);
+    const loaded = await loadSave('old-1');
+    expect(loaded?.turn).toBe(77);
+    expect(loaded?.generatedBy).toBeUndefined();
+  });
+});

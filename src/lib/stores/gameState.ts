@@ -12,6 +12,7 @@ import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import './simLogBridge';
 import { vlog } from '$lib/game/core/util/logSink';
 import { describeSession } from '$lib/dev/sessionHeader';
+import { stampGenerated } from '$lib/dev/buildStamp';
 import { setPerfContextProvider } from '$lib/dev/perfContext';
 import {
   environmentService,
@@ -453,7 +454,7 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
   next = socialService.seedFamilyRelationships(next);
   next = workService.ensureDefaultWorkAssignments(next);
   if (dev) next = applyDevWorld(next, itemQty);
-  next = entityService.seedInitialEntities(next);
+  next = stampGenerated(entityService.seedInitialEntities(next));
   loadStateIntoWorker(next);
   logSession(next);
 }
@@ -570,7 +571,7 @@ function resetGame() {
   fresh = socialService.meetColony(fresh);
   fresh = socialService.seedFamilyRelationships(fresh);
   fresh = workService.ensureDefaultWorkAssignments(fresh);
-  fresh = entityService.seedInitialEntities(fresh);
+  fresh = stampGenerated(entityService.seedInitialEntities(fresh));
   loadStateIntoWorker(fresh);
   console.info('[GameState] Game reset to initial state.');
 }
@@ -586,7 +587,7 @@ async function loadScenarioPreset(presetId: string): Promise<boolean> {
   mintActiveSave();
   setActiveCommitted(true);
   resetSimTransients();
-  const state = buildScenario(preset.spec);
+  const state = stampGenerated(buildScenario(preset.spec));
   loadStateIntoWorker(state);
   console.info(`[GameState] Loaded scenario preset '${presetId}'.`);
   return true;
@@ -795,7 +796,7 @@ export const savedStateReady: Promise<void> = (async () => {
     const genW = bootMode() === 'new' ? currentMapSize.w : 240;
     const genH = bootMode() === 'new' ? currentMapSize.h : 160;
     const migratedWorld = generateWorld(genW, genH, baseState.seed);
-    baseState = { ...baseState, worldMap: migratedWorld };
+    baseState = stampGenerated({ ...baseState, worldMap: migratedWorld });
   } else if (!baseState.worldMap[0]?.[1]?.discovered) {
     baseState = {
       ...baseState,
