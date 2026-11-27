@@ -1,0 +1,30 @@
+{
+ "w": 16,
+ "h": 37,
+ "footX": 9,
+ "footY": 35,
+ "anims": {
+  "talk": {
+   "dur": 2.6,
+   "frames": [
+    "pawn/talk-0.png",
+    "pawn/talk-1.png",
+    "pawn/talk-2.png",
+    "pawn/talk-3.png",
+    "pawn/talk-4.png",
+    "pawn/talk-5.png",
+    "pawn/talk-6.png",
+    "pawn/talk-7.png"
+   ]
+  },
+  "idle": {
+   "dur": 2.8,
+   "frames": [
+    "pawn/idle-0.png",
+    "pawn/idle-1.png",
+    "pawn/idle-2.png",
+    "pawn/idle-3.png"
+   ]
+  }
+ }
+}

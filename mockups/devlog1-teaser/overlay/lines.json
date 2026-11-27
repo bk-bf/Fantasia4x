@@ -1,0 +1,9 @@
+{
+  "charsPerSecond": 22,
+  "duration": 20,
+  "lines": [
+    { "start": 1.0, "end": 6.0, "text": "Hi, I'm the one making this game." },
+    { "start": 7.0, "end": 13.0, "text": "This week I tore up the whole look and painted it again." },
+    { "start": 14.0, "end": 19.5, "text": "Let me show you what changed." }
+  ]
+}

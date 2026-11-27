@@ -1,0 +1,81 @@
+@font-face {
+  font-family: 'Fantasia Mono';
+  src: url('fonts/cousine-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+:root {
+  --font-mono: 'Fantasia Mono', 'Courier New', monospace;
+}
+html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
+#stage {
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+}
+#rig {
+  position: absolute;
+}
+#pawn {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  image-rendering: pixelated;
+}
+#bubble-anchor {
+  position: absolute;
+  right: 0;
+  transform-origin: 100% 100%;
+}
+#bubble-anchor[hidden] {
+  display: block;
+  visibility: hidden;
+}
+.social-bubble {
+  min-width: 40px;
+  min-height: 24px;
+  padding: 2px 4px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  pointer-events: none;
+}
+.combat-float {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow:
+    0 0 3px #000,
+    0 1px 2px #000;
+}
+.social-bubble .combat-float.social {
+  position: relative;
+  left: auto;
+  top: auto;
+}
+.combat-float.social {
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: normal;
+  font-style: italic;
+  white-space: normal;
+  max-width: 160px;
+  width: max-content;
+  text-shadow:
+    0 0 3px #000,
+    0 1px 2px #000,
+    0 0 6px #000;
+}
+.combat-float.social .rest {
+  color: transparent;
+  text-shadow: none;
+}

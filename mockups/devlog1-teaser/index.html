@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Devlog 1 teaser</title>
+<style>
+@font-face { font-family: Pix; src: url(PixelifySans.ttf); font-weight: 400 700; }
+:root {
+  --bg: #f6f1e6; --card: #fffdf8; --ink: #2a2116; --dim: #6e6250; --edge: #e2d8c3;
+  --accent: #a8640a; --chip: #efe6d3;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17120c; --card: #211a12; --ink: #f2e8cc; --dim: #b3a585; --edge: #3a2f20;
+  --accent: #ffc468; --chip: #2c2318;
+} }
+:root[data-theme="dark"] {
+  --bg: #17120c; --card: #211a12; --ink: #f2e8cc; --dim: #b3a585; --edge: #3a2f20;
+  --accent: #ffc468; --chip: #2c2318;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, sans-serif; }
+main { max-width: 1200px; margin: 0 auto; padding: 20px 16px 60px; }
+h1 { font: 700 30px/1.2 Pix, sans-serif; margin: 8px 0 4px; }
+h2 { font: 700 21px/1.2 Pix, sans-serif; margin: 40px 0 12px; }
+a { color: var(--accent); }
+.dim { color: var(--dim); }
+.card { background: var(--card); border: 1px solid var(--edge); border-radius: 10px; padding: 14px; }
+video { display: block; width: 100%; background: #120d08; border-radius: 8px; }
+.cut { display: grid; gap: 16px; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 860px) { .cut { grid-template-columns: 3fr 1fr; } }
+.cut video.v, .shot video.v { aspect-ratio: 9/16; }
+.cut video.h, .shot video.h { aspect-ratio: 16/9; }
+.files { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 14px; }
+.shots { display: grid; gap: 16px; }
+.shot { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 860px) { .shot { grid-template-columns: 2.4fr 0.68fr 2fr; } }
+.shot h3 { margin: 0 0 6px; font: 700 18px/1.2 Pix, sans-serif; }
+.chip { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--dim); margin: 0 4px 4px 0; }
+dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: 14px; }
+dt { color: var(--dim); }
+dd { margin: 0; }
+.say { font-style: italic; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--edge); vertical-align: top; }
+th { color: var(--dim); font-weight: 600; }
+td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wrap { overflow-x: auto; }
+.sample { max-width: 820px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Devlog 1 teaser</h1>
+<div class="dim" id="meta"></div>
+
+<h2>Rough cut</h2>
+<div class="cut">
+  <div class="card">
+    <video class="h" controls preload="metadata" poster="posters/opener.png" src="media/rough-cut-1920x1080.mp4"></video>
+    <div class="files">
+      <a href="media/rough-cut-1920x1080.mp4">1920×1080 web</a>
+      <a href="media/masters/rough-cut-1920x1080.mp4">1920×1080 master</a>
+      <a href="media/blips.wav">blips.wav</a>
+      <a href="media/voice-placeholder.wav">voice-placeholder.wav</a>
+    </div>
+  </div>
+  <div class="card">
+    <video class="v" controls preload="metadata" src="media/rough-cut-1080x1920.mp4"></video>
+    <div class="files">
+      <a href="media/rough-cut-1080x1920.mp4">1080×1920 web</a>
+      <a href="media/masters/rough-cut-1080x1920.mp4">master</a>
+    </div>
+  </div>
+</div>
+
+<h2>Shots</h2>
+<div class="shots" id="shots"></div>
+
+<h2>Narration</h2>
+<div class="card wrap">
+  <table>
+    <thead><tr><th>Shot</th><th>Start</th><th>Typed</th><th>End</th><th>Line</th></tr></thead>
+    <tbody id="lines"></tbody>
+  </table>
+  <div class="files">
+    <a href="narration.json">narration.json</a>
+    <a href="lines.json">lines.json</a>
+    <a href="shots.json">shots.json</a>
+  </div>
+</div>
+
+<h2>Overlay sample</h2>
+<div class="card sample">
+  <video class="h" controls preload="metadata" src="media/sample.mp4"></video>
+  <div class="files">
+    <a href="media/sample.mp4">sample.mp4</a>
+    <a href="media/sample-vertical-4s.mp4">sample-vertical-4s.mp4</a>
+    <a href="overlay/">overlay/</a>
+    <a href="record/">record/</a>
+  </div>
+</div>
+</main>
+<script>
+const fmt = s => { const m = Math.floor(s / 60), r = (s - m * 60).toFixed(1).padStart(4, '0'); return `${m}:${r}`; };
+const el = (tag, attrs = {}, kids = []) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) k === 'text' ? e.textContent = v : e.setAttribute(k, v); for (const c of [].concat(kids)) e.append(c); return e; };
+const commit = rec => (rec.match(/[0-9a-f]{8}/) || [''])[0];
+Promise.all(['shots.json', 'narration.json'].map(u => fetch(u).then(r => r.json()))).then(([shots, narration]) => {
+  const by = Object.fromEntries(narration.map(n => [n.shot, n]));
+  document.getElementById('meta').textContent = `${shots.shots.length} shots · ${fmt(shots.totalSec)} · game @${commit(shots.recordedFrom.game)}`;
+  let t = 0;
+  for (const s of shots.shots) {
+    const n = by[s.id];
+    const src = s.source === 'game' ? `game @${commit(shots.recordedFrom.game)}` : (() => { const m = s.sourceDetail.match(/fantasia4x-([\w-]+).*? at ([0-9a-f]{8})/); return m ? `mockups/${m[1]} @${m[2]}` : 'mockup'; })();
+    document.getElementById('shots').append(el('div', { class: 'card shot', id: s.id }, [
+      el('video', { class: 'h', controls: '', preload: 'none', poster: `posters/${s.id}.png`, src: `media/clips/${s.id}.mp4` }),
+      el('video', { class: 'v', controls: '', preload: 'none', src: `media/clips-vertical/${s.id}.mp4` }),
+      el('div', {}, [
+        el('h3', { text: s.title }),
+        el('span', { class: 'chip', text: s.id }), el('span', { class: 'chip', text: `${fmt(t)}–${fmt(t + s.durationSec)}` }),
+        el('dl', {}, [
+          el('dt', { text: 'Source' }), el('dd', { text: src }),
+          el('dt', { text: 'Setup' }), el('dd', { class: 'dim', text: s.sourceDetail }),
+          el('dt', { text: 'Duration' }), el('dd', { text: `${s.durationSec} s` }),
+          el('dt', { text: 'Camera' }), el('dd', { text: s.cameraMove }),
+          el('dt', { text: 'Line' }), el('dd', { class: 'say', text: s.narration }),
+          el('dt', { text: 'Files' }), el('dd', {}, [el('a', { href: `media/masters/clips/${s.id}.mp4`, text: '16:9 master' }), ' · ', el('a', { href: `media/masters/clips-vertical/${s.id}.mp4`, text: '9:16 master' })])
+        ])
+      ])
+    ]));
+    t += s.durationSec;
+  }
+  for (const n of narration) document.getElementById('lines').append(el('tr', {}, [
+    el('td', {}, el('a', { href: `#${n.shot}`, text: n.shot })),
+    el('td', { class: 'n', text: fmt(n.start) }), el('td', { class: 'n', text: fmt(n.typingEnd) }), el('td', { class: 'n', text: fmt(n.end) }),
+    el('td', { text: n.text })
+  ]));
+});
+</script>
+</body>
+</html>

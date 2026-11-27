@@ -1,0 +1,65 @@
+[
+ {
+  "shot": "opener",
+  "start": 0.6,
+  "end": 6.198,
+  "typingEnd": 4.698,
+  "text": "Hi. I'm the one who makes this game, so for a few minutes I get to live in it too."
+ },
+ {
+  "shot": "land",
+  "start": 15.6,
+  "end": 24.013,
+  "typingEnd": 22.513,
+  "text": "This is Fantasia4x. Every world is a new valley grown from a seed, with lakes, meadows, cliffs and forest, and deer dozing by the water."
+ },
+ {
+  "shot": "colony",
+  "start": 30.6,
+  "end": 38,
+  "typingEnd": 36.5,
+  "text": "I don't steer anyone by hand. I mark trees to cut, lay out a yard and a bench, and the settlers sort out who does what."
+ },
+ {
+  "shot": "hudgame",
+  "start": 45.6,
+  "end": 52.926,
+  "typingEnd": 51.426,
+  "text": "Up here is everything we own and make, from flint knives to oak logs. I keep it plain so the world stays the main thing."
+ },
+ {
+  "shot": "herd",
+  "start": 60.6,
+  "end": 67.835,
+  "typingEnd": 66.335,
+  "text": "The valley isn't empty. Elk wander the woods, and one day we'll have to decide whether to leave them be or go hunting."
+ },
+ {
+  "shot": "rain",
+  "start": 75.6,
+  "end": 82.244,
+  "typingEnd": 80.744,
+  "text": "Weather comes and goes. Rain slows the work down, and the wind moves every tree and every stalk of grass."
+ },
+ {
+  "shot": "magic",
+  "start": 87.6,
+  "end": 92.691,
+  "typingEnd": 91.191,
+  "text": "Some trees are older than the rest, and a few of them are not quite ordinary."
+ },
+ {
+  "shot": "dusk",
+  "start": 102.6,
+  "end": 108.129,
+  "typingEnd": 106.629,
+  "text": "Days turn into evenings, the light goes gold, and people drift back toward the fire."
+ },
+ {
+  "shot": "night",
+  "start": 117.6,
+  "end": 124.677,
+  "typingEnd": 123.177,
+  "text": "That's where it stands today. Thanks for spending a little time in the valley with me. See you in the next one."
+ }
+]

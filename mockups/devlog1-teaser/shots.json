@@ -1,0 +1,100 @@
+{
+  "title": "Fantasia4x Devlog 1",
+  "recordedFrom": {
+    "game": "618667bb3b87cd1a67315ffa9adbd0a022461560 (test/look-overhaul), ?painted=1&blend=1, Mesa llvmpipe WebGL2",
+    "mockups": "mockups/hud at c8a2c749 (its newer versions fail to load: FOLK_PIECES is not defined); mockups/big-trees at 306e2cd4"
+  },
+  "totalSec": 132,
+  "shots": [
+    {
+      "id": "opener",
+      "title": "Autumn settlement",
+      "source": "mockup",
+      "sourceDetail": "fantasia4x-hud ?strip=0&motion=1&hour=16.5&weather=autumn_windy at c8a2c749, chrome hidden, 1x render, 960x540 window upscaled 2x nearest",
+      "durationSec": 15,
+      "cameraMove": "slow pan right from the thatched house and fields to the river; vertical frame pans right from the fence line to the windmill and river",
+      "narration": "Hi. I'm the one who makes this game, so for a few minutes I get to live in it too.",
+      "file": "clips/opener.mp4"
+    },
+    {
+      "id": "land",
+      "title": "A valley from a seed",
+      "source": "game",
+      "sourceDetail": "dev save, spring day 40 10:00, clear weather, camera 190,118 at 32px tiles, HUD hidden, 1200x1000 render, crop upscaled 2x nearest",
+      "durationSec": 15,
+      "cameraMove": "slow pan right across the lake shore and meadow",
+      "narration": "This is Fantasia4x. Every world is a new valley grown from a seed, with lakes, meadows, cliffs and forest, and deer dozing by the water.",
+      "file": "clips/land.mp4"
+    },
+    {
+      "id": "colony",
+      "title": "Setting up camp",
+      "source": "game",
+      "sourceDetail": "dev save, 09:30, settlers moved to the meadow at 247,130; campfire, workbenches, well, stockpile yard, woodcutting area and blueprints placed by dev commands; HUD hidden",
+      "durationSec": 15,
+      "cameraMove": "locked off on the camp while settlers work",
+      "narration": "I don't steer anyone by hand. I mark trees to cut, lay out a yard and a bench, and the settlers sort out who does what.",
+      "file": "clips/colony.mp4"
+    },
+    {
+      "id": "hudgame",
+      "title": "What the colony owns",
+      "source": "game",
+      "sourceDetail": "same staged camp from 10:00 to 12:00 with the in-game HUD visible (turn counter and FPS readout hidden), 960x540 render upscaled 2x; vertical frame crops the kingdom and resources panel at 4x",
+      "durationSec": 15,
+      "cameraMove": "locked off; settlers carry wood and work the benches",
+      "narration": "Up here is everything we own and make, from flint knives to oak logs. I keep it plain so the world stays the main thing.",
+      "file": "clips/hudgame.mp4"
+    },
+    {
+      "id": "herd",
+      "title": "Elk in the woods",
+      "source": "game",
+      "sourceDetail": "dev save, 08:00, clear, camera 258,118, wildlife running, HUD hidden",
+      "durationSec": 15,
+      "cameraMove": "slow pan left through the forest past grazing elk",
+      "narration": "The valley isn't empty. Elk wander the woods, and one day we'll have to decide whether to leave them be or go hunting.",
+      "file": "clips/herd.mp4"
+    },
+    {
+      "id": "rain",
+      "title": "Wind and rain",
+      "source": "mockup",
+      "sourceDetail": "fantasia4x-hud ?strip=0&motion=1&hour=12&weather=windy_rain at c8a2c749, chrome hidden, 1x render upscaled 2x nearest",
+      "durationSec": 12,
+      "cameraMove": "slow pan left over the river and settlement in the rain",
+      "narration": "Weather comes and goes. Rain slows the work down, and the wind moves every tree and every stalk of grass.",
+      "file": "clips/rain.mp4"
+    },
+    {
+      "id": "magic",
+      "title": "Old trees at night",
+      "source": "mockup",
+      "sourceDetail": "fantasia4x-big-trees ?show=magic&light=night&wind=breeze at 306e2cd4, page chrome hidden, 1x render upscaled 2x nearest",
+      "durationSec": 15,
+      "cameraMove": "slow pan right past the glowing trees",
+      "narration": "Some trees are older than the rest, and a few of them are not quite ordinary.",
+      "file": "clips/magic.mp4"
+    },
+    {
+      "id": "dusk",
+      "title": "Evening falls",
+      "source": "mockup",
+      "sourceDetail": "fantasia4x-hud ?strip=0&motion=1&weather=clear at c8a2c749, hour driven from 16.75 to 23 over the shot, chrome hidden",
+      "durationSec": 15,
+      "cameraMove": "locked off on the settlement while the light turns from afternoon to night",
+      "narration": "Days turn into evenings, the light goes gold, and people drift back toward the fire.",
+      "file": "clips/dusk.mp4"
+    },
+    {
+      "id": "night",
+      "title": "Goodnight",
+      "source": "mockup",
+      "sourceDetail": "fantasia4x-hud ?strip=0&motion=1&hour=21.5&weather=clear at c8a2c749, lit hearths, chrome hidden",
+      "durationSec": 15,
+      "cameraMove": "slow drift up and to the left over the sleeping settlement",
+      "narration": "That's where it stands today. Thanks for spending a little time in the valley with me. See you in the next one.",
+      "file": "clips/night.mp4"
+    }
+  ]
+}
