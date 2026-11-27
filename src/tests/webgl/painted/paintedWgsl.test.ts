@@ -4,16 +4,18 @@ import { ShaderManager } from '$lib/webgl/shaders';
 import { PaintedVignette } from '$lib/webgl/painted/vignette';
 import { PaintedLightPass } from '$lib/webgl/painted/lightPass';
 import { PaintedShadowCast } from '$lib/webgl/painted/shadowCast';
+import { FallingLeaves } from '$lib/webgl/painted/leaves';
 import { quietGl } from '../glLimits';
 import { expectWgslAtGlslSlots } from '../wgslSlots';
 
 const passes = {
   vignette: PaintedVignette,
   'light field': PaintedLightPass,
-  'shadow cast': PaintedShadowCast
+  'shadow cast': PaintedShadowCast,
+  leaf: FallingLeaves
 };
 
-describe('the fullscreen painted passes in WGSL', () => {
+describe('the painted passes in WGSL', () => {
   for (const [name, pass] of Object.entries(passes))
     it(`declares every ${name} block and texture at the slot the GLSL binds it to`, () => {
       const gpu = new Webgl2Device(quietGl());
