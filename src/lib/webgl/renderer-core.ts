@@ -29,7 +29,7 @@ import { resolveSpriteLights } from './painted/spriteLights.js';
 import { PaintedVignette } from './painted/vignette.js';
 import { FRAME_GROUP, frameBindings } from './frameBindings.js';
 import { PaintedShadowCast, SHADOW_DEPTH, SHADOW_SHADE } from './painted/shadowCast.js';
-import { GroundRings, type GroundRing, type RingInk } from './groundRings.js';
+import { GroundRings, type GroundRing, type RingInk, type RingSet } from './groundRings.js';
 import {
   drawnAt,
   drawnBounds,
@@ -130,7 +130,7 @@ export class WebGLRendererCore {
   private readonly fluidClock = new FluidClock();
   private fluids: FluidSet = FLUID_DEFS;
   private season: string | undefined = undefined;
-  private rings: { list: readonly GroundRing[]; ink: RingInk } | null = null;
+  private rings: RingSet | null = null;
   private pointLights: readonly PointLight[] = [];
   private ambientBase: Rgb = [1, 1, 1];
   private mapWeather: MapWeatherId = 'clear';
@@ -499,6 +499,14 @@ export class WebGLRendererCore {
     frame.view.set('u_viewOffset', [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX]);
     frame.view.set('u_zoom', [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX]);
     frame.view.upload(gpu.queue, frame.buffer);
+    const overlays =
+      this.overlayGrid ||
+      this.itemOverlayGrid ||
+      this.buildingOverlayGrid ||
+      this.resourceOverlayGrid ||
+      this.resourceTallOverlayGrid ||
+      this.snowGrid;
+    this.groundRings?.prepare(overlays ? this.rings : null);
     const vignette = this.vignetteOn && lightFrame ? this.vignette : null;
     if (vignette && lightFrame)
       vignette.prepare({ strength: lightFrame.grade.vignette, tilePx: this.tileWidth });
@@ -590,14 +598,7 @@ export class WebGLRendererCore {
     this.stats.drawCalls++;
     this.stats.vertexCount += gridStats.tilesRendered * 6;
 
-    if (
-      this.overlayGrid ||
-      this.itemOverlayGrid ||
-      this.buildingOverlayGrid ||
-      this.resourceOverlayGrid ||
-      this.resourceTallOverlayGrid ||
-      this.snowGrid
-    ) {
+    if (overlays) {
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
       const tOverlay = performance.now();
       if (this.snowGrid && passOn('snow')) {
@@ -607,7 +608,7 @@ export class WebGLRendererCore {
       }
       this.drawTreeGround(pass, gpu, flicker, lightTime, lightFrame, viewportTilesW, viewportTilesH);
       if (this.rowDepth) this.drawShadowCast(pass, viewportTilesW, viewportTilesH);
-      this.drawGroundRings(pass);
+      if (this.groundRings) this.stats.drawCalls += this.groundRings.encode(pass);
       this.setCutaway(viewportTilesW, viewportTilesH);
       for (const layer of SPRITE_LAYERS) {
         if (!passOn(LAYER_PASS[layer])) continue;
@@ -776,12 +777,6 @@ export class WebGLRendererCore {
       },
       { atlas: 1, light: LIGHT_FIELD_UNIT }
     );
-  }
-
-  private drawGroundRings(pass: GpuRenderPass): void {
-    if (!this.groundRings || !this.rings || !this.shaderManager) return;
-    const { list, ink } = this.rings;
-    this.stats.drawCalls += this.groundRings.draw(pass, list, ink);
   }
 
   private drawShadowCast(

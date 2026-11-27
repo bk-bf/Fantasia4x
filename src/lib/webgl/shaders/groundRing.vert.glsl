@@ -1,7 +1,5 @@
 #version 300 es
 
-uniform vec4 u_area;
-
 void main() {
     vec2 corner = vec2(float(gl_VertexID & 1), float(gl_VertexID >> 1));
     vec2 px = u_area.xy + corner * u_area.zw;

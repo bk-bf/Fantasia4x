@@ -1,12 +1,6 @@
 #version 300 es
 precision highp float;
 
-uniform vec4 u_ring;
-uniform float u_line;
-uniform float u_offset;
-uniform vec3 u_color;
-uniform vec3 u_shadow;
-
 out vec4 fragColor;
 
 bool onRing(vec2 p) {
