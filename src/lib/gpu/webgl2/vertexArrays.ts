@@ -6,12 +6,16 @@ interface Slot {
   offset: number;
 }
 
+interface Cached {
+  layout: number;
+  slots: Slot[];
+  vao: WebGLVertexArrayObject;
+}
+
 export class Webgl2VertexArrays {
   private readonly slots: Slot[] = [];
-  private readonly byKey = new Map<string, WebGLVertexArrayObject>();
-  private readonly byBuffer = new Map<WebGLBuffer, string[]>();
-  private readonly ids = new WeakMap<WebGLBuffer, number>();
-  private nextId = 1;
+  private readonly byFirst = new Map<WebGLBuffer, Cached[]>();
+  private readonly byBuffer = new Map<WebGLBuffer, Cached[]>();
   private readonly layoutIds = new Map<string, number>();
   private readonly pipelineLayouts = new WeakMap<Webgl2Pipeline, number>();
   private empty: WebGLVertexArrayObject | null = null;
@@ -24,43 +28,46 @@ export class Webgl2VertexArrays {
   }
 
   set(slot: number, buffer: WebGLBuffer, offset: number): void {
-    this.slots[slot] = { buffer, offset };
+    const current = this.slots[slot];
+    if (current) {
+      current.buffer = buffer;
+      current.offset = offset;
+    } else this.slots[slot] = { buffer, offset };
   }
 
   bind(p: Webgl2Pipeline): void {
     const vao =
       p.buffers.length === 0
         ? (this.empty ??= this.gl.createVertexArray())
-        : (this.byKey.get(this.key(p)) ?? this.build(p));
+        : (this.find(p) ?? this.build(p));
     if (vao === this.boundArray) return;
     this.gl.bindVertexArray(vao);
     this.boundArray = vao;
   }
 
   forget(buffer: WebGLBuffer): void {
-    for (const key of this.byBuffer.get(buffer) ?? []) {
-      const vao = this.byKey.get(key);
-      if (!vao) continue;
-      this.gl.deleteVertexArray(vao);
-      this.byKey.delete(key);
-      if (vao === this.boundArray) this.boundArray = null;
+    for (const cached of this.byBuffer.get(buffer) ?? []) {
+      this.gl.deleteVertexArray(cached.vao);
+      if (cached.vao === this.boundArray) this.boundArray = null;
+      for (const slot of cached.slots) {
+        if (slot.buffer === buffer) continue;
+        this.drop(this.byBuffer, slot.buffer, cached);
+      }
+      this.drop(this.byFirst, cached.slots[0].buffer, cached);
     }
     this.byBuffer.delete(buffer);
+    this.byFirst.delete(buffer);
     this.slots.forEach((slot, i) => {
       if (slot?.buffer === buffer) delete this.slots[i];
     });
   }
 
-  private id(buffer: WebGLBuffer): number {
-    let id = this.ids.get(buffer);
-    if (id === undefined) this.ids.set(buffer, (id = this.nextId++));
-    return id;
-  }
-
-  private slot(i: number): Slot {
-    const slot = this.slots[i];
-    if (!slot) throw new Error(`draw: no vertex buffer in slot ${i}`);
-    return slot;
+  private drop(index: Map<WebGLBuffer, Cached[]>, buffer: WebGLBuffer, cached: Cached): void {
+    const list = index.get(buffer);
+    if (!list) return;
+    const at = list.indexOf(cached);
+    if (at >= 0) list.splice(at, 1);
+    if (list.length === 0) index.delete(buffer);
   }
 
   private layoutId(p: Webgl2Pipeline): number {
@@ -73,24 +80,40 @@ export class Webgl2VertexArrays {
     return id;
   }
 
-  private key(p: Webgl2Pipeline): string {
-    let key = String(this.layoutId(p));
-    for (let i = 0; i < p.buffers.length; i++) {
-      const slot = this.slot(i);
-      key += `|${this.id(slot.buffer)}:${slot.offset}`;
+  private slot(i: number): Slot {
+    const slot = this.slots[i];
+    if (!slot) throw new Error(`draw: no vertex buffer in slot ${i}`);
+    return slot;
+  }
+
+  private find(p: Webgl2Pipeline): WebGLVertexArrayObject | null {
+    const layout = this.layoutId(p);
+    const candidates = this.byFirst.get(this.slot(0).buffer);
+    if (!candidates) return null;
+    for (const cached of candidates) {
+      if (cached.layout !== layout) continue;
+      if (this.matches(cached, p.buffers.length)) return cached.vao;
     }
-    return key;
+    return null;
+  }
+
+  private matches(cached: Cached, count: number): boolean {
+    for (let i = 0; i < count; i++) {
+      const slot = this.slot(i);
+      const held = cached.slots[i];
+      if (slot.buffer !== held.buffer || slot.offset !== held.offset) return false;
+    }
+    return true;
   }
 
   private build(p: Webgl2Pipeline): WebGLVertexArrayObject {
     const gl = this.gl;
-    const key = this.key(p);
     const vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
     this.boundArray = vao;
+    const slots = p.buffers.map((_, i) => ({ ...this.slot(i) }));
     p.buffers.forEach((layout, i) => {
-      const slot = this.slot(i);
-      gl.bindBuffer(gl.ARRAY_BUFFER, slot.buffer);
+      gl.bindBuffer(gl.ARRAY_BUFFER, slots[i].buffer);
       for (const a of layout.attributes) {
         gl.enableVertexAttribArray(a.shaderLocation);
         gl.vertexAttribPointer(
@@ -99,15 +122,21 @@ export class Webgl2VertexArrays {
           gl.FLOAT,
           false,
           layout.arrayStride,
-          slot.offset + a.offset
+          slots[i].offset + a.offset
         );
         if (layout.stepMode === 'instance') gl.vertexAttribDivisor(a.shaderLocation, 1);
       }
-      const keys = this.byBuffer.get(slot.buffer) ?? [];
-      keys.push(key);
-      this.byBuffer.set(slot.buffer, keys);
     });
-    this.byKey.set(key, vao);
+    const cached: Cached = { layout: this.layoutId(p), slots, vao };
+    this.index(this.byFirst, slots[0].buffer, cached);
+    for (const buffer of new Set(slots.map((s) => s.buffer)))
+      this.index(this.byBuffer, buffer, cached);
     return vao;
+  }
+
+  private index(index: Map<WebGLBuffer, Cached[]>, buffer: WebGLBuffer, cached: Cached): void {
+    const list = index.get(buffer);
+    if (list) list.push(cached);
+    else index.set(buffer, [cached]);
   }
 }
