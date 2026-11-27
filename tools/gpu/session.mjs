@@ -15,13 +15,13 @@ async function startCompositor(log) {
   );
   const config = join(tmpdir(), `${UNIT}.conf`);
   writeFileSync(config, 'monitor = , 1920x1080@60, auto, 1\nanimations {\n enabled = false\n}\ndecoration {\n blur {\n enabled = false\n }\n shadow {\n enabled = false\n }\n}\nmisc {\n disable_hyprland_logo = true\n disable_splash_rendering = true\n}\nxwayland {\n enabled = false\n}\necosystem {\n no_update_news = true\n no_donation_nag = true\n}\n');
-  const before = new Set(instances().map((i) => i.instance));
   const { HYPRLAND_INSTANCE_SIGNATURE: _a, HYPRLAND_CONFIG: _b, DISPLAY: _c, ...cleanEnv } = process.env;
-  spawn('systemd-run', ['--user', '--scope', '--quiet', '--collect', `--unit=${UNIT}`, '--slice=app.slice', '--', 'Hyprland', '-c', config], {
+  const hyprland = spawn('systemd-run', ['--user', '--scope', '--quiet', '--collect', `--unit=${UNIT}`, '--slice=app.slice', '--', 'Hyprland', '-c', config], {
     env: { ...cleanEnv, WAYLAND_DISPLAY: sessionEnv.WAYLAND_DISPLAY }, detached: true, stdio: 'ignore'
-  }).unref();
+  });
+  hyprland.unref();
   let inst;
-  for (let i = 0; i < 60 && !(inst = instances().find((n) => !before.has(n.instance))); i++) await sleep(500);
+  for (let i = 0; i < 60 && !(inst = instances().find((n) => n.pid === hyprland.pid)); i++) await sleep(500);
   if (!inst) throw new Error('nested compositor did not start');
   const hypr = (...a) => execFileSync('hyprctl', a, { encoding: 'utf8', env: { ...process.env, HYPRLAND_INSTANCE_SIGNATURE: inst.instance } }).trim();
   const nested = JSON.parse(hypr('-j', 'monitors')).map((m) => m.name);
