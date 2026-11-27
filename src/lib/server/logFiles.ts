@@ -3,6 +3,12 @@ import { join } from 'node:path';
 
 export const MAX_LOG_BYTES = 16 * 1024 * 1024;
 
+const pad = (n: number, width = 2) => String(n).padStart(width, '0');
+
+export function logStamp(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+}
+
 export const logDir = (): string => join(process.cwd(), '.debug');
 
 export function rotatedName(logFile: string, at: Date, taken: (path: string) => boolean): string {

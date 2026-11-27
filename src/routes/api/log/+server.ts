@@ -1,16 +1,10 @@
 import { mkdirSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadavg, freemem, totalmem } from 'node:os';
-import { appendToLog, logDir } from '$lib/server/logFiles';
+import { appendToLog, logDir, logStamp } from '$lib/server/logFiles';
 import type { RequestHandler } from './$types';
 
 const CATEGORY_RE = /^[a-z][a-z0-9_]*$/;
-
-const pad = (n: number, width = 2) => String(n).padStart(width, '0');
-
-function logStamp(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
-}
 
 const SESSION_LINE = /^\[T\d+\] \[\w+\] session /;
 
@@ -43,7 +37,9 @@ function hostState(): string {
   const gib = (b: number) => (b / 2 ** 30).toFixed(1);
   return [
     powerState(),
-    `load=${loadavg().map((l) => l.toFixed(2)).join('/')}`,
+    `load=${loadavg()
+      .map((l) => l.toFixed(2))
+      .join('/')}`,
     `freeGb=${gib(freemem())}/${gib(totalmem())}`
   ].join(' ');
 }

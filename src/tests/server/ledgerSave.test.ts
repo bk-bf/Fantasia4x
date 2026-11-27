@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 import { POST } from '../../routes/api/ledger/save/+server';
+import { queueSave } from '$lib/server/ledgerSave';
+import { worldId } from '../../../tools/ledger/spool.mjs';
 import {
   serializeSave,
   LEDGER_META_HEADER,
@@ -40,7 +42,9 @@ const state = {
   ]
 } as unknown as GameState;
 
-const meta: LedgerCaptureMeta = {
+const meta = (over: Partial<LedgerCaptureMeta> = {}): LedgerCaptureMeta => ({
+  captureId: 'feed0001-0',
+  session: 'feed0001',
   reason: 'session',
   at: '2026-11-27T01:37:00.000Z',
   ms: 412,
@@ -54,8 +58,8 @@ const meta: LedgerCaptureMeta = {
   scenario: null,
   generatedBy: null,
   savedBy: 'c'.repeat(40),
-  parent: null
-};
+  ...over
+});
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -63,15 +67,19 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
-async function send(
-  body: BodyInit,
-  header: string | null = encodeURIComponent(JSON.stringify(meta))
-) {
+function scratchSpool(): string {
   const spool = mkdtempSync(join(tmpdir(), 'f4x-ledger-spool-'));
   dirs.push(spool);
   vi.stubEnv('F4X_LEDGER_SPOOL', spool);
   vi.stubEnv('CLAUDE_CODE_SESSION_ID', 'session-1');
   vi.stubEnv('F4X_MACHINE', 'laptop');
+  return spool;
+}
+
+async function send(
+  body: BodyInit,
+  header: string | null = encodeURIComponent(JSON.stringify(meta()))
+) {
   const headers = new Headers({ 'content-type': 'application/json' });
   if (header) headers.set(LEDGER_META_HEADER, header);
   const request = new Request('http://localhost/api/ledger/save', {
@@ -79,31 +87,39 @@ async function send(
     body,
     headers
   });
-  const res = await POST({ request } as Parameters<typeof POST>[0]);
-  return { res, spool };
+  return POST({ request } as Parameters<typeof POST>[0]);
 }
 
+const bytesOf = async (blob: Blob) => (await blob.arrayBuffer()).slice(0);
+
 describe('the ledger save route', () => {
-  it('spools the snapshot as a gzipped blob under an entry named for the sha256 of its JSON', async () => {
+  it('accepts the capture at once and spools it under the world id core computes', async () => {
+    const spool = scratchSpool();
     const body = serializeSave(state);
     const text = await body.text();
-    const { res, spool } = await send(body);
-    expect(res.status).toBe(200);
+    const res = await send(body);
+    expect(res.status).toBe(202);
     const receipt = await res.json();
-    expect(receipt.save).toBe(createHash('sha256').update(text).digest('hex'));
+    expect(receipt.captureId).toBe('feed0001-0');
 
-    const [entryFile] = readdirSync(join(spool, 'entries'));
-    const entry = JSON.parse(readFileSync(join(spool, 'entries', entryFile), 'utf8'));
-    expect(entry.id).toBe(receipt.entry);
+    const { spooled } = queueSave(
+      await bytesOf(body),
+      meta({ captureId: 'feed0001-1', reason: 'manual' })
+    );
+    await spooled;
+    const entries = readdirSync(join(spool, 'entries')).map((f) =>
+      JSON.parse(readFileSync(join(spool, 'entries', f), 'utf8'))
+    );
+    const entry = entries.find((e) => e.id === receipt.entry);
     expect(entry).toMatchObject({
       v: 1,
       kind: 'save',
-      at: meta.at,
+      at: '2026-11-27T01:37:00.000Z',
       machine: 'laptop',
       launchedBy: { who: 'agent', session: 'session-1' },
       scenario: 'save',
       world: {
-        save: receipt.save,
+        captureId: 'feed0001-0',
         name: 'slot-1',
         turn: 17136,
         seed: 4042420917,
@@ -113,7 +129,10 @@ describe('the ledger save route', () => {
         generatedBy: null,
         savedBy: 'c'.repeat(40)
       },
-      perf: { speed: '4x', capture: { reason: 'session', ms: 412, bytes: text.length } },
+      perf: {
+        speed: '4x',
+        capture: { reason: 'session', session: 'feed0001', ms: 412, bytes: text.length }
+      },
       parent: null
     });
     expect(entry.commit).toMatch(/^[0-9a-f]{40}$/);
@@ -123,13 +142,62 @@ describe('the ledger save route', () => {
     const gz = readFileSync(join(spool, 'blobs', file.sha256.slice(0, 2), file.sha256));
     expect(createHash('sha256').update(gz).digest('hex')).toBe(file.sha256);
     expect(file.bytes).toBe(gz.length);
-    const back = fromSnapshot(JSON.parse(gunzipSync(gz).toString('utf8')));
+    const snapshot = JSON.parse(gunzipSync(gz).toString('utf8'));
+    expect(entry.world.save).toBe(worldId(snapshot));
+    expect(entry.world.save).toBe(worldId({ dynamic: snapshot.dynamic, world: state.worldMap }));
+    const back = fromSnapshot(snapshot);
     expect(back.turn).toBe(17136);
     expect(back.worldMap[1][1].resources).toEqual({ stone: 3 });
   });
 
   it('refuses a body that is not a save snapshot, or one without its capture meta', async () => {
-    expect((await send('{"nope":1}')).res.status).toBe(400);
-    expect((await send(serializeSave(state), null)).res.status).toBe(400);
+    scratchSpool();
+    expect((await send('{"nope":1}')).status).toBe(400);
+    expect((await send(serializeSave(state), null)).status).toBe(400);
+  });
+});
+
+describe('queueing a capture for the spool', () => {
+  it('names the entry before any of the slow work has run', async () => {
+    scratchSpool();
+    let release = () => {};
+    const held = () =>
+      new Promise<{ save: string; entry: string; blob: string }>((done) => {
+        release = () => done({ save: 's', entry: 'e', blob: 'b' });
+      });
+    const body = await bytesOf(serializeSave(state));
+    const { entry, spooled } = queueSave(body, meta(), process.env, process.cwd(), held);
+    expect(entry).toMatch(/^\d{8}T\d{6}Z-laptop-[0-9a-f]{6}$/);
+    const settled = await Promise.race([
+      spooled.then(() => true),
+      new Promise((r) => setTimeout(() => r(false), 20))
+    ]);
+    expect(settled).toBe(false);
+    release();
+    await spooled;
+  });
+
+  it('ties each later capture to the session capture taken under its own token', async () => {
+    scratchSpool();
+    const parents: Array<[string, string | null]> = [];
+    const run = async (job: object) => {
+      const { meta: m, parent } = job as { meta: LedgerCaptureMeta; parent: string | null };
+      parents.push([m.captureId, parent]);
+      return { save: 's', entry: 'e', blob: 'b' };
+    };
+    const body = await bytesOf(serializeSave(state));
+    const queue = (over: Partial<LedgerCaptureMeta>) =>
+      queueSave(body.slice(0), meta(over), process.env, process.cwd(), run);
+    const a = queue({ session: 'aaaa0000', captureId: 'aaaa0000-0' });
+    const b = queue({ session: 'bbbb0000', captureId: 'bbbb0000-0' });
+    queue({ session: 'aaaa0000', captureId: 'aaaa0000-1', reason: 'periodic' });
+    const last = queue({ session: 'bbbb0000', captureId: 'bbbb0000-1', reason: 'manual' });
+    await last.spooled;
+    expect(parents).toEqual([
+      ['aaaa0000-0', null],
+      ['bbbb0000-0', null],
+      ['aaaa0000-1', a.entry],
+      ['bbbb0000-1', b.entry]
+    ]);
   });
 });
