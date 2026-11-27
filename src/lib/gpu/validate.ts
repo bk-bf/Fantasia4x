@@ -1,14 +1,14 @@
-import type { Webgl2Pipeline } from './pipeline.js';
+import type { VertexBufferLayout } from './device.js';
 
 type Range = readonly [number, number];
 
-export interface DrawnSlot {
-  buffer: WebGLBuffer;
+export interface DrawnSlot<B> {
+  buffer: B;
   offset: number;
 }
 
-export class Webgl2Validator {
-  private readonly read = new Map<WebGLBuffer, Range[]>();
+export class WriteValidator<B> {
+  private readonly read = new Map<B, Range[]>();
   private readonly sampled = new Set<unknown>();
 
   reset(): void {
@@ -16,7 +16,7 @@ export class Webgl2Validator {
     this.sampled.clear();
   }
 
-  readBuffer(buffer: WebGLBuffer, start: number, end: number): void {
+  readBuffer(buffer: B, start: number, end: number): void {
     const ranges = this.read.get(buffer);
     if (ranges) ranges.push([start, end]);
     else this.read.set(buffer, [[start, end]]);
@@ -32,12 +32,12 @@ export class Webgl2Validator {
   }
 
   draw(
-    p: Webgl2Pipeline,
-    slots: readonly (DrawnSlot | undefined)[],
+    layouts: readonly VertexBufferLayout[],
+    slots: readonly (DrawnSlot<B> | undefined)[],
     vertices: Range,
     instances: Range
   ): void {
-    p.buffers.forEach((layout, i) => {
+    layouts.forEach((layout, i) => {
       const slot = slots[i];
       if (!slot) return;
       const [first, end] = layout.stepMode === 'instance' ? instances : vertices;
@@ -49,7 +49,7 @@ export class Webgl2Validator {
     });
   }
 
-  write(buffer: WebGLBuffer, start: number, end: number): void {
+  write(buffer: B, start: number, end: number): void {
     for (const [s, e] of this.read.get(buffer) ?? []) {
       if (start < e && s < end)
         throw new Error(

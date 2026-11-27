@@ -26,7 +26,7 @@ import { Webgl2Pipelines, type Webgl2Pipeline } from './pipeline.js';
 import { Webgl2State } from './state.js';
 import { Webgl2VertexArrays } from './vertexArrays.js';
 import { CANVAS_COLOR, CANVAS_DEPTH, Webgl2Framebuffers } from './passes.js';
-import { Webgl2Validator } from './validate.js';
+import { WriteValidator } from '../validate.js';
 import { Webgl2Buffers } from './buffers.js';
 import { Webgl2Textures } from './textures.js';
 import { Webgl2BindGroups } from './bindGroups.js';
@@ -66,7 +66,7 @@ export class Webgl2Device implements GpuDevice {
   private readonly framebuffers: Webgl2Framebuffers;
   private readonly bindGroups: Webgl2BindGroups;
   private pipeline: Webgl2Pipeline | null = null;
-  private readonly validator: Webgl2Validator | null;
+  private readonly validator: WriteValidator<WebGLBuffer> | null;
   readonly queue: GpuQueue;
 
   constructor(
@@ -74,7 +74,7 @@ export class Webgl2Device implements GpuDevice {
     options: { validate?: boolean } = {}
   ) {
     const validator =
-      (options.validate ?? import.meta.env.MODE === 'test') ? new Webgl2Validator() : null;
+      (options.validate ?? import.meta.env.MODE === 'test') ? new WriteValidator<WebGLBuffer>() : null;
     this.validator = validator;
     const textures = new Webgl2Textures(
       gl,
@@ -277,7 +277,7 @@ export class Webgl2Device implements GpuDevice {
     this.vertexArrays.bind(p);
     this.bindGroups.apply(p);
     this.validator?.draw(
-      p,
+      p.buffers,
       this.vertexArrays.bound,
       [firstVertex, firstVertex + vertexCount],
       [firstInstance, firstInstance + (instanceCount ?? 1)]
