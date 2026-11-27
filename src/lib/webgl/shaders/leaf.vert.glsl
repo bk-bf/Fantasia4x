@@ -5,8 +5,6 @@ in float a_turn;
 in vec2 a_rgb;
 in vec3 a_look;
 
-uniform float u_basePerArt;
-
 flat out vec2 v_texel;
 flat out float v_turn;
 flat out vec2 v_rgb;

@@ -1,6 +1,7 @@
 import {
   BufferUsage,
   ShaderStage,
+  TextureUsage,
   type BindGroupDescriptor,
   type BindGroupLayoutEntry,
   type GlslSources,
@@ -23,6 +24,22 @@ export interface PassTexture {
 }
 
 const STAGES = ShaderStage.VERTEX | ShaderStage.FRAGMENT;
+
+const blanks = new WeakMap<GpuDevice, GpuTexture>();
+
+export function blankTexture(gpu: GpuDevice): GpuTexture {
+  let blank = blanks.get(gpu);
+  if (!blank) {
+    blank = gpu.createTexture({
+      format: 'rgba8unorm',
+      width: 1,
+      height: 1,
+      usage: TextureUsage.TEXTURE_BINDING
+    });
+    blanks.set(gpu, blank);
+  }
+  return blank;
+}
 
 export function blockSources(
   sources: GlslSources,
