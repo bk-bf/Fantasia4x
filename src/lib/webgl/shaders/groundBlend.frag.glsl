@@ -671,15 +671,12 @@ bool raggedKind(uint k) {
     return layer.y < 0.5 && layer.z >= 0.0 && metaAt(ivec2(layer.zw), AMOUNT).b > 0;
 }
 
-#define TREE_GROUND_CODE
-
 void main() {
     vec2 p = floor(v_art);
     uint own = kindAt(p);
     if (own == 0u) discard;
 
     vec2 w = warpAt(p);
-    vec2 tw = w;
 
     uint k = kindAt(w);
     if (k == 0u) k = own;
@@ -691,9 +688,7 @@ void main() {
     }
     vec4 layer = u_layer[k];
     vec3 c;
-    if (u_treeOnly == 1) {
-        if (layer.y > 0.5 || !treeGroundWinter(p, tw, k, c)) discard;
-    } else if (layer.y > 0.5) {
+    if (layer.y > 0.5) {
         if (!frozenAt(w, p, c))
             c = u_waterStyle == WAVE_STYLE ? waveWater(w, p, int(layer.y + 0.5)) : water(w, int(layer.y + 0.5), ivec2(p));
     } else {
@@ -714,7 +709,6 @@ void main() {
         vec2 downLayer = down == 0u ? layer.xy : u_layer[down].xy;
         if (upLayer.x > layer.x + LIP_STEP && upLayer.y < 0.5) c = darken(c, UNDER_HIGHER);
         else if (downLayer.x < layer.x - LIP_STEP && downLayer.x < LOW_GROUND) c = darken(c, ABOVE_LOW);
-        c = treeGroundOver(c, p, tw, k);
     }
 
     vec2 corner = v_art / u_tileArt;

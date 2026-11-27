@@ -1,10 +1,3 @@
-import {
-  readTreeGround,
-  resolveTreeGround,
-  type ManifestTreeGround,
-  type PaintedTreeGround
-} from './treeGroundManifest.js';
-
 export type PaintedKind = 'subterrain' | 'resource' | 'building' | 'creature' | 'pawn' | 'item';
 
 export const PAINTED_KINDS: readonly PaintedKind[] = [
@@ -100,7 +93,6 @@ export interface PaintedManifest {
   pieces?: Record<string, ManifestPieces>;
   drops?: ManifestDrops;
   trees?: Record<string, ManifestTree>;
-  treeGround?: ManifestTreeGround;
   water?: ManifestField;
   ground?: ManifestGround;
 }
@@ -236,7 +228,6 @@ export interface PaintedTileset {
   ground?: PaintedGround;
   drops?: PaintedDrops;
   trees: Map<string, PaintedTree>;
-  treeGround?: PaintedTreeGround;
 }
 
 const SCENERY: Readonly<Record<string, string>> = {
@@ -432,7 +423,7 @@ function readDrops(raw: unknown): ManifestDrops {
 
 export function parseManifest(raw: unknown): PaintedManifest {
   if (!isObject(raw)) throw new Error('manifest is not an object');
-  const { tile, atlas, sprites, map, pieces, drops, trees, treeGround, water, ground } = raw;
+  const { tile, atlas, sprites, map, pieces, drops, trees, water, ground } = raw;
   if (!isInt(tile) || tile <= 0) throw new Error('manifest tile is not a positive integer');
   if (!isObject(atlas) || !isInt(atlas.w) || !isInt(atlas.h) || atlas.w <= 0 || atlas.h <= 0)
     throw new Error('manifest atlas size is missing');
@@ -464,7 +455,6 @@ export function parseManifest(raw: unknown): PaintedManifest {
     out.trees = {};
     for (const [id, t] of Object.entries(trees)) out.trees[id] = readTree(id, t);
   }
-  if (treeGround !== undefined) out.treeGround = readTreeGround(treeGround);
   if (water !== undefined) out.water = readField('water', water);
   if (ground !== undefined) out.ground = readGround(ground);
   return out;
@@ -609,9 +599,6 @@ export function buildTileset(
     }
     if (whole) trees.set(id, tree);
   }
-  const treeGround =
-    m.treeGround &&
-    resolveTreeGround(m.treeGround, m.trees ?? {}, (sid) => variantOf(sid)?.cells[0], problems);
   return {
     tileset: {
       tile: m.tile,
@@ -623,7 +610,6 @@ export function buildTileset(
       pieces,
       scenery,
       trees,
-      ...(treeGround ? { treeGround } : null),
       ...(ground ? { ground } : null),
       ...(drops ? { drops } : null)
     },

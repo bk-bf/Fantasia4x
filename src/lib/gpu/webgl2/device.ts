@@ -3,7 +3,6 @@ import type {
   BufferUsage,
   ClearDescriptor,
   CompareFunction,
-  StencilState,
   GpuBuffer,
   GpuDevice,
   GpuLimits,
@@ -57,8 +56,6 @@ function errorName(gl: WebGL2RenderingContext, error: number): string {
       return `UNKNOWN_ERROR_${error}`;
   }
 }
-
-const STENCIL_MASK = 0xff;
 
 export class Webgl2Device implements GpuDevice {
   readonly backend = 'webgl2' as const;
@@ -315,10 +312,7 @@ export class Webgl2Device implements GpuDevice {
 
   clear(desc: ClearDescriptor): void {
     const gl = this.gl;
-    const mask =
-      (desc.color ? gl.COLOR_BUFFER_BIT : 0) |
-      (desc.depth ? gl.DEPTH_BUFFER_BIT : 0) |
-      (desc.stencil ? gl.STENCIL_BUFFER_BIT : 0);
+    const mask = (desc.color ? gl.COLOR_BUFFER_BIT : 0) | (desc.depth ? gl.DEPTH_BUFFER_BIT : 0);
     if (mask) gl.clear(mask);
   }
 
@@ -366,21 +360,6 @@ export class Webgl2Device implements GpuDevice {
 
   setDepthCompare(compare: CompareFunction): void {
     this.gl.depthFunc(compareFunction(this.gl, compare));
-  }
-
-  setStencil(state: StencilState | null): void {
-    const gl = this.gl;
-    if (!state) {
-      gl.disable(gl.STENCIL_TEST);
-      return;
-    }
-    gl.enable(gl.STENCIL_TEST);
-    gl.stencilFunc(
-      state.compare === 'always' ? gl.ALWAYS : gl.NOTEQUAL,
-      state.reference,
-      STENCIL_MASK
-    );
-    gl.stencilOp(gl.KEEP, gl.KEEP, state.write ? gl.REPLACE : gl.KEEP);
   }
 
   draw(t: PrimitiveTopology, vertexCount: number, firstVertex = 0): void {

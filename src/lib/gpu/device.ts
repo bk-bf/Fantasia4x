@@ -70,12 +70,6 @@ export type BlendFactor = 'zero' | 'one' | 'src' | 'src-alpha' | 'one-minus-src-
 
 export type CompareFunction = 'less' | 'less-equal';
 
-export interface StencilState {
-  compare: 'always' | 'not-equal';
-  reference: number;
-  write: boolean;
-}
-
 export interface ShaderSources {
   vertex: string;
   fragment: string;
@@ -112,7 +106,6 @@ export interface GpuLimits {
 export interface ClearDescriptor {
   color: boolean;
   depth?: boolean;
-  stencil?: boolean;
 }
 
 export interface GpuDevice {
@@ -182,7 +175,6 @@ export interface GpuDevice {
   setDepthTest(on: boolean): void;
   depthTestEnabled(): boolean;
   setDepthCompare(compare: CompareFunction): void;
-  setStencil(state: StencilState | null): void;
 
   draw(topology: PrimitiveTopology, vertexCount: number, firstVertex?: number): void;
   drawInstanced(
