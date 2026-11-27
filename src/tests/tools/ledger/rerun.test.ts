@@ -132,6 +132,7 @@ describe('finding the save to rerun', () => {
 });
 
 type Call = { host: string; script: string };
+type Deps = Parameters<typeof rerun>[2];
 
 function fakeDesktop(opts: { reachable?: boolean; failRound?: boolean } = {}) {
   const calls: Call[] = [];
@@ -177,7 +178,7 @@ describe('rerun on a machine', () => {
     ownerSave();
     const deps = fakeDesktop({ reachable: false });
     const o = parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev']);
-    await expect(rerun(root, o, deps, env)).rejects.toThrow(/desktop is unreachable/);
+    await expect(rerun(root, o, deps as unknown as Deps, env)).rejects.toThrow(/desktop is unreachable/);
     expect(deps.calls).toHaveLength(1);
   });
 
@@ -185,7 +186,7 @@ describe('rerun on a machine', () => {
     const { id: saveId } = ownerSave();
     const deps = fakeDesktop();
     const o = parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev', '--ref', 'origin/test/look-overhaul', '--rounds', '2']);
-    const ids = await rerun(root, o, deps, env);
+    const ids = await rerun(root, o, deps as unknown as Deps, env);
     expect(ids).toHaveLength(4);
     const entries = ids.map((id: string) => getEntry(root, id));
     expect(entries.map((e) => e.commit)).toEqual([SHA_DEV, SHA_LO, SHA_DEV, SHA_LO]);
@@ -207,7 +208,7 @@ describe('rerun on a machine', () => {
   it('keeps the worktrees with --keep and still clears the run directory', async () => {
     ownerSave();
     const deps = fakeDesktop();
-    await rerun(root, parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev', '--keep']), deps, env);
+    await rerun(root, parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev', '--keep']), deps as unknown as Deps, env);
     const cleanup = deps.calls.find((c) => c.script.includes("'cleanup'"))!.script;
     expect(cleanup).toContain('.cache/f4x-ledger-rerun/');
     expect(cleanup).not.toContain('ledger-rerun-');
@@ -216,7 +217,7 @@ describe('rerun on a machine', () => {
   it('records nothing for a round that failed and still cleans up', async () => {
     ownerSave();
     const deps = fakeDesktop({ failRound: true });
-    await expect(rerun(root, parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev']), deps, env)).rejects.toThrow(/round 1/);
+    await expect(rerun(root, parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev']), deps as unknown as Deps, env)).rejects.toThrow(/round 1/);
     expect(listEntries(root, { kind: 'harness' })).toEqual([]);
     expect(deps.calls.some((c) => c.script.includes("'cleanup'"))).toBe(true);
   });

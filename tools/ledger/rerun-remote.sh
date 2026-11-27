@@ -9,7 +9,7 @@ toolchain() {
 
 quiet() {
   echo "load=$(cut -d' ' -f1-3 /proc/loadavg)"
-  pgrep -af '[f]rame-cost\.mjs|[s]teady\.mjs|[z]oom-out\.mjs|[a]ttach-trace\.mjs|[t]ickprof/|[v]itest|[w]ork-pins/' | sed 's/^/busy=/' || true
+  pgrep -af '^[^ ]*node( [^ ]+)* [^ ]*(tools/gpu/[a-z-]+\.mjs|vitest)' | sed 's/^/busy=/' || true
 }
 
 prepare() {
