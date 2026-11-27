@@ -271,6 +271,15 @@ describe('perf.log sessions', () => {
     );
   });
 
+  it('reads a session line written twice in a row as one session', () => {
+    const log = join(dir, 'perf.log');
+    writeFileSync(log, [SESSION_B, SESSION_B, tps('14:48:44.414', 6060, 60, '1x')].join('\n') + '\n');
+    const r = ingestPerfLog(dir, { machine: 'laptop', checkout: 'c', paths: [log], timeZone: 'Europe/Berlin', now: Date.parse('2026-11-28T00:00:00Z') });
+    expect(r).toMatchObject({ created: 1, known: 0 });
+    const plays = listEntries(dir, { kind: 'play' }) as unknown as (Entry & { parent: string | null })[];
+    expect(plays.map((e) => [e.perf.lines, e.parent])).toEqual([[{ from: 0, to: 2 }, null]]);
+  });
+
   it('records lines written after a session closed as a continuation of its entry', () => {
     const log = join(dir, 'perf.log');
     const head = [SESSION_B, tps('14:48:44.414', 6060, 60, '1x')];

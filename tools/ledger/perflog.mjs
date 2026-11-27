@@ -119,7 +119,11 @@ export function splitSessions(text, timeZone) {
   let cur = null;
   const lines = text.split('\n');
   if (lines[lines.length - 1] === '') lines.pop();
+  let previous = null;
   for (const raw of lines) {
+    const repeated = raw === previous && cur?.lines.length === 1;
+    previous = raw;
+    if (repeated) continue;
     const line = parseLine(raw, timeZone);
     if (line.type === 'session' || line.type === 'reset' || !cur) {
       cur = { start: line, lines: [] };
