@@ -1,4 +1,5 @@
 import source from '../shaders/treeGround.glsl?raw';
+import wgslSource from '../shaders/treeGround.wgsl?raw';
 import { GameGrid } from '../game-grid.js';
 import type { GpuDevice, GpuTexture } from '../../gpu/device.js';
 import { SizedTexture } from '../sizedTexture.js';
@@ -17,6 +18,8 @@ const VIEW_MARGIN = 3;
 const MARKER = '#define TREE_GROUND_CODE\n';
 
 export const withTreeGround = (shader: string): string => shader.replace(MARKER, `${source}\n`);
+
+export const withTreeGroundWgsl = (shader: string): string => `${shader}\n${wgslSource}`;
 
 type Tile = { x: number; y: number };
 type Rect = { x0: number; y0: number; x1: number; y1: number };

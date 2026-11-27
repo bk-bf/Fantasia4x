@@ -1,5 +1,6 @@
 import vertexSource from '../shaders/groundBlend.vert.glsl?raw';
 import fragmentSource from '../shaders/groundBlend.frag.glsl?raw';
+import wgslSource from '../shaders/groundBlend.wgsl?raw';
 import type { GameGrid } from '../game-grid.js';
 import type { ShaderManager } from '../shaders.js';
 import { BASE_TILE_PX } from '../tile-types.js';
@@ -22,7 +23,7 @@ import {
   type GpuTexture,
   type StencilFaceState
 } from '../../gpu/device.js';
-import { TreeGroundLayer, withTreeGround } from './treeGroundLayer.js';
+import { TreeGroundLayer, withTreeGround, withTreeGroundWgsl } from './treeGroundLayer.js';
 import { treeSoils } from './treeGroundTable.js';
 import type { TreeSoil } from './treeGroundManifest.js';
 import { uniformLayout, type UniformMember } from '../../gpu/uniforms.js';
@@ -217,6 +218,7 @@ export class GroundBlend {
       canvasPipeline(gpu, {
         vertex: vertexSource,
         fragment: withTreeGround(fragmentSource),
+        wgsl: withTreeGroundWgsl(wgslSource),
         attributes: { a_position: 0 },
         buffers: [
           {
