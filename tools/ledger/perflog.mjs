@@ -5,6 +5,7 @@ const RESET = /^=== log reset at (\S+) /;
 const TPS = /^tps=(\d+(?:\.\d+)?) speed=(\S+) pawns=(\d+) mobs=(\d+)/;
 const FPS = /^render fps=(\d+(?:\.\d+)?) /;
 const CAPTURE = /^ledger (save=\S+|save cap=\S+|failed) /;
+const LEDGER_SESSION = /^ledger capture=\S+ .*\bsession=(\S+)/;
 const TOKEN = /(\w+)=("(?:[^"]*)"|\S+)/g;
 const HOUR = 3600_000;
 
@@ -155,46 +156,76 @@ function dominant(groups) {
   return best;
 }
 
-export function sessionPerf(session, resolve = () => null) {
+export function ledgerSession(session) {
+  for (const l of session.lines) {
+    const m = LEDGER_SESSION.exec(l.msg);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+function failedCaptures(session) {
+  return session.lines.filter((l) => l.type === 'capture' && l.msg.startsWith('ledger failed')).map((l) => ({ line: l, t: tokens(l.msg) }));
+}
+
+function logCheckpoints(session, resolve) {
+  const failed = new Set(failedCaptures(session).map((f) => f.t.cap).filter(Boolean));
+  const out = [];
+  session.lines.forEach((line, index) => {
+    if (line.type !== 'capture' || line.msg.startsWith('ledger failed')) return;
+    const t = tokens(line.msg);
+    if (!t.save && !t.cap) return;
+    if (t.cap && failed.has(t.cap)) return;
+    const found = t.cap ? resolve(t.cap) : null;
+    out.push({
+      save: t.save ?? found?.save ?? null,
+      capture: t.cap ?? null,
+      reason: t.reason ?? null,
+      turn: num(t.turn) ?? line.turn,
+      at: t.at ?? (line.at == null ? null : new Date(line.at).toISOString()),
+      ms: num(t.ms) ?? 0,
+      entry: t.entry ?? found?.entry ?? null,
+      index
+    });
+  });
+  return out;
+}
+
+export function sessionPerf(session, resolve = () => null, fromEntries = []) {
   const header = session.start.type === 'session' ? sessionHeader(session.start.msg) : null;
-  const checkpoints = [];
+  const logged = logCheckpoints(session, resolve);
+  const seen = new Set(logged.map((c) => c.capture).filter(Boolean));
+  const checkpoints = [...logged, ...fromEntries.filter((c) => !seen.has(c.capture)).map((c) => ({ ...c, index: null }))].sort(
+    (a, b) => (Date.parse(a.at ?? '') || 0) - (Date.parse(b.at ?? '') || 0) || (a.turn ?? 0) - (b.turn ?? 0)
+  );
+  const timed = checkpoints.every((c) => !Number.isNaN(Date.parse(c.at ?? '')));
+  const windows = [
+    ...checkpoints.map((c) => [Date.parse(c.at ?? ''), c.ms ?? 0]),
+    ...session.lines
+      .filter((l) => l.type === 'capture')
+      .map((l) => tokens(l.msg))
+      .map((t) => [Date.parse(t.at ?? ''), num(t.ms) ?? 0])
+  ]
+    .filter(([a]) => !Number.isNaN(a))
+    .map(([a, ms]) => [a, a + ms]);
+  const stalled = (from, to) => windows.some(([a, b]) => a < to && b > from);
+  const stretchOf = (line, index) =>
+    timed && line.at != null
+      ? checkpoints.filter((c) => Date.parse(c.at) < line.at).length
+      : checkpoints.filter((c) => c.index != null && c.index < index).length;
   const tps = [];
   const fps = [];
-  const windows = session.lines
-    .filter((l) => l.type === 'capture')
-    .map((l) => {
-      const t = tokens(l.msg);
-      const ms = num(t.ms) ?? 0;
-      const from = Date.parse(t.at ?? '') || (l.at == null ? null : l.at - ms);
-      return from == null ? null : [from, from + ms];
-    })
-    .filter(Boolean);
-  const stalled = (from, to) => windows.some(([a, b]) => a < to && b > from);
   let lastTps = null;
   const changes = [];
   let power = header?.host ?? {};
-  for (const line of session.lines) {
-    if (line.type === 'capture') {
-      const t = tokens(line.msg);
-      const ms = num(t.ms) ?? 0;
-      if (!t.save && !t.cap) continue;
-      const found = t.cap ? resolve(t.cap) : null;
-      checkpoints.push({
-        save: t.save ?? found?.save ?? null,
-        capture: t.cap ?? null,
-        reason: t.reason ?? null,
-        turn: num(t.turn) ?? line.turn,
-        at: t.at ?? (line.at == null ? null : new Date(line.at).toISOString()),
-        ms,
-        entry: t.entry ?? found?.entry ?? null
-      });
-    } else if (line.type === 'tps') {
+  session.lines.forEach((line, index) => {
+    if (line.type === 'tps') {
       const since = lastTps ?? (line.at == null ? null : line.at - 1000);
       if (line.at != null) lastTps = line.at;
-      if (line.at != null && stalled(since, line.at)) continue;
-      if (!running(line)) continue;
+      if (line.at != null && stalled(since, line.at)) return;
+      if (!running(line)) return;
       const [, value, speed] = TPS.exec(line.msg);
-      tps.push({ value: Number(value), speed, turn: line.turn, stretch: checkpoints.length });
+      tps.push({ value: Number(value), speed, turn: line.turn, stretch: stretchOf(line, index) });
     } else if (line.type === 'fps') {
       const t = tokens(line.msg.split('|')[1] ?? '');
       fps.push({
@@ -206,7 +237,8 @@ export function sessionPerf(session, resolve = () => null) {
       power = { ...power, ...tokens(line.msg) };
       changes.push({ at: line.at == null ? null : new Date(line.at).toISOString(), ...tokens(line.msg) });
     }
-  }
+  });
+  for (const c of checkpoints) delete c.index;
   const speeds = bySpeed(tps);
   const speed = dominant(speeds);
   const turns = session.lines

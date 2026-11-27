@@ -314,6 +314,65 @@ describe('checkpoints by capture id', () => {
     expect(listEntries(dir, { world: 'cccc' }).map((e) => e.id)).toContain(play.id);
   });
 
+  it('places a checkpoint from its save entry when the perf.log line was lost, and merges one seen in both', () => {
+    const spooled = (seq: number, at: string, turn: number, world: string) => ({
+      v: 1,
+      id: newId('laptop', new Date(at)),
+      kind: 'save',
+      machine: 'laptop',
+      at,
+      world: { save: world, captureId: `tok1-${seq}`, turn },
+      perf: { speed: '1x', capture: { reason: 'periodic', session: 'tok1', ms: 1500 } },
+      files: []
+    });
+    const lost = spooled(0, '2026-11-27T13:48:45.000Z', 6100, 'e'.repeat(64));
+    const kept = spooled(1, '2026-11-27T13:48:50.000Z', 6400, 'f'.repeat(64));
+    putEntry(dir, lost);
+    putEntry(dir, kept);
+    putEntry(dir, { ...spooled(0, '2026-11-27T13:48:46.000Z', 6100, '9'.repeat(64)), machine: 'desktop', id: newId('desktop', new Date('2026-11-27T13:48:46Z')) });
+    const log = join(dir, 'perf.log');
+    writeFileSync(
+      log,
+      [
+        SESSION_B,
+        '2026-11-27 14:48:43.500 [T06000] [info] ledger capture=on interval=120s session=tok1',
+        tps('14:48:44.414', 6060, 60, '1x'),
+        tps('14:48:45.414', 6120, 20, '1x'),
+        tps('14:48:46.414', 6180, 30, '1x'),
+        tps('14:48:47.414', 6240, 40, '1x'),
+        tps('14:48:48.414', 6300, 70, '1x'),
+        tps('14:48:49.414', 6360, 72, '1x'),
+        '2026-11-27 14:48:50.100 [T06400] [info] ledger save cap=tok1-1 reason=periodic turn=6400 at=2026-11-27T13:48:50.000Z ms=1500 speed=1x bytes=10',
+        tps('14:48:52.414', 6500, 80, '1x'),
+        tps('14:48:53.414', 6560, 81, '1x')
+      ].join('\n') + '\n'
+    );
+    ingestPerfLog(dir, opts(log));
+    const [play] = listEntries(dir, { kind: 'play' }) as unknown as (Entry & {
+      perf: { checkpoints: { capture: string; save: string; entry: string }[]; stretches: { tps: Record<string, Stats> }[] };
+    })[];
+    expect(play.perf.checkpoints.map((c) => [c.capture, c.save[0], c.entry])).toEqual([
+      ['tok1-0', 'e', lost.id],
+      ['tok1-1', 'f', kept.id]
+    ]);
+    expect(play.perf.stretches.map((st) => st.tps['1x']?.n ?? 0)).toEqual([1, 2, 1]);
+    expect(play.perf.stretches[1].tps['1x'].median).toBe(72);
+  });
+
+  it('does not make a checkpoint of a capture that failed', () => {
+    const lines = [
+      SESSION_B,
+      '2026-11-27 14:48:45.000 [T06100] [info] ledger save cap=tok2-0 reason=manual turn=6100 at=2026-11-27T13:48:45.000Z ms=900 speed=1x bytes=10',
+      tps('14:48:45.414', 6120, 20, '1x'),
+      '2026-11-27 14:48:46.000 [T06100] [error] ledger failed cap=tok2-0 error="disk full"',
+      tps('14:48:46.414', 6180, 30, '1x'),
+      tps('14:48:47.414', 6240, 61, '1x')
+    ].join('\n');
+    const perf = sessionPerf(splitSessions(lines, 'Europe/Berlin')[0]) as unknown as Perf;
+    expect(perf.perf.checkpoints).toEqual([]);
+    expect((perf.perf as unknown as { tps: Stats }).tps).toMatchObject({ median: 61, n: 1 });
+  });
+
   it('finds a session by the world of a save that arrived after it', () => {
     const log = join(dir, 'perf.log');
     writeFileSync(log, capLog('cap-2'));

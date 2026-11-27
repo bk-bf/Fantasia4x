@@ -219,6 +219,14 @@ export function keyedEntry(root, key) {
   return existsSync(p) ? readFileSync(p, 'utf8').trim() : null;
 }
 
+export function rememberKey(root, key, id) {
+  return withLock(root, () => {
+    if (keyedEntry(root, key)) return false;
+    writeOnce(keyPath(root, key), id + '\n');
+    return true;
+  });
+}
+
 export function putKeyed(root, key, entry) {
   return withLock(root, () => {
     const existing = keyedEntry(root, key);

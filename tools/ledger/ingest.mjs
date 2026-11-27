@@ -4,8 +4,8 @@ import { readFileSync, statSync } from 'node:fs';
 import { basename } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { fileRef, newId, sha256Of, worldId as worldIdOfSnapshot } from './spool.mjs';
-import { isOpen, sessionPerf, sessionTimes, splitSessions } from './perflog.mjs';
-import { allEntries, getEntry, keyedEntry, putBlob, putKeyed } from './store.mjs';
+import { isOpen, ledgerSession, sessionPerf, sessionTimes, splitSessions } from './perflog.mjs';
+import { allEntries, getEntry, keyedEntry, putBlob, putKeyed, rememberKey } from './store.mjs';
 import { withInvalid } from './invalid.mjs';
 
 const REPO = new URL('../..', import.meta.url).pathname;
@@ -41,6 +41,20 @@ function sessionKey(machine, checkout, session) {
 }
 
 export const captureOf = (e) => e.captureId ?? e.world?.captureId ?? null;
+
+export function capturesOf(root, machine, token) {
+  return allEntries(root)
+    .filter((e) => e.kind === 'save' && e.machine === machine && (captureOf(e) ?? '').startsWith(`${token}-`))
+    .map((e) => ({
+      save: e.world?.save ?? null,
+      capture: captureOf(e),
+      reason: e.perf?.capture?.reason ?? null,
+      turn: e.world?.turn ?? null,
+      at: e.at ?? null,
+      ms: e.perf?.capture?.ms ?? 0,
+      entry: e.id
+    }));
+}
 
 export function captureIndex(root) {
   const out = new Map();
@@ -96,8 +110,16 @@ export function ingestPerfLog(root, opts) {
       continue;
     }
     const part = from ? { ...session, lines: session.lines.slice(from) } : session;
-    const { header, perf, host, save } = sessionPerf(part, resolve);
     const { start, end } = from ? sessionTimes({ start: part.lines.find((l) => l.at != null) ?? part.lines[0], lines: part.lines }) : sessionTimes(session);
+    const token = ledgerSession(session);
+    const spooled = token
+      ? capturesOf(root, machine, token).filter((c) => {
+          const t = Date.parse(c.at ?? '');
+          if (Number.isNaN(t)) return !from;
+          return (start == null || !from || t >= start) && (end == null || t <= end + 60_000);
+        })
+      : [];
+    const { header, perf, host, save } = sessionPerf(part, resolve, spooled);
     const body = Buffer.from(part.lines.map((l) => l.raw).join('\n') + '\n');
     const sha = putBlob(root, body);
     const notes = [note];
@@ -181,11 +203,17 @@ export function ingestSave(root, opts) {
   const isGz = gz[0] === 0x1f && gz[1] === 0x8b;
   const text = isGz ? gunzipSync(gz) : gz;
   if (!isGz) gz = gzipSync(text);
+  const bytesKey = `save-bytes|${sha256Of(text)}`;
+  const seen = keyedEntry(root, bytesKey);
+  if (seen) return { id: seen, worldId: getEntry(root, seen).world.save, created: false };
   const snapshot = JSON.parse(text);
   const worldId = worldIdOfSnapshot(snapshot);
   const key = `save|${worldId}`;
   const known = keyedEntry(root, key);
-  if (known) return { id: known, worldId, created: false };
+  if (known) {
+    rememberKey(root, bytesKey, known);
+    return { id: known, worldId, created: false };
+  }
   const info = describeSave(snapshot);
   const amended = opts.amend?.(worldId, info) ?? {};
   const sha = putBlob(root, gz);
@@ -213,6 +241,7 @@ export function ingestSave(root, opts) {
     note: [note, ...(amended.notes ?? [])].filter(Boolean).join('; ')
   };
   const r = putKeyed(root, key, entry);
+  rememberKey(root, bytesKey, r.id);
   return { id: r.id, worldId, created: r.created };
 }
 
