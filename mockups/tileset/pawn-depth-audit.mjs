@@ -54,7 +54,7 @@ function frame(G, kind, over, anim, face, u, loadId, seed) {
   const pose = G.posed(anim, def, u, c);
   G.fitted(A, pose);
   const layer = pose.carry && load ? G.HAUL.layer(load, pose.carry, c.face, pose.down > .5) : null;
-  if (layer) pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0, layer.draped ? 1 : 0, layer.yoked ? 1 : 0, layer.spr.head ? layer.spr.head[1] : -1];
+  if (layer) pose.load = [layer.spr.w, layer.spr.h, ...layer.grip, ...(layer.hand || layer.grip), layer.rows ? 1 : 0, layer.draped ? 1 : 0, layer.yoked ? 1 : 0, layer.spr.head ? layer.spr.head[1] : -1, layer.under ? 1 : 0];
   const rigged = look ? G.drawLook(look, face, null, JSON.parse(quant(pose, TURN)), A.gear) : G.rigPawn(A.o, JSON.parse(quant(pose, TURN)));
   const lying = pose.lie && !look ? G.rigPawnLie(A.o, { br: pose.br ? 1 : 0, rest: pose.rest ? 1 : 0, out: pose.out ? 1 : 0, bent: pose.bent ? 1 : 0 }) : null;
   return { spr: layer && rigged.mask ? G.MOTION_LOAD.put(rigged, layer) : rigged, rigged, pose, lying, seed: A.seed, fused: !!(layer && layer.fused), level: !!(layer && layer.rows), long: !!(load && (load.family === 'long' || load.slim || load.storage === 'shield')), layer, load: load ? { ...load, figure: load.storage === 'body' || /_carcass$/.test(load.id), person: PEOPLE.includes(load.id) } : null, fullLoad: layer ? solid(G.DBX.built(G.DBX.byId.get(layer.sprite))) : 0 };

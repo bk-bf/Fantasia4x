@@ -9,12 +9,12 @@
   },
   "bulky": {
    "items": 262,
-   "holds": { "chest": 261, "drape": 1 },
+   "holds": { "chest": 261, "cradle": 1 },
    "storage": { "baskets": 14, "hides": 82, "bundles": 16, "rubble": 23, "heap": 17, "bars": 9, "vessel": 10, "torso": 42, "bone": 1, "meat": 10, "pack": 15, "shield": 8, "axe": 5, "hammer": 1, "sword": 1, "bow": 3, "helm": 3, "sundry": 1, "greaves": 1 }
   },
   "heavy": {
    "items": 91,
-   "holds": { "low": 38, "game": 23, "shoulder": 25, "drape": 5 },
+   "holds": { "low": 38, "game": 23, "shoulder": 25, "cradle": 5 },
    "storage": { "sacks": 25, "meat": 27, "logs": 14, "planks": 11, "blocks": 10, "body": 1, "torso": 1, "hauler": 2 }
   }
  },
@@ -852,8 +852,8 @@
    "cycle": 11.612903225806452,
    "held": {
     "s": {
-     "at": 0.28,
-     "palm": "under"
+     "at": 0.95,
+     "palm": "around"
     },
     "f": {
      "at": 7,
@@ -1404,7 +1404,7 @@
     }
    }
   },
-  "drape": {
+  "cradle": {
    "items": 6,
    "walk": "rescue",
    "stand": "rescueStand",
@@ -1412,268 +1412,268 @@
    "cycle": 9.999999999999998,
    "held": {
     "s": {
-     "at": 0.25,
-     "palm": "around"
+     "at": 0.95,
+     "palm": "under"
     },
     "f": {
-     "at": 0.25,
-     "palm": "around"
+     "at": 6,
+     "palm": "under"
     },
     "b": {
-     "at": 0.35,
-     "palm": "around"
+     "at": -6,
+     "palm": "under"
     }
    },
    "anchors": {
     "human": {
      "walk": {
-      "s": [ [1, -18], [0, -20], [0, -20], [1, -18], [1, -18], [0, -20], [0, -20], [1, -18] ],
-      "f": [ [0, -4], [1, -6], [1, -6], [0, -4], [0, -4], [-1, -5], [-1, -5], [0, -4] ],
+      "s": [ [4, -10], [4, -12], [4, -12], [4, -10], [4, -10], [4, -12], [4, -12], [4, -10] ],
+      "f": [ [0, -5], [1, -7], [1, -7], [0, -5], [0, -5], [-1, -7], [-1, -7], [0, -5] ],
       "b": [ [0, -10], [-1, -12], [-1, -12], [0, -10], [0, -10], [1, -12], [1, -12], [0, -10] ]
      },
      "stand": {
-      "s": [ [1, -19], [1, -20], [1, -20], [1, -19] ],
-      "f": [ [0, -5], [0, -6], [0, -6], [0, -5] ],
+      "s": [ [4, -11], [4, -12], [4, -12], [4, -11] ],
+      "f": [ [0, -6], [0, -7], [0, -7], [0, -6] ],
       "b": [ [0, -11], [0, -12], [0, -12], [0, -11] ]
      }
     },
     "dwarf": {
      "walk": {
-      "s": [ [1, -15], [0, -16], [0, -16], [1, -15], [1, -15], [0, -16], [0, -16], [1, -15] ],
-      "f": [ [0, -1], [1, -2], [1, -2], [0, -1], [0, -1], [-1, -1], [-1, -1], [0, -1] ],
+      "s": [ [4, -7], [4, -8], [4, -8], [4, -7], [4, -7], [4, -8], [4, -8], [4, -7] ],
+      "f": [ [0, -2], [1, -3], [1, -3], [0, -2], [0, -2], [-1, -3], [-1, -3], [0, -2] ],
       "b": [ [0, -7], [-1, -8], [-1, -8], [0, -7], [0, -7], [1, -8], [1, -8], [0, -7] ]
      },
      "stand": {
-      "s": [ [1, -15], [1, -16], [1, -16], [1, -15] ],
-      "f": [ [0, -1], [0, -2], [0, -2], [0, -1] ],
+      "s": [ [4, -7], [4, -8], [4, -8], [4, -7] ],
+      "f": [ [0, -2], [0, -3], [0, -3], [0, -2] ],
       "b": [ [0, -7], [0, -8], [0, -8], [0, -7] ]
      }
     },
     "elf": {
      "walk": {
-      "s": [ [1, -20], [0, -21], [0, -21], [1, -20], [1, -20], [0, -21], [0, -21], [1, -20] ],
-      "f": [ [0, -6], [1, -7], [1, -7], [0, -6], [0, -6], [-1, -6], [-1, -6], [0, -6] ],
+      "s": [ [4, -12], [4, -13], [4, -13], [4, -12], [4, -12], [4, -13], [4, -13], [4, -12] ],
+      "f": [ [0, -7], [1, -8], [1, -8], [0, -7], [0, -7], [-1, -8], [-1, -8], [0, -7] ],
       "b": [ [0, -12], [-1, -13], [-1, -13], [0, -12], [0, -12], [1, -13], [1, -13], [0, -12] ]
      },
      "stand": {
-      "s": [ [1, -21], [1, -22], [1, -22], [1, -21] ],
-      "f": [ [0, -7], [0, -8], [0, -8], [0, -7] ],
+      "s": [ [4, -13], [4, -14], [4, -14], [4, -13] ],
+      "f": [ [0, -8], [0, -9], [0, -9], [0, -8] ],
       "b": [ [0, -13], [0, -14], [0, -14], [0, -13] ]
      }
     },
     "orc": {
      "walk": {
-      "s": [ [1, -19], [0, -21], [0, -21], [1, -19], [1, -19], [0, -21], [0, -21], [1, -19] ],
-      "f": [ [0, -4], [1, -6], [1, -6], [0, -4], [0, -4], [-1, -5], [-1, -5], [0, -4] ],
+      "s": [ [4, -10], [4, -12], [4, -12], [4, -10], [4, -10], [4, -12], [4, -12], [4, -10] ],
+      "f": [ [0, -5], [1, -7], [1, -7], [0, -5], [0, -5], [-1, -7], [-1, -7], [0, -5] ],
       "b": [ [0, -10], [-1, -12], [-1, -12], [0, -10], [0, -10], [1, -12], [1, -12], [0, -10] ]
      },
      "stand": {
-      "s": [ [1, -20], [1, -21], [1, -21], [1, -20] ],
-      "f": [ [0, -5], [0, -6], [0, -6], [0, -5] ],
+      "s": [ [4, -11], [4, -12], [4, -12], [4, -11] ],
+      "f": [ [0, -6], [0, -7], [0, -7], [0, -6] ],
       "b": [ [0, -11], [0, -12], [0, -12], [0, -11] ]
      }
     },
     "goblin": {
      "walk": {
-      "s": [ [1, -12], [0, -13], [0, -13], [1, -12], [1, -12], [0, -13], [0, -13], [1, -12] ],
+      "s": [ [2, -6], [2, -7], [2, -7], [2, -6], [2, -6], [2, -7], [2, -7], [2, -6] ],
       "f": [ [0, -1], [1, -2], [1, -2], [0, -1], [0, -1], [-1, -2], [-1, -2], [0, -1] ],
       "b": [ [0, -7], [-1, -8], [-1, -8], [0, -7], [0, -7], [1, -8], [1, -8], [0, -7] ]
      },
      "stand": {
-      "s": [ [1, -12], [1, -13], [1, -13], [1, -12] ],
+      "s": [ [2, -6], [2, -7], [2, -7], [2, -6] ],
       "f": [ [0, -1], [0, -2], [0, -2], [0, -1] ],
       "b": [ [0, -7], [0, -8], [0, -8], [0, -7] ]
      }
     },
     "kobold": {
      "walk": {
-      "s": [ [1, -12], [0, -13], [0, -13], [1, -12], [1, -12], [0, -13], [0, -13], [1, -12] ],
+      "s": [ [2, -6], [2, -7], [2, -7], [2, -6], [2, -6], [2, -7], [2, -7], [2, -6] ],
       "f": [ [0, -1], [1, -2], [1, -2], [0, -1], [0, -1], [-1, -2], [-1, -2], [0, -1] ],
       "b": [ [0, -7], [-1, -8], [-1, -8], [0, -7], [0, -7], [1, -8], [1, -8], [0, -7] ]
      },
      "stand": {
-      "s": [ [1, -12], [1, -13], [1, -13], [1, -12] ],
+      "s": [ [2, -6], [2, -7], [2, -7], [2, -6] ],
       "f": [ [0, -1], [0, -2], [0, -2], [0, -1] ],
       "b": [ [0, -7], [0, -8], [0, -8], [0, -7] ]
      }
     },
     "gnoll": {
      "walk": {
-      "s": [ [1, -20], [0, -21], [0, -21], [1, -20], [1, -20], [0, -21], [0, -21], [1, -20] ],
-      "f": [ [0, -6], [1, -7], [1, -7], [0, -6], [0, -6], [-1, -6], [-1, -6], [0, -6] ],
+      "s": [ [4, -12], [4, -13], [4, -13], [4, -12], [4, -12], [4, -13], [4, -13], [4, -12] ],
+      "f": [ [0, -7], [1, -8], [1, -8], [0, -7], [0, -7], [-1, -8], [-1, -8], [0, -7] ],
       "b": [ [0, -12], [-1, -13], [-1, -13], [0, -12], [0, -12], [1, -13], [1, -13], [0, -12] ]
      },
      "stand": {
-      "s": [ [1, -21], [1, -22], [1, -22], [1, -21] ],
-      "f": [ [0, -7], [0, -8], [0, -8], [0, -7] ],
+      "s": [ [4, -13], [4, -14], [4, -14], [4, -13] ],
+      "f": [ [0, -8], [0, -9], [0, -9], [0, -8] ],
       "b": [ [0, -13], [0, -14], [0, -14], [0, -13] ]
      }
     },
     "goblin_small": {
      "walk": {
-      "s": [ [1, -10], [0, -11], [0, -11], [1, -10], [1, -10], [0, -11], [0, -11], [1, -10] ],
+      "s": [ [1, -5], [1, -6], [1, -6], [1, -5], [1, -5], [1, -6], [1, -6], [1, -5] ],
       "f": [ [0, 0], [1, -1], [1, -1], [0, 0], [0, 0], [-1, -1], [-1, -1], [0, 0] ],
       "b": [ [0, -6], [-1, -7], [-1, -7], [0, -6], [0, -6], [1, -7], [1, -7], [0, -6] ]
      },
      "stand": {
-      "s": [ [1, -10], [1, -11], [1, -11], [1, -10] ],
+      "s": [ [1, -5], [1, -6], [1, -6], [1, -5] ],
       "f": [ [0, 0], [0, -1], [0, -1], [0, 0] ],
       "b": [ [0, -6], [0, -7], [0, -7], [0, -6] ]
      }
     },
     "hobgoblin": {
      "walk": {
-      "s": [ [1, -17], [0, -19], [0, -19], [1, -17], [1, -17], [0, -19], [0, -19], [1, -17] ],
-      "f": [ [0, -3], [1, -5], [1, -5], [0, -3], [0, -3], [-1, -4], [-1, -4], [0, -3] ],
+      "s": [ [4, -9], [4, -11], [4, -11], [4, -9], [4, -9], [4, -11], [4, -11], [4, -9] ],
+      "f": [ [0, -4], [1, -6], [1, -6], [0, -4], [0, -4], [-1, -6], [-1, -6], [0, -4] ],
       "b": [ [0, -9], [-1, -11], [-1, -11], [0, -9], [0, -9], [1, -11], [1, -11], [0, -9] ]
      },
      "stand": {
-      "s": [ [1, -18], [1, -19], [1, -19], [1, -18] ],
-      "f": [ [0, -4], [0, -5], [0, -5], [0, -4] ],
+      "s": [ [4, -10], [4, -11], [4, -11], [4, -10] ],
+      "f": [ [0, -5], [0, -6], [0, -6], [0, -5] ],
       "b": [ [0, -10], [0, -11], [0, -11], [0, -10] ]
      }
     },
     "hobgoblin_lord": {
      "walk": {
-      "s": [ [1, -19], [0, -21], [0, -21], [1, -19], [1, -19], [0, -21], [0, -21], [1, -19] ],
-      "f": [ [0, -4], [1, -6], [1, -6], [0, -4], [0, -4], [-1, -5], [-1, -5], [0, -4] ],
+      "s": [ [4, -10], [4, -12], [4, -12], [4, -10], [4, -10], [4, -12], [4, -12], [4, -10] ],
+      "f": [ [0, -5], [1, -7], [1, -7], [0, -5], [0, -5], [-1, -7], [-1, -7], [0, -5] ],
       "b": [ [0, -10], [-1, -12], [-1, -12], [0, -10], [0, -10], [1, -12], [1, -12], [0, -10] ]
      },
      "stand": {
-      "s": [ [1, -20], [1, -21], [1, -21], [1, -20] ],
-      "f": [ [0, -5], [0, -6], [0, -6], [0, -5] ],
+      "s": [ [4, -11], [4, -12], [4, -12], [4, -11] ],
+      "f": [ [0, -6], [0, -7], [0, -7], [0, -6] ],
       "b": [ [0, -11], [0, -12], [0, -12], [0, -11] ]
      }
     },
     "orc_small": {
      "walk": {
-      "s": [ [1, -16], [0, -17], [0, -17], [1, -16], [1, -16], [0, -17], [0, -17], [1, -16] ],
-      "f": [ [0, -3], [1, -4], [1, -4], [0, -3], [0, -3], [-1, -3], [-1, -3], [0, -3] ],
+      "s": [ [3, -9], [3, -10], [3, -10], [3, -9], [3, -9], [3, -10], [3, -10], [3, -9] ],
+      "f": [ [0, -4], [1, -5], [1, -5], [0, -4], [0, -4], [-1, -5], [-1, -5], [0, -4] ],
       "b": [ [0, -9], [-1, -10], [-1, -10], [0, -9], [0, -9], [1, -10], [1, -10], [0, -9] ]
      },
      "stand": {
-      "s": [ [1, -16], [1, -17], [1, -17], [1, -16] ],
-      "f": [ [0, -3], [0, -4], [0, -4], [0, -3] ],
+      "s": [ [3, -9], [3, -10], [3, -10], [3, -9] ],
+      "f": [ [0, -4], [0, -5], [0, -5], [0, -4] ],
       "b": [ [0, -9], [0, -10], [0, -10], [0, -9] ]
      }
     },
     "orc_big": {
      "walk": {
-      "s": [ [1, -21], [0, -22], [0, -22], [1, -21], [1, -21], [0, -22], [0, -22], [1, -21] ],
-      "f": [ [0, -5], [1, -7], [1, -7], [0, -5], [0, -5], [-1, -5], [-1, -5], [0, -5] ],
+      "s": [ [5, -12], [5, -13], [5, -13], [5, -12], [5, -12], [5, -13], [5, -13], [5, -12] ],
+      "f": [ [0, -6], [1, -7], [1, -7], [0, -6], [0, -6], [-1, -7], [-1, -7], [0, -6] ],
       "b": [ [0, -11], [-1, -12], [-1, -12], [0, -11], [0, -11], [1, -12], [1, -12], [0, -11] ]
      },
      "stand": {
-      "s": [ [1, -22], [1, -23], [1, -23], [1, -22] ],
-      "f": [ [0, -6], [0, -7], [0, -7], [0, -6] ],
+      "s": [ [5, -13], [5, -14], [5, -14], [5, -13] ],
+      "f": [ [0, -7], [0, -8], [0, -8], [0, -7] ],
       "b": [ [0, -12], [0, -13], [0, -13], [0, -12] ]
      }
     },
     "orc_boss": {
      "walk": {
-      "s": [ [1, -23], [0, -24], [0, -24], [1, -23], [1, -23], [0, -24], [0, -24], [1, -23] ],
-      "f": [ [0, -6], [1, -8], [1, -8], [0, -6], [0, -6], [-1, -6], [-1, -6], [0, -6] ],
+      "s": [ [5, -13], [5, -14], [5, -14], [5, -13], [5, -13], [5, -14], [5, -14], [5, -13] ],
+      "f": [ [0, -8], [1, -9], [1, -9], [0, -8], [0, -8], [-1, -9], [-1, -9], [0, -8] ],
       "b": [ [0, -12], [-1, -13], [-1, -13], [0, -12], [0, -12], [1, -13], [1, -13], [0, -12] ]
      },
      "stand": {
-      "s": [ [1, -24], [1, -25], [1, -25], [1, -24] ],
-      "f": [ [0, -7], [0, -8], [0, -8], [0, -7] ],
+      "s": [ [5, -14], [5, -15], [5, -15], [5, -14] ],
+      "f": [ [0, -9], [0, -10], [0, -10], [0, -9] ],
       "b": [ [0, -13], [0, -14], [0, -14], [0, -13] ]
      }
     },
     "gnoll_big": {
      "walk": {
-      "s": [ [1, -23], [0, -24], [0, -24], [1, -23], [1, -23], [0, -24], [0, -24], [1, -23] ],
-      "f": [ [0, -7], [1, -9], [1, -9], [0, -7], [0, -7], [-1, -7], [-1, -7], [0, -7] ],
+      "s": [ [5, -14], [5, -15], [5, -15], [5, -14], [5, -14], [5, -15], [5, -15], [5, -14] ],
+      "f": [ [0, -8], [1, -9], [1, -9], [0, -8], [0, -8], [-1, -9], [-1, -9], [0, -8] ],
       "b": [ [0, -13], [-1, -14], [-1, -14], [0, -13], [0, -13], [1, -14], [1, -14], [0, -13] ]
      },
      "stand": {
-      "s": [ [1, -24], [1, -25], [1, -25], [1, -24] ],
-      "f": [ [0, -8], [0, -9], [0, -9], [0, -8] ],
+      "s": [ [5, -15], [5, -16], [5, -16], [5, -15] ],
+      "f": [ [0, -9], [0, -10], [0, -10], [0, -9] ],
       "b": [ [0, -14], [0, -15], [0, -15], [0, -14] ]
      }
     },
     "kobold_big": {
      "walk": {
-      "s": [ [1, -14], [0, -15], [0, -15], [1, -14], [1, -14], [0, -15], [0, -15], [1, -14] ],
-      "f": [ [0, -2], [1, -3], [1, -3], [0, -2], [0, -2], [-1, -3], [-1, -3], [0, -2] ],
+      "s": [ [2, -8], [2, -9], [2, -9], [2, -8], [2, -8], [2, -9], [2, -9], [2, -8] ],
+      "f": [ [0, -3], [1, -4], [1, -4], [0, -3], [0, -3], [-1, -4], [-1, -4], [0, -3] ],
       "b": [ [0, -8], [-1, -9], [-1, -9], [0, -8], [0, -8], [1, -9], [1, -9], [0, -8] ]
      },
      "stand": {
-      "s": [ [1, -14], [1, -15], [1, -15], [1, -14] ],
-      "f": [ [0, -2], [0, -3], [0, -3], [0, -2] ],
+      "s": [ [2, -8], [2, -9], [2, -9], [2, -8] ],
+      "f": [ [0, -3], [0, -4], [0, -4], [0, -3] ],
       "b": [ [0, -8], [0, -9], [0, -9], [0, -8] ]
      }
     },
     "goblin_gaunt": {
      "walk": {
-      "s": [ [1, -12], [0, -13], [0, -13], [1, -12], [1, -12], [0, -13], [0, -13], [1, -12] ],
+      "s": [ [2, -6], [2, -7], [2, -7], [2, -6], [2, -6], [2, -7], [2, -7], [2, -6] ],
       "f": [ [0, -1], [1, -2], [1, -2], [0, -1], [0, -1], [-1, -2], [-1, -2], [0, -1] ],
       "b": [ [0, -7], [-1, -8], [-1, -8], [0, -7], [0, -7], [1, -8], [1, -8], [0, -7] ]
      },
      "stand": {
-      "s": [ [1, -12], [1, -13], [1, -13], [1, -12] ],
+      "s": [ [2, -6], [2, -7], [2, -7], [2, -6] ],
       "f": [ [0, -1], [0, -2], [0, -2], [0, -1] ],
       "b": [ [0, -7], [0, -8], [0, -8], [0, -7] ]
      }
     },
     "goblin_crippled": {
      "walk": {
-      "s": [ [1, -12], [0, -13], [0, -13], [1, -12], [1, -12], [0, -13], [0, -13], [1, -12] ],
+      "s": [ [2, -6], [2, -7], [2, -7], [2, -6], [2, -6], [2, -7], [2, -7], [2, -6] ],
       "f": [ [0, -1], [1, -2], [1, -2], [0, -1], [0, -1], [-1, -2], [-1, -2], [0, -1] ],
       "b": [ [0, -7], [-1, -8], [-1, -8], [0, -7], [0, -7], [1, -8], [1, -8], [0, -7] ]
      },
      "stand": {
-      "s": [ [1, -12], [1, -13], [1, -13], [1, -12] ],
+      "s": [ [2, -6], [2, -7], [2, -7], [2, -6] ],
       "f": [ [0, -1], [0, -2], [0, -2], [0, -1] ],
       "b": [ [0, -7], [0, -8], [0, -8], [0, -7] ]
      }
     },
     "goblin_grizzled": {
      "walk": {
-      "s": [ [1, -12], [0, -13], [0, -13], [1, -12], [1, -12], [0, -13], [0, -13], [1, -12] ],
+      "s": [ [2, -6], [2, -7], [2, -7], [2, -6], [2, -6], [2, -7], [2, -7], [2, -6] ],
       "f": [ [0, -1], [1, -2], [1, -2], [0, -1], [0, -1], [-1, -2], [-1, -2], [0, -1] ],
       "b": [ [0, -7], [-1, -8], [-1, -8], [0, -7], [0, -7], [1, -8], [1, -8], [0, -7] ]
      },
      "stand": {
-      "s": [ [1, -12], [1, -13], [1, -13], [1, -12] ],
+      "s": [ [2, -6], [2, -7], [2, -7], [2, -6] ],
       "f": [ [0, -1], [0, -2], [0, -2], [0, -1] ],
       "b": [ [0, -7], [0, -8], [0, -8], [0, -7] ]
      }
     },
     "orc_gaunt": {
      "walk": {
-      "s": [ [1, -19], [0, -21], [0, -21], [1, -19], [1, -19], [0, -21], [0, -21], [1, -19] ],
-      "f": [ [0, -4], [1, -6], [1, -6], [0, -4], [0, -4], [-1, -5], [-1, -5], [0, -4] ],
+      "s": [ [4, -10], [4, -12], [4, -12], [4, -10], [4, -10], [4, -12], [4, -12], [4, -10] ],
+      "f": [ [0, -5], [1, -7], [1, -7], [0, -5], [0, -5], [-1, -7], [-1, -7], [0, -5] ],
       "b": [ [0, -10], [-1, -12], [-1, -12], [0, -10], [0, -10], [1, -12], [1, -12], [0, -10] ]
      },
      "stand": {
-      "s": [ [1, -20], [1, -21], [1, -21], [1, -20] ],
-      "f": [ [0, -5], [0, -6], [0, -6], [0, -5] ],
+      "s": [ [4, -11], [4, -12], [4, -12], [4, -11] ],
+      "f": [ [0, -6], [0, -7], [0, -7], [0, -6] ],
       "b": [ [0, -11], [0, -12], [0, -12], [0, -11] ]
      }
     },
     "orc_crippled": {
      "walk": {
-      "s": [ [1, -19], [0, -21], [0, -21], [1, -19], [1, -19], [0, -21], [0, -21], [1, -19] ],
-      "f": [ [0, -4], [1, -6], [1, -6], [0, -4], [0, -4], [-1, -5], [-1, -5], [0, -4] ],
+      "s": [ [4, -10], [4, -12], [4, -12], [4, -10], [4, -10], [4, -12], [4, -12], [4, -10] ],
+      "f": [ [0, -5], [1, -7], [1, -7], [0, -5], [0, -5], [-1, -7], [-1, -7], [0, -5] ],
       "b": [ [0, -10], [-1, -12], [-1, -12], [0, -10], [0, -10], [1, -12], [1, -12], [0, -10] ]
      },
      "stand": {
-      "s": [ [1, -20], [1, -21], [1, -21], [1, -20] ],
-      "f": [ [0, -5], [0, -6], [0, -6], [0, -5] ],
+      "s": [ [4, -11], [4, -12], [4, -12], [4, -11] ],
+      "f": [ [0, -6], [0, -7], [0, -7], [0, -6] ],
       "b": [ [0, -11], [0, -12], [0, -12], [0, -11] ]
      }
     },
     "orc_grizzled": {
      "walk": {
-      "s": [ [1, -19], [0, -21], [0, -21], [1, -19], [1, -19], [0, -21], [0, -21], [1, -19] ],
-      "f": [ [0, -4], [1, -6], [1, -6], [0, -4], [0, -4], [-1, -5], [-1, -5], [0, -4] ],
+      "s": [ [4, -10], [4, -12], [4, -12], [4, -10], [4, -10], [4, -12], [4, -12], [4, -10] ],
+      "f": [ [0, -5], [1, -7], [1, -7], [0, -5], [0, -5], [-1, -7], [-1, -7], [0, -5] ],
       "b": [ [0, -10], [-1, -12], [-1, -12], [0, -10], [0, -10], [1, -12], [1, -12], [0, -10] ]
      },
      "stand": {
-      "s": [ [1, -20], [1, -21], [1, -21], [1, -20] ],
-      "f": [ [0, -5], [0, -6], [0, -6], [0, -5] ],
+      "s": [ [4, -11], [4, -12], [4, -12], [4, -11] ],
+      "f": [ [0, -6], [0, -7], [0, -7], [0, -6] ],
       "b": [ [0, -11], [0, -12], [0, -12], [0, -11] ]
      }
     }
@@ -1857,13 +1857,13 @@
     "salted_meat": {"bulk":"light","hold":"hip","sprite":"item/salted_meat/map-carry","grip":[6,6],"toward":{"sprite":"item/salted_meat/map-carry","grip":[4,9],"rows":[0,13],"stood":true},"away":{"sprite":"item/salted_meat/map-carry","grip":[4,9],"rows":[0,13],"stood":true}},
     "dried_meat": {"bulk":"light","hold":"hip","sprite":"item/dried_meat/map-carry","grip":[6,6],"toward":{"sprite":"item/dried_meat/map-carry","grip":[4,9],"rows":[0,13],"stood":true},"away":{"sprite":"item/dried_meat/map-carry","grip":[4,9],"rows":[0,13],"stood":true}},
     "dried_fruit": {"bulk":"bulky","hold":"chest","sprite":"item/dried_fruit/map-carry","grip":[7,8]},
-    "pine_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/pine_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/pine_plank/map-carry-end","grip":[4,3]},"away":{"sprite":"item/pine_plank/map-carry-end","grip":[4,3]}},
-    "beam": {"bulk":"heavy","hold":"shoulder","sprite":"item/beam/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/beam/map-carry-end","grip":[4,3]},"away":{"sprite":"item/beam/map-carry-end","grip":[4,3]}},
-    "oak_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/oak_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/oak_plank/map-carry-end","grip":[4,3]},"away":{"sprite":"item/oak_plank/map-carry-end","grip":[4,3]}},
-    "birch_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/birch_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/birch_plank/map-carry-end","grip":[4,3]},"away":{"sprite":"item/birch_plank/map-carry-end","grip":[4,3]}},
-    "ash_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/ash_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/ash_plank/map-carry-end","grip":[4,3]},"away":{"sprite":"item/ash_plank/map-carry-end","grip":[4,3]}},
-    "willow_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/willow_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/willow_plank/map-carry-end","grip":[4,3]},"away":{"sprite":"item/willow_plank/map-carry-end","grip":[4,3]}},
-    "yew_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/yew_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/yew_plank/map-carry-end","grip":[4,3]},"away":{"sprite":"item/yew_plank/map-carry-end","grip":[4,3]}},
+    "pine_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/pine_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/pine_plank/map-carry-end","grip":[4,6]},"away":{"sprite":"item/pine_plank/map-carry-end","grip":[4,6]}},
+    "beam": {"bulk":"heavy","hold":"shoulder","sprite":"item/beam/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/beam/map-carry-end","grip":[4,6]},"away":{"sprite":"item/beam/map-carry-end","grip":[4,6]}},
+    "oak_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/oak_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/oak_plank/map-carry-end","grip":[4,6]},"away":{"sprite":"item/oak_plank/map-carry-end","grip":[4,6]}},
+    "birch_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/birch_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/birch_plank/map-carry-end","grip":[4,6]},"away":{"sprite":"item/birch_plank/map-carry-end","grip":[4,6]}},
+    "ash_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/ash_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/ash_plank/map-carry-end","grip":[4,6]},"away":{"sprite":"item/ash_plank/map-carry-end","grip":[4,6]}},
+    "willow_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/willow_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/willow_plank/map-carry-end","grip":[4,6]},"away":{"sprite":"item/willow_plank/map-carry-end","grip":[4,6]}},
+    "yew_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/yew_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/yew_plank/map-carry-end","grip":[4,6]},"away":{"sprite":"item/yew_plank/map-carry-end","grip":[4,6]}},
     "saw": {"bulk":"light","hold":"hip","sprite":"item/saw/map-lie","grip":[3,4],"toward":{"sprite":"item/saw/map-lean","grip":[8,16],"upside":true,"rows":[0,20],"mirrored":true},"away":{"sprite":"item/saw/map-lean","grip":[4,16],"upside":true,"rows":[0,20]}},
     "granite": {"bulk":"bulky","hold":"chest","sprite":"item/granite/map-carry","grip":[7,8]},
     "limestone": {"bulk":"bulky","hold":"chest","sprite":"item/limestone/map-carry","grip":[7,8]},
@@ -1980,10 +1980,10 @@
     "great_bone": {"bulk":"light","hold":"hip","sprite":"item/great_bone/map-pile-1","grip":[16,6],"toward":{"sprite":"item/great_bone/map-pile-1","grip":[5,21],"rows":[0,32],"stood":true},"away":{"sprite":"item/great_bone/map-pile-1","grip":[5,21],"rows":[0,32],"stood":true}},
     "great_tusk": {"bulk":"bulky","hold":"chest","sprite":"item/great_tusk/map-pile-1","grip":[5,5],"toward":{"sprite":"item/great_tusk/map-pile-1","grip":[11,5]},"away":{"sprite":"item/great_tusk/map-pile-1","grip":[11,5]}},
     "venom_sac": {"bulk":"light","hold":"hip","sprite":"item/venom_sac/map-ground","grip":[4,1]},
-    "cave_bear_plate": {"bulk":"bulky","hold":"chest","sprite":"item/cave_bear_plate/map-ground","grip":[8,6],"toward":{"sprite":"item/cave_bear_plate/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/cave_bear_plate/map-carry-folded","grip":[8,4]}},
+    "cave_bear_plate": {"bulk":"bulky","hold":"chest","sprite":"item/cave_bear_plate/map-ground","grip":[8,6]},
     "fang_reaver": {"bulk":"light","hold":"hip","sprite":"item/fang_reaver/map-lie","grip":[5,3],"toward":{"sprite":"item/fang_reaver/map-lean","grip":[10,21],"upside":true,"rows":[0,32],"mirrored":true},"away":{"sprite":"item/fang_reaver/map-lean","grip":[4,21],"upside":true,"rows":[0,32]},"stance":"one"},
     "bear_carcass": {"bulk":"heavy","hold":"game","sprite":"item/bear_carcass/map-carry-draped","grip":[32,7],"toward":{"sprite":"item/bear_carcass/map-carry-draped","grip":[32,7],"yoked":true},"away":{"sprite":"item/bear_carcass/map-carry-draped","grip":[32,7],"yoked":true}},
-    "goblin_carcass": {"bulk":"heavy","hold":"drape","sprite":"item/goblin_carcass/map-carry-slung","grip":[15,16],"sag":5,"toward":{"sprite":"item/goblin_carcass/map-carry-slung","grip":[15,16],"sag":3,"yoked":true},"away":{"sprite":"item/goblin_carcass/map-carry-slung","grip":[15,16],"sag":3,"yoked":true}},
+    "goblin_carcass": {"bulk":"heavy","hold":"cradle","sprite":"item/goblin_carcass/map-carry-cradled","grip":[12,11],"away":{"sprite":"item/goblin_carcass/map-carry-cradled","grip":[14,11],"mirrored":true}},
     "giant_rat_carcass": {"bulk":"bulky","hold":"chest","sprite":"item/giant_rat_carcass/map-carry-held","grip":[9,7],"sag":2},
     "boar_carcass": {"bulk":"heavy","hold":"game","sprite":"item/boar_carcass/map-carry-draped","grip":[28,7],"toward":{"sprite":"item/boar_carcass/map-carry-draped","grip":[28,7],"yoked":true},"away":{"sprite":"item/boar_carcass/map-carry-draped","grip":[28,7],"yoked":true}},
     "elk_carcass": {"bulk":"heavy","hold":"game","sprite":"item/elk_carcass/map-carry-draped","grip":[24,7],"toward":{"sprite":"item/elk_carcass/map-carry-draped","grip":[24,7],"yoked":true},"away":{"sprite":"item/elk_carcass/map-carry-draped","grip":[24,7],"yoked":true}},
@@ -2004,9 +2004,9 @@
     "grimeling_carcass": {"bulk":"bulky","hold":"chest","sprite":"item/grimeling_carcass/map-carry-held","grip":[9,7],"sag":2},
     "giant_olm_carcass": {"bulk":"bulky","hold":"chest","sprite":"item/giant_olm_carcass/map-carry-held","grip":[9,7],"sag":2},
     "thornwood_spider_carcass": {"bulk":"bulky","hold":"chest","sprite":"item/thornwood_spider_carcass/map-carry-held","grip":[9,7],"sag":2},
-    "kobold_skulker_carcass": {"bulk":"bulky","hold":"drape","sprite":"item/kobold_skulker_carcass/map-carry-slung","grip":[15,16],"sag":5,"toward":{"sprite":"item/kobold_skulker_carcass/map-carry-slung","grip":[15,16],"sag":3,"yoked":true},"away":{"sprite":"item/kobold_skulker_carcass/map-carry-slung","grip":[15,16],"sag":3,"yoked":true}},
-    "gnoll_marauder_carcass": {"bulk":"heavy","hold":"drape","sprite":"item/gnoll_marauder_carcass/map-carry-slung","grip":[19,20],"sag":5,"toward":{"sprite":"item/gnoll_marauder_carcass/map-carry-slung","grip":[19,20],"sag":3,"yoked":true},"away":{"sprite":"item/gnoll_marauder_carcass/map-carry-slung","grip":[19,20],"sag":3,"yoked":true}},
-    "orc_reaver_carcass": {"bulk":"heavy","hold":"drape","sprite":"item/orc_reaver_carcass/map-carry-slung","grip":[20,21],"sag":5,"toward":{"sprite":"item/orc_reaver_carcass/map-carry-slung","grip":[20,21],"sag":3,"yoked":true},"away":{"sprite":"item/orc_reaver_carcass/map-carry-slung","grip":[20,21],"sag":3,"yoked":true}},
+    "kobold_skulker_carcass": {"bulk":"bulky","hold":"cradle","sprite":"item/kobold_skulker_carcass/map-carry-cradled","grip":[12,9],"away":{"sprite":"item/kobold_skulker_carcass/map-carry-cradled","grip":[14,9],"mirrored":true}},
+    "gnoll_marauder_carcass": {"bulk":"heavy","hold":"cradle","sprite":"item/gnoll_marauder_carcass/map-carry-cradled","grip":[13,11],"away":{"sprite":"item/gnoll_marauder_carcass/map-carry-cradled","grip":[20,11],"mirrored":true}},
+    "orc_reaver_carcass": {"bulk":"heavy","hold":"cradle","sprite":"item/orc_reaver_carcass/map-carry-cradled","grip":[14,13],"away":{"sprite":"item/orc_reaver_carcass/map-carry-cradled","grip":[21,13],"mirrored":true}},
     "harpy_carcass": {"bulk":"heavy","hold":"game","sprite":"item/harpy_carcass/map-carry-draped","grip":[18,18],"sag":4,"toward":{"sprite":"item/harpy_carcass/map-carry-draped","grip":[18,22],"sag":3,"yoked":true},"away":{"sprite":"item/harpy_carcass/map-carry-draped","grip":[18,22],"sag":3,"yoked":true}},
     "bullywug_carcass": {"bulk":"heavy","hold":"game","sprite":"item/bullywug_carcass/map-carry-draped","grip":[16,14],"sag":4,"toward":{"sprite":"item/bullywug_carcass/map-carry-draped","grip":[16,16],"sag":3,"yoked":true},"away":{"sprite":"item/bullywug_carcass/map-carry-draped","grip":[16,16],"sag":3,"yoked":true}},
     "wolf_meat": {"bulk":"light","hold":"hip","sprite":"item/wolf_meat/map-carry","grip":[6,6],"toward":{"sprite":"item/wolf_meat/map-carry","grip":[4,9],"rows":[0,13],"stood":true},"away":{"sprite":"item/wolf_meat/map-carry","grip":[4,9],"rows":[0,13],"stood":true}},
@@ -2032,8 +2032,8 @@
     "rotten_food": {"bulk":"light","hold":"hip","sprite":"item/rotten_food/map-pile-1","grip":[7,8]},
     "rotten_meat": {"bulk":"light","hold":"hip","sprite":"item/rotten_meat/map-pile-1","grip":[9,6],"toward":{"sprite":"item/rotten_meat/map-pile-1","grip":[6,14],"rows":[0,18],"stood":true},"away":{"sprite":"item/rotten_meat/map-pile-1","grip":[6,14],"rows":[0,18],"stood":true}},
     "rotten_carcass": {"bulk":"bulky","hold":"chest","sprite":"item/rotten_carcass/map-carry-held","grip":[9,7],"sag":2},
-    "pawn_carcass": {"bulk":"heavy","hold":"drape","sprite":"item/pawn_carcass/map-carry-slung","grip":[18,19],"sag":5,"toward":{"sprite":"item/pawn_carcass/map-carry-slung","grip":[18,19],"sag":3,"yoked":true},"away":{"sprite":"item/pawn_carcass/map-carry-slung","grip":[18,19],"sag":3,"yoked":true}},
-    "carried_pawn": {"bulk":"heavy","hold":"drape","sprite":"item/carried_pawn/map-carry","grip":[18,12],"sag":5,"toward":{"sprite":"item/carried_pawn/map-carry","grip":[18,12],"sag":3,"yoked":true},"away":{"sprite":"item/carried_pawn/map-carry","grip":[18,12],"sag":3,"yoked":true}},
+    "pawn_carcass": {"bulk":"heavy","hold":"cradle","sprite":"item/pawn_carcass/map-carry-cradled","grip":[14,11],"away":{"sprite":"item/pawn_carcass/map-carry-cradled","grip":[20,11],"mirrored":true}},
+    "carried_pawn": {"bulk":"heavy","hold":"cradle","sprite":"item/carried_pawn/map-carry-cradled","grip":[14,11],"away":{"sprite":"item/carried_pawn/map-carry-cradled","grip":[20,11],"mirrored":true}},
     "bone_cleaver": {"bulk":"light","hold":"hip","sprite":"item/bone_cleaver/map-lie","grip":[3,3],"toward":{"sprite":"item/bone_cleaver/map-lean","grip":[6,15],"upside":true,"rows":[0,19],"mirrored":true},"away":{"sprite":"item/bone_cleaver/map-lean","grip":[3,15],"upside":true,"rows":[0,19]}},
     "iron_butchery_kit": {"bulk":"light","hold":"hip","sprite":"item/iron_butchery_kit/map-ground","grip":[8,7]},
     "steel_butchery_kit": {"bulk":"light","hold":"hip","sprite":"item/steel_butchery_kit/map-ground","grip":[8,7]},
@@ -2092,7 +2092,7 @@
     "orc_cleaver": {"bulk":"bulky","hold":"chest","sprite":"item/orc_cleaver/map-lie","grip":[15,8],"stance":"two"},
     "orc_maul": {"bulk":"bulky","hold":"chest","sprite":"item/orc_maul/map-lie","grip":[19,14],"stance":"two"},
     "orc_serrated_axe": {"bulk":"light","hold":"hip","sprite":"item/orc_serrated_axe/map-lie","grip":[5,3],"toward":{"sprite":"item/orc_serrated_axe/map-lean","grip":[8,21],"upside":true,"rows":[0,32],"mirrored":true},"away":{"sprite":"item/orc_serrated_axe/map-lean","grip":[8,21],"upside":true,"rows":[0,32]},"stance":"one"},
-    "orc_scrap_plate": {"bulk":"bulky","hold":"chest","sprite":"item/orc_scrap_plate/map-ground","grip":[8,5],"toward":{"sprite":"item/orc_scrap_plate/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/orc_scrap_plate/map-carry-folded","grip":[8,4]}},
+    "orc_scrap_plate": {"bulk":"bulky","hold":"chest","sprite":"item/orc_scrap_plate/map-ground","grip":[8,5]},
     "goblin_shank": {"bulk":"light","hold":"hip","sprite":"item/goblin_shank/map-lie","grip":[3,2],"toward":{"sprite":"item/goblin_shank/map-lean","grip":[5,14],"upside":true,"rows":[0,18],"mirrored":true},"away":{"sprite":"item/goblin_shank/map-lean","grip":[2,14],"upside":true,"rows":[0,18]},"stance":"one"},
     "goblin_hooked_spear": {"bulk":"light","hold":"hip","sprite":"item/goblin_hooked_spear/map-lie","grip":[18,6],"toward":{"sprite":"item/goblin_hooked_spear/map-lean","grip":[12,30],"rows":[0,41]},"away":{"sprite":"item/goblin_hooked_spear/map-lean","grip":[4,30],"rows":[0,41],"mirrored":true},"stance":"two"},
     "goblin_net": {"bulk":"light","hold":"hip","sprite":"item/goblin_net/map-ground","grip":[8,5],"toward":{"sprite":"item/goblin_net/map-ground","grip":[4,12],"rows":[0,16],"stood":true},"away":{"sprite":"item/goblin_net/map-ground","grip":[4,12],"rows":[0,16],"stood":true}},
@@ -2115,12 +2115,12 @@
     "orc_plate_gauntlets": {"bulk":"light","hold":"hip","sprite":"item/orc_plate_gauntlets/map-ground","grip":[6,6],"toward":{"sprite":"item/orc_plate_gauntlets/map-ground","grip":[5,9],"rows":[0,13],"stood":true},"away":{"sprite":"item/orc_plate_gauntlets/map-ground","grip":[5,9],"rows":[0,13],"stood":true}},
     "orc_plate_sabatons": {"bulk":"light","hold":"hip","sprite":"item/orc_plate_sabatons/map-ground","grip":[7,7]},
     "great_bone_helm": {"bulk":"bulky","hold":"chest","sprite":"item/great_bone_helm/map-ground","grip":[6,4]},
-    "great_bone_cuirass": {"bulk":"bulky","hold":"chest","sprite":"item/great_bone_cuirass/map-ground","grip":[7,5],"toward":{"sprite":"item/great_bone_cuirass/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/great_bone_cuirass/map-carry-folded","grip":[8,4]}},
+    "great_bone_cuirass": {"bulk":"bulky","hold":"chest","sprite":"item/great_bone_cuirass/map-ground","grip":[7,5]},
     "great_bone_vambraces": {"bulk":"light","hold":"hip","sprite":"item/great_bone_vambraces/map-ground","grip":[7,7]},
     "great_bone_greaves": {"bulk":"light","hold":"hip","sprite":"item/great_bone_greaves/map-ground","grip":[6,7]},
     "great_bone_gauntlets": {"bulk":"light","hold":"hip","sprite":"item/great_bone_gauntlets/map-ground","grip":[6,6],"toward":{"sprite":"item/great_bone_gauntlets/map-ground","grip":[5,9],"rows":[0,13],"stood":true},"away":{"sprite":"item/great_bone_gauntlets/map-ground","grip":[5,9],"rows":[0,13],"stood":true}},
     "great_bone_sabatons": {"bulk":"light","hold":"hip","sprite":"item/great_bone_sabatons/map-ground","grip":[7,7]},
-    "orc_warplate": {"bulk":"heavy","hold":"low","sprite":"item/orc_warplate/map-ground","grip":[8,5],"toward":{"sprite":"item/orc_warplate/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/orc_warplate/map-carry-folded","grip":[8,4]}},
+    "orc_warplate": {"bulk":"heavy","hold":"low","sprite":"item/orc_warplate/map-ground","grip":[8,5]},
     "goblin_poison_bow": {"bulk":"light","hold":"hip","sprite":"item/goblin_poison_bow/map-lie","grip":[4,3],"toward":{"sprite":"item/goblin_poison_bow/map-lean","grip":[8,18],"upside":true,"rows":[0,22],"mirrored":true},"away":{"sprite":"item/goblin_poison_bow/map-lean","grip":[3,18],"upside":true,"rows":[0,22]},"stance":"bow"},
     "goblin_firepot": {"bulk":"light","hold":"hip","sprite":"item/goblin_firepot/map-lie","grip":[1,4],"toward":{"sprite":"item/goblin_firepot/map-lean","grip":[4,5],"upside":true,"rows":[0,9],"mirrored":true},"away":{"sprite":"item/goblin_firepot/map-lean","grip":[4,5],"upside":true,"rows":[0,9]},"stance":"one"},
     "kobold_trap_spear": {"bulk":"light","hold":"hip","sprite":"item/kobold_trap_spear/map-lie","grip":[18,6],"toward":{"sprite":"item/kobold_trap_spear/map-lean","grip":[10,30],"rows":[0,41]},"away":{"sprite":"item/kobold_trap_spear/map-lean","grip":[4,30],"rows":[0,41],"mirrored":true},"stance":"two"},
@@ -2242,11 +2242,11 @@
     "clay_bullet": {"bulk":"light","hold":"hip","sprite":"item/clay_bullet/map-pile-1","grip":[7,4],"toward":{"sprite":"item/clay_bullet/map-pile-1","grip":[4,11],"rows":[0,15],"stood":true},"away":{"sprite":"item/clay_bullet/map-pile-1","grip":[4,11],"rows":[0,15],"stood":true}},
     "lead_glans": {"bulk":"light","hold":"hip","sprite":"item/lead_glans/map-pile-1","grip":[5,4],"toward":{"sprite":"item/lead_glans/map-pile-1","grip":[4,7],"rows":[0,11],"stood":true},"away":{"sprite":"item/lead_glans/map-pile-1","grip":[4,7],"rows":[0,11],"stood":true}},
     "iron_boss_shield": {"bulk":"bulky","hold":"chest","sprite":"item/iron_boss_shield/map-ground","grip":[7,10]},
-    "wicker_vest": {"bulk":"bulky","hold":"chest","sprite":"item/wicker_vest/map-ground","grip":[7,6],"toward":{"sprite":"item/wicker_vest/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/wicker_vest/map-carry-folded","grip":[8,4]}},
-    "cured_hide_vest": {"bulk":"bulky","hold":"chest","sprite":"item/cured_hide_vest/map-ground","grip":[7,6],"toward":{"sprite":"item/cured_hide_vest/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/cured_hide_vest/map-carry-folded","grip":[8,4]}},
+    "wicker_vest": {"bulk":"bulky","hold":"chest","sprite":"item/wicker_vest/map-ground","grip":[7,6]},
+    "cured_hide_vest": {"bulk":"bulky","hold":"chest","sprite":"item/cured_hide_vest/map-ground","grip":[7,6]},
     "cured_hide_hood": {"bulk":"light","hold":"hip","sprite":"item/cured_hide_hood/map-ground","grip":[6,5],"toward":{"sprite":"item/cured_hide_hood/map-ground","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/cured_hide_hood/map-ground","grip":[5,8],"rows":[0,12],"stood":true}},
     "linen_gambeson": {"bulk":"bulky","hold":"chest","sprite":"item/linen_gambeson/map-ground","grip":[9,6],"toward":{"sprite":"item/linen_gambeson/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/linen_gambeson/map-carry-folded","grip":[8,4]}},
-    "boarhide_jerkin": {"bulk":"bulky","hold":"chest","sprite":"item/boarhide_jerkin/map-ground","grip":[7,6],"toward":{"sprite":"item/boarhide_jerkin/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/boarhide_jerkin/map-carry-folded","grip":[8,4]}},
+    "boarhide_jerkin": {"bulk":"bulky","hold":"chest","sprite":"item/boarhide_jerkin/map-ground","grip":[7,6]},
     "soot_darkened_jerkin": {"bulk":"bulky","hold":"chest","sprite":"item/soot_darkened_jerkin/map-ground","grip":[7,6],"toward":{"sprite":"item/soot_darkened_jerkin/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/soot_darkened_jerkin/map-carry-folded","grip":[8,4]}},
     "leather_coif": {"bulk":"light","hold":"hip","sprite":"item/leather_coif/map-ground","grip":[5,5],"toward":{"sprite":"item/leather_coif/map-ground","grip":[4,7],"rows":[0,11],"stood":true},"away":{"sprite":"item/leather_coif/map-ground","grip":[4,7],"rows":[0,11],"stood":true}},
     "brimmed_leather_hood": {"bulk":"light","hold":"hip","sprite":"item/brimmed_leather_hood/map-ground","grip":[6,5],"toward":{"sprite":"item/brimmed_leather_hood/map-ground","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/brimmed_leather_hood/map-ground","grip":[5,8],"rows":[0,12],"stood":true}},
@@ -2262,8 +2262,8 @@
     "hide_boots": {"bulk":"light","hold":"hip","sprite":"item/hide_boots/map-ground","grip":[7,6],"toward":{"sprite":"item/hide_boots/map-ground","grip":[6,10],"rows":[0,14],"stood":true},"away":{"sprite":"item/hide_boots/map-ground","grip":[6,10],"rows":[0,14],"stood":true}},
     "mail_coif": {"bulk":"light","hold":"hip","sprite":"item/mail_coif/map-ground","grip":[6,6],"toward":{"sprite":"item/mail_coif/map-ground","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/mail_coif/map-ground","grip":[5,8],"rows":[0,12],"stood":true}},
     "iron_nasal_helm": {"bulk":"light","hold":"hip","sprite":"item/iron_nasal_helm/map-ground","grip":[6,7]},
-    "mail_hauberk": {"bulk":"bulky","hold":"chest","sprite":"item/mail_hauberk/map-ground","grip":[9,5],"toward":{"sprite":"item/mail_hauberk/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/mail_hauberk/map-carry-folded","grip":[8,4]}},
-    "iron_plated_jack": {"bulk":"bulky","hold":"chest","sprite":"item/iron_plated_jack/map-ground","grip":[9,6],"toward":{"sprite":"item/iron_plated_jack/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/iron_plated_jack/map-carry-folded","grip":[8,4]}},
+    "mail_hauberk": {"bulk":"bulky","hold":"chest","sprite":"item/mail_hauberk/map-ground","grip":[9,5]},
+    "iron_plated_jack": {"bulk":"bulky","hold":"chest","sprite":"item/iron_plated_jack/map-ground","grip":[9,6]},
     "iron_gauntlets": {"bulk":"light","hold":"hip","sprite":"item/iron_gauntlets/map-ground","grip":[6,7]},
     "iron_shod_boots": {"bulk":"light","hold":"hip","sprite":"item/iron_shod_boots/map-ground","grip":[7,7]},
     "cured_hide_skirt": {"bulk":"light","hold":"hip","sprite":"item/cured_hide_skirt/map-ground","grip":[7,5],"toward":{"sprite":"item/cured_hide_skirt/map-ground","grip":[5,10],"rows":[0,14],"stood":true},"away":{"sprite":"item/cured_hide_skirt/map-ground","grip":[5,10],"rows":[0,14],"stood":true}},
@@ -2276,7 +2276,7 @@
     "steel_vambraces": {"bulk":"light","hold":"hip","sprite":"item/steel_vambraces/map-ground","grip":[7,7]},
     "steel_greaves": {"bulk":"light","hold":"hip","sprite":"item/steel_greaves/map-ground","grip":[7,8]},
     "cured_hide_boots": {"bulk":"light","hold":"hip","sprite":"item/cured_hide_boots/map-ground","grip":[7,6],"toward":{"sprite":"item/cured_hide_boots/map-ground","grip":[6,10],"rows":[0,14],"stood":true},"away":{"sprite":"item/cured_hide_boots/map-ground","grip":[6,10],"rows":[0,14],"stood":true}},
-    "copper_scale_shirt": {"bulk":"bulky","hold":"chest","sprite":"item/copper_scale_shirt/map-ground","grip":[9,6],"toward":{"sprite":"item/copper_scale_shirt/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/copper_scale_shirt/map-carry-folded","grip":[8,4]}},
+    "copper_scale_shirt": {"bulk":"bulky","hold":"chest","sprite":"item/copper_scale_shirt/map-ground","grip":[9,6]},
     "copper_scale_cap": {"bulk":"light","hold":"hip","sprite":"item/copper_scale_cap/map-ground","grip":[6,5],"toward":{"sprite":"item/copper_scale_cap/map-ground","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/copper_scale_cap/map-ground","grip":[5,8],"rows":[0,12],"stood":true}},
     "copper_scale_bracers": {"bulk":"light","hold":"hip","sprite":"item/copper_scale_bracers/map-ground","grip":[7,7]},
     "copper_scale_greaves": {"bulk":"light","hold":"hip","sprite":"item/copper_scale_greaves/map-ground","grip":[6,7]},
@@ -2287,14 +2287,14 @@
     "arming_hose": {"bulk":"light","hold":"hip","sprite":"item/arming_hose/map-ground","grip":[6,5],"toward":{"sprite":"item/arming_hose/map-ground","grip":[4,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/arming_hose/map-ground","grip":[4,8],"rows":[0,12],"stood":true}},
     "quilted_jack": {"bulk":"bulky","hold":"chest","sprite":"item/quilted_jack/map-ground","grip":[9,6],"toward":{"sprite":"item/quilted_jack/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/quilted_jack/map-carry-folded","grip":[8,4]}},
     "open_burgonet": {"bulk":"light","hold":"hip","sprite":"item/open_burgonet/map-ground","grip":[6,5],"toward":{"sprite":"item/open_burgonet/map-ground","grip":[4,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/open_burgonet/map-ground","grip":[4,8],"rows":[0,12],"stood":true}},
-    "munition_breastplate": {"bulk":"bulky","hold":"chest","sprite":"item/munition_breastplate/map-ground","grip":[8,6],"toward":{"sprite":"item/munition_breastplate/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/munition_breastplate/map-carry-folded","grip":[8,4]}},
+    "munition_breastplate": {"bulk":"bulky","hold":"chest","sprite":"item/munition_breastplate/map-ground","grip":[8,6]},
     "splint_bracers": {"bulk":"light","hold":"hip","sprite":"item/splint_bracers/map-ground","grip":[7,7]},
     "splint_greaves": {"bulk":"light","hold":"hip","sprite":"item/splint_greaves/map-ground","grip":[6,7]},
-    "rune_graven_cuirass": {"bulk":"bulky","hold":"chest","sprite":"item/rune_graven_cuirass/map-ground","grip":[8,7],"toward":{"sprite":"item/rune_graven_cuirass/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/rune_graven_cuirass/map-carry-folded","grip":[8,4]}},
+    "rune_graven_cuirass": {"bulk":"bulky","hold":"chest","sprite":"item/rune_graven_cuirass/map-ground","grip":[8,7]},
     "rune_graven_helm": {"bulk":"light","hold":"hip","sprite":"item/rune_graven_helm/map-ground","grip":[6,6],"toward":{"sprite":"item/rune_graven_helm/map-ground","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/rune_graven_helm/map-ground","grip":[5,8],"rows":[0,12],"stood":true}},
     "rune_graven_vambraces": {"bulk":"light","hold":"hip","sprite":"item/rune_graven_vambraces/map-ground","grip":[7,7]},
     "rune_graven_greaves": {"bulk":"light","hold":"hip","sprite":"item/rune_graven_greaves/map-ground","grip":[7,8]},
-    "rune_stitched_lamellar": {"bulk":"bulky","hold":"chest","sprite":"item/rune_stitched_lamellar/map-ground","grip":[7,6],"toward":{"sprite":"item/rune_stitched_lamellar/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/rune_stitched_lamellar/map-carry-folded","grip":[8,4]}},
+    "rune_stitched_lamellar": {"bulk":"bulky","hold":"chest","sprite":"item/rune_stitched_lamellar/map-ground","grip":[7,6]},
     "rune_stitched_coif": {"bulk":"light","hold":"hip","sprite":"item/rune_stitched_coif/map-ground","grip":[6,6],"toward":{"sprite":"item/rune_stitched_coif/map-ground","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/rune_stitched_coif/map-ground","grip":[5,8],"rows":[0,12],"stood":true}},
     "rune_woven_robe": {"bulk":"bulky","hold":"chest","sprite":"item/rune_woven_robe/map-ground","grip":[9,7],"toward":{"sprite":"item/rune_woven_robe/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/rune_woven_robe/map-carry-folded","grip":[8,4]}},
     "rune_woven_hood": {"bulk":"light","hold":"hip","sprite":"item/rune_woven_hood/map-ground","grip":[6,5],"toward":{"sprite":"item/rune_woven_hood/map-ground","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/rune_woven_hood/map-ground","grip":[5,8],"rows":[0,12],"stood":true}},
@@ -2379,18 +2379,18 @@
     "nightshade_bolete": {"bulk":"light","hold":"hip","sprite":"item/nightshade_bolete/map-pile-1","grip":[5,5],"toward":{"sprite":"item/nightshade_bolete/map-pile-1","grip":[4,7],"rows":[0,11],"stood":true},"away":{"sprite":"item/nightshade_bolete/map-pile-1","grip":[4,7],"rows":[0,11],"stood":true}},
     "witch_morel": {"bulk":"light","hold":"hip","sprite":"item/witch_morel/map-pile-1","grip":[4,1]},
     "spore_of_madness": {"bulk":"light","hold":"hip","sprite":"item/spore_of_madness/map-pile-1","grip":[5,5],"toward":{"sprite":"item/spore_of_madness/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/spore_of_madness/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true}},
-    "mana_crystal": {"bulk":"light","hold":"hip","sprite":"item/mana_crystal/map-pile-1","grip":[5,1]},
-    "star_shard": {"bulk":"light","hold":"hip","sprite":"item/star_shard/map-pile-1","grip":[5,6]},
+    "mana_crystal": {"bulk":"light","hold":"hip","sprite":"item/mana_crystal/map-pile-1","grip":[5,10]},
+    "star_shard": {"bulk":"light","hold":"hip","sprite":"item/star_shard/map-pile-1","grip":[5,8]},
     "rune_etched_pick": {"bulk":"light","hold":"hip","sprite":"item/rune_etched_pick/map-lie","grip":[5,5],"toward":{"sprite":"item/rune_etched_pick/map-lean","grip":[14,22],"rows":[0,33]},"away":{"sprite":"item/rune_etched_pick/map-lean","grip":[5,22],"rows":[0,33],"mirrored":true}},
-    "voidshard": {"bulk":"light","hold":"hip","sprite":"item/voidshard/map-pile-1","grip":[4,1]},
-    "heartwood_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/heartwood_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/heartwood_plank/map-carry-end","grip":[4,3]},"away":{"sprite":"item/heartwood_plank/map-carry-end","grip":[4,3]}},
-    "moonwood_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/moonwood_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/moonwood_plank/map-carry-end","grip":[4,3]},"away":{"sprite":"item/moonwood_plank/map-carry-end","grip":[4,3]}},
-    "ironwood_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/ironwood_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/ironwood_plank/map-carry-end","grip":[4,3]},"away":{"sprite":"item/ironwood_plank/map-carry-end","grip":[4,3]}},
-    "emberwood_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/emberwood_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/emberwood_plank/map-carry-end","grip":[4,3]},"away":{"sprite":"item/emberwood_plank/map-carry-end","grip":[4,3]}},
-    "ruby": {"bulk":"light","hold":"hip","sprite":"item/ruby/map-pile-1","grip":[5,5],"toward":{"sprite":"item/ruby/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/ruby/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true}},
-    "infused_ruby": {"bulk":"light","hold":"hip","sprite":"item/infused_ruby/map-pile-1","grip":[5,6]},
+    "voidshard": {"bulk":"light","hold":"hip","sprite":"item/voidshard/map-pile-1","grip":[4,7]},
+    "heartwood_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/heartwood_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/heartwood_plank/map-carry-end","grip":[4,6]},"away":{"sprite":"item/heartwood_plank/map-carry-end","grip":[4,6]}},
+    "moonwood_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/moonwood_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/moonwood_plank/map-carry-end","grip":[4,6]},"away":{"sprite":"item/moonwood_plank/map-carry-end","grip":[4,6]}},
+    "ironwood_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/ironwood_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/ironwood_plank/map-carry-end","grip":[4,6]},"away":{"sprite":"item/ironwood_plank/map-carry-end","grip":[4,6]}},
+    "emberwood_plank": {"bulk":"heavy","hold":"shoulder","sprite":"item/emberwood_plank/map-carry","grip":[15,5],"fused":true,"toward":{"sprite":"item/emberwood_plank/map-carry-end","grip":[4,6]},"away":{"sprite":"item/emberwood_plank/map-carry-end","grip":[4,6]}},
+    "ruby": {"bulk":"light","hold":"hip","sprite":"item/ruby/map-pile-1","grip":[5,7],"toward":{"sprite":"item/ruby/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/ruby/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true}},
+    "infused_ruby": {"bulk":"light","hold":"hip","sprite":"item/infused_ruby/map-pile-1","grip":[5,8]},
     "cut_ruby": {"bulk":"light","hold":"hip","sprite":"item/cut_ruby/map-pile-1","grip":[4,4],"toward":{"sprite":"item/cut_ruby/map-pile-1","grip":[3,4],"rows":[0,8],"stood":true},"away":{"sprite":"item/cut_ruby/map-pile-1","grip":[3,4],"rows":[0,8],"stood":true}},
-    "attuned_ruby": {"bulk":"light","hold":"hip","sprite":"item/attuned_ruby/map-pile-1","grip":[6,6],"toward":{"sprite":"item/attuned_ruby/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_ruby/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
+    "attuned_ruby": {"bulk":"light","hold":"hip","sprite":"item/attuned_ruby/map-pile-1","grip":[6,8],"toward":{"sprite":"item/attuned_ruby/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_ruby/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
     "tooth_necklace": {"bulk":"light","hold":"hip","sprite":"item/tooth_necklace/map-ground","grip":[4,4],"toward":{"sprite":"item/tooth_necklace/map-ground","grip":[3,5],"rows":[0,9],"stood":true},"away":{"sprite":"item/tooth_necklace/map-ground","grip":[3,5],"rows":[0,9],"stood":true}},
     "bone_circlet": {"bulk":"light","hold":"hip","sprite":"item/bone_circlet/map-ground","grip":[5,4],"toward":{"sprite":"item/bone_circlet/map-ground","grip":[3,7],"rows":[0,11],"stood":true},"away":{"sprite":"item/bone_circlet/map-ground","grip":[3,7],"rows":[0,11],"stood":true}},
     "bronze_torc": {"bulk":"light","hold":"hip","sprite":"item/bronze_torc/map-ground","grip":[5,4],"toward":{"sprite":"item/bronze_torc/map-ground","grip":[2,7],"rows":[0,11],"stood":true},"away":{"sprite":"item/bronze_torc/map-ground","grip":[2,7],"rows":[0,11],"stood":true}},
@@ -2401,40 +2401,40 @@
     "gold_chain_of_office": {"bulk":"light","hold":"hip","sprite":"item/gold_chain_of_office/map-ground","grip":[5,5],"toward":{"sprite":"item/gold_chain_of_office/map-ground","grip":[5,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/gold_chain_of_office/map-ground","grip":[5,6],"rows":[0,10],"stood":true}},
     "ruby_ring": {"bulk":"light","hold":"hip","sprite":"item/ruby_ring/map-ground","grip":[3,1]},
     "ruby_amulet": {"bulk":"light","hold":"hip","sprite":"item/ruby_amulet/map-ground","grip":[4,5],"toward":{"sprite":"item/ruby_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true},"away":{"sprite":"item/ruby_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true}},
-    "sapphire": {"bulk":"light","hold":"hip","sprite":"item/sapphire/map-pile-1","grip":[4,5]},
-    "infused_sapphire": {"bulk":"light","hold":"hip","sprite":"item/infused_sapphire/map-pile-1","grip":[4,1]},
-    "cut_sapphire": {"bulk":"light","hold":"hip","sprite":"item/cut_sapphire/map-pile-1","grip":[3,4]},
-    "attuned_sapphire": {"bulk":"light","hold":"hip","sprite":"item/attuned_sapphire/map-pile-1","grip":[6,6],"toward":{"sprite":"item/attuned_sapphire/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_sapphire/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
+    "sapphire": {"bulk":"light","hold":"hip","sprite":"item/sapphire/map-pile-1","grip":[4,7]},
+    "infused_sapphire": {"bulk":"light","hold":"hip","sprite":"item/infused_sapphire/map-pile-1","grip":[4,8]},
+    "cut_sapphire": {"bulk":"light","hold":"hip","sprite":"item/cut_sapphire/map-pile-1","grip":[3,5]},
+    "attuned_sapphire": {"bulk":"light","hold":"hip","sprite":"item/attuned_sapphire/map-pile-1","grip":[6,8],"toward":{"sprite":"item/attuned_sapphire/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_sapphire/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
     "sapphire_ring": {"bulk":"light","hold":"hip","sprite":"item/sapphire_ring/map-ground","grip":[3,1]},
     "sapphire_amulet": {"bulk":"light","hold":"hip","sprite":"item/sapphire_amulet/map-ground","grip":[4,5],"toward":{"sprite":"item/sapphire_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true},"away":{"sprite":"item/sapphire_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true}},
-    "emerald": {"bulk":"light","hold":"hip","sprite":"item/emerald/map-pile-1","grip":[5,5],"toward":{"sprite":"item/emerald/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/emerald/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true}},
-    "infused_emerald": {"bulk":"light","hold":"hip","sprite":"item/infused_emerald/map-pile-1","grip":[5,6]},
-    "cut_emerald": {"bulk":"light","hold":"hip","sprite":"item/cut_emerald/map-pile-1","grip":[3,4]},
-    "attuned_emerald": {"bulk":"light","hold":"hip","sprite":"item/attuned_emerald/map-pile-1","grip":[6,6],"toward":{"sprite":"item/attuned_emerald/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_emerald/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
+    "emerald": {"bulk":"light","hold":"hip","sprite":"item/emerald/map-pile-1","grip":[5,7],"toward":{"sprite":"item/emerald/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/emerald/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true}},
+    "infused_emerald": {"bulk":"light","hold":"hip","sprite":"item/infused_emerald/map-pile-1","grip":[5,8]},
+    "cut_emerald": {"bulk":"light","hold":"hip","sprite":"item/cut_emerald/map-pile-1","grip":[3,5]},
+    "attuned_emerald": {"bulk":"light","hold":"hip","sprite":"item/attuned_emerald/map-pile-1","grip":[6,8],"toward":{"sprite":"item/attuned_emerald/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_emerald/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
     "emerald_ring": {"bulk":"light","hold":"hip","sprite":"item/emerald_ring/map-ground","grip":[3,1]},
     "emerald_amulet": {"bulk":"light","hold":"hip","sprite":"item/emerald_amulet/map-ground","grip":[4,5],"toward":{"sprite":"item/emerald_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true},"away":{"sprite":"item/emerald_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true}},
-    "topaz": {"bulk":"light","hold":"hip","sprite":"item/topaz/map-pile-1","grip":[4,5]},
-    "infused_topaz": {"bulk":"light","hold":"hip","sprite":"item/infused_topaz/map-pile-1","grip":[4,1]},
-    "cut_topaz": {"bulk":"light","hold":"hip","sprite":"item/cut_topaz/map-pile-1","grip":[3,4]},
-    "attuned_topaz": {"bulk":"light","hold":"hip","sprite":"item/attuned_topaz/map-pile-1","grip":[6,6],"toward":{"sprite":"item/attuned_topaz/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_topaz/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
+    "topaz": {"bulk":"light","hold":"hip","sprite":"item/topaz/map-pile-1","grip":[4,7]},
+    "infused_topaz": {"bulk":"light","hold":"hip","sprite":"item/infused_topaz/map-pile-1","grip":[4,8]},
+    "cut_topaz": {"bulk":"light","hold":"hip","sprite":"item/cut_topaz/map-pile-1","grip":[3,5]},
+    "attuned_topaz": {"bulk":"light","hold":"hip","sprite":"item/attuned_topaz/map-pile-1","grip":[6,8],"toward":{"sprite":"item/attuned_topaz/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_topaz/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
     "topaz_ring": {"bulk":"light","hold":"hip","sprite":"item/topaz_ring/map-ground","grip":[3,1]},
     "topaz_amulet": {"bulk":"light","hold":"hip","sprite":"item/topaz_amulet/map-ground","grip":[4,5],"toward":{"sprite":"item/topaz_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true},"away":{"sprite":"item/topaz_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true}},
-    "amethyst": {"bulk":"light","hold":"hip","sprite":"item/amethyst/map-pile-1","grip":[5,5],"toward":{"sprite":"item/amethyst/map-pile-1","grip":[5,7],"rows":[0,11],"stood":true},"away":{"sprite":"item/amethyst/map-pile-1","grip":[5,7],"rows":[0,11],"stood":true}},
-    "infused_amethyst": {"bulk":"light","hold":"hip","sprite":"item/infused_amethyst/map-pile-1","grip":[5,5],"toward":{"sprite":"item/infused_amethyst/map-pile-1","grip":[5,7],"rows":[0,11],"stood":true},"away":{"sprite":"item/infused_amethyst/map-pile-1","grip":[5,7],"rows":[0,11],"stood":true}},
-    "cut_amethyst": {"bulk":"light","hold":"hip","sprite":"item/cut_amethyst/map-pile-1","grip":[3,4]},
-    "attuned_amethyst": {"bulk":"light","hold":"hip","sprite":"item/attuned_amethyst/map-pile-1","grip":[6,6],"toward":{"sprite":"item/attuned_amethyst/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_amethyst/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
+    "amethyst": {"bulk":"light","hold":"hip","sprite":"item/amethyst/map-pile-1","grip":[5,7],"toward":{"sprite":"item/amethyst/map-pile-1","grip":[5,7],"rows":[0,11],"stood":true},"away":{"sprite":"item/amethyst/map-pile-1","grip":[5,7],"rows":[0,11],"stood":true}},
+    "infused_amethyst": {"bulk":"light","hold":"hip","sprite":"item/infused_amethyst/map-pile-1","grip":[5,7],"toward":{"sprite":"item/infused_amethyst/map-pile-1","grip":[5,7],"rows":[0,11],"stood":true},"away":{"sprite":"item/infused_amethyst/map-pile-1","grip":[5,7],"rows":[0,11],"stood":true}},
+    "cut_amethyst": {"bulk":"light","hold":"hip","sprite":"item/cut_amethyst/map-pile-1","grip":[3,5]},
+    "attuned_amethyst": {"bulk":"light","hold":"hip","sprite":"item/attuned_amethyst/map-pile-1","grip":[6,8],"toward":{"sprite":"item/attuned_amethyst/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_amethyst/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
     "amethyst_ring": {"bulk":"light","hold":"hip","sprite":"item/amethyst_ring/map-ground","grip":[3,1]},
     "amethyst_amulet": {"bulk":"light","hold":"hip","sprite":"item/amethyst_amulet/map-ground","grip":[4,5],"toward":{"sprite":"item/amethyst_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true},"away":{"sprite":"item/amethyst_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true}},
-    "citrine": {"bulk":"light","hold":"hip","sprite":"item/citrine/map-pile-1","grip":[5,5],"toward":{"sprite":"item/citrine/map-pile-1","grip":[6,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/citrine/map-pile-1","grip":[6,6],"rows":[0,10],"stood":true}},
-    "infused_citrine": {"bulk":"light","hold":"hip","sprite":"item/infused_citrine/map-pile-1","grip":[5,5],"toward":{"sprite":"item/infused_citrine/map-pile-1","grip":[6,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/infused_citrine/map-pile-1","grip":[6,6],"rows":[0,10],"stood":true}},
+    "citrine": {"bulk":"light","hold":"hip","sprite":"item/citrine/map-pile-1","grip":[5,7],"toward":{"sprite":"item/citrine/map-pile-1","grip":[6,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/citrine/map-pile-1","grip":[6,6],"rows":[0,10],"stood":true}},
+    "infused_citrine": {"bulk":"light","hold":"hip","sprite":"item/infused_citrine/map-pile-1","grip":[5,7],"toward":{"sprite":"item/infused_citrine/map-pile-1","grip":[6,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/infused_citrine/map-pile-1","grip":[6,6],"rows":[0,10],"stood":true}},
     "cut_citrine": {"bulk":"light","hold":"hip","sprite":"item/cut_citrine/map-pile-1","grip":[5,3],"toward":{"sprite":"item/cut_citrine/map-pile-1","grip":[2,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/cut_citrine/map-pile-1","grip":[2,6],"rows":[0,10],"stood":true}},
-    "attuned_citrine": {"bulk":"light","hold":"hip","sprite":"item/attuned_citrine/map-pile-1","grip":[6,6],"toward":{"sprite":"item/attuned_citrine/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_citrine/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
+    "attuned_citrine": {"bulk":"light","hold":"hip","sprite":"item/attuned_citrine/map-pile-1","grip":[6,8],"toward":{"sprite":"item/attuned_citrine/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_citrine/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
     "citrine_ring": {"bulk":"light","hold":"hip","sprite":"item/citrine_ring/map-ground","grip":[3,1]},
     "citrine_amulet": {"bulk":"light","hold":"hip","sprite":"item/citrine_amulet/map-ground","grip":[4,5],"toward":{"sprite":"item/citrine_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true},"away":{"sprite":"item/citrine_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true}},
-    "moonstone": {"bulk":"light","hold":"hip","sprite":"item/moonstone/map-pile-1","grip":[5,5],"toward":{"sprite":"item/moonstone/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/moonstone/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true}},
-    "infused_moonstone": {"bulk":"light","hold":"hip","sprite":"item/infused_moonstone/map-pile-1","grip":[5,5],"toward":{"sprite":"item/infused_moonstone/map-pile-1","grip":[5,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/infused_moonstone/map-pile-1","grip":[5,6],"rows":[0,10],"stood":true}},
+    "moonstone": {"bulk":"light","hold":"hip","sprite":"item/moonstone/map-pile-1","grip":[5,6],"toward":{"sprite":"item/moonstone/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/moonstone/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true}},
+    "infused_moonstone": {"bulk":"light","hold":"hip","sprite":"item/infused_moonstone/map-pile-1","grip":[5,7],"toward":{"sprite":"item/infused_moonstone/map-pile-1","grip":[5,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/infused_moonstone/map-pile-1","grip":[5,6],"rows":[0,10],"stood":true}},
     "cut_moonstone": {"bulk":"light","hold":"hip","sprite":"item/cut_moonstone/map-pile-1","grip":[4,4],"toward":{"sprite":"item/cut_moonstone/map-pile-1","grip":[3,4],"rows":[0,8],"stood":true},"away":{"sprite":"item/cut_moonstone/map-pile-1","grip":[3,4],"rows":[0,8],"stood":true}},
-    "attuned_moonstone": {"bulk":"light","hold":"hip","sprite":"item/attuned_moonstone/map-pile-1","grip":[6,6],"toward":{"sprite":"item/attuned_moonstone/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_moonstone/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
+    "attuned_moonstone": {"bulk":"light","hold":"hip","sprite":"item/attuned_moonstone/map-pile-1","grip":[6,8],"toward":{"sprite":"item/attuned_moonstone/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/attuned_moonstone/map-pile-1","grip":[5,8],"rows":[0,12],"stood":true}},
     "moonstone_ring": {"bulk":"light","hold":"hip","sprite":"item/moonstone_ring/map-ground","grip":[3,1]},
     "moonstone_amulet": {"bulk":"light","hold":"hip","sprite":"item/moonstone_amulet/map-ground","grip":[4,5],"toward":{"sprite":"item/moonstone_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true},"away":{"sprite":"item/moonstone_amulet/map-ground","grip":[3,5],"rows":[0,9],"stood":true}},
     "scholars_circlet": {"bulk":"light","hold":"hip","sprite":"item/scholars_circlet/map-ground","grip":[5,4],"toward":{"sprite":"item/scholars_circlet/map-ground","grip":[3,7],"rows":[0,11],"stood":true},"away":{"sprite":"item/scholars_circlet/map-ground","grip":[3,7],"rows":[0,11],"stood":true}},
@@ -2565,17 +2565,17 @@
     "crushed_stone": {"bulk":"bulky","hold":"chest","sprite":"item/crushed_stone/map-carry","grip":[7,8]},
     "concrete": {"bulk":"bulky","hold":"chest","sprite":"item/concrete/map-carry","grip":[7,8]},
     "rebar": {"bulk":"bulky","hold":"chest","sprite":"item/rebar/map-carry","grip":[4,2]},
-    "gem_dust": {"bulk":"light","hold":"hip","sprite":"item/gem_dust/map-pile-1","grip":[4,4],"toward":{"sprite":"item/gem_dust/map-pile-1","grip":[5,5],"rows":[0,9],"stood":true},"away":{"sprite":"item/gem_dust/map-pile-1","grip":[5,5],"rows":[0,9],"stood":true}},
+    "gem_dust": {"bulk":"light","hold":"hip","sprite":"item/gem_dust/map-pile-1","grip":[4,5],"toward":{"sprite":"item/gem_dust/map-pile-1","grip":[5,5],"rows":[0,9],"stood":true},"away":{"sprite":"item/gem_dust/map-pile-1","grip":[5,5],"rows":[0,9],"stood":true}},
     "magic_concrete": {"bulk":"bulky","hold":"chest","sprite":"item/magic_concrete/map-carry","grip":[7,8]},
     "iron_wire": {"bulk":"light","hold":"hip","sprite":"item/iron_wire/map-pile-1","grip":[7,5],"toward":{"sprite":"item/iron_wire/map-pile-1","grip":[4,10],"rows":[0,14],"stood":true},"away":{"sprite":"item/iron_wire/map-pile-1","grip":[4,10],"rows":[0,14],"stood":true}},
     "mail_rings": {"bulk":"light","hold":"hip","sprite":"item/mail_rings/map-pile-1","grip":[5,5],"toward":{"sprite":"item/mail_rings/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/mail_rings/map-pile-1","grip":[4,6],"rows":[0,10],"stood":true}},
-    "croc_scale_cuirass": {"bulk":"bulky","hold":"chest","sprite":"item/croc_scale_cuirass/map-ground","grip":[7,6],"toward":{"sprite":"item/croc_scale_cuirass/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/croc_scale_cuirass/map-carry-folded","grip":[8,4]}},
-    "plate_cuirass": {"bulk":"bulky","hold":"chest","sprite":"item/plate_cuirass/map-ground","grip":[8,7],"toward":{"sprite":"item/plate_cuirass/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/plate_cuirass/map-carry-folded","grip":[8,4]}},
+    "croc_scale_cuirass": {"bulk":"bulky","hold":"chest","sprite":"item/croc_scale_cuirass/map-ground","grip":[7,6]},
+    "plate_cuirass": {"bulk":"bulky","hold":"chest","sprite":"item/plate_cuirass/map-ground","grip":[8,7]},
     "great_helm": {"bulk":"light","hold":"hip","sprite":"item/great_helm/map-ground","grip":[6,7]},
-    "layered_boarhide_plate": {"bulk":"bulky","hold":"chest","sprite":"item/layered_boarhide_plate/map-ground","grip":[7,6],"toward":{"sprite":"item/layered_boarhide_plate/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/layered_boarhide_plate/map-carry-folded","grip":[8,4]}},
-    "bone_plated_cuirass": {"bulk":"bulky","hold":"chest","sprite":"item/bone_plated_cuirass/map-ground","grip":[7,5],"toward":{"sprite":"item/bone_plated_cuirass/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/bone_plated_cuirass/map-carry-folded","grip":[8,4]}},
+    "layered_boarhide_plate": {"bulk":"bulky","hold":"chest","sprite":"item/layered_boarhide_plate/map-ground","grip":[7,6]},
+    "bone_plated_cuirass": {"bulk":"bulky","hold":"chest","sprite":"item/bone_plated_cuirass/map-ground","grip":[7,5]},
     "horned_helm": {"bulk":"light","hold":"hip","sprite":"item/horned_helm/map-ground","grip":[6,5],"toward":{"sprite":"item/horned_helm/map-ground","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/horned_helm/map-ground","grip":[5,8],"rows":[0,12],"stood":true}},
-    "ceremonial_plate": {"bulk":"bulky","hold":"chest","sprite":"item/ceremonial_plate/map-ground","grip":[8,7],"toward":{"sprite":"item/ceremonial_plate/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/ceremonial_plate/map-carry-folded","grip":[8,4]}},
+    "ceremonial_plate": {"bulk":"bulky","hold":"chest","sprite":"item/ceremonial_plate/map-ground","grip":[8,7]},
     "silk_robe": {"bulk":"bulky","hold":"chest","sprite":"item/silk_robe/map-ground","grip":[9,7],"toward":{"sprite":"item/silk_robe/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/silk_robe/map-carry-folded","grip":[8,4]}},
     "regal_robes": {"bulk":"bulky","hold":"chest","sprite":"item/regal_robes/map-ground","grip":[9,7],"toward":{"sprite":"item/regal_robes/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/regal_robes/map-carry-folded","grip":[8,4]}},
     "clay_alembic": {"bulk":"light","hold":"hip","sprite":"item/clay_alembic/map-ground","grip":[10,8]},
@@ -2676,12 +2676,12 @@
     "rune_graven_kite": {"bulk":"bulky","hold":"chest","sprite":"item/rune_graven_kite/map-ground","grip":[7,10]},
     "goblin_scrap_cap": {"bulk":"light","hold":"hip","sprite":"item/goblin_scrap_cap/map-ground","grip":[6,5],"toward":{"sprite":"item/goblin_scrap_cap/map-ground","grip":[4,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/goblin_scrap_cap/map-ground","grip":[4,8],"rows":[0,12],"stood":true}},
     "goblin_bark_bracers": {"bulk":"light","hold":"hip","sprite":"item/goblin_bark_bracers/map-ground","grip":[7,7]},
-    "goblin_ring_vest": {"bulk":"bulky","hold":"chest","sprite":"item/goblin_ring_vest/map-ground","grip":[7,5],"toward":{"sprite":"item/goblin_ring_vest/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/goblin_ring_vest/map-carry-folded","grip":[8,4]}},
+    "goblin_ring_vest": {"bulk":"bulky","hold":"chest","sprite":"item/goblin_ring_vest/map-ground","grip":[7,5]},
     "goblin_pot_helm": {"bulk":"light","hold":"hip","sprite":"item/goblin_pot_helm/map-ground","grip":[6,5],"toward":{"sprite":"item/goblin_pot_helm/map-ground","grip":[4,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/goblin_pot_helm/map-ground","grip":[4,8],"rows":[0,12],"stood":true}},
-    "kobold_scale_vest": {"bulk":"bulky","hold":"chest","sprite":"item/kobold_scale_vest/map-ground","grip":[7,6],"toward":{"sprite":"item/kobold_scale_vest/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/kobold_scale_vest/map-carry-folded","grip":[8,4]}},
+    "kobold_scale_vest": {"bulk":"bulky","hold":"chest","sprite":"item/kobold_scale_vest/map-ground","grip":[7,6]},
     "kobold_dig_cap": {"bulk":"light","hold":"hip","sprite":"item/kobold_dig_cap/map-ground","grip":[6,5],"toward":{"sprite":"item/kobold_dig_cap/map-ground","grip":[5,8],"rows":[0,12],"stood":true},"away":{"sprite":"item/kobold_dig_cap/map-ground","grip":[5,8],"rows":[0,12],"stood":true}},
     "kobold_bone_bracers": {"bulk":"light","hold":"hip","sprite":"item/kobold_bone_bracers/map-ground","grip":[7,7]},
-    "gnoll_bone_harness": {"bulk":"bulky","hold":"chest","sprite":"item/gnoll_bone_harness/map-ground","grip":[7,5],"toward":{"sprite":"item/gnoll_bone_harness/map-carry-folded","grip":[8,4]},"away":{"sprite":"item/gnoll_bone_harness/map-carry-folded","grip":[8,4]}},
+    "gnoll_bone_harness": {"bulk":"bulky","hold":"chest","sprite":"item/gnoll_bone_harness/map-ground","grip":[7,5]},
     "gnoll_skull_helm": {"bulk":"light","hold":"hip","sprite":"item/gnoll_skull_helm/map-ground","grip":[5,5],"toward":{"sprite":"item/gnoll_skull_helm/map-ground","grip":[4,6],"rows":[0,10],"stood":true},"away":{"sprite":"item/gnoll_skull_helm/map-ground","grip":[4,6],"rows":[0,10],"stood":true}},
     "gnoll_hide_greaves": {"bulk":"light","hold":"hip","sprite":"item/gnoll_hide_greaves/map-ground","grip":[6,7]},
     "orc_horned_helm": {"bulk":"bulky","hold":"chest","sprite":"item/orc_horned_helm/map-ground","grip":[8,5]},

@@ -17,7 +17,7 @@ const stride = (ph, duty, S, H) => {
   const v = (ph - duty) / (1 - duty);
   return [-S / 2 + S * (v * v * (3 - 2 * v)), Math.sin(Math.PI * v) * H];
 };
-const HANG = [0, 10], FLUNG = { out: 7, up: 0, back: 3 };
+const HANG = [0, 10], FLUNG = { out: 7, up: 1, back: 3 };
 const CARRY = {
   axe: s => ({ hr: [1 + s * 2, 9.5], tool: 108 }), pick: s => ({ hr: [1 + s * 2, 9.5], tool: 108 }), hoe: s => ({ hr: [1 + s * 2, 9.5], tool: 104 }),
   spear: s => ({ hr: [1 + s * 2, 9], tool: 96 }), staff: s => ({ hr: [1 + s * 2, 9], tool: 96 }), torch: s => ({ hr: [7.5 + s * .5, 3], tool: 20 }),

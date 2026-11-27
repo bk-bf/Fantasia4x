@@ -308,7 +308,7 @@ function rigPawn(o, p) {
       put = between(anchored(ground[0] - REST.edge, base), inArms ? anchored(left, bottom) : load[7] ? [sx0 - aft, tTop + 1 + jaw - br] : [sx0 - 1 - aft, tTop + SUNK.slung + jaw - br], cu);
       if (cradled && boxAt(put).top < clear && boxAt(put).left <= head[1]) put = [put[0], put[1] + clear - boxAt(put).top];
       const b = boxAt(put), low = clamp(sy + TOT - 1, b.top, b.bottom);
-      grasp = cradled ? [b.left + load[2], b.top + load[3] + 1] : inArms ? [b.left + (low === b.bottom ? 1 : 0), low] : [b.left + load[4] + aft, b.top + load[5] - jaw];
+      grasp = cradled ? [b.left + load[2], b.top + load[3] + 1] : inArms && load[10] ? [b.left + load[4], b.top + load[5]] : inArms ? [b.left + (low === b.bottom ? 1 : 0), low] : [b.left + load[4] + aft, b.top + load[5] - jaw];
       if (cradled) farGrasp = [b.left + load[4], b.top + load[5] + 1];
     }
     if (grasp) { const k = resting ? reached : 1, by = farGrasp || [grasp[0] + 1, grasp[1]]; hr = between(hr || [0, TOT], [grasp[0] - near[0], grasp[1] - near[1]], k); htl = between(htl || [0, TOT], [by[0] - far[0], by[1] - far[1]], k); }
