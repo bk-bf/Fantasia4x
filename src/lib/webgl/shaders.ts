@@ -232,8 +232,13 @@ export class ShaderManager {
   }
 }
 
-const withPaintedPath = (source: string): string =>
-  withTreeParts(withRockSurface(source.replace(/^(#version[^\n]*\n)/, '$1#define PAINTED\n')));
+const withPaintedDefine = (source: string): string =>
+  source.replace(/^(#version[^\n]*\n)/, '$1#define PAINTED\n');
+
+export const tileFragmentSource = (painted: boolean): string =>
+  withTreeParts(
+    withRockSurface(painted ? withPaintedDefine(fragmentShaderSource) : fragmentShaderSource)
+  );
 
 export async function createTileRendererShaders(
   gpu: GpuDevice,
@@ -246,7 +251,7 @@ export async function createTileRendererShaders(
   try {
     const shaderSource: ShaderSource = {
       vertex: vertexShaderSource,
-      fragment: painted ? withPaintedPath(fragmentShaderSource) : fragmentShaderSource
+      fragment: tileFragmentSource(painted)
     };
 
     console.log('📋 Vertex shader source length:', shaderSource.vertex.length);
