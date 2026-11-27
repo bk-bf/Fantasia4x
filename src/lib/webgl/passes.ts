@@ -24,3 +24,11 @@ const SKIPPED: Set<RenderPass> =
     : new Set();
 
 export const passOn = (pass: RenderPass): boolean => !SKIPPED.has(pass);
+
+export const readValidateFlag = (search: string): boolean =>
+  new URLSearchParams(search).get('validate') === '1';
+
+export const GPU_VALIDATE: boolean =
+  import.meta.env.DEV && typeof window !== 'undefined'
+    ? readValidateFlag(window.location?.search ?? '')
+    : false;

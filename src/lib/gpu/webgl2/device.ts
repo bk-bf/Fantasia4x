@@ -73,7 +73,8 @@ export class Webgl2Device implements GpuDevice {
     private readonly gl: WebGL2RenderingContext,
     options: { validate?: boolean } = {}
   ) {
-    const validator = (options.validate ?? import.meta.env.DEV) ? new Webgl2Validator() : null;
+    const validator =
+      (options.validate ?? import.meta.env.MODE === 'test') ? new Webgl2Validator() : null;
     this.validator = validator;
     const textures = new Webgl2Textures(
       gl,
