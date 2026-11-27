@@ -46,6 +46,7 @@ import { TIER_NOISE_UNIT, TIER_TILE_UNIT, Tiers } from './painted/tiers.js';
 
 const LIGHT_ATLAS_UNIT = 7;
 const DRESS_BUDGET_MS = 3;
+const TREE_GROUND_STENCIL = 1;
 const WINTER = 'winter';
 
 export const ROW_DEPTH_RANGE = 8192;
@@ -420,7 +421,10 @@ export class WebGLRendererCore {
     try {
       if (this.debug) console.log('🔄 Initializing WebGL2 renderer...');
 
-      const gpu = await this.webglState.initialize({ depth: this.rowDepth });
+      const gpu = await this.webglState.initialize({
+        depth: this.rowDepth,
+        stencil: this.rowDepth
+      });
 
       this.shaderManager = await createTileRendererShaders(gpu, this.debug, PAINTED_TILES);
       if (!this.shaderManager) throw new Error('Shader init failed');
@@ -642,7 +646,7 @@ export class WebGLRendererCore {
           chunk
         );
         if (layer === 'resource' && this.snowGrid && passOn('snow'))
-          this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
+          this.drawSnowPieces(gpu, viewportTilesW, viewportTilesH, lightTime);
         if (layer === 'resource' && ROCK_TIERS && this.rowDepth)
           this.drawTiers(gpu, viewportTilesW, viewportTilesH, lightFrame);
       }
@@ -844,6 +848,7 @@ export class WebGLRendererCore {
       lightFrame?.grade.saturation ?? 1,
       lightFrame?.grade.brightness ?? 1
     ];
+    gpu.setStencil({ compare: 'always', reference: TREE_GROUND_STENCIL, write: true });
     if (this.drawGroundBlend(blend, flicker, lightTime, tone, true)) {
       this.tiers?.bindShared();
       this.shaderManager.useProgram('tileRenderer');
@@ -868,6 +873,7 @@ export class WebGLRendererCore {
       cacheVersion: this.gridVersion,
       chunkLayer: 'decor'
     });
+    gpu.setStencil(null);
     this.stats.drawCalls++;
     this.stats.vertexCount += s.tilesRendered * 6;
   }
@@ -969,6 +975,19 @@ export class WebGLRendererCore {
       painted.top.ramp.y
     ]);
     this.shaderManager.setUniform('tileRenderer', 'u_rockLift', painted.top.lift);
+  }
+
+  private drawSnowPieces(
+    gpu: GpuDevice,
+    viewportTilesW: number,
+    viewportTilesH: number,
+    lightTime: number
+  ): void {
+    const kept = !!this.groundBlend?.trees;
+    if (kept)
+      gpu.setStencil({ compare: 'not-equal', reference: TREE_GROUND_STENCIL, write: false });
+    this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
+    if (kept) gpu.setStencil(null);
   }
 
   private drawSnowGrid(

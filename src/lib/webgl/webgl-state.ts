@@ -107,7 +107,7 @@ export class WebGLStateManager {
 
   clear(depth = false): void {
     if (!this.device) return;
-    this.device.clear({ color: true, depth });
+    this.device.clear({ color: true, depth, stencil: depth });
   }
 
   private onContextLost(event: Event): void {
