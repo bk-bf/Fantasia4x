@@ -9,7 +9,10 @@ interface BufferInfo {
 export class Webgl2Buffers {
   private readonly info = new WeakMap<WebGLBuffer, BufferInfo>();
 
-  constructor(private readonly gl: WebGL2RenderingContext) {}
+  constructor(
+    private readonly gl: WebGL2RenderingContext,
+    private readonly beforeWrite?: (buffer: WebGLBuffer, start: number, end: number) => void
+  ) {}
 
   create(desc: BufferDescriptor): GpuBuffer {
     const gl = this.gl;
@@ -41,6 +44,7 @@ export class Webgl2Buffers {
     const elements = size ?? data.byteLength / per - dataOffset;
     if (offset + elements * per > info.size)
       throw new Error(`writeBuffer: ${elements * per} bytes at ${offset} overrun ${info.size}`);
+    this.beforeWrite?.(buf, offset, offset + elements * per);
     gl.bindBuffer(info.target, buf);
     if (offset === 0 && elements * per === info.size)
       gl.bufferData(info.target, data, info.hint, dataOffset, elements);

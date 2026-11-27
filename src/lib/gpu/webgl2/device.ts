@@ -24,6 +24,7 @@ import { Webgl2Pipelines, type Webgl2Pipeline, type Webgl2Uniform } from './pipe
 import { Webgl2State } from './state.js';
 import { Webgl2VertexArrays } from './vertexArrays.js';
 import { CANVAS_COLOR, CANVAS_DEPTH, Webgl2Framebuffers } from './passes.js';
+import { Webgl2Validator } from './validate.js';
 import { Webgl2Buffers } from './buffers.js';
 import { Webgl2Textures } from './textures.js';
 
@@ -63,11 +64,20 @@ export class Webgl2Device implements GpuDevice {
   private readonly vertexArrays: Webgl2VertexArrays;
   private readonly framebuffers: Webgl2Framebuffers;
   private pipeline: Webgl2Pipeline | null = null;
+  private readonly validator: Webgl2Validator | null;
   readonly queue: GpuQueue;
 
-  constructor(private readonly gl: WebGL2RenderingContext) {
+  constructor(
+    private readonly gl: WebGL2RenderingContext,
+    options: { validate?: boolean } = {}
+  ) {
+    const validator = (options.validate ?? import.meta.env.DEV) ? new Webgl2Validator() : null;
+    this.validator = validator;
     const textures = new Webgl2Textures(gl);
-    const buffers = new Webgl2Buffers(gl);
+    const buffers = new Webgl2Buffers(
+      gl,
+      validator ? (b, s, e) => validator.write(b, s, e) : undefined
+    );
     this.textures = textures;
     this.buffers = buffers;
     const attributes = gl.getContextAttributes();
@@ -102,7 +112,7 @@ export class Webgl2Device implements GpuDevice {
       writeTexture: (dst, data, layout, size) =>
         textures.write(dst.texture, dst.origin ?? { x: 0, y: 0 }, data, layout.bytesPerRow, size),
       copyExternalImageToTexture: (src, dst) => textures.copyImage(src.source, dst.texture),
-      submit: () => {}
+      submit: () => validator?.reset()
     };
   }
 
@@ -243,6 +253,7 @@ export class Webgl2Device implements GpuDevice {
   }
 
   createCommandEncoder(): GpuCommandEncoder {
+    this.validator?.reset();
     let open = false;
     return {
       beginRenderPass: (desc): GpuRenderPass => {
@@ -307,6 +318,12 @@ export class Webgl2Device implements GpuDevice {
     if (firstInstance !== 0) throw new Error('draw: WebGL2 has no base instance');
     this.state.use(p.program);
     this.vertexArrays.bind(p);
+    this.validator?.draw(
+      p,
+      this.vertexArrays.bound,
+      [firstVertex, firstVertex + vertexCount],
+      [firstInstance, firstInstance + (instanceCount ?? 1)]
+    );
     if (instanceCount === undefined) this.gl.drawArrays(p.topology, firstVertex, vertexCount);
     else this.gl.drawArraysInstanced(p.topology, firstVertex, vertexCount, instanceCount);
   }

@@ -13,9 +13,13 @@ export class Webgl2VertexArrays {
   private readonly ids = new WeakMap<WebGLBuffer, number>();
   private nextId = 1;
   private empty: WebGLVertexArrayObject | null = null;
-  private bound: WebGLVertexArrayObject | null = null;
+  private boundArray: WebGLVertexArrayObject | null = null;
 
   constructor(private readonly gl: WebGL2RenderingContext) {}
+
+  get bound(): readonly (Slot | undefined)[] {
+    return this.slots;
+  }
 
   set(slot: number, buffer: WebGLBuffer, offset: number): void {
     this.slots[slot] = { buffer, offset };
@@ -26,9 +30,9 @@ export class Webgl2VertexArrays {
       p.buffers.length === 0
         ? (this.empty ??= this.gl.createVertexArray())
         : (this.byKey.get(this.key(p)) ?? this.build(p));
-    if (vao === this.bound) return;
+    if (vao === this.boundArray) return;
     this.gl.bindVertexArray(vao);
-    this.bound = vao;
+    this.boundArray = vao;
   }
 
   forget(buffer: WebGLBuffer): void {
@@ -37,7 +41,7 @@ export class Webgl2VertexArrays {
       if (!vao) continue;
       this.gl.deleteVertexArray(vao);
       this.byKey.delete(key);
-      if (vao === this.bound) this.bound = null;
+      if (vao === this.boundArray) this.boundArray = null;
     }
     this.byBuffer.delete(buffer);
     this.slots.forEach((slot, i) => {
@@ -71,7 +75,7 @@ export class Webgl2VertexArrays {
     const key = this.key(p);
     const vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
-    this.bound = vao;
+    this.boundArray = vao;
     p.buffers.forEach((layout, i) => {
       const slot = this.slot(i);
       gl.bindBuffer(gl.ARRAY_BUFFER, slot.buffer);
