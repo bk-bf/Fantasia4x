@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Webgl2Device } from '../../lib/gpu/webgl2/device.js';
+import { Webgl2BindGroups } from '../../lib/gpu/webgl2/bindGroups.js';
+import type { Webgl2Pipeline } from '../../lib/gpu/webgl2/pipeline.js';
 import {
   BufferUsage,
   ShaderStage,
@@ -203,6 +205,53 @@ describe('webgl2 bind groups', () => {
         ?.slice(1)
     ).toEqual([0, sampler]);
     expect(calls.slice(before).find((c) => c[0] === 'activeTexture')?.[1]).toBe(GL.TEXTURE0);
+  });
+});
+
+describe('repeated draws', () => {
+  it('walk the bindings again only when the pipeline, a bind group or its offsets change', () => {
+    const walked: number[] = [];
+    const gl = { UNIFORM_BUFFER: GL.UNIFORM_BUFFER, bindBufferRange: () => {} };
+    const groups = new Webgl2BindGroups(gl as unknown as WebGL2RenderingContext, () => {}, {
+      buffer: (_, start) => walked.push(start),
+      texture: () => {}
+    });
+    const layout = groups.createLayout({
+      entries: [
+        {
+          binding: 2,
+          visibility: ShaderStage.VERTEX,
+          buffer: { minBindingSize: 32, hasDynamicOffset: true }
+        }
+      ]
+    });
+    const buffer = {} as never;
+    const group = groups.createGroup({
+      layout,
+      entries: [{ binding: 2, resource: { buffer, size: 32 } }]
+    });
+    const pipelineOn = () =>
+      ({
+        layout: [layout],
+        linked: { blocks: [{ slot: [0, 2], point: 2 }], textures: [] }
+      }) as unknown as Webgl2Pipeline;
+    const [p, q] = [pipelineOn(), pipelineOn()];
+    groups.beginPass();
+    groups.setGroup(0, group, [0]);
+    groups.apply(p);
+    groups.apply(p);
+    groups.setGroup(0, group, [0]);
+    groups.apply(p);
+    groups.setGroup(0, group, [256]);
+    groups.apply(p);
+    groups.apply(q);
+    groups.apply(q);
+    groups.forgetBuffer(buffer);
+    groups.apply(q);
+    groups.beginPass();
+    groups.setGroup(0, group, [256]);
+    groups.apply(q);
+    expect(walked).toEqual([0, 256, 256, 256, 256]);
   });
 });
 

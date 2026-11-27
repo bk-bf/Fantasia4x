@@ -31,6 +31,12 @@ export interface BindingReads {
   texture(texture: GpuTexture): void;
 }
 
+function sameOffsets(a: readonly number[], b: readonly number[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 export class Webgl2BindGroups {
   private readonly layouts = new WeakMap<GpuBindGroupLayout, LayoutRecord>();
   private readonly groups = new WeakMap<GpuBindGroup, GroupRecord>();
@@ -38,6 +44,9 @@ export class Webgl2BindGroups {
   private readonly ranges = new Map<number, readonly [WebGLBuffer, number, number]>();
   private readonly units = new Map<number, GpuTexture>();
   private readonly samplers = new Map<number, GpuSampler | null>();
+  private version = 0;
+  private appliedPipeline: Webgl2Pipeline | null = null;
+  private appliedVersion = -1;
 
   constructor(
     private readonly gl: WebGL2RenderingContext,
@@ -74,14 +83,19 @@ export class Webgl2BindGroups {
     const dynamic = this.layouts.get(record.layout)!.dynamic.length;
     if (offsets.length !== dynamic)
       throw new Error(`setBindGroup ${index}: ${offsets.length} dynamic offsets for ${dynamic}`);
+    const current = this.set[index];
+    if (current?.group === record && sameOffsets(current.offsets, offsets)) return;
     this.set[index] = { group: record, offsets };
+    this.version++;
   }
 
   beginPass(): void {
     this.set.length = 0;
+    this.version++;
   }
 
   apply(p: Webgl2Pipeline): void {
+    if (p === this.appliedPipeline && this.version === this.appliedVersion) return;
     p.layout.forEach((layout, g) => {
       if (this.set[g]?.group.layout !== layout)
         throw new Error(`draw: bind group ${g} is not set to the pipeline's layout`);
@@ -111,14 +125,18 @@ export class Webgl2BindGroups {
       }
       this.reads?.texture(texture);
     }
+    this.appliedPipeline = p;
+    this.appliedVersion = this.version;
   }
 
   forgetTexture(texture: GpuTexture): void {
     for (const [unit, bound] of this.units) if (bound === texture) this.units.delete(unit);
+    this.version++;
   }
 
   forgetBuffer(buffer: WebGLBuffer): void {
     for (const [point, bound] of this.ranges) if (bound[0] === buffer) this.ranges.delete(point);
+    this.version++;
   }
 
   private resource(group: number, binding: number): BindingResource {
