@@ -229,7 +229,7 @@ function staveOf(aim, cant) {
   return add3(mul3(u, Math.cos(c)), mul3(cross3(aim, u), Math.sin(c)));
 }
 const TOOL_REACH = { axe: 24, pick: 23, hoe: 23, hammer: 17, sword: 21, spear: 34, club: 20, torch: 12, staff: 30, ladle: 11, cup: 3, bread: 2 };
-const WIDE_GRIP = { axe: [2, -6], pick: [2, -6], hoe: [-4, -6] }, gripsOf = (kind, face) => (face !== 's' && WIDE_GRIP[kind]) || TWO_HANDED[kind];
+const WIDE_GRIP = { axe: [2, -6], pick: [2, -6], hoe: [-4, -6], spear: [4, -8], staff: [4, -8] }, gripsOf = (kind, face) => (face !== 's' && WIDE_GRIP[kind]) || TWO_HANDED[kind];
 const TWO_HANDED = { axe: [0, -3], pick: [0, -3], hoe: [-8, -2], spear: [5, -13], staff: [5, -13] }, TOOL_HEAD = { axe: 7, pick: 8, hoe: 6, hammer: 4, club: 4, staff: 3 };
 const TOOL_AIM = { sword: [0, .9, -.44], club: [0, .9, -.44], hammer: [0, .9, -.44], axe: [0, .9, -.44], pick: [0, .9, -.44], spear: [0, 1, .04], staff: [0, 1, .04], hoe: [0, 1, .04], torch: [0, .35, .94], ladle: [0, .3, -.95], cup: [0, 0, 1], bread: [0, 1, 0] };
 const STRUCK = { reach: 1.5 };

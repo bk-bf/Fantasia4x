@@ -6,7 +6,7 @@ const SHOWS = 3, APART = 4, IN_LINE = { cos: .94, reach: 5, tools: ['hammer', 'c
 const KEPT_AS_APPROVED = { x: ['shoulder'] };
 const QUIVERED = .9, BODY_HIDES = ['bow', 'arrow'];
 const CRADLE = { palm: 3, across: 2, above: 3, below: 2 };
-const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15, FACE = { dark: .5, marks: 4 }, YOKED = { above: .2 }, BLOCK = { wide: 12, tall: 8, under: 2, along: 3 };
+const HIDDEN = { share: .88, least: 10, head: 2 }, LAPPED = 4, SEEN_DEPTH = .4, FLAT_AIM = .3, SUNK_SHARE = .5, GRIP_OFF = 2.5, GRABBED = .15, FACE = { dark: .5, marks: 4 }, POLES = ['spear', 'staff'], LEVEL = 2, YOKED = { above: .2 }, BLOCK = { wide: 12, tall: 8, under: 2, along: 3 };
 const READS = { bars: s => s.w <= 9 && s.w >= 2 * s.h, bundles: s => s.filled <= .6 * s.w * s.h };
 
 const same = (a, b) => Math.abs(a[0] - b[0]) < 1.01 && Math.abs(a[1] - b[1]) < 1.01 && Math.abs(a[2] - b[2]) < 1.01;
@@ -84,14 +84,17 @@ export function pictured(now, face, ink) {
   const behindBody = what => { const own = stack.filter(l => l.seg === 'hand' && l.grips === 'tool' && (what === 'arrow' ? l.piece !== 'stave' : l.piece !== 'string')); return own.length > 0 && own.every(h => showing(h).length < SHOWS); };
   for (const [what, px, by, drawn] of things) if (px.length >= SHOWS && !touches(drawn, by, w) && !(BODY_HIDES.includes(what === 'tool' ? sp && sp.tool : what) && (face === 'b' || behindBody(what))) && !(face === 'b' && what === 'tool' && behindBody(what))) { counts.w++; said.push(what + ' shows ' + px.length + ' px with no hand showing on it'); }
   if (toolPx.length) {
-    const ax = axisOf(toolPx, w), seen = rigid.flatMap(showing), gripped = toolPx.filter(i => top[i] >= 0 && stack[top[i]].limb), underHead = toolPx.filter(i => top[i] >= 0 && stack[top[i]].name === 'head'), behindBack = face === 'b' ? toolPx.filter(i => top[i] >= 0 && !stack[top[i]].limb && !rigid.includes(stack[top[i]])) : [];
+    const ax = axisOf(toolPx, w), seen = rigid.flatMap(showing), gripped = toolPx.filter(i => top[i] >= 0 && stack[top[i]].limb), underHead = toolPx.filter(i => top[i] >= 0 && stack[top[i]].name === 'head'), behindBack = face !== 'f' ? toolPx.filter(i => top[i] >= 0 && !stack[top[i]].limb && !rigid.includes(stack[top[i]]) && (face === 'b' || stack[top[i]].name !== 'head')) : [];
     const paired = !!(sp && sp.arms && sp.arms.second && sp.arms.aim && sp.tool !== 'bow'), along = i => (i % w - ax[2]) * ax[0] + (((i / w) | 0) - ax[3]) * ax[1];
     const offGrip = px => { const cx = px.reduce((t, i) => t + i % w, 0) / px.length, cy = px.reduce((t, i) => t + ((i / w) | 0), 0) / px.length; return !toolPx.some(i => Math.hypot(i % w - cx, ((i / w) | 0) - cy) <= GRIP_OFF); };
     const depthOf = () => { const aim = sp.arms.aim, flat = [aim[0], -SEEN_DEPTH * aim[1] - aim[2]], run = Math.hypot(flat[0], flat[1]), way = flat[0] * ax[0] + flat[1] * ax[1] >= 0 ? 1 : -1, tip = Math.max(...toolPx.map(i => way * along(i))); return run < FLAT_AIM ? null : i => sp.arms.R.H[1] + aim[1] * (sp.reach - (tip - way * along(i)) / run); };
     const trunk = stack.filter(l => !l.limb && l.seg !== 'hand' && l.name !== 'load' && !tools.includes(l)), wrongSide = () => { const at = depthOf(); return at ? [...underHead.filter(i => at(i) < sp.head.at[1]), ...seen.filter(i => at(i) > sp.torso.deep && trunk.some(l => l.spr.c[i]))] : []; };
     counts.rigid = { all: alongAxis(toolPx, w, ax), seen: alongAxis([...seen, ...(seen.length ? gripped : [])], w, ax), px: seen.length, sunk: face === 'b' && behindBack.length >= SUNK_SHARE * toolPx.length };
-    const open = alongAxis([...seen, ...gripped, ...behindBack], w, ax), lost = paired ? face === 'b' ? wrongSide() : underHead : [];
-    if (paired && counts.rigid.all >= HIDDEN.least && seen.length && open < HIDDEN.share * counts.rigid.all) { counts.N++; said.push('tool shows ' + open.toFixed(1) + ' px of ' + counts.rigid.all.toFixed(1)); }
+    const pole = POLES.includes(sp && sp.tool), torso = stack.find(l => l.name === 'torso'), across = torso ? rigid.map(l => [l, pixels(l.spr).filter(i => torso.spr.c[i]).length]).filter(q => q[1]) : [];
+    if (pole && face === 's') { const over = across.filter(q => q[0].cam > torso.cam).reduce((t, q) => t + q[1], 0), under = across.reduce((t, q) => t + q[1], 0) - over; counts.poleSide = over >= LAPPED && over > under ? 1 : under >= LAPPED ? -1 : 0; }
+    const level = !!(sp && sp.arms && sp.arms.aim) && Math.abs(sp.arms.aim[0]) >= LEVEL * Math.max(Math.abs(sp.arms.aim[1]), Math.abs(sp.arms.aim[2])), shielded = toolPx.filter(i => top[i] >= 0 && stack[top[i]].name === 'shield'), fisted = stack.some(l => l.seg === 'hand' && l.grips === 'tool' && showing(l).length >= SHOWS);
+    const open = alongAxis([...seen, ...gripped, ...shielded, ...(paired || !level || !fisted ? behindBack : [])], w, ax), lost = paired ? face === 'b' ? [...new Set([...wrongSide(), ...(pole ? underHead : [])])] : underHead : [];
+    if ((paired || pole) && counts.rigid.all >= HIDDEN.least && seen.length && open < HIDDEN.share * counts.rigid.all) { counts.N++; said.push('tool shows ' + open.toFixed(1) + ' px of ' + counts.rigid.all.toFixed(1)); }
     if (lost.length >= HIDDEN.head) { counts.P++; said.push(lost.length + (face === 'b' ? ' px of the tool on the wrong side of the body' : ' px of the tool behind the head')); }
     for (const h of paired ? stack.filter(l => l.seg === 'hand' && l.grips === 'tool') : []) if (showing(h).length >= SHOWS && offGrip(pixels(h.spr))) { counts.O++; said.push('a gripping hand shows ' + showing(h).length + ' px off the ' + sp.tool); }
     const second = sp && sp.arms && sp.arms.second && sp.tool !== 'bow' ? stack.filter(l => l.seg === 'hand' && l.grips !== 'tool') : [];

@@ -179,8 +179,9 @@ function audit(now, shown, face) {
   return counts;
 }
 
-const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', ...PICTURE_KEYS, 'z', 'I', 'J', 'M', 'Q'];
-const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', o: 'held thing behind the body it is in front of', p: 'inside the body', ...PICTURE_NAMED, z: 'rigid thing changes length', I: 'seated with no seat', J: 'lying figure under its ground line', M: 'limb sticks up from a lying figure', Q: 'load jumps between frames' };
+const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', ...PICTURE_KEYS, 'z', 'I', 'J', 'M', 'Q', 'T'];
+const POLE_ROWS = ['guardTwo', 'thrust'], poleSides = new Map();
+const NAMED = { a: 'over the back', b: 'arm through load', c: 'palm side', d: 'out of depth order', e: 'hand off its object', f: 'over the face', g: 'size jump or missing', h: 'below the ground', i: 'blended', j: 'shield side', k: 'arm length', l: 'grip off the hand', m: 'under the ground', n: 'load too big to carry', o: 'held thing behind the body it is in front of', p: 'inside the body', ...PICTURE_NAMED, z: 'rigid thing changes length', I: 'seated with no seat', J: 'lying figure under its ground line', M: 'limb sticks up from a lying figure', Q: 'load jumps between frames', T: 'pole on the other side of the body than in the guard' };
 const anims = Object.keys(NOW.PAWN_ANIMS).filter(a => !only || new RegExp(only).test(a));
 const totals = Object.fromEntries(KEYS.map(k => [k, 0])), rows = [], notes = [], ground = new Map(), shares = [], seenShare = args.includes('--seen');
 let frames = 0;
@@ -204,6 +205,7 @@ for (const anim of anims) {
         const got = audit(now, (THEN ? frame(THEN, kind, over, anim, face, u, loadId, now.seed) : now).spr.c, face), where = who + (loadId ? ' ' + loadId : '') + ' frame ' + (i + 1);
         const seen = pictured({ ...now, bowHalf: NOW.BOW.half, shade: NOW.shade, waited: PICKED_UP.includes(anim) && Math.min(u, 1 - u) >= SETTLE }, face, NOW.P.ink);
         spots[i] = seen.loadLow === undefined ? null : seen.loadLow;
+        if (POLE_ROWS.includes(anim) && seen.poleSide) { const key = who + ' ' + NAMES[face], had = poleSides.get(key); if (had && had !== seen.poleSide) { sum.T++; if (noted) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + NAMED.T); } else if (!had) poleSides.set(key, seen.poleSide); }
         for (const k of PICTURE_KEYS) got[k] = seen[k];
         if (kind.startsWith('folk-')) for (const k of COSTUMED) got[k] = 0;
         if (noted && seen.said.length) notes.push(anim + ' ' + NAMES[face] + ' ' + where + ': ' + seen.said.join('; '));
