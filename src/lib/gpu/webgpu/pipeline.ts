@@ -1,12 +1,23 @@
 import {
   WGSL_FRAGMENT_ENTRY,
   WGSL_VERTEX_ENTRY,
+  type BindGroupLayoutEntry,
+  type GpuBindGroupLayout,
   type GpuRenderPipeline,
   type GpuShaderModule,
   type RenderPipelineDescriptor,
-  type RenderPipelineResult
+  type RenderPipelineResult,
+  type VertexBufferLayout
 } from '../device.js';
 import { blendState, depthStencilState, vertexBuffers } from './formats.js';
+import { pipelineLayoutError, type BindingLimits } from './limits.js';
+
+interface Built {
+  label: string;
+  pipeline: GPURenderPipeline | null;
+  failed: boolean;
+  buffers: readonly VertexBufferLayout[];
+}
 
 function reportCompilation(label: string, code: string, module: GPUShaderModule): void {
   void module.getCompilationInfo().then((info) => {
@@ -22,9 +33,13 @@ function reportCompilation(label: string, code: string, module: GPUShaderModule)
 
 export class WebgpuPipelines {
   private readonly modules = new Map<string, GPUShaderModule>();
-  private readonly skipped = new WeakSet<GPURenderPipeline>();
+  private readonly built = new WeakMap<GpuRenderPipeline, Built>();
 
-  constructor(private readonly device: GPUDevice) {}
+  constructor(
+    private readonly device: GPUDevice,
+    private readonly limits: BindingLimits,
+    private readonly entriesOf: (layout: GpuBindGroupLayout) => readonly BindGroupLayoutEntry[]
+  ) {}
 
   private module(label: string, code: string): GPUShaderModule {
     let module = this.modules.get(code);
@@ -38,47 +53,75 @@ export class WebgpuPipelines {
 
   create(desc: RenderPipelineDescriptor): RenderPipelineResult {
     if (!desc.wgsl) return { ok: false, error: `${desc.label} carries no WGSL`, modules: [] };
+    const over = pipelineLayoutError(desc.layout.map(this.entriesOf), this.limits);
+    if (over) return { ok: false, error: `${desc.label}: ${over}`, modules: [] };
     const device = this.device;
-    device.pushErrorScope('validation');
     const module = this.module(desc.label, desc.wgsl.code);
     const target = desc.fragment.targets[0];
-    const pipeline = device.createRenderPipeline({
+    const handle = { label: desc.label } as unknown as GpuRenderPipeline;
+    const built: Built = {
       label: desc.label,
-      layout: device.createPipelineLayout({
+      pipeline: null,
+      failed: false,
+      buffers: desc.vertex.buffers
+    };
+    this.built.set(handle, built);
+    device
+      .createRenderPipelineAsync({
         label: desc.label,
-        bindGroupLayouts: desc.layout as unknown as GPUBindGroupLayout[]
-      }),
-      vertex: {
-        module,
-        entryPoint: WGSL_VERTEX_ENTRY,
-        buffers: vertexBuffers(desc.vertex.buffers)
-      },
-      fragment: {
-        module,
-        entryPoint: WGSL_FRAGMENT_ENTRY,
-        targets: [{ format: target.format, blend: blendState(target.blend) }]
-      },
-      primitive: { topology: desc.primitive.topology },
-      depthStencil: depthStencilState(desc.depthStencil)
-    });
-    void device.popErrorScope().then((error) => {
-      if (!error) return;
-      this.skipped.add(pipeline);
-      console.error(`❌ WebGPU pipeline ${desc.label} is invalid and will not draw: ${error.message}`);
-    });
+        layout: device.createPipelineLayout({
+          label: desc.label,
+          bindGroupLayouts: desc.layout as unknown as GPUBindGroupLayout[]
+        }),
+        vertex: {
+          module,
+          entryPoint: WGSL_VERTEX_ENTRY,
+          buffers: vertexBuffers(desc.vertex.buffers)
+        },
+        fragment: {
+          module,
+          entryPoint: WGSL_FRAGMENT_ENTRY,
+          targets: [{ format: target.format, blend: blendState(target.blend) }]
+        },
+        primitive: { topology: desc.primitive.topology },
+        depthStencil: depthStencilState(desc.depthStencil)
+      })
+      .then(
+        (pipeline) => {
+          if (!built.failed) built.pipeline = pipeline;
+        },
+        (error: unknown) => {
+          built.failed = true;
+          console.error(
+            `❌ WebGPU pipeline ${desc.label} is invalid and will not draw: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+      );
     return {
       ok: true,
-      pipeline: pipeline as unknown as GpuRenderPipeline,
+      pipeline: handle,
       modules: [{ label: desc.label, module: module as unknown as GpuShaderModule }]
     };
   }
 
-  draws(pipeline: GpuRenderPipeline): boolean {
-    return !this.skipped.has(pipeline as unknown as GPURenderPipeline);
+  private of(pipeline: GpuRenderPipeline): Built {
+    const built = this.built.get(pipeline);
+    if (!built) throw new Error('not a pipeline this device created');
+    return built;
+  }
+
+  ready(pipeline: GpuRenderPipeline): GPURenderPipeline | null {
+    return this.of(pipeline).pipeline;
+  }
+
+  buffers(pipeline: GpuRenderPipeline): readonly VertexBufferLayout[] {
+    return this.of(pipeline).buffers;
   }
 
   retire(pipeline: GpuRenderPipeline): void {
-    this.skipped.add(pipeline as unknown as GPURenderPipeline);
+    const built = this.of(pipeline);
+    built.failed = true;
+    built.pipeline = null;
   }
 
   forget(module: GpuShaderModule): void {

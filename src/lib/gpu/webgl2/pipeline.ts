@@ -163,10 +163,14 @@ function link(
   return { program };
 }
 
+export const UNIFORM_POINTS_PER_GROUP = 8;
+
 export function uniformPoint([group, binding]: BindingSlot): number {
-  if (binding >= 8)
-    throw new Error(`uniform block binding ${binding} is past the 8 a group may use`);
-  return group * 8 + binding;
+  if (binding >= UNIFORM_POINTS_PER_GROUP)
+    throw new Error(
+      `uniform block binding ${binding} is past the ${UNIFORM_POINTS_PER_GROUP} a group may use`
+    );
+  return group * UNIFORM_POINTS_PER_GROUP + binding;
 }
 
 function bindings(

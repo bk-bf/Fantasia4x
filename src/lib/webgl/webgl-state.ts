@@ -137,12 +137,11 @@ export class WebGLStateManager {
       if (logged++ < UNCAPTURED_LOGGED)
         console.error('[gpu] WebGPU error:', (event as GPUUncapturedErrorEvent).error.message);
     });
-    const device = new WebgpuDevice(raw, {
-      canvas,
-      context: acquire,
-      format,
-      depthFormat: depthFormatOf(attributes)
-    });
+    const device = new WebgpuDevice(
+      raw,
+      { canvas, context: acquire, format, depthFormat: depthFormatOf(attributes) },
+      GPU_VALIDATE ? { validate: true } : {}
+    );
     void raw.lost.then((info) => {
       if (this.device !== device) return;
       this.device = null;
@@ -252,6 +251,9 @@ export class WebGLStateManager {
     this.canvas.removeEventListener('webglcontextrestored', this.contextRestoredHandler);
 
     this.device = null;
+    const choice = this.choice;
+    this.choice = null;
+    if (choice?.backend === 'webgpu') choice.device.destroy();
 
     if (this.debug) {
       console.log('🗑️ WebGL state manager disposed');

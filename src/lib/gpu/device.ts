@@ -262,6 +262,10 @@ export interface GpuLimits {
   maxTextureSize: number;
   maxCombinedTextureImageUnits: number;
   minUniformBufferOffsetAlignment: number;
+  maxBindGroups: number;
+  maxBindingsPerBindGroup: number;
+  maxSampledTexturesPerShaderStage: number;
+  maxUniformBuffersPerShaderStage: number;
 }
 
 export type LoadOp = 'load' | 'clear';

@@ -22,7 +22,7 @@ import type {
   TextureDescriptor
 } from '../device.js';
 import { addressMode, filterMode } from './formats.js';
-import { Webgl2Pipelines, type Webgl2Pipeline } from './pipeline.js';
+import { UNIFORM_POINTS_PER_GROUP, Webgl2Pipelines, type Webgl2Pipeline } from './pipeline.js';
 import { Webgl2State } from './state.js';
 import { Webgl2VertexArrays } from './vertexArrays.js';
 import { CANVAS_COLOR, CANVAS_DEPTH, Webgl2Framebuffers } from './passes.js';
@@ -142,7 +142,16 @@ export class Webgl2Device implements GpuDevice {
       maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
       maxCombinedTextureImageUnits: gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS),
       minUniformBufferOffsetAlignment:
-        Number(gl.getParameter(gl.UNIFORM_BUFFER_OFFSET_ALIGNMENT)) || 0
+        Number(gl.getParameter(gl.UNIFORM_BUFFER_OFFSET_ALIGNMENT)) || 0,
+      maxBindGroups: Math.floor(
+        Number(gl.getParameter(gl.MAX_UNIFORM_BUFFER_BINDINGS)) / UNIFORM_POINTS_PER_GROUP
+      ),
+      maxBindingsPerBindGroup: UNIFORM_POINTS_PER_GROUP,
+      maxSampledTexturesPerShaderStage: gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS),
+      maxUniformBuffersPerShaderStage: Math.min(
+        gl.getParameter(gl.MAX_VERTEX_UNIFORM_BLOCKS),
+        gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_BLOCKS)
+      )
     };
   }
 
