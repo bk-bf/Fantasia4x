@@ -215,12 +215,108 @@ function nearestPredators(allMobs: Mob[]): NearestPredators {
   return _predNearestCache;
 }
 
+let _stepMobs: Mob[] | null = null;
+let _idMap: Map<string, Mob> | null = null;
+let _preyGrid: PreyGrid | null = null;
+
 export function indexStep(state: GameState): void {
   occupancyService.indexTiles(state);
+  _stepMobs = state.mobs ?? null;
+  _idMap = null;
+  _preyGrid = null;
 }
 
 export function dropStepIndex(): void {
   occupancyService.dropTileIndex();
+  _stepMobs = null;
+  _idMap = null;
+  _preyGrid = null;
+}
+
+export function mobById(allMobs: Mob[], id: string): Mob | undefined {
+  if (allMobs !== _stepMobs) return allMobs.find((m) => m.id === id);
+  let map = _idMap;
+  if (!map) {
+    map = new Map();
+    for (let i = 0; i < allMobs.length; i++)
+      if (!map.has(allMobs[i].id)) map.set(allMobs[i].id, allMobs[i]);
+    _idMap = map;
+  }
+  return map.get(id);
+}
+
+const PREY_CELL = 16;
+const PREY_CELL_SPAN = 1 << 16;
+
+interface PreyGrid {
+  prey: Mob[];
+  corpses: number[];
+  cells: Map<number, number[]>;
+}
+
+function preyCell(x: number, y: number): number {
+  return Math.floor(y / PREY_CELL) * PREY_CELL_SPAN + Math.floor(x / PREY_CELL);
+}
+
+function preyGrid(allMobs: Mob[]): PreyGrid | null {
+  if (allMobs !== _stepMobs) return null;
+  const prey = mobThreatSubsets(allMobs).prey;
+  if (_preyGrid && _preyGrid.prey === prey) return _preyGrid;
+  const corpses: number[] = [];
+  const cells = new Map<number, number[]>();
+  for (let i = 0; i < prey.length; i++) {
+    const c = prey[i];
+    if (c.state === 'Corpse') {
+      corpses.push(i);
+      continue;
+    }
+    const k = preyCell(c.x, c.y);
+    const cell = cells.get(k);
+    if (cell) cell.push(i);
+    else cells.set(k, [i]);
+  }
+  _preyGrid = { prey, corpses, cells };
+  return _preyGrid;
+}
+
+function nearestPreyFromGrid(
+  grid: PreyGrid,
+  mob: Mob,
+  allowLivePrey: boolean,
+  worldMap: WorldTile[][]
+): Mob | null {
+  const { prey } = grid;
+  const found: { d: number; i: number }[] = [];
+  for (const i of grid.corpses) {
+    const c = prey[i];
+    if (c.id === mob.id) continue;
+    const d = manhattan(c.x, c.y, mob.x, mob.y) * 0.5;
+    if (d < Infinity) found.push({ d, i });
+  }
+  if (allowLivePrey) {
+    const x0 = Math.floor((mob.x - HUNT_RADIUS) / PREY_CELL);
+    const x1 = Math.floor((mob.x + HUNT_RADIUS) / PREY_CELL);
+    const y0 = Math.floor((mob.y - HUNT_RADIUS) / PREY_CELL);
+    const y1 = Math.floor((mob.y + HUNT_RADIUS) / PREY_CELL);
+    for (let cy = y0; cy <= y1; cy++)
+      for (let cx = x0; cx <= x1; cx++) {
+        const cell = grid.cells.get(cy * PREY_CELL_SPAN + cx);
+        if (!cell) continue;
+        for (const i of cell) {
+          const c = prey[i];
+          if (c.id === mob.id || c.creatureId === mob.creatureId) continue;
+          const raw = manhattan(c.x, c.y, mob.x, mob.y);
+          if (raw <= HUNT_RADIUS) found.push({ d: raw, i });
+        }
+      }
+  }
+  found.sort((a, b) => a.d - b.d || a.i - b.i);
+  for (const { i } of found) {
+    const c = prey[i];
+    if (reachable(mob.x, mob.y, c.x, c.y) && hasLineOfSight(worldMap, mob.x, mob.y, c.x, c.y))
+      return c;
+  }
+  return null;
 }
 
 export function findNearestPrey(
@@ -229,6 +325,8 @@ export function findNearestPrey(
   allowLivePrey: boolean,
   worldMap: WorldTile[][]
 ): Mob | null {
+  const grid = preyGrid(allMobs);
+  if (grid) return nearestPreyFromGrid(grid, mob, allowLivePrey, worldMap);
   let best: Mob | null = null;
   let bestDist = Infinity;
   const canTarget = (c: Mob) =>
@@ -259,7 +357,7 @@ export function huntAttacker(
   allMobs: Mob[]
 ): { x: number; y: number } | null {
   if (!mob.huntTargetId) return null;
-  const m = allMobs.find((a) => a.id === mob.huntTargetId);
+  const m = mobById(allMobs, mob.huntTargetId);
   if (m) return m.state === 'Attacking' ? { x: m.x, y: m.y } : null;
   const p = pawnById(state.pawns, mob.huntTargetId);
   if (

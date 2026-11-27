@@ -38,6 +38,7 @@ import {
   mobInLiveRegion,
   liveRegion,
   packCorpses,
+  mobById,
   indexStep,
   dropStepIndex,
   isThinkTick,
@@ -744,7 +745,7 @@ export function stepHostile(
   const onHunt = mob.state === 'Hunting' || mob.state === 'Attacking' || mob.huntTargetId != null;
   const feeding = mob.state === 'Eating';
   const desperate = mob.needs.hunger >= HUNGER_OVERSTRETCH_THRESHOLD;
-  const huntTgt = mob.huntTargetId ? allMobs.find((m) => m.id === mob.huntTargetId) : null;
+  const huntTgt = mob.huntTargetId ? mobById(allMobs, mob.huntTargetId) : null;
   const targetAsleep = huntTgt?.state === 'Sleeping';
   const leashReach =
     (mob.lairRange ?? Infinity) + (onHunt || feeding || desperate ? HUNT_OVERSTRETCH_TILES : 0);
@@ -1043,7 +1044,7 @@ export function stepHostile(
       return { ...mob, path: decision.path, pathIndex: 0 };
     }
     case 'Attacking': {
-      const preyTarget = mob.huntTargetId ? allMobs.find((m) => m.id === mob.huntTargetId) : null;
+      const preyTarget = mob.huntTargetId ? mobById(allMobs, mob.huntTargetId) : null;
       if (preyTarget && preyTarget.state !== 'Corpse') {
         if (adjacent(mob, { x: preyTarget.x, y: preyTarget.y })) return mob;
         return { ...mob, state: 'Hunting', stateSince: turn };
@@ -1513,7 +1514,7 @@ export function stepHunting(
 ): Mob {
   const progress = mob.eatProgress ?? 0;
   if (progress > 0) {
-    const target = mob.huntTargetId ? allMobs.find((m) => m.id === mob.huntTargetId) : null;
+    const target = mob.huntTargetId ? mobById(allMobs, mob.huntTargetId) : null;
     if (!target || target.state !== 'Corpse' || (target.intactness ?? 1.0) <= 0) {
       const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
       return {
@@ -1560,7 +1561,7 @@ export function stepHunting(
   const allowLivePrey = def.predator || def.diet === 'carnivore';
   let prey: Mob | null = null;
   if (mob.huntTargetId) {
-    const lockedTarget = allMobs.find((m) => m.id === mob.huntTargetId);
+    const lockedTarget = mobById(allMobs, mob.huntTargetId);
     if (lockedTarget && lockedTarget.state !== 'Tamed') {
       if (lockedTarget.state === 'Corpse' && (lockedTarget.intactness ?? 1.0) <= 0) {
         prey = findNearestPrey(mob, allMobs, allowLivePrey, state.worldMap);
