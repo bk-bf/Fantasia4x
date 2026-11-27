@@ -45,7 +45,11 @@ function rigLimb(s, pts, w, col, rim) {
   for (let i = 0; i + 1 < pts.length; i++) {
     const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], len = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, rnd(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)))), vert = Math.abs(y1 - y0) >= Math.abs(x1 - x0);
     if (i > 0) dab(x0, y0, !vert, t);
-    for (let j = 0; j <= n; j++) dab(mix(x0, x1, j / n), mix(y0, y1, j / n), vert, t + len * j / n);
+    const along = j => rnd(vert ? mix(y0, y1, j / n) : mix(x0, x1, j / n));
+    for (let j = 0; j <= n; j++) {
+      if (j && Math.abs(along(j) - along(j - 1)) > 1) dab(mix(x0, x1, (j - .5) / n), mix(y0, y1, (j - .5) / n), vert, t + len * (j - .5) / n);
+      dab(mix(x0, x1, j / n), mix(y0, y1, j / n), vert, t + len * j / n);
+    }
     t += len;
   }
   if (rim) for (const i of px.keys()) for (const d of [-1, 1, -s.w, s.w]) { const q = i + d; if (!px.has(q) && s.c[q] && s.c[q] !== P.ink) s.c[q] = rim(s.c[q]); }

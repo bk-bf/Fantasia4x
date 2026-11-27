@@ -294,7 +294,7 @@ function rigPawn(o, p) {
       ground = [Math.min(Math.max(ground[0], head[1] + 2 + REST.edge), near[0] + TOT - 2), base];
       if (boxAt(ground).left <= head[1]) held = { ...held, at: D.far - 1 };
     }
-    if (cradled && !resting && cu < 1) held = { ...held, at: D.over };
+    if (cradled && !resting && cu < 1) held = { ...held, at: D.over, palm: 'under' };
     let htl = p.hl, hr = p.hr || (TOOLS[kind] ? [2, armLen - 2] : null);
     let grasp = null, farGrasp = null;
     const clearOf = y => load && p.carry === 'hip' && !resting && cu >= 1 ? Math.min(y, base - CLEAR.ground - (load[1] - 1 - load[3]) - 1) : y;
@@ -364,7 +364,7 @@ function rigPawn(o, p) {
       if (inArms && !cradled && bottom - h + 1 < chin) bottom = chin + h - 1;
       if (!inArms) { bottom = tTop - br + sunk; left = back ? head[1] + 1 - tucked : head[0] - w + tucked; }
       const yoked = !!load[8], from = anchored(mid - (w >> 1), ground[1]), to = cradled ? [mid - (load[4] - load[2]) / 2, sy + HELD_LOW[p.carry]] : yoked ? [mid, chin + load[3] + Math.min(SUNK.yoke, load[9] >= 0 ? SUNK.yokeHead - load[9] : SUNK.yoke)] : load[7] && !inArms ? [roots[laden][0], tTop + 1 - br] : anchored(left, bottom);
-      put = resting ? ground : [mix(from[0], to[0], Math.min(1, cu * SUNK.aside)), mix(from[1], to[1], cu)];
+      put = resting ? ground : [cradled ? to[0] : mix(from[0], to[0], Math.min(1, cu * SUNK.aside)), mix(from[1], to[1], cu)];
       const b = boxAt(put), y = clamp(sy + TOT, b.top, b.bottom + 1), under = y === b.bottom + 1, middle = (b.left + b.right) / 2, out = under || heaved ? Math.min(w / 2 - 1, hw + 1) : w / 2;
       if (cradled && !resting) { grasps = [[b.left + load[2], b.top + load[3] + SUNK.cradled.under], [b.left + load[4], b.top + load[5] + SUNK.cradled.under]].sort((q, r) => q[0] - r[0]); palms = 'under'; }
       else if (inArms) { grasps = [[middle - out, y], [middle + out, y]]; palms = under ? 'under' : 'around'; }
