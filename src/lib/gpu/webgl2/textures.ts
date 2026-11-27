@@ -88,19 +88,6 @@ export class Webgl2Textures {
     });
   }
 
-  copyImage(source: TexImageSource, texture: GpuTexture): void {
-    const gl = this.gl;
-    const tex = texture as unknown as WebGLTexture;
-    const info = this.info.get(tex);
-    if (!info) throw new Error('copyExternalImageToTexture: not a texture this device created');
-    this.beforeWrite?.(texture);
-    const f = textureFormat(gl, info.format);
-    this.onScratch(tex, () => {
-      this.setRowLength(0);
-      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, f.format, f.type, source);
-    });
-  }
-
   size(texture: GpuTexture): Extent {
     const info = this.info.get(texture as unknown as WebGLTexture);
     if (!info) throw new Error('not a texture this device created');

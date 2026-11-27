@@ -118,11 +118,6 @@ export interface GpuQueue {
     layout: { bytesPerRow: number },
     size: Extent
   ): void;
-  copyExternalImageToTexture(
-    source: { source: TexImageSource },
-    destination: { texture: GpuTexture },
-    size: Extent
-  ): void;
   submit(buffers: GpuCommandBuffer[]): void;
 }
 

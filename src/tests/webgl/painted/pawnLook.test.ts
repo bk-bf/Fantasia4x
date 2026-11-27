@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { FakeImageData, coordinateAtlas, paintedFetch } from './pngFile';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: false }));
 vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true, GROUND_BLEND: false }));
@@ -8,15 +9,7 @@ vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true, GROUND_BLEND
 const raw = JSON.parse(readFileSync(join(__dirname, 'fixture', 'manifest.json'), 'utf8'));
 raw.map.pawn = { Verdant: ['pawn_red'], '*': ['pawn_red', 'pawn_blue'] };
 
-class FakeImage {
-  naturalWidth = raw.atlas.w;
-  naturalHeight = raw.atlas.h;
-  onload: (() => void) | null = null;
-  onerror: (() => void) | null = null;
-  set src(_url: string) {
-    queueMicrotask(() => this.onload?.());
-  }
-}
+const atlas = coordinateAtlas(raw.atlas.w, raw.atlas.h);
 
 const pool = [{ id: 'morix', archetype: 'Verdant' }];
 const pawns = [
@@ -29,14 +22,20 @@ describe('one look for a pawn on the map and in the hud', () => {
 
   it('draws each pawn on the map with the sprite the hud crops for it', async () => {
     const crops: number[][] = [];
-    vi.stubGlobal('Image', FakeImage);
-    vi.stubGlobal('fetch', async () => ({ ok: true, json: async () => raw }));
+    vi.stubGlobal('ImageData', FakeImageData);
+    vi.stubGlobal('fetch', paintedFetch(raw, atlas));
     vi.stubGlobal('document', {
       createElement: () => ({
         width: 0,
         height: 0,
         getContext: () => ({
-          drawImage: (_img: unknown, ...box: number[]) => crops.push(box.slice(0, 4))
+          putImageData: ({ data, width, height }: FakeImageData) =>
+            crops.push([
+              data[0] | ((data[2] & 15) << 8),
+              data[1] | ((data[2] >> 4) << 8),
+              width,
+              height
+            ])
         })
       })
     });
