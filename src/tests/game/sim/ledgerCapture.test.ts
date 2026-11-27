@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { LedgerCapturer, serializeSave, type LedgerCaptureMeta } from '$lib/game/sim/ledgerCapture';
-import { fromSnapshot } from '$lib/game/headless/snapshot';
+import { fromSnapshot, toSnapshot } from '$lib/game/headless/snapshot';
+import { worldId } from '../../../../tools/ledger/spool.mjs';
 import type { GameState, WorldTile } from '$lib/game/core/types';
 
 const tile = (x: number): WorldTile =>
@@ -63,11 +64,15 @@ function rig(fail = false) {
 const on = { on: true, intervalMs: 120_000, save: 'slot-1', scenario: null, session: '1a2b3c4d' };
 
 describe('the ledger capture in the sim worker', () => {
-  it('writes the JSON of {v: 1, dynamic, world}, with each tile as the sim holds it', async () => {
-    const { worldMap, ...dynamic } = state;
-    expect(await serializeSave(state).text()).toBe(
-      JSON.stringify({ v: 1, dynamic, world: worldMap })
-    );
+  it('writes the same JSON a save holds, with the pathfinding fields left off each tile', async () => {
+    expect(await serializeSave(state).text()).toBe(JSON.stringify(toSnapshot(state)));
+  });
+
+  it('gives a loaded save, captured before it runs, the world id of the save file', async () => {
+    const file = JSON.parse(JSON.stringify(toSnapshot(state)));
+    const loaded = fromSnapshot(file);
+    const captured = JSON.parse(await serializeSave(loaded).text());
+    expect(worldId(captured)).toBe(worldId(file));
   });
 
   it('sends the whole state as a snapshot the headless loader reads back', async () => {
@@ -81,6 +86,7 @@ describe('the ledger capture in the sim worker', () => {
     expect(posts[0].meta).toMatchObject({
       captureId: '1a2b3c4d-0',
       session: '1a2b3c4d',
+      sessionAt: '2026-11-27T01:37:00.000Z',
       reason: 'session',
       turn: 30058,
       seed: 4242,
@@ -119,15 +125,19 @@ describe('the ledger capture in the sim worker', () => {
     expect(posts[1].meta).toMatchObject({ reason: 'manual', save: 'slot-2', session: '1a2b3c4d' });
   });
 
-  it('keeps each capture under the session it was taken in, whichever answer comes back first', async () => {
+  it('posts captures one at a time, in the order they were taken, across sessions', async () => {
     const { capturer, posts, answer } = rig();
     capturer.configure(on);
     const first = capturer.capture('session');
     capturer.configure({ ...on, session: '99887766' });
     const second = capturer.capture('session');
     await new Promise((r) => setTimeout(r, 0));
+    expect(posts.map((p) => p.meta.captureId)).toEqual(['1a2b3c4d-0']);
     answer();
-    await Promise.all([first, second]);
+    await first;
+    await new Promise((r) => setTimeout(r, 0));
+    answer();
+    await second;
     expect(posts.map((p) => [p.meta.session, p.meta.captureId])).toEqual([
       ['1a2b3c4d', '1a2b3c4d-0'],
       ['99887766', '99887766-0']

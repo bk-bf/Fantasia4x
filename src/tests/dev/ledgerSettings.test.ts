@@ -26,11 +26,13 @@ describe('the ledger switches', () => {
     ).toBe(false);
   });
 
-  it('take the interval in seconds, zero for no periodic capture, and ignore nonsense', () => {
+  it('take the interval in seconds, never under a minute, zero for no periodic capture, and ignore nonsense', () => {
     const at = (v: string) =>
       readLedgerSettings(store({ 'fantasia4x-ledger-interval': v }), false, null, null, 'cafe0123')
         .intervalMs;
     expect(at('60')).toBe(60_000);
+    expect(at('180')).toBe(180_000);
+    expect(at('5')).toBe(60_000);
     expect(at('0')).toBe(0);
     expect(at('soon')).toBe(120_000);
     expect(at('-5')).toBe(120_000);

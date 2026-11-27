@@ -1,4 +1,5 @@
 import type { GameState } from '../core/types';
+import { stripTile } from '../headless/snapshot';
 
 export type LedgerReason = 'session' | 'manual' | 'periodic';
 
@@ -13,6 +14,7 @@ export interface LedgerSettings {
 export interface LedgerCaptureMeta {
   captureId: string;
   session: string;
+  sessionAt: string;
   reason: LedgerReason;
   at: string;
   ms: number;
@@ -30,7 +32,7 @@ export interface LedgerCaptureMeta {
 
 export interface LedgerReceipt {
   captureId: string;
-  entry: string;
+  entry: string | null;
 }
 
 export interface LedgerDeps {
@@ -45,13 +47,19 @@ export interface LedgerDeps {
 
 export const LEDGER_ENDPOINT = '/api/ledger/save';
 export const LEDGER_META_HEADER = 'x-f4x-ledger';
+export const LEDGER_DROPPED = 503;
+
+export function ledgerFailedLine(captureId: string, err: unknown): string {
+  const why = err instanceof Error ? err.message : String(err);
+  return `ledger failed cap=${captureId} error="${why.replace(/"/g, "'")}"`;
+}
 
 export function serializeSave(state: GameState): Blob {
   const { worldMap, ...dynamic } = state;
   const parts = ['{"v":1,"dynamic":', JSON.stringify(dynamic), ',"world":['];
   for (let y = 0; y < worldMap.length; y++) {
     if (y) parts.push(',');
-    parts.push(JSON.stringify(worldMap[y]));
+    parts.push(JSON.stringify(worldMap[y].map(stripTile)));
   }
   parts.push(']}');
   return new Blob(parts, { type: 'application/json' });
@@ -66,6 +74,7 @@ export async function postLedgerSave(body: Blob, meta: LedgerCaptureMeta): Promi
       [LEDGER_META_HEADER]: encodeURIComponent(JSON.stringify(meta))
     }
   });
+  if (res.status === LEDGER_DROPPED) return { captureId: meta.captureId, entry: null };
   if (!res.ok) throw new Error(`status ${res.status}`);
   return (await res.json()) as LedgerReceipt;
 }
@@ -80,6 +89,8 @@ export class LedgerCapturer {
   private settings = OFF;
   private runMs = 0;
   private seq = 0;
+  private sessionAt = '';
+  private posting: Promise<void> = Promise.resolve();
 
   constructor(private deps: LedgerDeps) {}
 
@@ -87,6 +98,7 @@ export class LedgerCapturer {
     this.settings = settings;
     this.runMs = 0;
     this.seq = 0;
+    this.sessionAt = '';
   }
 
   reset(): void {
@@ -110,9 +122,11 @@ export class LedgerCapturer {
     const body = serializeSave(state);
     const ms = Math.round(this.deps.now() - start);
     const { session } = this.settings;
+    if (this.seq === 0) this.sessionAt = at;
     const meta: LedgerCaptureMeta = {
       captureId: `${session}-${this.seq++}`,
       session,
+      sessionAt: this.sessionAt,
       reason,
       at,
       ms,
@@ -131,15 +145,12 @@ export class LedgerCapturer {
       state.turn,
       `ledger save cap=${meta.captureId} reason=${reason} turn=${state.turn} at=${at} ms=${ms} speed=${meta.speed}x bytes=${body.size}`
     );
-    return this.deps.post(body, meta).then(
-      () => {},
-      (err: unknown) => {
-        const why = err instanceof Error ? err.message : String(err);
-        this.deps.log(
-          state.turn,
-          `ledger failed cap=${meta.captureId} error="${why.replace(/"/g, "'")}"`
-        );
-      }
+    this.posting = this.posting.then(() =>
+      this.deps.post(body, meta).then(
+        () => {},
+        (err: unknown) => this.deps.log(state.turn, ledgerFailedLine(meta.captureId, err))
+      )
     );
+    return this.posting;
   }
 }
