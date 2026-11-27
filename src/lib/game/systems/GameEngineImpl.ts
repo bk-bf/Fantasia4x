@@ -900,7 +900,7 @@ export class GameEngineImpl implements GameEngine {
   }
 
   private processPawns(): void {
-    const tp = (_label: string, fn: () => void): void => fn();
+    const tp = (label: string, fn: () => void): void => this.timed(label, fn);
     if (this.gameState!.pawns?.some((p) => p.drafted && p.draftTarget)) {
       tp('p.draft', () => {
         this.gameState = this._processDraftOrders(this.gameState!);
