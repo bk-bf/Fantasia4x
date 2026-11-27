@@ -4,6 +4,42 @@ type Handle<K extends string> = { readonly [handle]: K };
 export type GpuBuffer = Handle<'buffer'>;
 export type GpuTexture = Handle<'texture'>;
 export type GpuCommandBuffer = Handle<'command-buffer'>;
+export type GpuBindGroupLayout = Handle<'bind-group-layout'>;
+export type GpuBindGroup = Handle<'bind-group'>;
+
+export const ShaderStage = { VERTEX: 1, FRAGMENT: 2 } as const;
+
+export type BindGroupLayoutEntry =
+  | {
+      binding: number;
+      visibility: number;
+      buffer: { hasDynamicOffset?: boolean; minBindingSize: number };
+    }
+  | {
+      binding: number;
+      visibility: number;
+      texture: { sampleType: 'float' | 'unfilterable-float' | 'uint' };
+    }
+  | { binding: number; visibility: number; sampler: { type: 'filtering' | 'non-filtering' } };
+
+export interface BindGroupLayoutDescriptor {
+  label?: string;
+  entries: BindGroupLayoutEntry[];
+}
+
+export interface BufferBinding {
+  buffer: GpuBuffer;
+  offset?: number;
+  size: number;
+}
+
+export type BindingResource = BufferBinding | GpuTexture | GpuSampler;
+
+export interface BindGroupDescriptor {
+  label?: string;
+  layout: GpuBindGroupLayout;
+  entries: { binding: number; resource: BindingResource }[];
+}
 export type GpuRenderPipeline = Handle<'render-pipeline'>;
 export type GpuShaderModule = Handle<'shader-module'>;
 export type GpuUniform = Handle<'uniform'>;
@@ -161,8 +197,22 @@ export interface ShaderSources {
   fragment: string;
 }
 
+export type BindingSlot = readonly [group: number, binding: number];
+
+export interface GlslBlock {
+  slot: BindingSlot;
+  offsets: Readonly<Record<string, number>>;
+}
+
+export interface GlslTexture {
+  texture: BindingSlot;
+  sampler?: BindingSlot;
+}
+
 export interface GlslSources extends ShaderSources {
   attributes: Record<string, number>;
+  blocks?: Record<string, GlslBlock>;
+  textures?: Record<string, GlslTexture>;
 }
 
 export interface ColorTargetState {
@@ -172,6 +222,7 @@ export interface ColorTargetState {
 
 export interface RenderPipelineDescriptor {
   label: string;
+  layout: GpuBindGroupLayout[];
   glsl: GlslSources;
   wgsl?: ShaderSources;
   vertex: { buffers: VertexBufferLayout[] };
@@ -199,6 +250,7 @@ export interface GpuLimits {
   maxVertexAttribs: number;
   maxTextureSize: number;
   maxCombinedTextureImageUnits: number;
+  minUniformBufferOffsetAlignment: number;
 }
 
 export type LoadOp = 'load' | 'clear';
@@ -229,6 +281,7 @@ export interface RenderPassDescriptor {
 
 export interface GpuRenderPass {
   setPipeline(pipeline: GpuRenderPipeline): void;
+  setBindGroup(index: number, group: GpuBindGroup, dynamicOffsets?: readonly number[]): void;
   setVertexBuffer(slot: number, buffer: GpuBuffer, offset?: number): void;
   draw(
     vertexCount: number,
@@ -285,6 +338,8 @@ export interface GpuDevice {
   createSampler(desc: SamplerDescriptor): GpuSampler;
   bindSampler(slot: number, sampler: GpuSampler | null): void;
 
+  createBindGroupLayout(desc: BindGroupLayoutDescriptor): GpuBindGroupLayout;
+  createBindGroup(desc: BindGroupDescriptor): GpuBindGroup;
   createCommandEncoder(): GpuCommandEncoder;
   setStencil(state: StencilState | null): void;
 }

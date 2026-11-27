@@ -2,7 +2,6 @@
 precision highp float;
 precision highp int;
 
-uniform vec2 u_canvas;
 uniform float u_strength;
 
 out vec4 fragColor;

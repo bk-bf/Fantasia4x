@@ -1,7 +1,6 @@
 #version 300 es
 precision highp float;
 
-uniform vec2 u_canvas;
 uniform vec4 u_ring;
 uniform float u_line;
 uniform float u_offset;

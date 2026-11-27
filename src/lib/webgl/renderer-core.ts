@@ -27,6 +27,7 @@ import {
 } from './painted/lightGrade.js';
 import { resolveSpriteLights } from './painted/spriteLights.js';
 import { PaintedVignette } from './painted/vignette.js';
+import { FRAME_GROUP, frameBindings } from './frameBindings.js';
 import { PaintedShadowCast, SHADOW_DEPTH, SHADOW_SHADE } from './painted/shadowCast.js';
 import { GroundRings, type GroundRing, type RingInk } from './groundRings.js';
 import {
@@ -492,20 +493,17 @@ export class WebGLRendererCore {
       this.lightPass && this.painted
         ? this.lightFrame(this.painted.tileset.tile, viewportTilesW, viewportTilesH)
         : null;
+    const frame = frameBindings(gpu);
+    frame.view.set('u_projection', this.projectionMatrix);
+    frame.view.set('u_canvas', [this.viewport.width, this.viewport.height]);
+    frame.view.set('u_viewOffset', [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX]);
+    frame.view.set('u_zoom', [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX]);
+    frame.view.upload(gpu.queue, frame.buffer);
     const encoder = gpu.createCommandEncoder();
     if (this.lightPass && lightFrame)
       this.stats.drawCalls += this.lightPass.drawField(encoder, lightFrame);
     const pass = encoder.beginRenderPass(this.webglState.canvasPass(gpu));
-    this.shaderManager.setUniform('tileRenderer', 'u_projection', this.projectionMatrix);
-
-    this.shaderManager.setUniform('tileRenderer', 'u_viewOffset', [
-      this.viewTileX * BASE_TILE_PX,
-      this.viewTileY * BASE_TILE_PX
-    ]);
-    this.shaderManager.setUniform('tileRenderer', 'u_zoom', [
-      this.tileWidth / BASE_TILE_PX,
-      this.tileHeight / BASE_TILE_PX
-    ]);
+    pass.setBindGroup(FRAME_GROUP, frame.group);
     const unlit = lightFrame !== null;
     this.shaderManager.setUniform(
       'tileRenderer',
@@ -633,7 +631,6 @@ export class WebGLRendererCore {
     }
     if (this.vignette && lightFrame && this.vignetteOn)
       this.stats.drawCalls += this.vignette.draw(pass, {
-        canvas: [this.viewport.width, this.viewport.height],
         strength: lightFrame.grade.vignette,
         tilePx: this.tileWidth
       });
@@ -666,9 +663,6 @@ export class WebGLRendererCore {
         x1: (this.viewTileX + viewportTilesW + 1) * art,
         y1: (this.viewTileY + viewportTilesH + 1) * art
       },
-      projection: this.projectionMatrix,
-      viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
-      zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
       ambient: lightFrame
         ? lightFrame.grade.ambient
         : [
@@ -694,8 +688,6 @@ export class WebGLRendererCore {
     const view = { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH };
     return {
       canvas: [this.viewport.width, this.viewport.height],
-      viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
-      zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
       artPerBase: artTile / BASE_TILE_PX,
       artTile,
       view,
@@ -759,9 +751,6 @@ export class WebGLRendererCore {
       secs,
       this.wind,
       {
-        canvas: [this.viewport.width, this.viewport.height],
-        viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
-        zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
         basePerArt: BASE_TILE_PX / artTile,
         artTile,
         view: {
@@ -793,10 +782,7 @@ export class WebGLRendererCore {
   private drawGroundRings(pass: GpuRenderPass): void {
     if (!this.groundRings || !this.rings || !this.shaderManager) return;
     const { list, ink } = this.rings;
-    this.stats.drawCalls += this.groundRings.draw(pass, list, ink, [
-      this.viewport.width,
-      this.viewport.height
-    ]);
+    this.stats.drawCalls += this.groundRings.draw(pass, list, ink);
   }
 
   private drawShadowCast(
@@ -808,8 +794,6 @@ export class WebGLRendererCore {
     const artTile = this.painted.tileset.tile;
     this.stats.drawCalls += this.shadowCast.draw(pass, {
       canvas: [this.viewport.width, this.viewport.height],
-      viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
-      zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
       artPerBase: artTile / BASE_TILE_PX,
       artTile,
       view: { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH },
@@ -870,8 +854,6 @@ export class WebGLRendererCore {
     winterTrees = false
   ): boolean {
     const frame: GroundBlendFrame = {
-      projection: this.projectionMatrix,
-      viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
       zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
       ambient: this.lightPass
         ? [1, 1, 1]

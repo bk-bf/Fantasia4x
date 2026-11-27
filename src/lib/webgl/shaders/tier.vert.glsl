@@ -1,8 +1,5 @@
 #version 300 es
 
-uniform mat4 u_projection;
-uniform vec2 u_viewOffset;
-uniform vec2 u_zoom;
 uniform highp float u_atlasScale;
 uniform highp vec4 u_rect;
 

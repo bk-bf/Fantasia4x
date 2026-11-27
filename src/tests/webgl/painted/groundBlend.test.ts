@@ -42,7 +42,13 @@ beforeAll(() => setPaintedTileset(tileset));
 
 function recordingGl(calls: [string, unknown[]][]): WebGL2RenderingContext {
   const answer = (name: string, args: unknown[]) =>
-    name === 'getUniformLocation' ? args[1] : name === 'getAttribLocation' ? 0 : {};
+    name === 'getUniformLocation'
+      ? args[1]
+      : name === 'getAttribLocation'
+        ? 0
+        : name === 'getUniformBlockIndex'
+          ? 0xffffffff
+          : {};
   return new Proxy({} as WebGL2RenderingContext, {
     get: (_, name) =>
       typeof name !== 'string' || /^[A-Z0-9_]+$/.test(name)
@@ -140,8 +146,6 @@ describe('the water clock', () => {
     for (let x = 0; x < 4; x++) applyTileToGrid(grid, tile({ x, y: 0 }), []);
     blend.setGrid(grid);
     const frame = (waterTime: number) => ({
-      projection: new Float32Array(16),
-      viewOffset: [0, 0] as [number, number],
       zoom: [1, 1] as [number, number],
       ambient: [1, 1, 1] as [number, number, number],
       flicker: 1,
@@ -172,8 +176,6 @@ describe('the wave water switch', () => {
       applyTileToGrid(grid, tile({ x, y: 0, subType: x < 2 ? 'grass' : 'water' }), []);
     blend.setGrid(grid);
     const frame = (sea?: Float32Array) => ({
-      projection: new Float32Array(16),
-      viewOffset: [0, 0] as [number, number],
       zoom: [1, 1] as [number, number],
       ambient: [1, 1, 1] as [number, number, number],
       flicker: 1,

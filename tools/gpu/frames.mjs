@@ -101,10 +101,15 @@ function tickShare(times, ticks, slowerThan) {
       if (ticked) fastTicked++;
     }
   }
-  return { ticks: inside.length, slowWithTickPct: share(slowTicked, slow), otherWithTickPct: share(fastTicked, fast) };
+  return {
+    ticks: inside.length,
+    slowWithTickPct: share(slowTicked, slow),
+    otherWithTickPct: share(fastTicked, fast)
+  };
 }
 
-const quantile = (xs, q) => [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(q * xs.length))];
+const quantile = (xs, q) =>
+  [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(q * xs.length))];
 const median = (xs) => quantile(xs, 0.5);
 
 function summarise(times, seconds, ticks) {
@@ -145,6 +150,7 @@ async function runPhase(page, phase, ms) {
   return {
     ...frames,
     bufferUploadKB: Math.round(render.bufferUploadBytes / 1024),
+    uniformUploadKB: Math.round(render.uniformUploadBytes / 1024),
     textureUploadKB: Math.round(render.textureUploadBytes / 1024),
     glDrawCalls: render.glDrawCalls,
     glVertices: render.glVertices
@@ -160,7 +166,11 @@ async function main() {
   const rounds = Number(opts.rounds);
   const out = resolve(opts.out);
   mkdirSync(dirname(out), { recursive: true });
-  const args = [`--use-angle=${opts.angle}`, '--ignore-gpu-blocklist', ...(opts.capped ? [] : UNCAPPED)];
+  const args = [
+    `--use-angle=${opts.angle}`,
+    '--ignore-gpu-blocklist',
+    ...(opts.capped ? [] : UNCAPPED)
+  ];
   const game = await openGame({
     tree: resolve(opts.tree),
     fixture: opts.fixture,

@@ -55,8 +55,6 @@ type Rect = { x: number; y: number; w: number; h: number };
 type Changed = { x: number; y: number; k: number };
 
 export interface GroundBlendFrame {
-  projection: Float32Array;
-  viewOffset: [number, number];
   zoom: [number, number];
   ambient: [number, number, number];
   flicker: number;
@@ -217,9 +215,6 @@ export class GroundBlend {
       usage: BufferUsage.VERTEX | BufferUsage.COPY_DST
     });
     const names = [
-      'u_projection',
-      'u_viewOffset',
-      'u_zoom',
       'u_artPerBase',
       'u_kinds',
       'u_paintAtlas',
@@ -501,9 +496,6 @@ export class GroundBlend {
     pass.setPipeline(this.program);
     gpu.setI32(this.at.u_treeOnly, treeOnly ? 1 : 0);
     gpu.setI32(this.at.u_treeRow, this.trees?.tableRow ?? 0);
-    gpu.setMat4fv(this.at.u_projection, f.projection);
-    gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
-    gpu.setVec2fv(this.at.u_zoom, f.zoom);
     gpu.setF32(this.at.u_artPerPx, this.artPerBase / f.zoom[0]);
     gpu.setVec3fv(this.at.u_ambient, f.ambient);
     gpu.setF32(this.at.u_lightFlicker, f.flicker);

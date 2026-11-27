@@ -58,6 +58,7 @@ function recordingGl(uploads: Float32Array[] = []) {
       if (key in target) return target[key as keyof typeof target];
       return (...args: unknown[]) => {
         calls.push([key, ...args]);
+        if (key === 'getUniformBlockIndex') return 0xffffffff;
         if (key === 'bufferData' && args[1] instanceof Float32Array) uploads.push(args[1]);
         if (key === 'bufferSubData' && args[2] instanceof Float32Array) uploads.push(args[2]);
         return {};

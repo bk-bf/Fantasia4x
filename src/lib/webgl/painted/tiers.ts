@@ -36,9 +36,6 @@ export interface TierView {
 
 export interface TierFrame {
   view: TierView;
-  projection: Float32Array;
-  viewOffset: [number, number];
-  zoom: [number, number];
   ambient: [number, number, number];
   fieldLit: boolean;
   tone: [number, number];
@@ -48,9 +45,6 @@ export interface TierFrame {
 }
 
 const UNIFORMS = [
-  'u_projection',
-  'u_viewOffset',
-  'u_zoom',
   'u_atlasScale',
   'u_rect',
   'u_tierFieldTexture',
@@ -188,9 +182,6 @@ export class Tiers {
     const tile = this.painted.tileset.tile;
     const u = this.at;
     pass.setPipeline(this.program);
-    gpu.setMat4fv(u.u_projection, f.projection);
-    gpu.setVec2fv(u.u_viewOffset, f.viewOffset);
-    gpu.setVec2fv(u.u_zoom, f.zoom);
     gpu.setF32(u.u_atlasScale, tile / BASE_TILE_PX);
     gpu.setVec4f(u.u_rect, f.view.x0, f.view.y0, f.view.x1, f.view.y1);
     gpu.setVec2f(u.u_rockRamp, top.ramp.x, top.ramp.y);

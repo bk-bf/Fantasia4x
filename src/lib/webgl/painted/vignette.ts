@@ -40,7 +40,6 @@ export function vignetteAlpha(
 }
 
 export interface VignetteFrame {
-  canvas: [number, number];
   strength: number;
   tilePx: number;
 }
@@ -48,7 +47,6 @@ export interface VignetteFrame {
 export class PaintedVignette {
   private readonly gpu: GpuDevice;
   private readonly program: GpuRenderPipeline;
-  private readonly uCanvas: GpuUniform | null;
   private readonly uStrength: GpuUniform | null;
 
   static create(gpu: GpuDevice, shaders: ShaderManager): PaintedVignette | null {
@@ -75,7 +73,6 @@ export class PaintedVignette {
   private constructor(gpu: GpuDevice, program: GpuRenderPipeline) {
     this.gpu = gpu;
     this.program = program;
-    this.uCanvas = gpu.uniform(program, 'u_canvas');
     this.uStrength = gpu.uniform(program, 'u_strength');
   }
 
@@ -84,7 +81,6 @@ export class PaintedVignette {
     if (strength <= 0) return 0;
     const gpu = this.gpu;
     pass.setPipeline(this.program);
-    gpu.setVec2fv(this.uCanvas, f.canvas);
     gpu.setF32(this.uStrength, strength);
     pass.draw(3);
     return 1;

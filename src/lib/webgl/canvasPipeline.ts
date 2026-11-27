@@ -4,9 +4,9 @@ import type {
   GlslSources,
   GpuDevice,
   PrimitiveTopology,
-  RenderPipelineDescriptor,
   VertexBufferLayout
 } from '../gpu/device.js';
+import type { FramedPipeline } from './frameBindings.js';
 
 export interface CanvasPipeline {
   vertex: string;
@@ -19,10 +19,7 @@ export interface CanvasPipeline {
   depthWrite?: boolean;
 }
 
-export function canvasPipeline(
-  gpu: GpuDevice,
-  p: CanvasPipeline
-): Omit<RenderPipelineDescriptor, 'label' | 'debug'> {
+export function canvasPipeline(gpu: GpuDevice, p: CanvasPipeline): FramedPipeline {
   const depth = gpu.canvas.depthFormat;
   return {
     glsl: { vertex: p.vertex, fragment: p.fragment, attributes: p.attributes ?? {} },

@@ -14,7 +14,10 @@ export class Webgl2Textures {
   private rowLength = 0;
   slot = 0;
 
-  constructor(private readonly gl: WebGL2RenderingContext) {
+  constructor(
+    private readonly gl: WebGL2RenderingContext,
+    private readonly beforeWrite?: (texture: GpuTexture) => void
+  ) {
     this.scratch = (Number(gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)) || 32) - 1;
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
@@ -26,6 +29,13 @@ export class Webgl2Textures {
     gl.activeTexture(gl.TEXTURE0 + this.scratch);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     act();
+    gl.activeTexture(gl.TEXTURE0 + this.slot);
+  }
+
+  bindOn(unit: number, texture: GpuTexture): void {
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, texture as unknown as WebGLTexture);
     gl.activeTexture(gl.TEXTURE0 + this.slot);
   }
 
@@ -62,6 +72,7 @@ export class Webgl2Textures {
     const tex = texture as unknown as WebGLTexture;
     const info = this.info.get(tex);
     if (!info) throw new Error('writeTexture: not a texture this device created');
+    this.beforeWrite?.(texture);
     const f = textureFormat(gl, info.format);
     const rowTexels = bytesPerRow / bytesPerTexel(info.format);
     this.onScratch(tex, () => {
@@ -85,6 +96,7 @@ export class Webgl2Textures {
     const tex = texture as unknown as WebGLTexture;
     const info = this.info.get(tex);
     if (!info) throw new Error('copyExternalImageToTexture: not a texture this device created');
+    this.beforeWrite?.(texture);
     const f = textureFormat(gl, info.format);
     this.onScratch(tex, () => {
       this.setRowLength(0);

@@ -47,6 +47,7 @@ const layout: VertexBufferLayout = {
 
 const pipeline = (over: Partial<RenderPipelineDescriptor> = {}): RenderPipelineDescriptor => ({
   label: 'p',
+  layout: [],
   glsl: { vertex: 'v', fragment: 'f', attributes: { a_position: 0 } },
   vertex: { buffers: [layout] },
   primitive: { topology: 'triangle-list' },
