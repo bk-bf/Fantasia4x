@@ -104,7 +104,7 @@ function measuredDirty(tree) {
 
 export async function buildEntry(opts, dir) {
   const spool = await import('./spool.mjs');
-  const { describeSave } = await import('./ingest.mjs');
+  const { describeSave, worldIdOf } = await import('./ingest.mjs');
   const env = opts.env ?? process.env;
   const machine = opts.machine ?? spool.machineName(env);
   const at = opts.at ?? new Date().toISOString();
@@ -116,7 +116,7 @@ export async function buildEntry(opts, dir) {
     const { gz, text } = readSave(opts.save);
     const sha = spool.writeBlob(gz, dir);
     files.push(spool.fileRef('save', basename(opts.save).replace(/(\.json)?(\.gz)?$/, '.json.gz'), sha, dir));
-    world = { ...world, ...describeSave(text.toString('utf8')), save: spool.sha256Of(text) };
+    world = { ...world, ...describeSave(text.toString('utf8')), save: worldIdOf(gz) };
   }
   for (const [k, v] of Object.entries(opts.world ?? {})) if (v != null) world[k] = v;
   for (const f of opts.files ?? []) {

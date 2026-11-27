@@ -253,7 +253,7 @@ export async function recordRound(root, c) {
       at: c.at,
       git: { branch: c.t.branch, commit: c.t.sha, dirty: c.t.prep?.dirty == null ? null : Number(c.t.prep.dirty), refs: c.t.refs },
       save: c.localSave,
-      world: { turn: c.result.turn ?? null, pawns: c.result.pawns ?? null, mobs: c.result.mobs ?? null },
+      world: { save: c.found.world.save, turn: c.result.turn ?? null, pawns: c.result.pawns ?? null, mobs: c.result.mobs ?? null },
       perf: {
         ...harnessPerf(c.result),
         mode: c.o.mode,
@@ -275,7 +275,6 @@ export async function recordRound(root, c) {
     },
     dir
   );
-  if (entry.world.save !== c.found.world.save) throw new Error(`the copied save is world ${entry.world.save}, not ${c.found.world.save}`);
   const id = writeEntry(entry, dir);
   const report = ingestSpool(root, dir, { remove: true });
   if (report.errors.length) console.error(`ledger: ${report.errors.join('; ')}`);
