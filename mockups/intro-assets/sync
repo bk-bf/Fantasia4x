@@ -20,6 +20,8 @@ case "${1:-}" in
     rsync -a --delete --exclude=tools "$host:.cache/fantasia4x-intro/" "$dir/assets/"
     rsync -a "$host:.cache/fantasia4x-intro/tools/sync" "$dir/sync"
     chmod 755 "$dir/sync"
+    rsync -a "$host:.cache/fantasia4x-intro/tools/krita-setup.py" "$dir/.krita-setup.py"
+    python3 "$dir/.krita-setup.py"
     echo "assets in $dir/assets"
     ;;
   *) echo "usage: sync [--render | --push]" >&2; exit 2 ;;
