@@ -11,7 +11,7 @@ const NONE = { r: 0, g: 0, b: 0 };
 const STEP_SPAN = 4096;
 const placed = new WeakMap<PaintedSprite, Map<number, PaintedSprite>>();
 
-function placedTuft(s: PaintedSprite, dx: number, dy: number, tileArt: number): PaintedSprite {
+export function placedTuft(s: PaintedSprite, dx: number, dy: number, tileArt: number): PaintedSprite {
   let at = placed.get(s);
   if (!at) placed.set(s, (at = new Map()));
   const key = (tileArt * STEP_SPAN + dx) * STEP_SPAN + dy;

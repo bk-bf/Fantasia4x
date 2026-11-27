@@ -35,7 +35,7 @@ export interface GridRenderOptions {
   litBounds?: { minX: number; minY: number; maxX: number; maxY: number } | null;
   renderAllTiles?: boolean;
   cacheVersion?: number;
-  chunkLayer?: 'terrain' | 'resource' | 'resourceTall' | 'snow';
+  chunkLayer?: 'terrain' | 'resource' | 'resourceTall' | 'snow' | 'decor';
   pointLightActive?: boolean;
   rowPasses?: boolean;
 }
@@ -82,12 +82,14 @@ export class GridRenderer {
   private resourceChunks: Map<string, TerrainChunk> = new Map();
   private resourceTallChunks: Map<string, TerrainChunk> = new Map();
   private snowChunks: Map<string, TerrainChunk> = new Map();
+  private decorChunks: Map<string, TerrainChunk> = new Map();
   private warmState = new Map<Map<string, TerrainChunk>, WarmState>();
   chunksRebuiltLastRender = 0;
   skipBlendedGround = false;
   skipWaterIce = false;
   private chunkDirty = new Map<string, number>();
   private snowChunkDirty = new Map<string, number>();
+  private decorChunkDirty = new Map<string, number>();
   private chunkDirtyCounter = 0;
 
   private stats: GridRenderStats = {
@@ -130,7 +132,9 @@ export class GridRenderer {
             ? this.resourceTallChunks
             : options.chunkLayer === 'snow'
               ? this.snowChunks
-              : this.terrainChunks;
+              : options.chunkLayer === 'decor'
+                ? this.decorChunks
+                : this.terrainChunks;
       const drawnTiles = this.renderTerrainChunked(grid, options, chunks);
       this.stats = {
         tilesRendered: drawnTiles,
@@ -179,10 +183,21 @@ export class GridRenderer {
   }
 
   markSnowChunksDirty(tiles: ReadonlyArray<{ x: number; y: number }>): void {
+    this.markDirty(this.snowChunkDirty, tiles);
+  }
+
+  markDecorChunksDirty(tiles: ReadonlyArray<{ x: number; y: number }>): void {
+    this.markDirty(this.decorChunkDirty, tiles);
+  }
+
+  private markDirty(
+    map: Map<string, number>,
+    tiles: ReadonlyArray<{ x: number; y: number }>
+  ): void {
     const CS = GridRenderer.CHUNK_SIZE;
     for (const t of tiles) {
       const key = `${Math.floor(t.x / CS)}:${Math.floor(t.y / CS)}`;
-      this.snowChunkDirty.set(key, ++this.chunkDirtyCounter);
+      map.set(key, ++this.chunkDirtyCounter);
     }
   }
 
@@ -209,7 +224,12 @@ export class GridRenderer {
       return 0;
     }
 
-    const dirtyMap = options.chunkLayer === 'snow' ? this.snowChunkDirty : this.chunkDirty;
+    const dirtyMap =
+      options.chunkLayer === 'snow'
+        ? this.snowChunkDirty
+        : options.chunkLayer === 'decor'
+          ? this.decorChunkDirty
+          : this.chunkDirty;
 
     let drawnVerts = 0;
     this.drawnChunks.length = 0;
@@ -284,11 +304,13 @@ export class GridRenderer {
     let chunk = chunks.get(key);
     const region = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
     const tiles =
-      this.skipBlendedGround && chunks === this.terrainChunks
-        ? region.flatMap((t) => (t.ground ? tuftTiles(t) : [t]))
-        : this.skipWaterIce && chunks === this.snowChunks
-          ? region.filter((t) => t.waterIce === undefined)
-          : region;
+      chunks === this.decorChunks
+        ? region.flatMap(tuftTiles)
+        : this.skipBlendedGround && chunks === this.terrainChunks
+          ? region.flatMap((t) => (t.ground ? tuftTiles(t) : [t]))
+          : this.skipWaterIce && chunks === this.snowChunks
+            ? region.filter((t) => t.waterIce === undefined)
+            : region;
     if (!chunk) {
       chunk = {
         vao: null,
@@ -779,11 +801,13 @@ export class GridRenderer {
       this.gridVAO = null;
     }
 
-    for (const chunk of this.terrainChunks.values()) {
-      if (chunk.vbo) gpu.destroyBuffer(chunk.vbo);
-      if (chunk.vao) gpu.destroyVertexLayout(chunk.vao);
+    for (const chunks of [this.terrainChunks, this.decorChunks]) {
+      for (const chunk of chunks.values()) {
+        if (chunk.vbo) gpu.destroyBuffer(chunk.vbo);
+        if (chunk.vao) gpu.destroyVertexLayout(chunk.vao);
+      }
+      chunks.clear();
     }
-    this.terrainChunks.clear();
 
     if (this.debug) {
       console.log('🧹 Grid renderer disposed');

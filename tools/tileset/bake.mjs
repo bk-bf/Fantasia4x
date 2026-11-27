@@ -39,8 +39,12 @@ import {
   fieldSlots,
   groundField,
   groundKinds,
-  groundSprites
+  groundSprites,
+  patternOffset,
+  GRASS_SEED,
+  OFFSET_STEP
 } from './ground.mjs';
+import { pixelSprite, treeFoot, treeGround, TREE_GROUND_KINDS } from './treeGround.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', '..', 'static', 'tilesets', 'painted');
@@ -75,6 +79,7 @@ export const ROCK = rockArt(A);
 
 export const TREE_SEASONS = ['summer', 'autumn', 'winter'];
 export const TREE_AGES = { young: 4, mature: 2, elder: 1 };
+const TREE_GROUND_GRASS_SEED = 77;
 const TREE_SEED = { young: (v = 0) => v, mature: (v = 0) => 3 + v * 5, elder: (v = 0) => 41 + v };
 
 const treeSpecies = () =>
@@ -499,6 +504,8 @@ function sprites(ground = groundSprites(A, [], [])) {
     );
   const trees = treeSet(A);
   for (const { id, sprite: s } of trees.drawn) add(id, object(s, 16, 23));
+  const under = treeGroundSet(trees.drawn);
+  for (const [id, s] of under.sprites) add(id, s);
   for (const k of Object.keys(A.PLANTS))
     for (let v = 0; v < 3; v++) add(`plant/${k}/${v}`, object(A.mkPlant(k, v, 'summer'), 16, 23));
   for (const { id, sprite: s } of shoreSprites(A)) add(id, object(s, 16, 23));
@@ -531,7 +538,38 @@ function sprites(ground = groundSprites(A, [], [])) {
     pieces,
     drops,
     trees: trees.map,
+    treeGround: under.manifest,
     grass: [...new Set(grass)].sort()
+  };
+}
+
+function treeGroundSet(drawn = treeSet(A).drawn) {
+  const byId = new Map(drawn.map((d) => [d.id, d.sprite]));
+  const species = new Map(
+    Object.keys(TREE_GROUND_KINDS).map((kind) => [
+      kind,
+      {
+        kind,
+        mature: byId.get(treeSprite(kind, 'mature', 'summer', 0)),
+        elder: byId.get(treeSprite(kind, 'elder', 'summer', 0))
+      }
+    ])
+  );
+  const made = treeGround(
+    A.P,
+    species,
+    (px) => object(pixelSprite(px), 0, 0),
+    /** @type {[number, number]} */ (
+      patternOffset(TREE_GROUND_GRASS_SEED, GRASS_SEED, A.hash).map((v) => v * OFFSET_STEP)
+    )
+  );
+  const resources = Object.fromEntries(
+    treeSpecies().map(([resource, kind]) => [resource, Object.keys(TREE_GROUND_KINDS).indexOf(kind)])
+  );
+  const feet = Object.fromEntries(drawn.map((d) => [d.id, treeFoot(d.sprite)]));
+  return {
+    sprites: /** @type {Map<string, ReturnType<typeof sprite>>} */ (made.sprites),
+    manifest: { ...made.manifest, resources, feet }
   };
 }
 
@@ -757,7 +795,7 @@ function ground() {
 
 export function bake() {
   const laid = ground();
-  const { all, roles, extra, pieces, drops, trees, grass } = sprites(laid);
+  const { all, roles, extra, pieces, drops, trees, treeGround: under, grass } = sprites(laid);
   const order = [...all].sort(
     ([a, sa], [b, sb]) => sb.patch - sa.patch || sb.h - sa.h || (a < b ? -1 : 1)
   );
@@ -798,6 +836,7 @@ export function bake() {
     pieces,
     drops,
     trees,
+    treeGround: under,
     water: { image: WATER_IMAGE, size: WATER_SIZE },
     ground: {
       field: { image: FIELD_IMAGE, size: FIELD_SIZE },

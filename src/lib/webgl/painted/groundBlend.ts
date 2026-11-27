@@ -22,6 +22,9 @@ import type {
   GpuVertexLayout,
   FilterMode
 } from '../../gpu/device.js';
+import { TREE_UNIT, TreeGroundLayer, withTreeGround } from './treeGroundLayer.js';
+import { treeSoils } from './treeGroundTable.js';
+import type { TreeSoil } from './treeGroundManifest.js';
 
 const PROGRAM = 'groundBlend';
 const MAX_KINDS = 64;
@@ -150,13 +153,15 @@ export class GroundBlend {
   private dirty: { x: number; y: number }[] = [];
   private lightBuilt: { version: number; sampler: LightSampler | undefined } | null = null;
   private litRect: Rect | null = null;
+  readonly trees: TreeGroundLayer | null;
+  private readonly soils: TreeSoil[];
 
   static create(
     gpu: GpuDevice,
     shaders: ShaderManager,
     painted: LoadedPaintedTileset
   ): GroundBlend | null {
-    const made = shaders.createProgram(PROGRAM, vertexSource, fragmentSource);
+    const made = shaders.createProgram(PROGRAM, vertexSource, withTreeGround(fragmentSource));
     const program = shaders.getProgram(PROGRAM)?.program;
     if (!made.success || !program) {
       console.warn('[ground blend] off:', made.error);
@@ -225,7 +230,12 @@ export class GroundBlend {
       'u_fluid[0]',
       'u_ice',
       'u_flow',
-      'u_stream'
+      'u_stream',
+      'u_trees',
+      'u_treeRow',
+      'u_treeKinds',
+      'u_treeOnly',
+      'u_grassShift'
     ];
     this.at = Object.fromEntries(names.map((n) => [n, gpu.uniform(program, n)]));
     const { patch, layer, tide, shore, still } = groundKindTable(painted);
@@ -249,6 +259,20 @@ export class GroundBlend {
     gpu.setF32(this.at.u_artPerBase, this.artPerBase);
     gpu.setVec4fv(this.at.u_patch, patch);
     gpu.setVec4fv(this.at.u_layer, layer);
+    const look = painted.tileset.treeGround;
+    this.trees = look ? new TreeGroundLayer(gpu, look, painted.tileset.tile) : null;
+    this.soils = look ? treeSoils(look, paintedGroundIds(), (id) => groundLayer(id).water > 0) : [];
+    gpu.setPipeline(this.program);
+    gpu.setI32(this.at.u_trees, TREE_UNIT);
+    gpu.setI32(this.at.u_treeKinds, look?.kinds.length ?? 0);
+    gpu.setVec2i(this.at.u_grassShift, look?.grassShift[0] ?? 0, look?.grassShift[1] ?? 0);
+  }
+
+  setTrees(
+    grids: readonly (GameGrid | null)[],
+    dirtyTiles?: ReadonlyArray<{ x: number; y: number }>
+  ): void {
+    this.trees?.setTrees(grids, dirtyTiles);
   }
 
   setIce(grid: GameGrid | null, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
@@ -474,7 +498,12 @@ export class GroundBlend {
     this.lightBuilt = { version: f.lightVersion, sampler: f.lightSampler };
   }
 
-  draw(f: GroundBlendFrame): boolean {
+  drawWinterTrees(f: GroundBlendFrame): boolean {
+    if (!this.trees?.winter) return false;
+    return this.draw(f, true);
+  }
+
+  draw(f: GroundBlendFrame, treeOnly = false): boolean {
     const grid = this.grid;
     if (!grid) return false;
     const gpu = this.gpu;
@@ -487,7 +516,10 @@ export class GroundBlend {
     this.ice.sync(this.w, this.h);
     if (f.sea && this.waveStyle) this.syncRivers();
     this.rebuildLight(f);
+    this.trees?.sync(this.kinds, this.w, this.h, this.soils);
     gpu.setPipeline(this.program);
+    gpu.setI32(this.at.u_treeOnly, treeOnly ? 1 : 0);
+    gpu.setI32(this.at.u_treeRow, this.trees?.tableRow ?? 0);
     gpu.setMat4fv(this.at.u_projection, f.projection);
     gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
     gpu.setVec2fv(this.at.u_zoom, f.zoom);
@@ -515,6 +547,7 @@ export class GroundBlend {
     this.bindOn(LIGHT_UNIT, this.lightTex);
     this.ice.bind();
     this.rivers.bind();
+    if (this.trees) this.bindOn(TREE_UNIT, this.trees.texture);
     gpu.setTextureSlot(0);
     gpu.setVertexLayout(this.vao);
     gpu.draw('triangle-list', 6);
@@ -527,6 +560,7 @@ export class GroundBlend {
     gpu.destroyTexture(this.kindTex);
     gpu.destroyTexture(this.tideTex);
     gpu.destroyTexture(this.lightTex);
+    this.trees?.dispose();
     this.ice.dispose();
     this.rivers.dispose();
     gpu.destroyBuffer(this.vbo);
