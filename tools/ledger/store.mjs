@@ -19,29 +19,63 @@ import { blobPath, sha256Of, writeBlobAt, writeOnce } from './spool.mjs';
 const KINDS = new Set(['play', 'bench', 'harness', 'ci', 'save']);
 const ID = /^(\d{4})(\d{2})\d{2}T\d{6}Z-[a-z0-9-]+-[0-9a-f]{6}$/;
 
-export function withLock(root, fn) {
+const held = new Map();
+const pause = new Int32Array(new SharedArrayBuffer(4));
+
+function holder(lock) {
+  try {
+    return Number(readFileSync(lock, 'utf8')) || null;
+  } catch {
+    return null;
+  }
+}
+
+function alive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return err.code === 'EPERM';
+  }
+}
+
+function acquire(root, waitMs) {
   mkdirSync(root, { recursive: true });
   const lock = join(root, '.lock');
-  let fd;
-  try {
-    fd = openSync(lock, 'wx');
-  } catch (err) {
-    if (err.code !== 'EEXIST') throw err;
-    const pid = Number(readFileSync(lock, 'utf8'));
-    let alive = false;
+  const until = Date.now() + waitMs;
+  for (;;) {
     try {
-      process.kill(pid, 0);
-      alive = true;
-    } catch {
-      alive = false;
+      const fd = openSync(lock, 'wx');
+      writeFileSync(fd, String(process.pid));
+      closeSync(fd);
+      return lock;
+    } catch (err) {
+      if (err.code !== 'EEXIST') throw err;
     }
-    if (alive) throw new Error(`the store is held by process ${pid}`);
-    rmSync(lock, { force: true });
-    fd = openSync(lock, 'wx');
+    const pid = holder(lock);
+    if (pid != null && !alive(pid)) {
+      rmSync(lock, { force: true });
+      continue;
+    }
+    if (Date.now() >= until) throw new Error(`the store is held by process ${pid ?? '?'}`);
+    Atomics.wait(pause, 0, 0, 200);
   }
-  writeFileSync(fd, String(process.pid));
-  closeSync(fd);
-  const release = () => rmSync(lock, { force: true });
+}
+
+export function lockWaitMs(env = process.env) {
+  return Number(env.F4X_LEDGER_LOCK_WAIT_MS ?? 20 * 60_000);
+}
+
+export function withLock(root, fn, { waitMs = lockWaitMs() } = {}) {
+  const depth = held.get(root) ?? 0;
+  if (depth === 0) acquire(root, waitMs);
+  held.set(root, depth + 1);
+  const release = () => {
+    const left = held.get(root) - 1;
+    if (left > 0) return held.set(root, left);
+    held.delete(root);
+    rmSync(join(root, '.lock'), { force: true });
+  };
   try {
     const out = fn();
     if (out && typeof out.then === 'function') return out.finally(release);
@@ -102,11 +136,13 @@ export function entryExists(root, id) {
 }
 
 export function putEntry(root, entry) {
-  checkEntry(entry, root);
-  const text = JSON.stringify(entry, null, 2) + '\n';
-  writeOnce(entryPath(root, entry.id), text);
-  appendFileSync(join(root, 'index.jsonl'), JSON.stringify(entry) + '\n');
-  return entry.id;
+  return withLock(root, () => {
+    checkEntry(entry, root);
+    const text = JSON.stringify(entry, null, 2) + '\n';
+    writeOnce(entryPath(root, entry.id), text);
+    appendFileSync(join(root, 'index.jsonl'), JSON.stringify(entry) + '\n');
+    return entry.id;
+  });
 }
 
 export function getEntry(root, id) {
@@ -124,6 +160,10 @@ function* entryFiles(root) {
 }
 
 export function reindex(root) {
+  return withLock(root, () => rebuildIndex(root));
+}
+
+function rebuildIndex(root) {
   const lines = [];
   for (const f of entryFiles(root)) lines.push(JSON.stringify(JSON.parse(readFileSync(f, 'utf8'))));
   const index = join(root, 'index.jsonl');
@@ -180,11 +220,13 @@ export function keyedEntry(root, key) {
 }
 
 export function putKeyed(root, key, entry) {
-  const existing = keyedEntry(root, key);
-  if (existing) return { id: existing, created: false };
-  putEntry(root, entry);
-  writeOnce(keyPath(root, key), entry.id + '\n');
-  return { id: entry.id, created: true };
+  return withLock(root, () => {
+    const existing = keyedEntry(root, key);
+    if (existing) return { id: existing, created: false };
+    putEntry(root, entry);
+    writeOnce(keyPath(root, key), entry.id + '\n');
+    return { id: entry.id, created: true };
+  });
 }
 
 export function ingestSpool(root, spool, { remove = false } = {}) {

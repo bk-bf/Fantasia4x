@@ -65,7 +65,7 @@ async function readOrigin(chromium, idbDir, base, scratch, spare, outDir) {
       await done;
       await page.evaluate('delete window.__f4xSave');
       if (read !== length) throw new Error(`${url} save ${id}: read ${read} of ${length}`);
-      saves.push({ id, meta, file, worldId: hash.digest('hex') });
+      saves.push({ id, meta, file, textSha256: hash.digest('hex') });
     }
     return { url, names, saves, keys: keys.length };
   } finally {
@@ -83,8 +83,8 @@ export async function extractSaves(idbDir, outDir, { playwright, scratch, only =
   for (const base of readdirSync(idbDir).filter((d) => d.endsWith('.indexeddb.leveldb') && (!only || only.includes(d))).sort()) {
     const r = await readOrigin(chromium, idbDir, base, scratch, spare++, outDir);
     for (const s of r.saves) {
-      writeFileSync(`${s.file}.meta`, JSON.stringify({ origin: r.url, id: s.id, worldId: s.worldId, meta: s.meta }) + '\n');
-      found.push({ origin: r.url, id: s.id, file: s.file, worldId: s.worldId, meta: s.meta });
+      writeFileSync(`${s.file}.meta`, JSON.stringify({ origin: r.url, id: s.id, textSha256: s.textSha256, meta: s.meta }) + '\n');
+      found.push({ origin: r.url, id: s.id, file: s.file, textSha256: s.textSha256, meta: s.meta });
     }
     if (!r.saves.length) found.push({ origin: r.url, id: null, file: null, databases: r.names });
   }

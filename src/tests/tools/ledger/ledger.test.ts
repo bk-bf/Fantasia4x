@@ -10,7 +10,8 @@ import {
   newId,
   machineName,
   launchedBy,
-  blobPath
+  blobPath,
+  worldId
 } from '../../../../tools/ledger/spool.mjs';
 import {
   putEntry,
@@ -41,6 +42,7 @@ const LOG = [
   SESSION_A,
   '2026-11-27 01:37:36.000 [T30058] [info] ledger save=start0000 reason=session turn=30058 at=2026-11-27T00:37:35.900Z ms=800 speed=1x bytes=100 entry=20261127T003735Z-laptop-aaaaaa',
   tps('01:37:36.749', 30058, 0, '1x', true),
+  '2026-11-27 01:37:36.800 [T00000] [info] capCache hit=0 miss=12',
   tps('01:38:00.100', 30100, 100, '4x'),
   tps('01:38:01.100', 30340, 90, '4x'),
   fps('01:38:01.100', 30340, 92),
@@ -154,6 +156,25 @@ describe('store', () => {
     expect(() => putEntry(dir, entry(newId('laptop'), [{ role: 'log', name: 'x', sha256: missing, bytes: 1 }]))).toThrow(/no blob/);
   });
 
+  it('waits for the store lock while a live process holds it and takes it from a dead one', () => {
+    process.env.F4X_LEDGER_LOCK_WAIT_MS = '300';
+    try {
+      writeFileSync(join(dir, '.lock'), String(process.ppid));
+      const started = Date.now();
+      expect(() => putEntry(dir, entry(newId('laptop')))).toThrow(/held by process/);
+      expect(Date.now() - started).toBeGreaterThanOrEqual(250);
+      expect(() => reindex(dir)).toThrow(/held by process/);
+      writeFileSync(join(dir, '.lock'), '2147483646');
+      const id = newId('laptop');
+      putEntry(dir, entry(id));
+      expect(existsSync(join(dir, '.lock'))).toBe(false);
+      expect(reindex(dir)).toBe(1);
+      expect(listEntries(dir).map((e) => e.id)).toEqual([id]);
+    } finally {
+      delete process.env.F4X_LEDGER_LOCK_WAIT_MS;
+    }
+  });
+
   it('ingests a spool only where each blob matches its hash, then clears what it holds', () => {
     const spool = join(dir, 'spool');
     const store = join(dir, 'store');
@@ -195,6 +216,7 @@ describe('perf.log sessions', () => {
       ['bbbb2222', 31600]
     ]);
     expect(save).toBe('start0000');
+    expect((perf as unknown as { turns: unknown }).turns).toEqual({ first: 30058, last: 31940 });
     expect(perf.stretches.map((s) => s.tps['4x'])).toEqual([
       undefined,
       { median: 100, p10: 90, p90: 100, n: 2 },
@@ -232,6 +254,27 @@ describe('perf.log sessions', () => {
     expect(a!.world.save).toBe('start0000');
     expect(readBlob(dir, a!.files[0].sha256).toString().split('\n')[0]).toBe(SESSION_A);
   });
+
+  it('records lines written after a session closed as a continuation of its entry', () => {
+    const log = join(dir, 'perf.log');
+    const head = [SESSION_B, tps('14:48:44.414', 6060, 60, '1x')];
+    writeFileSync(log, head.join('\n') + '\n');
+    const opts = { machine: 'laptop', checkout: 'c', paths: [log], timeZone: 'Europe/Berlin' };
+    const closed = Date.parse('2026-11-27T16:00:00Z');
+    expect(ingestPerfLog(dir, { ...opts, now: closed })).toMatchObject({ created: 1 });
+    const late = [tps('17:20:00.000', 6100, 58, '1x'), tps('17:20:01.000', 6160, 59, '1x')];
+    writeFileSync(log, [...head, ...late].join('\n') + '\n');
+    expect(ingestPerfLog(dir, { ...opts, now: Date.parse('2026-11-27T16:20:30Z') })).toMatchObject({ created: 0, open: 1 });
+    expect(ingestPerfLog(dir, { ...opts, now: Date.parse('2026-11-27T18:00:00Z') })).toMatchObject({ created: 1 });
+    expect(ingestPerfLog(dir, { ...opts, now: Date.parse('2026-11-27T18:00:00Z') })).toMatchObject({ created: 0, known: 1 });
+    const [first, rest] = (listEntries(dir, { kind: 'play' }) as unknown as (Entry & { parent: string })[]).sort((a, b) => a.id.localeCompare(b.id));
+    expect(rest.parent).toBe(first.id);
+    expect(first.perf.lines).toEqual({ from: 0, to: 2 });
+    expect(rest.perf.lines).toEqual({ from: 2, to: 4 });
+    expect(rest.at).toBe('2026-11-27T16:20:00.000Z');
+    expect(rest.world).toMatchObject({ turn: 6000, mobs: 1259 });
+    expect(readBlob(dir, rest.files[0].sha256).toString()).toBe(late.join('\n') + '\n');
+  });
 });
 
 describe('saves', () => {
@@ -251,14 +294,19 @@ describe('saves', () => {
     expect((listEntries(dir, { world: saved.worldId.slice(0, 12) }) as unknown as Entry[]).map((e) => e.id)).toContain(session!.id);
   });
 
-  it('keys a save by its uncompressed JSON and fetches it back', () => {
-    const text = JSON.stringify({ dynamic: { turn: 30058, seed: 7, pawns: [{}], mobs: [{}, {}] }, world: [[{}, {}, {}], [{}, {}, {}]] });
+  it('keys a save by the canonical JSON of its world, whatever its wrapper, key order or compression', () => {
+    const dynamic = { turn: 30058, seed: 7, pawns: [{ a: 1, b: 2 }], mobs: [{}, {}] };
+    const world = [[{}, {}, {}], [{}, {}, {}]];
+    const text = JSON.stringify({ dynamic, world });
     const path = join(dir, 'save.json.gz');
     writeFileSync(path, gzipSync(text, { level: 1 }));
     utimesSync(path, new Date('2026-11-27T01:00:00Z'), new Date('2026-11-27T01:00:00Z'));
     const first = ingestSave(dir, { machine: 'laptop', path });
-    expect(first.worldId).toBe(createHash('sha256').update(text).digest('hex'));
-    writeFileSync(path, gzipSync(text, { level: 9 }));
+    expect(first.worldId).toBe(createHash('sha256').update('{"dynamic":{"mobs":[{},{}],"pawns":[{"a":1,"b":2}],"seed":7,"turn":30058},"world":[[{},{},{}],[{},{},{}]]}').digest('hex'));
+    const reordered = { world, dynamic: { mobs: dynamic.mobs, turn: 30058, pawns: [{ b: 2, a: 1, c: undefined }], seed: 7, key: undefined } };
+    expect(worldId(reordered)).toBe(first.worldId);
+    expect(worldId({ v: 1, ...reordered })).toBe(first.worldId);
+    writeFileSync(path, gzipSync(JSON.stringify({ v: 1, ...reordered }), { level: 9 }));
     expect(ingestSave(dir, { machine: 'laptop', path })).toMatchObject({ id: first.id, created: false });
     const save = resolveSave(dir, first.worldId.slice(0, 10));
     expect(save.world).toMatchObject({ turn: 30058, seed: 7, map: '3x2', pawns: 1, mobs: 2 });

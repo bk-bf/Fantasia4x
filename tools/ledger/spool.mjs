@@ -103,6 +103,54 @@ export function sha256Of(data) {
   return createHash('sha256').update(data).digest('hex');
 }
 
+/** @param {unknown} value @param {(chunk: string) => void} out @returns {boolean} */
+function canonical(value, out) {
+  if (value === undefined || typeof value === 'function' || typeof value === 'symbol') return false;
+  if (value === null || typeof value !== 'object') {
+    out(JSON.stringify(value) ?? 'null');
+    return true;
+  }
+  const json = /** @type {{ toJSON?: () => unknown }} */ (value).toJSON;
+  if (typeof json === 'function') return canonical(json.call(value), out);
+  if (Array.isArray(value)) {
+    out('[');
+    value.forEach((v, i) => {
+      if (i) out(',');
+      if (!canonical(v, out)) out('null');
+    });
+    out(']');
+    return true;
+  }
+  const record = /** @type {Record<string, unknown>} */ (value);
+  out('{');
+  let first = true;
+  for (const key of Object.keys(record).sort()) {
+    const v = record[key];
+    if (v === undefined || typeof v === 'function' || typeof v === 'symbol') continue;
+    out(first ? `${JSON.stringify(key)}:` : `,${JSON.stringify(key)}:`);
+    first = false;
+    canonical(v, out);
+  }
+  out('}');
+  return true;
+}
+
+/** @param {{ dynamic?: unknown, world?: unknown, [field: string]: unknown }} snapshot */
+export function worldId(snapshot) {
+  const hash = createHash('sha256');
+  let buf = '';
+  const out = (/** @type {string} */ chunk) => {
+    buf += chunk;
+    if (buf.length > 1 << 16) {
+      hash.update(buf);
+      buf = '';
+    }
+  };
+  canonical({ dynamic: snapshot.dynamic, world: snapshot.world }, out);
+  hash.update(buf);
+  return hash.digest('hex');
+}
+
 /** @param {string} root @param {string} sha */
 export function blobPath(root, sha) {
   if (!SHA256.test(sha)) throw new Error(`not a sha256: ${sha}`);

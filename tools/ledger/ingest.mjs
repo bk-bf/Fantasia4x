@@ -3,9 +3,9 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { basename } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
-import { fileRef, newId, sha256Of } from './spool.mjs';
+import { fileRef, newId, sha256Of, worldId as worldIdOfSnapshot } from './spool.mjs';
 import { isOpen, sessionPerf, sessionTimes, splitSessions } from './perflog.mjs';
-import { allEntries, keyedEntry, putBlob, putKeyed } from './store.mjs';
+import { allEntries, getEntry, keyedEntry, putBlob, putKeyed } from './store.mjs';
 
 const REPO = new URL('../..', import.meta.url).pathname;
 const expanded = new Map();
@@ -39,6 +39,15 @@ function sessionKey(machine, checkout, session) {
   return `perf.log|${machine}|${checkout}|${start}`;
 }
 
+function coveredLines(root, key, firstId) {
+  let to = getEntry(root, firstId).perf?.lines?.to;
+  if (to == null) return null;
+  for (let next = keyedEntry(root, `${key}|from:${to}`); next; next = keyedEntry(root, `${key}|from:${to}`)) {
+    to = getEntry(root, next).perf.lines.to;
+  }
+  return to;
+}
+
 export function concatLogs(paths) {
   const ordered = [...paths].sort((a, b) => {
     const rank = (p) => (basename(p) === 'perf.log' ? 1 : 0);
@@ -57,19 +66,28 @@ export function ingestPerfLog(root, opts) {
   const report = { created: 0, known: 0, open: 0, ids: [] };
   for (const session of sessions) {
     const key = sessionKey(machine, checkout, session);
-    if (keyedEntry(root, key)) {
-      report.known++;
-      continue;
+    const first = keyedEntry(root, key);
+    let from = 0;
+    let entryKey = key;
+    if (first) {
+      from = coveredLines(root, key, first);
+      if (from == null || from >= session.lines.length) {
+        report.known++;
+        continue;
+      }
+      entryKey = `${key}|from:${from}`;
     }
     if (isOpen(session, now, mtime)) {
       report.open++;
       continue;
     }
-    const { header, perf, host, save } = sessionPerf(session);
-    const { start, end } = sessionTimes(session);
-    const body = Buffer.from(session.lines.map((l) => l.raw).join('\n') + '\n');
+    const part = from ? { ...session, lines: session.lines.slice(from) } : session;
+    const { header, perf, host, save } = sessionPerf(part);
+    const { start, end } = from ? sessionTimes({ start: part.lines.find((l) => l.at != null) ?? part.lines[0], lines: part.lines }) : sessionTimes(session);
+    const body = Buffer.from(part.lines.map((l) => l.raw).join('\n') + '\n');
     const sha = putBlob(root, body);
     const notes = [note];
+    if (from) notes.push(`lines ${from + 1}–${session.lines.length} of a session whose first ${from} lines are in ${first}, written after that entry was made`);
     if (!header) {
       notes.push(
         session.start.type === 'reset'
@@ -104,12 +122,12 @@ export function ingestPerfLog(root, opts) {
         savedBy: null
       },
       host,
-      perf: { ...perf, end: end == null ? null : new Date(end).toISOString(), checkout },
+      perf: { ...perf, end: end == null ? null : new Date(end).toISOString(), checkout, lines: { from, to: session.lines.length } },
       files: [fileRef('perf-log', 'perf.log', sha, root)],
-      parent: null,
+      parent: first ?? null,
       note: notes.filter(Boolean).join('; ')
     };
-    const r = putKeyed(root, key, entry);
+    const r = putKeyed(root, entryKey, entry);
     if (r.created) {
       report.created++;
       report.ids.push(r.id);
@@ -122,8 +140,8 @@ const commitOf = (stamp) => (stamp == null ? null : typeof stamp === 'string' ? 
 
 export const noHost = () => ({ load: null, loadEnd: null, cores: null, others: null });
 
-export function describeSave(text) {
-  const save = JSON.parse(text);
+export function describeSave(textOrSave) {
+  const save = typeof textOrSave === 'string' || Buffer.isBuffer(textOrSave) ? JSON.parse(textOrSave) : textOrSave;
   const dynamic = save.dynamic ?? {};
   const world = save.world ?? save.dynamic?.worldMap ?? null;
   return {
@@ -140,7 +158,7 @@ export function describeSave(text) {
 
 export function worldIdOf(gzOrText) {
   const text = Buffer.isBuffer(gzOrText) && gzOrText[0] === 0x1f && gzOrText[1] === 0x8b ? gunzipSync(gzOrText) : gzOrText;
-  return sha256Of(text);
+  return worldIdOfSnapshot(JSON.parse(text));
 }
 
 export function ingestSave(root, opts) {
@@ -149,11 +167,12 @@ export function ingestSave(root, opts) {
   const isGz = gz[0] === 0x1f && gz[1] === 0x8b;
   const text = isGz ? gunzipSync(gz) : gz;
   if (!isGz) gz = gzipSync(text);
-  const worldId = sha256Of(text);
+  const snapshot = JSON.parse(text);
+  const worldId = worldIdOfSnapshot(snapshot);
   const key = `save|${worldId}`;
   const known = keyedEntry(root, key);
   if (known) return { id: known, worldId, created: false };
-  const info = describeSave(text.toString('utf8'));
+  const info = describeSave(snapshot);
   const sha = putBlob(root, gz);
   const when = at ?? (opts.path ? statSync(opts.path).mtimeMs : Date.now());
   const parent = opts.parent !== undefined ? opts.parent : sessionFor(root, machine, info, at);
@@ -187,7 +206,7 @@ export function sessionFor(root, machine, info, savedAt) {
   const hits = allEntries(root).filter((e) => {
     if (e.kind !== 'play' || e.machine !== machine || !e.perf?.turns || !e.world?.map) return false;
     if (info.map && e.world.map !== info.map) return false;
-    if (info.turn < e.perf.turns.first || info.turn > e.perf.turns.last + 600) return false;
+    if (info.turn < e.perf.turns.first || info.turn > e.perf.turns.last) return false;
     if (savedAt == null) return true;
     if (!e.at || !e.perf.end) return false;
     return Date.parse(e.at) <= savedAt && savedAt <= Date.parse(e.perf.end) + 10 * 60_000;

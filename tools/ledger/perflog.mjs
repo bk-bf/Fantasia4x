@@ -207,7 +207,11 @@ export function sessionPerf(session) {
   }
   const speeds = bySpeed(tps);
   const speed = dominant(speeds);
-  const turns = session.lines.map((l) => l.turn).filter((t) => t != null);
+  const turns = session.lines
+    .filter((l) => l.type === 'tps' || l.type === 'fps')
+    .map((l) => l.turn)
+    .concat(header?.turn ?? [])
+    .filter((t) => t != null);
   const started = checkpoints.find((c) => c.reason === 'session');
   const stretches = [];
   for (let k = 0; k <= checkpoints.length; k++) {
