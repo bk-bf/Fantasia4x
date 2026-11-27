@@ -34,6 +34,7 @@ export class TreeGroundLayer {
   private kinds: Uint8Array = new Uint8Array(0);
   readonly decor = new GameGrid();
   private decorDirty: Tile[] = [];
+  private dressedView = '';
   winter = false;
 
   constructor(
@@ -59,12 +60,12 @@ export class TreeGroundLayer {
   setTrees(grids: readonly (GameGrid | null)[], dirty?: ReadonlyArray<Tile>): void {
     const same = grids.length === this.grids.length && grids.every((g, i) => g === this.grids[i]);
     this.grids = grids;
-    if (!same || !dirty || dirty.length === 0) {
+    if (!same) {
       this.whole = true;
       this.changed = [];
       return;
     }
-    if (!this.whole) for (const t of dirty) this.changed.push(t);
+    if (!this.whole && dirty) for (const t of dirty) this.changed.push(t);
   }
 
   private standAt(x: number, y: number) {
@@ -194,6 +195,7 @@ export class TreeGroundLayer {
 
   private undress(r: Rect): void {
     const f = this.field!;
+    this.dressedView = '';
     const strip = (x: number, y: number) => {
       this.dressed.delete(y * f.w + x);
       if (this.decor.removeTile(x, y)) this.decorDirty.push({ x, y });
@@ -218,6 +220,8 @@ export class TreeGroundLayer {
     const y0 = Math.max(0, Math.floor(view.y) - VIEW_MARGIN);
     const x1 = Math.min(f.w - 1, Math.ceil(view.x + view.w) + VIEW_MARGIN);
     const y1 = Math.min(f.h - 1, Math.ceil(view.y + view.h) + VIEW_MARGIN);
+    const viewKey = `${x0},${y0},${x1},${y1}`;
+    if (viewKey === this.dressedView) return touched;
     for (let ty = y0; ty <= y1; ty++)
       for (let tx = x0; tx <= x1; tx++) {
         const key = ty * f.w + tx;
@@ -238,6 +242,7 @@ export class TreeGroundLayer {
         this.decor.setTile(tx, ty, tile);
         touched.push({ x: tx, y: ty });
       }
+    this.dressedView = viewKey;
     return touched;
   }
 

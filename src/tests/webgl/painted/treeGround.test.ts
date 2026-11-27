@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import manifest from '../../../../static/tilesets/painted/manifest.json';
 import { buildTileset, parseManifest } from '$lib/webgl/painted/manifest';
 import { BED, TreeField, type Probe } from '$lib/webgl/painted/treeGround';
+import { TreeGroundLayer } from '$lib/webgl/painted/treeGroundLayer';
+import { GameGrid } from '$lib/webgl/game-grid';
+import type { GpuDevice } from '$lib/gpu/device';
 import {
   KIND_ROWS,
   TABLE_W,
@@ -15,7 +18,11 @@ const look = tileset.treeGround!;
 const ART = 32;
 const grass = look.soils.get('grass')!;
 
-const standFor = (resource: string, age: 'young' | 'mature' | 'elder', season = 'summer' as const) => {
+const standFor = (
+  resource: string,
+  age: 'young' | 'mature' | 'elder',
+  season = 'summer' as const
+) => {
   const sprite = tileset.trees.get(resource)?.[age]?.[season][0]?.cells[0];
   return sprite ? look.stands.get(sprite) : undefined;
 };
@@ -87,5 +94,49 @@ describe('tree ground patches', () => {
     const gainAt = (i: number) => table[(soilRow * TABLE_W + i) * 4];
     expect(gainAt(1)).toBeGreaterThan(gainAt(2));
     expect(gainAt(3)).toBe(0);
+  });
+
+  it('rebuilds and uploads nothing on a frame where the tree grids did not change', () => {
+    let uploads = 0;
+    const gpu = {
+      createTexture: () => ({}),
+      destroyTexture: () => {},
+      setTextureSlot: () => {},
+      bindTexture: () => {},
+      setSampler: () => {},
+      setUnpackAlignment: () => {},
+      writeTexture: () => {},
+      writeSubTexture: () => uploads++
+    } as unknown as GpuDevice;
+    const layer = new TreeGroundLayer(gpu, look, ART);
+    const trees = new GameGrid();
+    const oak = tileset.trees.get('oak_tree')!.mature!.summer[0].cells[0];
+    const at = (x: number, y: number) => ({
+      char: ' ',
+      foreground: { r: 0, g: 0, b: 0 },
+      background: { r: 0, g: 0, b: 0 },
+      position: { x, y },
+      painted: oak
+    });
+    trees.setTile(6, 6, at(6, 6));
+    const kinds = new Uint8Array(24 * 24).fill(1);
+    const soils = [{ gain: 0 }, grass];
+    layer.setTrees([trees, null]);
+    layer.sync(kinds, 24, 24, soils);
+    expect(uploads).toBeGreaterThan(0);
+    const view = { x: 0, y: 0, w: 24, h: 24 };
+    expect(layer.dressAround(view, 1000).length).toBeGreaterThan(0);
+    uploads = 0;
+    for (let frame = 0; frame < 3; frame++) {
+      layer.setTrees([trees, null]);
+      layer.sync(kinds, 24, 24, soils);
+      expect(layer.dressAround(view, 1000)).toEqual([]);
+    }
+    expect(uploads).toBe(0);
+    trees.setTile(16, 16, at(16, 16));
+    layer.setTrees([trees, null], [{ x: 16, y: 16 }]);
+    layer.sync(kinds, 24, 24, soils);
+    expect(uploads).toBe(1);
+    expect(layer.dressAround(view, 1000)).toContainEqual({ x: 16, y: 16 });
   });
 });
