@@ -8,6 +8,7 @@ import {
   logActivity,
   logDiag,
   logCombatSwing,
+  keepaliveBodies,
   __resetCombatSessions
 } from '$lib/stores/Log';
 
@@ -126,5 +127,23 @@ describe('activity log', () => {
     const combat = get(activityLog).filter((e) => e.type === 'combat');
     expect(combat).toHaveLength(1);
     expect(combat[0].combatBreakdown).toHaveLength(5);
+  });
+});
+
+describe('keepaliveBodies', () => {
+  const line = (i: number) => ({ category: 'ai', line: `[T${i}] [info] ${'x'.repeat(200)}` });
+
+  it('splits a burst into bodies the browser accepts for a keepalive post', () => {
+    const entries = Array.from({ length: 600 }, (_, i) => line(i));
+    const bodies = keepaliveBodies(entries, 60_000);
+    expect(bodies.length).toBeGreaterThan(1);
+    for (const body of bodies) expect(body.length).toBeLessThanOrEqual(60_000);
+    expect(bodies.flatMap((b) => JSON.parse(b).entries)).toEqual(entries);
+  });
+
+  it('keeps a quiet second in one body', () => {
+    expect(keepaliveBodies([line(1), line(2)])).toEqual([
+      JSON.stringify({ entries: [line(1), line(2)] })
+    ]);
   });
 });

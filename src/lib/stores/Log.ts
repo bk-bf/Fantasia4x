@@ -214,16 +214,38 @@ function mirrorToFile(entry: ActivityLogEntry): void {
   if (_mirrorTimer === null) _mirrorTimer = setTimeout(flushMirror, 1000);
 }
 
+export const KEEPALIVE_BODY_LIMIT = 60_000;
+
+export function keepaliveBodies<T>(entries: readonly T[], limit = KEEPALIVE_BODY_LIMIT): string[] {
+  const bodies: string[] = [];
+  let batch: string[] = [];
+  let size = 0;
+  const close = () => {
+    if (batch.length) bodies.push(`{"entries":[${batch.join(',')}]}`);
+    batch = [];
+    size = 0;
+  };
+  for (const entry of entries) {
+    const json = JSON.stringify(entry);
+    if (batch.length && size + json.length + 16 > limit) close();
+    batch.push(json);
+    size += json.length + 1;
+  }
+  close();
+  return bodies;
+}
+
 function flushMirror(): void {
   _mirrorTimer = null;
   if (_mirrorPending.length === 0) return;
-  const entries = _mirrorPending.splice(0);
-  fetch('/api/log', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ entries }),
-    keepalive: true
-  }).catch(() => {});
+  for (const body of keepaliveBodies(_mirrorPending.splice(0))) {
+    fetch('/api/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: true
+    }).catch(() => {});
+  }
 }
 
 export function logWork(
