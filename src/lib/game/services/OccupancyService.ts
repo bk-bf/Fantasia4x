@@ -51,23 +51,39 @@ class OccupancyServiceImpl implements OccupancyService {
     const mobs = state.mobs ?? [];
     const next = new Int32Array(pawns.length + mobs.length);
     const ids: string[] = [];
-    const add = (x: number, y: number, id: string): boolean => {
-      if (!onGrid(x, y, width, height)) return false;
+    const np = pawns.length;
+    for (let j = 0; j < np + mobs.length; j++) {
+      let x: number;
+      let y: number;
+      let id: string;
+      if (j < np) {
+        const pos = pawns[j].position;
+        if (!pos) continue;
+        x = pos.x;
+        y = pos.y;
+        id = pawns[j].id;
+      } else {
+        const m = mobs[j - np];
+        if (m.state === 'Corpse') continue;
+        x = m.x;
+        y = m.y;
+        id = m.id;
+      }
+      if (
+        !Number.isInteger(x) ||
+        !Number.isInteger(y) ||
+        x < 0 ||
+        y < 0 ||
+        x >= width ||
+        y >= height
+      )
+        return;
       const k = y * width + x;
       const i = ids.length;
       ids.push(id);
       next[i] = head[k];
       head[k] = i;
       written.push(k);
-      return true;
-    };
-    for (let i = 0; i < pawns.length; i++) {
-      const pos = pawns[i].position;
-      if (pos && !add(pos.x, pos.y, pawns[i].id)) return;
-    }
-    for (let i = 0; i < mobs.length; i++) {
-      const m = mobs[i];
-      if (m.state !== 'Corpse' && !add(m.x, m.y, m.id)) return;
     }
     this._tiles = { pawns, mobs: state.mobs, width, height, head, next, ids };
   }
