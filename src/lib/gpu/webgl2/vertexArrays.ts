@@ -12,6 +12,8 @@ export class Webgl2VertexArrays {
   private readonly byBuffer = new Map<WebGLBuffer, string[]>();
   private readonly ids = new WeakMap<WebGLBuffer, number>();
   private nextId = 1;
+  private readonly layoutIds = new Map<string, number>();
+  private readonly pipelineLayouts = new WeakMap<Webgl2Pipeline, number>();
   private empty: WebGLVertexArrayObject | null = null;
   private boundArray: WebGLVertexArrayObject | null = null;
 
@@ -61,8 +63,18 @@ export class Webgl2VertexArrays {
     return slot;
   }
 
+  private layoutId(p: Webgl2Pipeline): number {
+    let id = this.pipelineLayouts.get(p);
+    if (id !== undefined) return id;
+    const layout = JSON.stringify(p.buffers);
+    id = this.layoutIds.get(layout);
+    if (id === undefined) this.layoutIds.set(layout, (id = this.layoutIds.size));
+    this.pipelineLayouts.set(p, id);
+    return id;
+  }
+
   private key(p: Webgl2Pipeline): string {
-    let key = p.layoutKey;
+    let key = String(this.layoutId(p));
     for (let i = 0; i < p.buffers.length; i++) {
       const slot = this.slot(i);
       key += `|${this.id(slot.buffer)}:${slot.offset}`;
