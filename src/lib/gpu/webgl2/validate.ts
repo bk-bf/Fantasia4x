@@ -9,9 +9,26 @@ export interface DrawnSlot {
 
 export class Webgl2Validator {
   private readonly read = new Map<WebGLBuffer, Range[]>();
+  private readonly sampled = new Set<unknown>();
 
   reset(): void {
     this.read.clear();
+    this.sampled.clear();
+  }
+
+  readBuffer(buffer: WebGLBuffer, start: number, end: number): void {
+    const ranges = this.read.get(buffer);
+    if (ranges) ranges.push([start, end]);
+    else this.read.set(buffer, [[start, end]]);
+  }
+
+  sample(texture: unknown): void {
+    this.sampled.add(texture);
+  }
+
+  writeTexture(texture: unknown): void {
+    if (this.sampled.has(texture))
+      throw new Error('writeTexture: a draw that is not submitted yet samples this texture');
   }
 
   draw(
@@ -24,13 +41,11 @@ export class Webgl2Validator {
       const slot = slots[i];
       if (!slot) return;
       const [first, end] = layout.stepMode === 'instance' ? instances : vertices;
-      const range: Range = [
+      this.readBuffer(
+        slot.buffer,
         slot.offset + first * layout.arrayStride,
         slot.offset + end * layout.arrayStride
-      ];
-      const ranges = this.read.get(slot.buffer);
-      if (ranges) ranges.push(range);
-      else this.read.set(slot.buffer, [range]);
+      );
     });
   }
 

@@ -1,10 +1,6 @@
 import type { ShaderProgram } from './types.js';
-import type {
-  GpuDevice,
-  GpuRenderPipeline,
-  GpuShaderModule,
-  RenderPipelineDescriptor
-} from '../gpu/device.js';
+import type { GpuDevice, GpuRenderPipeline, GpuShaderModule } from '../gpu/device.js';
+import { framed, type FramedPipeline } from './frameBindings.js';
 import { addTilePipelines } from './tilePipelines.js';
 import vertexShaderSource from './shaders/vertex.glsl?raw';
 import fragmentShaderSource from './shaders/fragment.glsl?raw';
@@ -34,12 +30,13 @@ export class ShaderManager {
     this.debug = debug;
   }
 
-  createPipeline(
-    name: string,
-    desc: Omit<RenderPipelineDescriptor, 'label' | 'debug'>
-  ): ShaderCompilationResult {
+  createPipeline(name: string, desc: FramedPipeline): ShaderCompilationResult {
     try {
-      const made = this.gpu.createRenderPipeline({ ...desc, label: name, debug: this.debug });
+      const made = this.gpu.createRenderPipeline({
+        ...framed(this.gpu, desc),
+        label: name,
+        debug: this.debug
+      });
       for (const { label, module } of made.modules) this.shaderCache.set(label, module);
       if (!made.ok) {
         return { success: false, error: made.error };

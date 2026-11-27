@@ -17,11 +17,6 @@ in float a_sway;
 in float a_tree;
 
 // Uniforms (constant for all vertices in a draw call)
-uniform mat4 u_projection;  // Orthographic projection matrix
-uniform vec2 u_viewOffset;  // Camera top-left in BASE-tile pixels; applied here so
-                            // panning never rebuilds the vertex buffer.
-uniform vec2 u_zoom;        // actualTileSize / BASE_TILE_PX; applied here so zoom
-                            // never rebuilds the vertex buffer either.
 uniform float u_rowDepth;
 uniform vec4 u_wind;
 uniform vec2 u_windDir;

@@ -17,6 +17,7 @@ import {
   type GpuUniform
 } from '../../gpu/device.js';
 import { SizedTexture } from '../sizedTexture.js';
+import { FRAME_GROUP, frameBindings } from '../frameBindings.js';
 
 const FIELD_USAGE = TextureUsage.TEXTURE_BINDING | TextureUsage.RENDER_ATTACHMENT;
 
@@ -36,8 +37,6 @@ export const LIGHT_FIELD_UNIT = 6;
 
 export interface LightPassFrame {
   canvas: [number, number];
-  viewOffset: [number, number];
-  zoom: [number, number];
   artPerBase: number;
   artTile: number;
   view: TileRect;
@@ -74,9 +73,6 @@ export class PaintedLightPass {
     this.program = program;
     this.field = new SizedTexture(gpu, 'rgba8unorm', 1, 1, FIELD_USAGE);
     const names = [
-      'u_canvas',
-      'u_viewOffset',
-      'u_zoom',
       'u_artPerBase',
       'u_weights',
       'u_timeAmbient',
@@ -95,9 +91,6 @@ export class PaintedLightPass {
 
   private use(f: LightPassFrame): void {
     const gpu = this.gpu;
-    gpu.setVec2fv(this.at.u_canvas, f.canvas);
-    gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
-    gpu.setVec2fv(this.at.u_zoom, f.zoom);
     gpu.setF32(this.at.u_artPerBase, f.artPerBase);
     gpu.setVec3fv(this.at.u_weights, f.grade.weights);
     gpu.setVec3fv(this.at.u_timeAmbient, TIME_AMBIENT);
@@ -116,6 +109,7 @@ export class PaintedLightPass {
       label: 'light field',
       colorAttachments: [{ view: this.field.texture, loadOp: 'load', storeOp: 'store' }]
     });
+    pass.setBindGroup(FRAME_GROUP, frameBindings(gpu).group);
     pass.setPipeline(this.program);
     pass.draw(3);
     pass.end();

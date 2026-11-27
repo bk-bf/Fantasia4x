@@ -4,10 +4,10 @@ import {
   type BlendState,
   type CompareFunction,
   type GlslSources,
-  type RenderPipelineDescriptor,
   type TextureFormat,
   type VertexBufferLayout
 } from '../gpu/device.js';
+import type { FramedPipeline } from './frameBindings.js';
 import type { ShaderCompilationResult, ShaderManager } from './shaders.js';
 
 export const GLYPH_VERTEX_FLOATS = 24;
@@ -74,7 +74,7 @@ export function tilePipelines(
   glsl: Omit<GlslSources, 'attributes'>,
   format: TextureFormat,
   rowDepth: boolean
-): [string, Omit<RenderPipelineDescriptor, 'label' | 'debug'>][] {
+): [string, FramedPipeline][] {
   return (Object.keys(STATES) as TilePipeline[]).map((p) => {
     const [blend, depthCompare, depthWriteEnabled] = STATES[p];
     return [

@@ -26,8 +26,6 @@ export function rebuildDue(
 
 export interface CastFrame {
   canvas: [number, number];
-  viewOffset: [number, number];
-  zoom: [number, number];
   artPerBase: number;
   artTile: number;
   view: TileRect;
@@ -94,17 +92,7 @@ export class PaintedShadowCast {
     this.gpu = gpu;
     this.program = program;
     this.texture = new SizedTexture(gpu, 'r8unorm');
-    const names = [
-      'u_canvas',
-      'u_viewOffset',
-      'u_zoom',
-      'u_artPerBase',
-      'u_tileArt',
-      'u_heights',
-      'u_origin',
-      'u_shade',
-      'u_depth'
-    ];
+    const names = ['u_artPerBase', 'u_tileArt', 'u_heights', 'u_origin', 'u_shade', 'u_depth'];
     this.at = Object.fromEntries(names.map((n) => [n, gpu.uniform(program, n)]));
   }
 
@@ -170,9 +158,6 @@ export class PaintedShadowCast {
     gpu.setTextureSlot(CAST_UNIT);
     gpu.bindTexture(this.texture.texture);
     gpu.setTextureSlot(0);
-    gpu.setVec2fv(this.at.u_canvas, f.canvas);
-    gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
-    gpu.setVec2fv(this.at.u_zoom, f.zoom);
     gpu.setF32(this.at.u_artPerBase, f.artPerBase);
     gpu.setF32(this.at.u_tileArt, f.artTile);
     gpu.setI32(this.at.u_heights, CAST_UNIT);

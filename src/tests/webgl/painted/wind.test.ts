@@ -74,6 +74,7 @@ function recordingGl(uploads: Float32Array[], calls: [string, unknown[]][] = [])
       return (...args: unknown[]) => {
         calls.push([key, args]);
         if (key === 'getUniformLocation') return args[1];
+        if (key === 'getUniformBlockIndex') return 0xffffffff;
         if ((key === 'bufferData' || key === 'bufferSubData') && args[1] instanceof Float32Array)
           uploads.push(args[1]);
         return {};
@@ -383,9 +384,6 @@ function seeded(seed: number) {
 
 function leafFrame(season: string): LeafFrame {
   return {
-    canvas: [640, 480],
-    viewOffset: [0, 0],
-    zoom: [2, 2],
     basePerArt: 0.5,
     artTile: 32,
     view: { x: 0, y: 0, w: 40, h: 30 },

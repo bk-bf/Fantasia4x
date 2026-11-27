@@ -14,6 +14,7 @@ const totals = {
   drawCalls: 0,
   vertexCount: 0,
   bufferUploadBytes: 0,
+  uniformUploadBytes: 0,
   textureUploadBytes: 0,
   framebufferBinds: 0,
   clears: 0,
@@ -72,8 +73,12 @@ export function countGl(gl: WebGL2RenderingContext): void {
   let viewportArea = gl.drawingBufferWidth * gl.drawingBufferHeight;
   let program: unknown = null;
   let bound: WebGLTexture | null = null;
-  wrapGl(gl, 'bufferData', (a) => (totals.bufferUploadBytes += dataBytes(a[1], a[3], a[4])));
-  wrapGl(gl, 'bufferSubData', (a) => (totals.bufferUploadBytes += dataBytes(a[2], a[3], a[4])));
+  const upload = (target: unknown, bytes: number) => {
+    if (target === gl.UNIFORM_BUFFER) totals.uniformUploadBytes += bytes;
+    else totals.bufferUploadBytes += bytes;
+  };
+  wrapGl(gl, 'bufferData', (a) => upload(a[0], dataBytes(a[1], a[3], a[4])));
+  wrapGl(gl, 'bufferSubData', (a) => upload(a[0], dataBytes(a[2], a[3], a[4])));
   wrapGl(gl, 'texSubImage2D', (a) => {
     totals.textureUploadBytes += a.length >= 9 ? pixelBytes(a[8], a[4], a[5]) : pixelBytes(a[6]);
   });

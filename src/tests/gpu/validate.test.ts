@@ -17,6 +17,7 @@ function device(validate: boolean) {
   const gpu = new Webgl2Device(gl as unknown as WebGL2RenderingContext, { validate });
   const made = gpu.createRenderPipeline({
     label: 'p',
+    layout: [],
     glsl: { vertex: 'v', fragment: 'f', attributes: { a: 0 } },
     vertex: {
       buffers: [

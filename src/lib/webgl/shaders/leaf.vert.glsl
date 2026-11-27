@@ -5,9 +5,6 @@ in float a_turn;
 in vec2 a_rgb;
 in vec3 a_look;
 
-uniform vec2 u_canvas;
-uniform vec2 u_viewOffset;
-uniform vec2 u_zoom;
 uniform float u_basePerArt;
 
 flat out vec2 v_texel;

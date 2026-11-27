@@ -36,9 +36,6 @@ export interface LeafView {
 }
 
 export interface LeafFrame {
-  canvas: [number, number];
-  viewOffset: [number, number];
-  zoom: [number, number];
   basePerArt: number;
   artTile: number;
   view: LeafView;
@@ -232,9 +229,6 @@ export class FallingLeaves {
     })
   ) {
     const names = [
-      'u_canvas',
-      'u_viewOffset',
-      'u_zoom',
       'u_basePerArt',
       'u_paintAtlas',
       'u_lightTexture',
@@ -267,9 +261,6 @@ export class FallingLeaves {
     pass.setPipeline(this.program);
     pass.setVertexBuffer(0, this.vbo);
     gpu.queue.writeBuffer(this.vbo, 0, this.data, 0, n * FLOATS);
-    gpu.setVec2fv(this.at.u_canvas, f.canvas);
-    gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
-    gpu.setVec2fv(this.at.u_zoom, f.zoom);
     gpu.setF32(this.at.u_basePerArt, f.basePerArt);
     gpu.setI32(this.at.u_paintAtlas, units.atlas);
     gpu.setI32(this.at.u_lightTexture, units.light);

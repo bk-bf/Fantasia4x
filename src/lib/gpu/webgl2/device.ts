@@ -1,6 +1,10 @@
 import type {
+  BindGroupDescriptor,
+  BindGroupLayoutDescriptor,
   BufferDescriptor,
   StencilState,
+  GpuBindGroup,
+  GpuBindGroupLayout,
   GpuBuffer,
   GpuCanvas,
   GpuCommandBuffer,
@@ -27,6 +31,7 @@ import { CANVAS_COLOR, CANVAS_DEPTH, Webgl2Framebuffers } from './passes.js';
 import { Webgl2Validator } from './validate.js';
 import { Webgl2Buffers } from './buffers.js';
 import { Webgl2Textures } from './textures.js';
+import { Webgl2BindGroups } from './bindGroups.js';
 
 const raw = <T>(h: unknown): T => h as T;
 
@@ -63,6 +68,7 @@ export class Webgl2Device implements GpuDevice {
   private readonly state: Webgl2State;
   private readonly vertexArrays: Webgl2VertexArrays;
   private readonly framebuffers: Webgl2Framebuffers;
+  private readonly bindGroups: Webgl2BindGroups;
   private pipeline: Webgl2Pipeline | null = null;
   private readonly validator: Webgl2Validator | null;
   readonly queue: GpuQueue;
@@ -73,7 +79,10 @@ export class Webgl2Device implements GpuDevice {
   ) {
     const validator = (options.validate ?? import.meta.env.DEV) ? new Webgl2Validator() : null;
     this.validator = validator;
-    const textures = new Webgl2Textures(gl);
+    const textures = new Webgl2Textures(
+      gl,
+      validator ? (t) => validator.writeTexture(t) : undefined
+    );
     const buffers = new Webgl2Buffers(
       gl,
       validator ? (b, s, e) => validator.write(b, s, e) : undefined
@@ -97,9 +106,19 @@ export class Webgl2Device implements GpuDevice {
       getCurrentTexture: () => CANVAS_COLOR,
       getDepthTexture: () => (depthFormat ? CANVAS_DEPTH : null)
     };
-    this.pipelines = new Webgl2Pipelines(gl);
     const state = new Webgl2State(gl);
     this.state = state;
+    this.pipelines = new Webgl2Pipelines(gl, (program) => state.use(program), validator !== null);
+    this.bindGroups = new Webgl2BindGroups(
+      gl,
+      (unit, texture) => textures.bindOn(unit, texture),
+      validator
+        ? {
+            buffer: (b, s, e) => validator.readBuffer(b, s, e),
+            texture: (t) => validator.sample(t)
+          }
+        : null
+    );
     this.vertexArrays = new Webgl2VertexArrays(gl);
     this.framebuffers = new Webgl2Framebuffers(
       gl,
@@ -125,7 +144,8 @@ export class Webgl2Device implements GpuDevice {
     return {
       maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
       maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
-      maxCombinedTextureImageUnits: gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
+      maxCombinedTextureImageUnits: gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS),
+      minUniformBufferOffsetAlignment: gl.getParameter(gl.UNIFORM_BUFFER_OFFSET_ALIGNMENT)
     };
   }
 
@@ -216,6 +236,7 @@ export class Webgl2Device implements GpuDevice {
   destroyBuffer(buffer: GpuBuffer | null): void {
     if (!buffer) return;
     this.vertexArrays.forget(raw<WebGLBuffer>(buffer));
+    this.bindGroups.forgetBuffer(raw<WebGLBuffer>(buffer));
     this.buffers.destroy(buffer);
   }
 
@@ -226,6 +247,7 @@ export class Webgl2Device implements GpuDevice {
   destroyTexture(texture: GpuTexture | null): void {
     if (!texture) return;
     this.framebuffers.forget(texture);
+    this.bindGroups.forgetTexture(texture);
     this.textures.destroy(texture);
   }
 
@@ -252,6 +274,14 @@ export class Webgl2Device implements GpuDevice {
     this.gl.bindSampler(slot, raw<WebGLSampler | null>(sampler));
   }
 
+  createBindGroupLayout(desc: BindGroupLayoutDescriptor): GpuBindGroupLayout {
+    return this.bindGroups.createLayout(desc);
+  }
+
+  createBindGroup(desc: BindGroupDescriptor): GpuBindGroup {
+    return this.bindGroups.createGroup(desc);
+  }
+
   createCommandEncoder(): GpuCommandEncoder {
     this.validator?.reset();
     let open = false;
@@ -260,6 +290,7 @@ export class Webgl2Device implements GpuDevice {
         if (open) throw new Error('beginRenderPass: the encoder already has an open pass');
         open = true;
         this.framebuffers.begin(desc);
+        this.bindGroups.beginPass();
         let ended = false;
         const live = () => {
           if (ended) throw new Error('render pass used after end');
@@ -268,6 +299,10 @@ export class Webgl2Device implements GpuDevice {
           setPipeline: (pipeline) => {
             live();
             this.setPipeline(pipeline);
+          },
+          setBindGroup: (index, group, offsets) => {
+            live();
+            this.bindGroups.setGroup(index, group, offsets);
           },
           setVertexBuffer: (slot, buffer, offset = 0) => {
             live();
@@ -318,6 +353,7 @@ export class Webgl2Device implements GpuDevice {
     if (firstInstance !== 0) throw new Error('draw: WebGL2 has no base instance');
     this.state.use(p.program);
     this.vertexArrays.bind(p);
+    this.bindGroups.apply(p);
     this.validator?.draw(
       p,
       this.vertexArrays.bound,

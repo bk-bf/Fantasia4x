@@ -1,6 +1,5 @@
 #version 300 es
 
-uniform vec2 u_canvas;
 uniform vec4 u_area;
 
 void main() {

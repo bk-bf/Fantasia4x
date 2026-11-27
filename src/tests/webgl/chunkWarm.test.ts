@@ -23,6 +23,7 @@ function setup() {
         if (typeof key !== 'string') return undefined;
         if (key in target) return target[key as keyof typeof target];
         return (...args: unknown[]) => {
+          if (key === 'getUniformBlockIndex') return 0xffffffff;
           if (key === 'bufferData' && args[1] instanceof Float32Array) uploads++;
           if (key === 'bufferSubData' && args[2] instanceof Float32Array) uploads++;
           return {};

@@ -53,23 +53,17 @@ export class GroundRings {
     this.gpu = gpu;
     this.program = program;
     this.at = Object.fromEntries(
-      ['u_canvas', 'u_area', 'u_ring', 'u_line', 'u_offset', 'u_color', 'u_shadow'].map((name) => [
+      ['u_area', 'u_ring', 'u_line', 'u_offset', 'u_color', 'u_shadow'].map((name) => [
         name,
         gpu.uniform(program, name)
       ])
     );
   }
 
-  draw(
-    pass: GpuRenderPass,
-    rings: readonly GroundRing[],
-    ink: RingInk,
-    canvas: [number, number]
-  ): number {
+  draw(pass: GpuRenderPass, rings: readonly GroundRing[], ink: RingInk): number {
     if (rings.length === 0) return 0;
     const gpu = this.gpu;
     pass.setPipeline(this.program);
-    gpu.setVec2fv(this.at.u_canvas, canvas);
     gpu.setF32(this.at.u_line, ink.line);
     gpu.setF32(this.at.u_offset, SHADOW_OFFSET);
     gpu.setVec3fv(this.at.u_color, ink.color);

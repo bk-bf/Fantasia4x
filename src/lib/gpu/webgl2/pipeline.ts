@@ -1,5 +1,7 @@
 import type {
+  BindingSlot,
   CompiledModule,
+  GpuBindGroupLayout,
   GpuRenderPipeline,
   GpuShaderModule,
   GpuUniform,
@@ -70,14 +72,21 @@ export interface Webgl2Uniform {
   location: WebGLUniformLocation;
 }
 
-interface LinkedProgram {
+export const FIRST_BOUND_UNIT = 16;
+const INVALID_INDEX = 0xffffffff;
+
+export interface LinkedProgram {
   program: WebGLProgram;
   uniforms: Map<string, GpuUniform>;
+  blocks: { slot: BindingSlot; point: number }[];
+  textures: { slot: BindingSlot; sampler?: BindingSlot; unit: number }[];
   users: number;
 }
 
 export interface Webgl2Pipeline {
   program: WebGLProgram;
+  linked: LinkedProgram;
+  layout: GpuBindGroupLayout[];
   buffers: VertexBufferLayout[];
   layoutKey: string;
   topology: number;
@@ -150,16 +159,69 @@ function link(
   return { program };
 }
 
+export function uniformPoint([group, binding]: BindingSlot): number {
+  if (binding >= 8)
+    throw new Error(`uniform block binding ${binding} is past the 8 a group may use`);
+  return group * 8 + binding;
+}
+
+function bindings(
+  gl: WebGL2RenderingContext,
+  desc: RenderPipelineDescriptor,
+  program: WebGLProgram,
+  use: (program: WebGLProgram) => void,
+  checkOffsets: boolean
+): Pick<LinkedProgram, 'blocks' | 'textures'> | { error: string } {
+  const blocks: LinkedProgram['blocks'] = [];
+  for (const [name, block] of Object.entries(desc.glsl.blocks ?? {})) {
+    const index = gl.getUniformBlockIndex(program, name);
+    if (index === INVALID_INDEX) continue;
+    const point = uniformPoint(block.slot);
+    gl.uniformBlockBinding(program, index, point);
+    blocks.push({ slot: block.slot, point });
+    if (!checkOffsets) continue;
+    const members = Object.keys(block.offsets);
+    const indices = gl.getUniformIndices(program, members) ?? [];
+    const active = members.filter((_, i) => indices[i] !== INVALID_INDEX);
+    const at = gl.getActiveUniforms(
+      program,
+      indices.filter((i) => i !== INVALID_INDEX),
+      gl.UNIFORM_OFFSET
+    ) as number[];
+    for (let i = 0; i < active.length; i++)
+      if (at[i] !== block.offsets[active[i]])
+        return {
+          error: `${desc.label}: ${name}.${active[i]} sits at ${at[i]}, the layout says ${block.offsets[active[i]]}`
+        };
+  }
+  const textures: LinkedProgram['textures'] = [];
+  const named = Object.entries(desc.glsl.textures ?? {}).sort(
+    ([, a], [, b]) => a.texture[0] - b.texture[0] || a.texture[1] - b.texture[1]
+  );
+  if (named.length > 0) use(program);
+  named.forEach(([name, t], i) => {
+    const unit = FIRST_BOUND_UNIT + i;
+    const location = gl.getUniformLocation(program, name);
+    if (location === null) return;
+    gl.uniform1i(location, unit);
+    textures.push({ slot: t.texture, sampler: t.sampler, unit });
+  });
+  return { blocks, textures };
+}
+
 function pipelineState(
   gl: WebGL2RenderingContext,
   desc: RenderPipelineDescriptor,
-  program: WebGLProgram
+  linked: LinkedProgram
 ): Webgl2Pipeline {
+  const program = linked.program;
   const blend = desc.fragment.targets[0].blend;
   const depth = desc.depthStencil;
   const testsDepth = depth && (depth.depthCompare !== 'always' || depth.depthWriteEnabled);
   return {
     program,
+    linked,
+    layout: desc.layout,
     buffers: desc.vertex.buffers,
     layoutKey: JSON.stringify(desc.vertex.buffers),
     topology: topology(gl, desc.primitive.topology),
@@ -181,20 +243,34 @@ export class Webgl2Pipelines {
   private readonly linked = new Map<string, LinkedProgram>();
   private readonly pipelines = new WeakMap<GpuRenderPipeline, Webgl2Pipeline>();
 
-  constructor(private readonly gl: WebGL2RenderingContext) {}
+  constructor(
+    private readonly gl: WebGL2RenderingContext,
+    private readonly use: (program: WebGLProgram) => void,
+    private readonly checkOffsets: boolean
+  ) {}
 
   create(desc: RenderPipelineDescriptor): RenderPipelineResult {
     const modules: CompiledModule[] = [];
-    const key = JSON.stringify([desc.glsl.vertex, desc.glsl.fragment, desc.glsl.attributes]);
+    const key = JSON.stringify(desc.glsl);
     let linked = this.linked.get(key);
     if (!linked) {
       const made = link(this.gl, desc, modules);
       if ('error' in made) return { ok: false, error: made.error, modules };
-      linked = { program: made.program, uniforms: uniformsOf(this.gl, made.program), users: 0 };
+      const bound = bindings(this.gl, desc, made.program, this.use, this.checkOffsets);
+      if ('error' in bound) {
+        this.gl.deleteProgram(made.program);
+        return { ok: false, error: bound.error, modules };
+      }
+      linked = {
+        program: made.program,
+        uniforms: uniformsOf(this.gl, made.program),
+        ...bound,
+        users: 0
+      };
       this.linked.set(key, linked);
     }
     linked.users++;
-    const state = pipelineState(this.gl, desc, linked.program);
+    const state = pipelineState(this.gl, desc, linked);
     const pipeline = state as unknown as GpuRenderPipeline;
     this.pipelines.set(pipeline, state);
     return { ok: true, pipeline, uniforms: linked.uniforms, modules };
