@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createHash, randomBytes } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import {

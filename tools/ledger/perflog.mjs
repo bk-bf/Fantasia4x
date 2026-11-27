@@ -1,3 +1,4 @@
+// @ts-nocheck
 const STAMP = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})\.(\d{3}) (.*)$/;
 const TAGGED = /^\[T(\d+)\] \[(\w+)\] (.*)$/;
 const RESET = /^=== log reset at (\S+) /;

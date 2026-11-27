@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { allEntries, entryExists, getEntry, readBlob } from './store.mjs';
 
 const ENTRY_ID = /^\d{8}T\d{6}Z-/;

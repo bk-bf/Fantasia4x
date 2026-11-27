@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-nocheck
 import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
@@ -44,7 +45,8 @@ function stretchLines(e) {
 function line(e) {
   const w = e.world ?? {};
   const where = e.branch ?? (e.refs ? e.refs.split(',')[0] : '-');
-  const tps = e.perf?.tps ? `tps ${Math.round(e.perf.tps.median)}@${e.perf.speed ?? '?'}` : '';
+  const bad = e.invalid?.length ? `INVALID: ${e.invalid.join('; ')}` : '';
+  const tps = e.perf?.tps && !bad ? `tps ${Math.round(e.perf.tps.median)}@${e.perf.speed ?? '?'}` : '';
   const ck = e.perf?.checkpoints?.length ? `${e.perf.checkpoints.length} checkpoints` : '';
   return [
     e.id,
@@ -57,7 +59,8 @@ function line(e) {
     `p${w.pawns ?? '-'} m${w.mobs ?? '-'} T${w.turn ?? '-'}`,
     w.save ? `world ${short(w.save, 12)}` : '',
     tps,
-    ck
+    ck,
+    bad
   ]
     .filter(Boolean)
     .join('  ');

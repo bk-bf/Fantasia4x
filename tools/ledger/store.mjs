@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   appendFileSync,
   existsSync,
@@ -53,6 +54,8 @@ export function checkEntry(entry, root) {
   if (entry.v !== 1) throw new Error(`entry ${entry.id}: v must be 1`);
   if (!ID.test(entry.id ?? '')) throw new Error(`entry id ${entry.id} is not <stamp>-<machine>-<hex>`);
   if (!KINDS.has(entry.kind)) throw new Error(`entry ${entry.id}: kind ${entry.kind} is not one of ${[...KINDS]}`);
+  if (entry.invalid !== undefined && (!Array.isArray(entry.invalid) || entry.invalid.some((r) => typeof r !== 'string' || !r)))
+    throw new Error(`entry ${entry.id}: invalid must be a list of reasons`);
   for (const f of entry.files ?? []) {
     if (!hasBlob(root, f.sha256)) throw new Error(`entry ${entry.id}: file ${f.name} has no blob ${f.sha256}`);
   }

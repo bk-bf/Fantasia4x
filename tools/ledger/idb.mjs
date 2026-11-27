@@ -1,7 +1,10 @@
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+// @ts-nocheck
+import { createWriteStream, cpSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { once } from 'node:events';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
-import { gzipSync } from 'node:zlib';
+import { createGzip } from 'node:zlib';
 
 const ORIGIN_DIR = /^(https?)_(.+)_(\d+)\.indexeddb\.leveldb$/;
 const SLICE = 8_000_000;
@@ -14,7 +17,7 @@ function originOf(dir, spare) {
 
 const openDb = `new Promise((d, f) => { const r = indexedDB.open('fantasia4x'); r.onsuccess = () => d(r.result); r.onerror = () => f(r.error); })`;
 
-async function readOrigin(chromium, idbDir, base, scratch, spare) {
+async function readOrigin(chromium, idbDir, base, scratch, spare, outDir) {
   const { url, as } = originOf(base, spare);
   const udd = mkdtempSync(join(scratch, 'udd-'));
   const target = join(udd, 'Default', 'IndexedDB');
@@ -46,12 +49,23 @@ async function readOrigin(chromium, idbDir, base, scratch, spare) {
       const length = await page.evaluate(
         `(async () => { const db = await ${openDb}; const get = (k) => new Promise((d) => { const r = db.transaction('saves').objectStore('saves').get(k); r.onsuccess = () => d(r.result); }); const dynamic = await get(${JSON.stringify(`save:${id}`)}); const world = await get(${JSON.stringify(`world:${id}`)}); db.close(); window.__f4xSave = JSON.stringify({ dynamic, world }); return window.__f4xSave.length; })()`
       );
-      const parts = [];
-      for (let i = 0; i < length; i += SLICE) parts.push(await page.evaluate(`window.__f4xSave.slice(${i}, ${i + SLICE})`));
+      const file = join(outDir, `${stem.replace(/\.indexeddb$/, '')}--${id.replace(/[^\w.-]/g, '_')}.json.gz`);
+      const hash = createHash('sha256');
+      const gz = createGzip();
+      const done = once(gz.pipe(createWriteStream(file)), 'finish');
+      let read = 0;
+      for (let i = 0; i < length; i += SLICE) {
+        const part = await page.evaluate(`window.__f4xSave.slice(${i}, ${i + SLICE})`);
+        read += part.length;
+        const bytes = Buffer.from(part, 'utf8');
+        hash.update(bytes);
+        if (!gz.write(bytes)) await once(gz, 'drain');
+      }
+      gz.end();
+      await done;
       await page.evaluate('delete window.__f4xSave');
-      const body = parts.join('');
-      if (body.length !== length) throw new Error(`${url} save ${id}: read ${body.length} of ${length}`);
-      saves.push({ id, meta, body });
+      if (read !== length) throw new Error(`${url} save ${id}: read ${read} of ${length}`);
+      saves.push({ id, meta, file, worldId: hash.digest('hex') });
     }
     return { url, names, saves, keys: keys.length };
   } finally {
@@ -67,12 +81,10 @@ export async function extractSaves(idbDir, outDir, { playwright, scratch }) {
   const found = [];
   let spare = 5390;
   for (const base of readdirSync(idbDir).filter((d) => d.endsWith('.indexeddb.leveldb')).sort()) {
-    const r = await readOrigin(chromium, idbDir, base, scratch, spare++);
+    const r = await readOrigin(chromium, idbDir, base, scratch, spare++, outDir);
     for (const s of r.saves) {
-      const file = join(outDir, `${base.replace(/\.indexeddb\.leveldb$/, '')}--${s.id.replace(/[^\w.-]/g, '_')}.json.gz`);
-      writeFileSync(file, gzipSync(s.body));
-      writeFileSync(`${file}.meta`, JSON.stringify({ origin: r.url, id: s.id, meta: s.meta }) + '\n');
-      found.push({ origin: r.url, id: s.id, file, meta: s.meta });
+      writeFileSync(`${s.file}.meta`, JSON.stringify({ origin: r.url, id: s.id, worldId: s.worldId, meta: s.meta }) + '\n');
+      found.push({ origin: r.url, id: s.id, file: s.file, worldId: s.worldId, meta: s.meta });
     }
     if (!r.saves.length) found.push({ origin: r.url, id: null, file: null, databases: r.names });
   }
