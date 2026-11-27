@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { openGpuGame, sleep } from './session.mjs';
+import { assertSpeed, setSpeed, watchSim } from './sim-speed.mjs';
 
 /** @typedef {import('../work-pins/browser-session.mjs').Page} Page */
 /** @typedef {import('../work-pins/browser-session.mjs').CDPSession} CDPSession */
@@ -30,27 +31,6 @@ const scenario = process.env.F4X_SCENARIO ?? (process.env.F4X_FIXTURE ? '' : 'la
 const skipSets = (process.env.F4X_SKIP ?? 'none;gl').split(';').map((s) => (s === 'none' ? '' : s));
 const args = process.env.F4X_CAPPED === '1' ? [] : UNCAPPED;
 const seconds = Number(SECONDS);
-
-function watchSim() {
-  window.__f4xTurn = 0;
-  window.__f4xSpeed = null;
-  const Native = window.Worker;
-  window.Worker = class extends Native {
-    constructor(/** @type {string | URL} */ url, /** @type {WorkerOptions | undefined} */ options) {
-      super(url, options);
-      if (String(url).includes('sim.worker')) window.__f4xSim = this;
-      this.addEventListener('message', (e) => {
-        const d = e.data;
-        if (d?.kind === 'snapshot' && typeof d.state?.turn === 'number') window.__f4xTurn = d.state.turn;
-        if (d?.kind === 'simlog')
-          for (const { m: sink, a } of d.events ?? []) {
-            const speed = /speed=([\d.]+)x/.exec(a?.[0]?.message ?? '');
-            if (sink === 'logEvent' && a[0].category === 'perf' && speed) window.__f4xSpeed = Number(speed[1]);
-          }
-      });
-    }
-  };
-}
 
 /** @param {string} skip */
 function queryFor(skip) {
@@ -121,28 +101,17 @@ async function runSkipSet(skip, rows) {
   try {
     if (scenario) await waitForScenario(page, scenario);
     await cdp.send('Performance.enable');
-    /** @param {number} speed */
-    const setSpeed = (speed) =>
-      page.evaluate((/** @type {number} */ s) => {
-        window.__f4xSpeed = null;
-        window.__f4xSim.postMessage({ kind: 'setSpeed', speed: s });
-      }, speed);
-    /** @param {number} speed */
-    const assertSpeed = async (speed) => {
-      const running = await page.evaluate(() => window.__f4xSpeed);
-      if (running !== speed) throw new Error(`asked the sim for ${speed}x, it reports ${running ?? 'no'} speed`);
-    };
     for (const [zoom, deltaY, steps] of ZOOMS) {
       await setPaused(true);
       await wheel(deltaY, steps);
       await sleep(1500);
       const tilePx = await tile();
       for (const [speed, value] of SPEEDS) {
-        if (value) await setSpeed(value);
+        if (value) await setSpeed(page, value);
         await setPaused(!value);
         await sleep(SETTLE_MS);
         const row = { skipped: skip || 'none', zoom, tilePx, speed, ...(await measureCell(page, cdp)) };
-        if (value) await assertSpeed(value);
+        if (value) await assertSpeed(page, value);
         rows.push(row);
         log(`ROW ${JSON.stringify(row)}`);
       }
