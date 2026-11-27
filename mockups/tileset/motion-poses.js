@@ -111,7 +111,7 @@ const PAWN_ANIMS = {
   } },
   panic: { label: 'Panicking', group: 'Movement', dist: 30, n: 8, pose(u, c) {
     const a = sn(u), b = sn(u * 2);
-    if (c.face !== 's') return { ...face(c), fl: [0, Math.max(0, a) * 5], fr: [0, Math.max(0, -a) * 5], by: -Math.abs(a) * 1.4 + .5, hl: [-3, -8 + b], hr: [3, -8 - b], covers: 1, mouth: 1, item: null, ...flow(c, u, 2) };
+    if (c.face !== 's') return { ...face(c), fl: [0, Math.max(0, a) * 5], fr: [0, Math.max(0, -a) * 5], by: -Math.abs(a) * 1.4 + .5, hl: [c.face === 'b' ? 3 : -3, -8 + b], hr: [c.face === 'b' ? -3 : 3, -8 - b], covers: 1, mouth: 1, item: null, ...flow(c, u, 2) };
     const arms = LOOK_STYLE.pieces ? { hl: [-FLUNG.out - b, FLUNG.back + b * 2], hr: [FLUNG.out + b, FLUNG.up - b * 2] } : { hl: [2, -8 + b], hr: [4, -8 - b], covers: 1 };
     return { face: 's', fr: stride(u, .4, 12, 5), fl: stride(u + .5, .4, 12, 5), by: .6 - Math.abs(sn(u + .12)) * 2, lean: 1.5, ...arms, mouth: 1, item: null, ...flow(c, u, 5) };
   } },
