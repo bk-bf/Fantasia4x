@@ -10,6 +10,7 @@ import {
   BufferUsage,
   FLOAT32_FORMATS,
   type GpuDevice,
+  type GpuRenderPass,
   type GpuRenderPipeline,
   type GpuUniform,
   type VertexBufferLayout
@@ -246,6 +247,7 @@ export class FallingLeaves {
   }
 
   draw(
+    pass: GpuRenderPass,
     secs: number,
     wind: WindClock,
     f: LeafFrame,
@@ -262,8 +264,8 @@ export class FallingLeaves {
     n += Math.min(bits.length, this.data.length - n * FLOATS) / FLOATS;
     if (n === 0) return 0;
     const gpu = this.gpu;
-    gpu.setPipeline(this.program);
-    gpu.setVertexBuffer(0, this.vbo);
+    pass.setPipeline(this.program);
+    pass.setVertexBuffer(0, this.vbo);
     gpu.queue.writeBuffer(this.vbo, 0, this.data, 0, n * FLOATS);
     gpu.setVec2fv(this.at.u_canvas, f.canvas);
     gpu.setVec2fv(this.at.u_viewOffset, f.viewOffset);
@@ -275,7 +277,7 @@ export class FallingLeaves {
     gpu.setVec3fv(this.at.u_ambient, f.light.ambient);
     gpu.setVec2fv(this.at.u_tone, f.light.tone);
     gpu.setF32(this.at.u_shade, SHADE);
-    gpu.draw(4, n);
+    pass.draw(4, n);
     return 1;
   }
 

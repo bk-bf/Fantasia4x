@@ -3,7 +3,7 @@ import fragmentSource from '../shaders/paintedShadow.frag.glsl?raw';
 import type { ShaderManager } from '../shaders.js';
 import type { GameGrid, GridUpdateEvent } from '../game-grid.js';
 import type { TileRect } from './lightGrade.js';
-import type { GpuDevice, GpuRenderPipeline, GpuUniform } from '../../gpu/device.js';
+import type { GpuDevice, GpuRenderPass, GpuRenderPipeline, GpuUniform } from '../../gpu/device.js';
 import { canvasPipeline } from '../canvasPipeline.js';
 import { SizedTexture } from '../sizedTexture.js';
 
@@ -154,7 +154,7 @@ export class PaintedShadowCast {
     this.texture.write(this.heights);
   }
 
-  draw(f: CastFrame): number {
+  draw(pass: GpuRenderPass, f: CastFrame): number {
     this.watch(f.casters);
     if (f.canvas[0] / f.view.w < MIN_SHADOW_TILE_PX) return 0;
     const rect = {
@@ -166,7 +166,7 @@ export class PaintedShadowCast {
     this.rebuild(f, rect);
     if (!this.casts) return 0;
     const gpu = this.gpu;
-    gpu.setPipeline(this.program);
+    pass.setPipeline(this.program);
     gpu.setTextureSlot(CAST_UNIT);
     gpu.bindTexture(this.texture.texture);
     gpu.setTextureSlot(0);
@@ -179,7 +179,7 @@ export class PaintedShadowCast {
     gpu.setVec2i(this.at.u_origin, rect.x, rect.y);
     gpu.setVec3fv(this.at.u_shade, SHADOW_SHADE);
     gpu.setF32(this.at.u_depth, SHADOW_DEPTH);
-    gpu.draw(3);
+    pass.draw(3);
     return 1;
   }
 

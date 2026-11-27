@@ -78,15 +78,13 @@ export class ShaderManager {
     return this.programs.get(name);
   }
 
-  useProgram(name: string): boolean {
+  pipeline(name: string): GpuRenderPipeline | null {
     const shaderProgram = this.programs.get(name);
     if (!shaderProgram) {
       console.error(`Shader program "${name}" not found`);
-      return false;
+      return null;
     }
-
-    this.gpu.setPipeline(shaderProgram.pipeline);
-    return true;
+    return shaderProgram.pipeline;
   }
 
   setUniform(
@@ -203,7 +201,7 @@ export async function createTileRendererShaders(
     console.log('📋 Vertex shader source length:', shaderSource.vertex.length);
     console.log('📋 Fragment shader source length:', shaderSource.fragment.length);
 
-    const result = addTilePipelines(shaderManager, shaderSource, gpu.canvasFormat, rowDepth);
+    const result = addTilePipelines(shaderManager, shaderSource, gpu.canvas.format, rowDepth);
 
     if (result.success) {
       console.log('✅ Tile renderer shaders created successfully');

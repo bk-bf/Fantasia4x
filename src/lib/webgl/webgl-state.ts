@@ -1,9 +1,11 @@
 import { createWebgl2Device, isWebGL2Supported } from '../gpu/webgl2/context.js';
-import type { GpuDevice } from '../gpu/device.js';
+import type { GpuDevice, RenderPassDescriptor } from '../gpu/device.js';
 import { Webgl2Device } from '../gpu/webgl2/device.js';
 import { crashBreadcrumb } from './crashLog.js';
 import { WORK_PINS } from '../workPins/flag.js';
 import { countGl } from '../workPins/page.js';
+
+const CANVAS_CLEAR = [0.173, 0.094, 0.063, 1.0] as const;
 
 export interface WebGLStateOptions {
   canvas: HTMLCanvasElement;
@@ -77,10 +79,6 @@ export class WebGLStateManager {
 
     const gpu = this.device;
 
-    gpu.setViewport(0, 0, this.canvas.width, this.canvas.height);
-
-    gpu.setClearColor(0.173, 0.094, 0.063, 1.0);
-
     gpu.checkError('initial WebGL state configuration');
 
     if (this.debug) {
@@ -91,18 +89,39 @@ export class WebGLStateManager {
   updateViewport(width: number, height: number): void {
     if (!this.device) return;
 
-    this.canvas.width = width;
-    this.canvas.height = height;
-    this.device.setViewport(0, 0, width, height);
+    this.device.canvas.resize(width, height);
 
     if (this.debug) {
       console.log(`📐 Viewport updated to ${width}x${height}`);
     }
   }
 
-  clear(depth = false): void {
-    if (!this.device) return;
-    this.device.clear({ color: true, depth, stencil: depth });
+  canvasPass(gpu: GpuDevice): RenderPassDescriptor {
+    const depth = gpu.canvas.getDepthTexture();
+    return {
+      label: 'canvas',
+      colorAttachments: [
+        {
+          view: gpu.canvas.getCurrentTexture(),
+          loadOp: 'clear',
+          clearValue: CANVAS_CLEAR,
+          storeOp: 'store'
+        }
+      ],
+      ...(depth
+        ? {
+            depthStencilAttachment: {
+              view: depth,
+              depthLoadOp: 'clear',
+              depthClearValue: 1,
+              depthStoreOp: 'discard',
+              ...(gpu.canvas.depthFormat === 'depth24plus-stencil8'
+                ? { stencilLoadOp: 'clear', stencilClearValue: 0, stencilStoreOp: 'discard' }
+                : {})
+            }
+          }
+        : {})
+    };
   }
 
   private onContextLost(event: Event): void {

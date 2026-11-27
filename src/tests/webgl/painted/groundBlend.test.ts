@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import type { WorldTile } from '$lib/game/core/types';
 import { Webgl2Device } from '$lib/gpu/webgl2/device';
 import { ShaderManager } from '$lib/webgl/shaders';
+import { canvasPass } from '../tileShaders';
 import type { GpuTexture } from '$lib/gpu/device';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
@@ -151,9 +152,9 @@ describe('the water clock', () => {
       lightVersion: 1,
       litBounds: undefined
     });
-    expect(blend.draw(frame(0))).toBe(true);
+    expect(blend.draw(canvasPass(gpu), frame(0))).toBe(true);
     calls.length = 0;
-    expect(blend.draw(frame(1.25))).toBe(true);
+    expect(blend.draw(canvasPass(gpu), frame(1.25))).toBe(true);
     expect(calls.filter(([name]) => /^(tex(Sub)?Image2D|buffer(Sub)?Data)$/.test(name))).toEqual(
       []
     );
@@ -185,10 +186,10 @@ describe('the wave water switch', () => {
       litBounds: undefined
     });
     blend.setWaterStyle(true);
-    blend.draw(frame(new Float32Array(52)));
+    blend.draw(canvasPass(gpu), frame(new Float32Array(52)));
     calls.length = 0;
     const sea = new Float32Array(52).fill(0.5);
-    blend.draw(frame(sea));
+    blend.draw(canvasPass(gpu), frame(sea));
     expect(calls.filter(([name]) => /^(tex(Sub)?Image2D|buffer(Sub)?Data)$/.test(name))).toEqual(
       []
     );
@@ -196,7 +197,7 @@ describe('the wave water switch', () => {
     expect(calls).toContainEqual(['uniform4fv', ['u_sea[0]', sea]]);
     calls.length = 0;
     blend.setWaterStyle(false);
-    blend.draw(frame(sea));
+    blend.draw(canvasPass(gpu), frame(sea));
     expect(calls).toContainEqual(['uniform1i', ['u_waterStyle', 0]]);
   });
 });

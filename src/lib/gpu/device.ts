@@ -3,7 +3,7 @@ type Handle<K extends string> = { readonly [handle]: K };
 
 export type GpuBuffer = Handle<'buffer'>;
 export type GpuTexture = Handle<'texture'>;
-export type GpuRenderTarget = Handle<'render-target'>;
+export type GpuCommandBuffer = Handle<'command-buffer'>;
 export type GpuRenderPipeline = Handle<'render-pipeline'>;
 export type GpuShaderModule = Handle<'shader-module'>;
 export type GpuUniform = Handle<'uniform'>;
@@ -88,6 +88,7 @@ export interface GpuQueue {
     destination: { texture: GpuTexture },
     size: Extent
   ): void;
+  submit(buffers: GpuCommandBuffer[]): void;
 }
 
 export const BufferUsage = { VERTEX: 1, UNIFORM: 2, COPY_DST: 4 } as const;
@@ -141,7 +142,7 @@ export const ALPHA_BLEND: BlendState = {
 
 export type CompareFunction = 'always' | 'less' | 'less-equal';
 
-export type DepthFormat = 'depth24plus';
+export type DepthFormat = 'depth24plus' | 'depth24plus-stencil8';
 
 export interface DepthStencilState {
   format: DepthFormat;
@@ -200,17 +201,61 @@ export interface GpuLimits {
   maxCombinedTextureImageUnits: number;
 }
 
-export interface ClearDescriptor {
-  color: boolean;
-  depth?: boolean;
-  stencil?: boolean;
+export type LoadOp = 'load' | 'clear';
+export type StoreOp = 'store' | 'discard';
+
+export interface RenderPassColorAttachment {
+  view: GpuTexture;
+  loadOp: LoadOp;
+  storeOp: StoreOp;
+  clearValue?: readonly [number, number, number, number];
+}
+
+export interface RenderPassDepthStencilAttachment {
+  view: GpuTexture;
+  depthLoadOp: LoadOp;
+  depthStoreOp: StoreOp;
+  depthClearValue?: number;
+  stencilLoadOp?: LoadOp;
+  stencilStoreOp?: StoreOp;
+  stencilClearValue?: number;
+}
+
+export interface RenderPassDescriptor {
+  label?: string;
+  colorAttachments: [RenderPassColorAttachment];
+  depthStencilAttachment?: RenderPassDepthStencilAttachment;
+}
+
+export interface GpuRenderPass {
+  setPipeline(pipeline: GpuRenderPipeline): void;
+  setVertexBuffer(slot: number, buffer: GpuBuffer, offset?: number): void;
+  draw(
+    vertexCount: number,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number
+  ): void;
+  end(): void;
+}
+
+export interface GpuCommandEncoder {
+  beginRenderPass(desc: RenderPassDescriptor): GpuRenderPass;
+  finish(): GpuCommandBuffer;
+}
+
+export interface GpuCanvas {
+  readonly format: TextureFormat;
+  readonly depthFormat: DepthFormat | null;
+  resize(width: number, height: number): void;
+  getCurrentTexture(): GpuTexture;
+  getDepthTexture(): GpuTexture | null;
 }
 
 export interface GpuDevice {
   readonly backend: 'webgl2';
   readonly queue: GpuQueue;
-  readonly canvasFormat: TextureFormat;
-  readonly canvasDepthFormat: DepthFormat | null;
+  readonly canvas: GpuCanvas;
 
   limits(): GpuLimits;
   checkError(operation: string): boolean;
@@ -219,7 +264,6 @@ export interface GpuDevice {
   destroyRenderPipeline(pipeline: GpuRenderPipeline): void;
   destroyShaderModule(module: GpuShaderModule): void;
   uniform(pipeline: GpuRenderPipeline, name: string): GpuUniform | null;
-  setPipeline(pipeline: GpuRenderPipeline): void;
 
   setF32(u: GpuUniform | null, x: number): void;
   setI32(u: GpuUniform | null, x: number): void;
@@ -233,7 +277,6 @@ export interface GpuDevice {
 
   createBuffer(desc: BufferDescriptor): GpuBuffer;
   destroyBuffer(buffer: GpuBuffer | null): void;
-  setVertexBuffer(slot: number, buffer: GpuBuffer, offset?: number): void;
 
   createTexture(desc: TextureDescriptor): GpuTexture;
   destroyTexture(texture: GpuTexture | null): void;
@@ -242,21 +285,6 @@ export interface GpuDevice {
   createSampler(desc: SamplerDescriptor): GpuSampler;
   bindSampler(slot: number, sampler: GpuSampler | null): void;
 
-  createRenderTarget(): GpuRenderTarget;
-  destroyRenderTarget(target: GpuRenderTarget | null): void;
-  beginRenderPass(target: GpuRenderTarget): void;
-  endRenderPass(): void;
-  attachColorTexture(target: GpuRenderTarget, texture: GpuTexture): void;
-  clear(desc: ClearDescriptor): void;
-  setClearColor(r: number, g: number, b: number, a: number): void;
-  setViewport(x: number, y: number, width: number, height: number): void;
-
+  createCommandEncoder(): GpuCommandEncoder;
   setStencil(state: StencilState | null): void;
-
-  draw(
-    vertexCount: number,
-    instanceCount?: number,
-    firstVertex?: number,
-    firstInstance?: number
-  ): void;
 }

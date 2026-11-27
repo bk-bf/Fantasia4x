@@ -4,6 +4,7 @@ import type { ShaderManager } from './shaders.js';
 import {
   ALPHA_BLEND,
   type GpuDevice,
+  type GpuRenderPass,
   type GpuRenderPipeline,
   type GpuUniform
 } from '../gpu/device.js';
@@ -59,10 +60,15 @@ export class GroundRings {
     );
   }
 
-  draw(rings: readonly GroundRing[], ink: RingInk, canvas: [number, number]): number {
+  draw(
+    pass: GpuRenderPass,
+    rings: readonly GroundRing[],
+    ink: RingInk,
+    canvas: [number, number]
+  ): number {
     if (rings.length === 0) return 0;
     const gpu = this.gpu;
-    gpu.setPipeline(this.program);
+    pass.setPipeline(this.program);
     gpu.setVec2fv(this.at.u_canvas, canvas);
     gpu.setF32(this.at.u_line, ink.line);
     gpu.setF32(this.at.u_offset, SHADOW_OFFSET);
@@ -71,7 +77,7 @@ export class GroundRings {
     for (const r of rings) {
       gpu.setVec4f(this.at.u_ring, r.x, r.y, r.w, r.h);
       gpu.setVec4f(this.at.u_area, r.x, r.y, r.w + SHADOW_OFFSET, r.h + SHADOW_OFFSET);
-      gpu.draw(4);
+      pass.draw(4);
     }
     return rings.length;
   }
