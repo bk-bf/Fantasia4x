@@ -43,6 +43,7 @@
         "tools/gpu/**",
         "tools/dev-tools/**",
         "tools/tileset/**",
+        "tools/ledger/**",
         "tools/*.mjs",
         ".github/workflows/**",
         "electron/**",

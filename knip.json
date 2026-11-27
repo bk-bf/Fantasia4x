@@ -9,6 +9,7 @@
     "tools/lib/private-check.mjs",
     "tools/work-pins/*.mjs",
     "tools/gpu/*.mjs",
+    "tools/ledger/*.mjs",
     "tools/*.mjs",
     "tools/dev-tools/**/*.mjs",
     "src/tests/**/*.test.ts"
