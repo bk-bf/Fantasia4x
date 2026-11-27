@@ -107,7 +107,10 @@ function fake(
     device as unknown as GPUDevice,
     {
       canvas: { width: 64, height: 32 },
-      context: () => ({ getCurrentTexture: () => canvasTexture }) as unknown as GPUCanvasContext,
+      context: record('context', () => ({
+        getCurrentTexture: () => canvasTexture,
+        unconfigure: record('unconfigure')
+      })) as unknown as () => GPUCanvasContext,
       format: 'bgra8unorm',
       depthFormat: 'depth24plus-stencil8'
     },
@@ -494,5 +497,23 @@ describe('the WebGPU device limits', () => {
       ok: false,
       error: 'p carries no WGSL'
     });
+  });
+});
+
+describe('disposing the WebGPU device', () => {
+  it('unconfigures the canvas context it drew to and destroys the device', () => {
+    const untouched = fake();
+    untouched.gpu.destroy();
+    expect(untouched.named('context')).toEqual([]);
+    expect(untouched.named('destroy')).toHaveLength(1);
+    const { gpu, named } = fake();
+    gpu.createCommandEncoder()
+      .beginRenderPass({
+        colorAttachments: [{ view: gpu.canvas.getCurrentTexture(), loadOp: 'load', storeOp: 'store' }]
+      })
+      .end();
+    gpu.destroy();
+    expect(named('unconfigure')).toHaveLength(1);
+    expect(named('destroy')).toHaveLength(1);
   });
 });

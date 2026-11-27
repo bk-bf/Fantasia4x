@@ -16,6 +16,7 @@ export class WebgpuCanvas implements GpuCanvas {
   private readonly target: WebgpuCanvasTarget;
   private depth: GPUTexture | null = null;
   private depthView: GPUTextureView | null = null;
+  private context: GPUCanvasContext | null = null;
 
   constructor(
     private readonly device: GPUDevice,
@@ -40,7 +41,8 @@ export class WebgpuCanvas implements GpuCanvas {
   }
 
   colorView(): GPUTextureView {
-    return this.target.context().getCurrentTexture().createView();
+    this.context ??= this.target.context();
+    return this.context.getCurrentTexture().createView();
   }
 
   depthTextureView(): GPUTextureView {
@@ -63,5 +65,7 @@ export class WebgpuCanvas implements GpuCanvas {
   destroy(): void {
     this.depth?.destroy();
     this.depth = null;
+    this.context?.unconfigure();
+    this.context = null;
   }
 }

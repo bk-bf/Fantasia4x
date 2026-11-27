@@ -33,6 +33,7 @@ export class WebGLStateManager {
   private contextRestoredHandler: (event: Event) => void;
   private readonly onDeviceLost: ((message: string) => void) | undefined;
   private choice: GpuChoice | null = null;
+  private webgpu: WebgpuDevice | null = null;
 
   constructor(options: WebGLStateOptions) {
     this.canvas = options.canvas;
@@ -106,10 +107,16 @@ export class WebGLStateManager {
   }
 
   fallBackToWebgl2(reason: string): void {
-    const choice = this.choice;
+    this.releaseWebgpu();
     this.choice = { backend: 'webgl2', reason };
+  }
+
+  private releaseWebgpu(): void {
+    const choice = this.choice;
     this.device = null;
-    if (choice?.backend === 'webgpu') choice.device.destroy();
+    if (this.webgpu) this.webgpu.destroy();
+    else if (choice?.backend === 'webgpu') choice.device.destroy();
+    this.webgpu = null;
   }
 
   private announce(backend: string, detail: string): void {
@@ -153,6 +160,7 @@ export class WebGLStateManager {
       this.onDeviceLost?.(message);
     });
     this.device = device;
+    this.webgpu = device;
     console.info(
       `[gpu] WebGPU on ${choice.adapter}${choice.forced ? ' (forced by ?gpu=webgpu)' : ''}`
     );
@@ -250,10 +258,8 @@ export class WebGLStateManager {
     this.canvas.removeEventListener('webglcontextlost', this.contextLostHandler);
     this.canvas.removeEventListener('webglcontextrestored', this.contextRestoredHandler);
 
-    this.device = null;
-    const choice = this.choice;
+    this.releaseWebgpu();
     this.choice = null;
-    if (choice?.backend === 'webgpu') choice.device.destroy();
 
     if (this.debug) {
       console.log('🗑️ WebGL state manager disposed');

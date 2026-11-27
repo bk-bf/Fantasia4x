@@ -72,8 +72,14 @@ function keepWebgpuFrames() {
   if (!w.GPUCanvasContext) return;
   const proto = w.GPUCanvasContext.prototype;
   const configure = proto.configure;
+  const destroy = w.GPUDevice.prototype.destroy;
+  w.GPUDevice.prototype.destroy = function () {
+    this.__f4xGone = true;
+    return destroy.call(this);
+  };
   proto.configure = function (/** @type {any} */ c) {
     this.__f4xDevice = c.device;
+    c.device.lost.then(() => (c.device.__f4xGone = true));
     return configure.call(this, {
       ...c,
       usage: (c.usage ?? w.GPUTextureUsage.RENDER_ATTACHMENT) | w.GPUTextureUsage.COPY_SRC
@@ -122,7 +128,10 @@ function keepWebgpuFrames() {
       return { w: texture.width, h: texture.height, rgba };
     });
     const previous = w.__f4xWebgpuFrame ?? null;
-    w.__f4xWebgpuFrame = done.catch(() => previous);
+    w.__f4xWebgpuFrame = done.catch((/** @type {unknown} */ error) => {
+      if (device.__f4xGone) return previous;
+      throw error;
+    });
     return result;
   };
 }
