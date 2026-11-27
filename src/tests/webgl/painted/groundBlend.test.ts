@@ -7,8 +7,8 @@ import { ShaderManager } from '$lib/webgl/shaders';
 import { canvasPass } from '../tileShaders';
 import { blankTexture } from '$lib/webgl/passBindings';
 import type { GpuTexture } from '$lib/gpu/device';
-import { wgslInstance } from '$lib/gpu/uniforms';
 import { GL_LIMITS, glLimit } from '../glLimits';
+import { expectWgslAtGlslSlots } from '../wgslSlots';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
 vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true, GROUND_BLEND: true }));
@@ -240,18 +240,6 @@ describe('the ground blend WGSL', () => {
     const gpu = new Webgl2Device(recordingGl([]));
     const made = vi.spyOn(gpu, 'createRenderPipeline');
     GroundBlend.create(gpu, new ShaderManager(gpu), painted);
-    const descs = made.mock.calls.map(([desc]) => desc);
-    expect(descs.length).toBeGreaterThan(0);
-    for (const { glsl, wgsl } of descs) {
-      const code = wgsl!.code;
-      for (const [name, { slot }] of Object.entries(glsl.blocks ?? {}))
-        expect(code).toContain(
-          `@group(${slot[0]}) @binding(${slot[1]}) var<uniform> ${wgslInstance(name)}: ${name};`
-        );
-      for (const [name, { texture }] of Object.entries(glsl.textures ?? {}))
-        expect(code).toContain(`@group(${texture[0]}) @binding(${texture[1]}) var ${name}: texture_2d<`);
-      expect(code).toMatch(/@vertex\s+fn vs\(/);
-      expect(code).toMatch(/@fragment\s+fn fs\(/);
-    }
+    expectWgslAtGlslSlots(made.mock.calls.map(([desc]) => desc));
   });
 });

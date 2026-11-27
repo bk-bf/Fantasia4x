@@ -1,5 +1,6 @@
 import vertexSource from './shaders/groundRing.vert.glsl?raw';
 import fragmentSource from './shaders/groundRing.frag.glsl?raw';
+import wgslSource from './shaders/groundRing.wgsl?raw';
 import type { ShaderManager } from './shaders.js';
 import {
   ALPHA_BLEND,
@@ -56,6 +57,7 @@ export class GroundRings {
       canvasPipeline(gpu, {
         vertex: vertexSource,
         fragment: fragmentSource,
+        wgsl: wgslSource,
         topology: 'triangle-strip',
         blend: ALPHA_BLEND,
         bindings: [frame, draws]
