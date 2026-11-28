@@ -64,19 +64,5 @@
     "tools/ci/extract.mjs": 1,
     "tools/dev-tools/geardb/vite.config.mjs": 1,
     "tools/gpu/session.mjs": 1
-  },
-  "tools-types": {
-    "src/lib/game/core/util/logSink.ts": 2,
-    "src/lib/game/services/PawnGrowthService.ts": 6,
-    "src/lib/game/services/WasmPathfinderService.ts": 1,
-    "src/lib/game/services/jobs/filters.ts": 2,
-    "src/lib/game/sim/sim.worker.ts": 4,
-    "src/lib/workPins/flag.ts": 1,
-    "tools/bench/body.bench.ts": 7,
-    "tools/bench/dev-save.bench.ts": 3,
-    "tools/bench/session.ts": 11,
-    "tools/bench/tps/large-wilderness.bench.ts": 1,
-    "tools/work-pins/harness.ts": 3,
-    "tools/work-pins/scenarios.ts": 1
   }
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // @ts-nocheck
 import { execFileSync, spawnSync } from 'node:child_process';
-import { appendFileSync, readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -72,11 +72,30 @@ function runTool(command, args, parse, { exitsOnFindings = false } = {}) {
   return found;
 }
 
-const TSC_FLAGS = [
-  '--noEmit', '--pretty', 'false', '--allowJs', '--checkJs', '--strict', '--skipLibCheck',
-  '--module', 'esnext', '--moduleResolution', 'bundler', '--target', 'es2022',
-  '--types', 'node', '--resolveJsonModule'
-];
+const TOOLS_TSCONFIG = '.svelte-kit/tsconfig.tools.json';
+
+function writeToolsTsconfig(files) {
+  execFileSync('svelte-kit', ['sync'], OUTPUT);
+  const kit = JSON.parse(readFileSync('.svelte-kit/tsconfig.json', 'utf8'));
+  const config = {
+    compilerOptions: {
+      noEmit: true,
+      allowJs: true,
+      checkJs: true,
+      strict: true,
+      skipLibCheck: true,
+      module: 'esnext',
+      moduleResolution: 'bundler',
+      target: 'es2022',
+      resolveJsonModule: true,
+      types: ['node', 'vite/client'],
+      paths: kit.compilerOptions.paths
+    },
+    files: ['src/app.d.ts', ...files].map((f) => `../${f}`)
+  };
+  writeFileSync(TOOLS_TSCONFIG, JSON.stringify(config, null, 2));
+  return TOOLS_TSCONFIG;
+}
 
 const toolFiles = () =>
   execFileSync('git', ['ls-files', '-z', 'tools'], OUTPUT)
@@ -90,7 +109,7 @@ const RUNNERS = {
     ),
   eslint: () => runTool('eslint', ['.', '--format', 'json'], (out) => parseEslint(out || '[]')),
   'tools-types': () =>
-    runTool('tsc', [...TSC_FLAGS, ...toolFiles()], (out) => parseTsc(out), { exitsOnFindings: true })
+    runTool('tsc', ['-p', writeToolsTsconfig(toolFiles()), '--pretty', 'false'], (out) => parseTsc(out), { exitsOnFindings: true })
 };
 
 export function byRule(found) {

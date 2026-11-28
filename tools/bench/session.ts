@@ -24,7 +24,7 @@ export async function warmSession(
 
 function tickOrThrow(session: HeadlessSession, n: number): void {
   const { ticked, result } = session.tick(n);
-  if (ticked !== n || !result.success) throw new Error(result.errors.join('; '));
+  if (ticked !== n || !result.success) throw new Error((result.errors ?? []).join('; '));
 }
 
 export function ticks(session: HeadlessSession, n: number): () => void {
