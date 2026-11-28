@@ -3,9 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const DB = path.resolve(import.meta.dirname, '../src/lib/game/database');
-const CREATURES = path.join(DB, 'creatures.json');
-const ITEMS = path.join(DB, 'items.json');
-const LOOTPOOL = path.join(DB, 'lootpool.json');
+const CREATURES = path.join(DB, 'pawns', 'creatures.json');
+const ITEMS = path.join(DB, 'items', 'items.json');
+const LOOTPOOL = path.join(DB, 'items', 'lootpool.json');
 
 const QUALITY_MULT = [0.8, 1.0, 1.15, 1.3, 1.5, 1.8];
 
