@@ -703,6 +703,10 @@ export class WebGLRendererCore {
     const painted = this.painted;
     if (painted) {
       const artTile = painted.tileset.tile;
+      this.wind.pivotTo(
+        (this.viewTileX + viewportTilesW / 2) * artTile,
+        (this.viewTileY + viewportTilesH / 2) * artTile
+      );
       const wind = this.wind.uniforms(artTile, BASE_TILE_PX / artTile);
       if (!this.swayOn) wind.u_wind[0] = 0;
       for (const [name, value] of Object.entries(wind)) tile.set(name, value);

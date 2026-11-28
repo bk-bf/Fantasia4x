@@ -1,7 +1,10 @@
 {
   "mockupStrength": 0.45,
   "maxScale": 2.2,
-  "ease": 2,
+  "ease": 3,
+  "maxTurn": 0.12,
+  "pace": 146,
+  "loopSeconds": 1.1,
   "sway": {
     "idle": 0.3,
     "gust": 1.2,

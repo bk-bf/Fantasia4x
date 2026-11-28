@@ -17,7 +17,7 @@ import {
   spriteAt,
   type PaintedSprite
 } from '$lib/webgl/painted/manifest';
-import { WindClock, byLevel, gustAt, heading, swayTable } from '$lib/webgl/painted/wind';
+import { WindClock, gustAt, heading, swayTable } from '$lib/webgl/painted/wind';
 import WIND from '$lib/webgl/painted/wind.json';
 import { LeafField, leafTarget, type LeafFrame } from '$lib/webgl/painted/leaves';
 import { GROUND_FRAME, GroundBlend, waterTime } from '$lib/webgl/painted/groundBlend';
@@ -119,42 +119,71 @@ describe('wind in the vertex data', () => {
   });
 });
 
-describe("a tree's parts in the wind", () => {
-  const tree = (strength: number) => {
-    const c = new WindClock();
-    c.set(strength, heading(1, 0));
-    return c.uniforms(32, 0.5).u_treeWind;
+describe('the wind clock by size', () => {
+  const air = (u: ReturnType<WindClock['uniforms']>, x: number, y: number) => {
+    const [px, py, gx, gy] = u.u_windFrame;
+    const [dx, dy] = u.u_windDir;
+    return [(x - px) * dx + (y - py) * dy + gx, -(x - px) * dy + (y - py) * dx + gy];
   };
 
-  it('flutters more leaves, bobs more pine layers and bends the trunk only as the wind rises to a gale', () => {
-    const [breeze, windy, gale] = [0.36, 0.6, 0.95].map(tree);
-    expect(breeze[0]).toBeGreaterThan(windy[0]);
-    expect(windy[0]).toBeGreaterThan(gale[0]);
-    expect(breeze[2]).toBeGreaterThan(gale[2]);
-    expect(windy[3]).toBeCloseTo(breeze[3], 5);
-    expect(gale[3]).toBeGreaterThan(windy[3] * 5);
-    expect(gale[1]).toBeLessThan(1);
-    expect(windy[1]).toBeGreaterThan(1);
+  it('runs the gusts and the leaf loops at full pace in a calm and in a gale alike', () => {
+    const run = (strength: number) => {
+      const c = new WindClock();
+      c.set(strength, heading(1, 0));
+      for (let t = 0; t <= 3000; t += 50) c.tick(t);
+      return c.uniforms(32, 0.5).u_wind;
+    };
+    const [calm, gale] = [run(0.1), run(1)];
+    expect(calm[1]).toBeCloseTo(gale[1], 6);
+    expect(calm[2]).toBeCloseTo(gale[2], 6);
+    expect(calm[1]).toBeCloseTo(WIND.pace * 3, 6);
+    expect(calm[2]).toBeCloseTo(3 / WIND.loopSeconds, 6);
+    expect(calm[0]).toBeCloseTo(0.1, 6);
   });
 
-  it('holds every leaf still when there is no wind at all', () => {
-    expect(byLevel(0, WIND.trees.flutter)).toBeGreaterThan(1);
-    expect(byLevel(0, WIND.trees.bob)).toBeGreaterThan(1);
-  });
-
-  it('lags the boughs behind the crown by the same gust a moment earlier', () => {
+  it('turns to a new heading no faster than the cap, so the gust field never jumps', () => {
     const c = new WindClock();
-    c.set(0.6, heading(1, 0));
+    c.set(1, heading(1, 0));
     c.tick(0);
-    c.tick(3000);
-    const u = c.uniforms(32, 0.5);
-    const back = (u.u_wind[1] - u.u_treeTime[0] + 256) % 256;
-    expect(back).toBeGreaterThan(0);
-    expect(back).toBeLessThan(WIND.gust.speed);
-    expect((u.u_wind[2] - u.u_treeTime[1] + 8 * Math.PI) % (8 * Math.PI)).toBeCloseTo(
-      WIND.trees.lag,
-      5
-    );
+    c.pivotTo(800, 600);
+    c.set(1, heading(-1, 0));
+    let before = c.uniforms(32, 0.5);
+    for (let t = 100; t <= 5000; t += 100) {
+      c.tick(t);
+      c.pivotTo(800, 600);
+      const now = c.uniforms(32, 0.5);
+      const turned = Math.acos(Math.min(1, before.u_windDir[0] * now.u_windDir[0] + before.u_windDir[1] * now.u_windDir[1]));
+      expect(turned).toBeLessThanOrEqual(WIND.maxTurn * 0.1 + 1e-9);
+      for (const [x, y] of [
+        [0, 0],
+        [1600, 1200],
+        [800, 600]
+      ]) {
+        const [a0, s0] = air(before, x, y);
+        const [a1, s1] = air(now, x, y);
+        expect(Math.hypot(a1 - a0, s1 - s0)).toBeLessThan(1000 * WIND.maxTurn * 0.1 + 1);
+      }
+      before = now;
+    }
+  });
+
+  it('keeps the gust field where it is when the view moves', () => {
+    const c = new WindClock();
+    c.set(0.6, heading(1, 1));
+    for (let t = 0; t <= 2000; t += 100) c.tick(t);
+    const before = c.uniforms(32, 0.5);
+    c.pivotTo(5000, -300);
+    const after = c.uniforms(32, 0.5);
+    for (const [x, y] of [
+      [0, 0],
+      [5000, -300],
+      [123, 4567]
+    ]) {
+      const [a0, s0] = air(before, x, y);
+      const [a1, s1] = air(after, x, y);
+      expect(a1).toBeCloseTo(a0, 6);
+      expect(s1).toBeCloseTo(s0, 6);
+    }
   });
 });
 
@@ -320,7 +349,7 @@ describe('the wind clock', () => {
     clock.tick(100);
     expect(clock.strength).toBeGreaterThan(0.1);
     expect(clock.strength).toBeLessThan(0.5);
-    for (let t = 200; t < 20_000; t += 100) clock.tick(t);
+    for (let t = 200; t < 40_000; t += 100) clock.tick(t);
     expect(clock.strength).toBeCloseTo(1, 2);
     expect(clock.dir.x).toBeCloseTo(-1, 2);
   });
@@ -334,21 +363,6 @@ describe('the wind clock', () => {
     expect(at(0.1)).toBeLessThan(0.25);
     expect(at(0.45)).toBeCloseTo(1, 5);
     expect(at(1)).toBeGreaterThan(2);
-  });
-
-  it('keeps the sway reach the same from a calm to a gale, and wide enough for the strongest lean', () => {
-    const at = (strength: number, ms: number) => {
-      const c = new WindClock();
-      c.set(strength, heading(1, 0));
-      c.tick(0);
-      c.tick(ms);
-      return c.uniforms(32, 0.5);
-    };
-    const calm = at(0.05, 100);
-    const gale = at(1, 5000);
-    const [idle, gust] = gale.u_swayShape;
-    expect(calm.u_swayReach).toBe(gale.u_swayReach);
-    expect(gale.u_swayReach).toBeGreaterThanOrEqual(gale.u_wind[0] * (idle + gust));
   });
 
   it('carries the gusts across the map downwind', () => {

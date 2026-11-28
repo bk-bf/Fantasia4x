@@ -20,30 +20,15 @@ export function heading(dx: number, dy: number): Heading {
 
 export interface WindUniforms {
   u_wind: [number, number, number, number];
+  u_windFrame: [number, number, number, number];
   u_windDir: [number, number];
-  u_swayShape: [number, number, number, number];
-  u_gustShape: [number, number, number, number];
-  u_gustNoise: [number, number, number, number];
-  u_windPhase: [number, number, number, number];
+  u_windPace: number;
+  u_treeClock: number;
   u_basePerArt: number;
-  u_swayReach: number;
-  u_treeWind: [number, number, number, number];
-  u_treeTime: [number, number, number, number];
   u_treeVeil: [number, number, number];
 }
 
 const T = WIND.trees;
-
-export function byLevel(strength: number, table: readonly number[]): number {
-  const at = T.levels;
-  if (strength <= at[0]) return table[0];
-  for (let i = 1; i < at.length; i++)
-    if (strength <= at[i]) {
-      const k = (strength - at[i - 1]) / (at[i] - at[i - 1]);
-      return table[i - 1] + (table[i] - table[i - 1]) * k;
-    }
-  return table[table.length - 1];
-}
 
 export class WindClock {
   strength = 0;
@@ -51,6 +36,10 @@ export class WindClock {
   scroll = 0;
   idle = 0;
   clock = 0;
+  travelled = 0;
+  loops = 0;
+  pivot = { x: 0, y: 0 };
+  frame = { x: 0, y: 0 };
   private target = { strength: 0, dir: { x: 1, y: 0 } as Heading };
   private last: number | null = null;
 
@@ -72,39 +61,35 @@ export class WindClock {
     this.strength += (this.target.strength - this.strength) * k;
     const from = Math.atan2(this.dir.y, this.dir.x);
     const turn = Math.atan2(this.target.dir.y, this.target.dir.x) - from;
-    const angle = from + (Math.atan2(Math.sin(turn), Math.cos(turn)) || 0) * k;
+    const swing = (Math.atan2(Math.sin(turn), Math.cos(turn)) || 0) * k;
+    const most = WIND.maxTurn * secs;
+    const angle = from + Math.max(-most, Math.min(most, swing));
     this.dir = { x: Math.cos(angle), y: Math.sin(angle) };
     const pace = 0.5 + 0.5 * Math.min(1, this.scale);
     this.scroll = (this.scroll + WIND.gust.speed * pace * secs) % GUST_PERIOD;
     this.idle = (this.idle + secs) % IDLE_PERIOD;
     this.clock = (this.clock + secs) % FX_PERIOD;
+    this.travelled += WIND.pace * secs;
+    this.loops += secs / WIND.loopSeconds;
     return secs;
   }
 
+  pivotTo(x: number, y: number): void {
+    const dx = x - this.pivot.x;
+    const dy = y - this.pivot.y;
+    const { x: cx, y: cy } = this.dir;
+    this.frame = { x: this.frame.x + dx * cx + dy * cy, y: this.frame.y - dx * cy + dy * cx };
+    this.pivot = { x, y };
+  }
+
   uniforms(artTile: number, basePerArt: number): WindUniforms {
-    const [a, b] = WIND.gustNoise;
-    const pace = 0.5 + 0.5 * Math.min(1, this.scale);
     return {
-      u_wind: [this.scale, this.scroll, this.idle, artTile],
+      u_wind: [this.strength, this.travelled, this.loops, artTile],
+      u_windFrame: [this.pivot.x, this.pivot.y, this.frame.x, this.frame.y],
       u_windDir: [this.dir.x, this.dir.y],
-      u_swayShape: [WIND.sway.idle, WIND.sway.gust, WIND.sway.idleRate, WIND.sway.flutterRate],
-      u_gustShape: [WIND.gust.onset, WIND.gust.width, a.amp, b.amp],
-      u_gustNoise: [a.fx, a.fy, b.fx, b.fy],
-      u_windPhase: [WIND.phase[0], WIND.phase[1], WIND.gust.along, WIND.gust.across],
+      u_windPace: WIND.pace,
+      u_treeClock: this.clock,
       u_basePerArt: basePerArt,
-      u_swayReach: WIND.maxScale * (WIND.sway.idle + WIND.sway.gust),
-      u_treeWind: [
-        byLevel(this.strength, T.flutter),
-        byLevel(this.strength, T.flutterBig),
-        byLevel(this.strength, T.bob),
-        byLevel(this.strength, T.trunk)
-      ],
-      u_treeTime: [
-        (this.scroll - WIND.gust.speed * pace * T.lag + GUST_PERIOD) % GUST_PERIOD,
-        (this.idle - T.lag + IDLE_PERIOD) % IDLE_PERIOD,
-        T.lagScale,
-        this.clock
-      ],
       u_treeVeil: [T.veil[0], T.veil[1], T.veil[2]]
     };
   }

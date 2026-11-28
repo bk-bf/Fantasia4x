@@ -13,8 +13,6 @@ in highp vec2 v_world;
 flat in highp vec4 v_vein;
 flat in float v_veinNear;
 flat in highp float v_row;
-flat in highp float v_lean;
-flat in highp float v_reach;
 
 uniform sampler2D u_fontAtlas;
 uniform sampler2D u_paintAtlas;
@@ -55,18 +53,9 @@ vec3 weathered(vec3 c) {
     return mix(vec3(dot(c, LUMA)), c, u_saturation) * u_brightness;
 }
 
-highp vec2 swayed(highp vec2 uv) {
-    if (v_lean == 0.0) return uv;
-    highp float top = v_uvBounds.y;
-    highp float rows = (v_uvBounds.w - top) / u_paintTexelSize.y;
-    highp float row = floor((uv.y - top) / u_paintTexelSize.y);
-    highp float rise = (rows - row + mod(row, 3.0)) / rows;
-    highp float step = rise > 0.0 ? floor(v_lean * rise * sqrt(rise) + 0.5) : 0.0;
-    return uv - vec2(step * u_paintTexelSize.x, 0.0);
-}
-
 bool offSprite(highp vec2 uv) {
-    return v_reach > 0.0 && (uv.x < v_uvBounds.x - 2.0 || uv.x > v_uvBounds.z - 2.0);
+    highp vec4 cell = v_uvBounds - vec4(2.0, 0.0, 2.0, 0.0);
+    return uv.x < cell.x || uv.x > cell.z || uv.y < cell.y || uv.y > cell.w;
 }
 
 highp vec2 paintedUv(highp vec2 uv) {
@@ -111,8 +100,7 @@ void main() {
 
 #ifdef PAINTED
     if (u_shadowPass > 0.5) {
-        highp vec2 leaned = swayed(v_texCoord);
-        if (v_uvBounds.x < 2.0 || offSprite(leaned) || texture(u_lightAtlas, paintedUv(leaned)).g < 0.5) discard;
+        if (v_uvBounds.x < 2.0 || offSprite(v_texCoord) || texture(u_lightAtlas, paintedUv(v_texCoord)).g < 0.5) discard;
         gl_FragDepth = u_shadowDepth;
         fragColor = vec4(u_shade, 1.0);
         return;
@@ -132,21 +120,31 @@ void main() {
     bool painted = v_uvBounds.x >= 2.0;
     if (painted) {
         highp vec2 at = v_world * u_atlasScale;
-        if (v_tree.z > 0.0) {
+        if (v_tree.x > 0.0) {
             g_treeFlags = int(v_tree.z + 0.5);
+            g_parts = g_treeFlags > 0;
             highp vec2 size = vec2(textureSize(u_paintAtlas, 0));
             highp vec4 cell = v_uvBounds - vec4(2.0, 0.0, 2.0, 0.0);
             g_treeOrg = ivec2(floor(cell.xy * size + 0.5));
             g_treeDim = ivec2(floor((cell.zw - cell.xy) * size + 0.5));
-            TreePixel px = treePixelAt(ivec2(floor((v_texCoord - cell.xy) * size)));
+            highp ivec2 q = ivec2(floor((v_texCoord - cell.xy) * size));
+            vec4 colour;
+            TreePixel px;
+            if (g_parts) px = treePixelAt(q, colour);
+            else {
+                px = pieceAt(q);
+                colour = px.hit && inTree(px.at) ? texelFetch(u_paintAtlas, g_treeOrg + px.at, 0) : vec4(0.0);
+            }
             float glow = px.mark.r;
-            sprite = px.hit ? treeColor(px, ivec2(floor(at)), glow) : vec4(0.0);
+            sprite = !px.hit ? vec4(0.0) : g_parts ? treeColor(px, colour, ivec2(floor(at)), glow) : colour;
+            sprite.rgb *= px.shade;
+            if (!g_parts && px.hit)
+                sprite.rgb *= 1.0 + SHEEN * v_bend.z * smoothstep(0.15, 0.9, clamp(float(g_treeDim.y - px.at.y) / float(g_treeDim.y), 0.0, 1.0));
             if (u_fieldLit > 0.5 && px.hit && glow > 0.0) light = mix(u_ambient, vec3(1.0), glow);
-            if (sprite.a > 0.0 && cutAway(at, px.hit)) discard;
+            if (sprite.a > 0.0 && cutAway(at, px.hit && (g_parts || (markCode(px.mark) & 15) != 0))) discard;
         } else {
-            highp vec2 leaned = swayed(v_texCoord);
-            bool off = offSprite(leaned);
-            highp vec2 uv = paintedUv(leaned);
+            bool off = offSprite(v_texCoord);
+            highp vec2 uv = paintedUv(v_texCoord);
             sprite = off ? vec4(0.0) : texture(u_paintAtlas, uv);
             if (u_fieldLit > 0.5 && !off) {
                 float glow = texture(u_lightAtlas, uv).r;

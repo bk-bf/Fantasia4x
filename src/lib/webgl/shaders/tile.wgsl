@@ -1,4 +1,3 @@
-const FLUTTER_REACH: f32 = 2.0;
 const CUT_MAX: i32 = 16;
 const CUT_EDGE: f32 = 34.0;
 const CUT_SOFT: f32 = 6.0;
@@ -39,8 +38,8 @@ struct TileOut {
     @location(8) @interpolate(flat) vein: vec4f,
     @location(9) @interpolate(flat) veinNear: f32,
     @location(10) @interpolate(flat) row: f32,
-    @location(11) @interpolate(flat) lean: f32,
-    @location(12) @interpolate(flat) reach: f32,
+    @location(11) @interpolate(flat) bend: vec4f,
+    @location(12) @interpolate(flat) place: vec4f,
     @location(13) @interpolate(flat) tree: vec4f,
 }
 
@@ -72,58 +71,123 @@ fn valueNoise(p: vec2f) -> f32 {
     return mix(top, bottom, f.y);
 }
 
-fn gustAt(p: vec2f, scroll: f32) -> f32 {
+const PIECE_DEPTH_V: f32 = 0.5;
+const PIECE_LIFT_V: f32 = 0.6;
+const GUST_WIDE = vec2f(250.0, 420.0);
+const GUST_FINE = vec2f(85.0, 140.0);
+const GUST_FINE_PACE: f32 = 1.4;
+const GUST_FINE_SHARE: f32 = 0.32;
+const SHARE_LULL = vec2f(0.72, 0.2);
+const SHARE_EDGE: f32 = 0.12;
+const BOW_LANE = vec2f(230.0, 96.0);
+const BOW_DEPTH = vec2f(0.8, 0.5);
+const BOW_RAGGED: f32 = 0.6;
+const BOW_RUN: f32 = 380.0;
+const TREE_SCALE = vec2f(100.0, 1.6);
+const PLANT_SCALE = vec2f(40.0, 1.0);
+const TREE_LOOP: f32 = 3.3;
+const PLANT_LOOP: f32 = 2.7;
+const TREE_RIDE: f32 = 4.4;
+const PLANT_RIDE: f32 = 3.0;
+const CROWN_LEAN: f32 = 6.0;
+const CROWN_LAG: f32 = 0.38;
+const SIZE_SPAN = vec2f(24.0, 190.0);
+const HEAVE_LAG: f32 = 0.7;
+const SIZE_TEMPO = vec2f(0.7, 1.4);
+
+fn airFrame(p: vec2f) -> vec2f {
     let dir = tileFrame.u_windDir;
-    let phase = tileFrame.u_windPhase;
-    let shape = tileFrame.u_gustShape;
-    let noise = tileFrame.u_gustNoise;
-    let across = vec2f(-dir.y, dir.x);
-    let raw = dot(p, dir) * phase.z - dot(p, across) * phase.w
-        + valueNoise(p * noise.xy) * shape.z
-        + valueNoise(p * noise.zw) * shape.w - scroll;
-    let wave = floorMod(raw, 256.0);
-    if (wave < shape.x) {
-        return 0.0;
-    }
-    let s = sin((wave - shape.x) / shape.y * 3.14159265);
-    return s * s;
+    let q = p - tileFrame.u_windFrame.xy;
+    return vec2f(dot(q, dir), dot(q, vec2f(-dir.y, dir.x))) + tileFrame.u_windFrame.zw;
 }
 
-fn leanAt(foot: vec2f, amp: f32, scroll: f32, clock: f32) -> f32 {
-    let sway = tileFrame.u_swayShape;
-    let ph = dot(foot, tileFrame.u_windPhase.xy);
-    let gust = gustAt(foot, scroll) * sway.y;
-    let flutter = (1.0 - abs(tileFrame.u_windDir.x)) * sin(clock * sway.w + ph);
-    let idle = sin(clock * sway.z + ph) * sway.x;
-    return amp * tileFrame.u_wind.x * (idle + gust * (tileFrame.u_windDir.x + flutter));
+fn laneEdge(k: i32, salt: i32) -> f32 {
+    return f32(k) + (gustCell(vec2i(k, salt)) - 0.5) * BOW_RAGGED;
+}
+
+fn bowOf(side: f32, run: f32, lane: f32, deep: f32, salt: i32) -> f32 {
+    let x = side / lane;
+    let k = i32(floor(x + 0.5));
+    let here = laneEdge(k, salt);
+    let before = x < here;
+    let id = select(k, k - 1, before);
+    let lo = select(here, laneEdge(k - 1, salt), before);
+    let hi = select(laneEdge(k + 1, salt), here, before);
+    let u = (x - lo) / (hi - lo);
+    let r = run / BOW_RUN;
+    let n = i32(floor(r));
+    var t = r - f32(n);
+    t = t * t * (3.0 - 2.0 * t);
+    let share = mix(gustCell(vec2i(id * 7 + salt, n)), gustCell(vec2i(id * 7 + salt, n + 1)), t);
+    return lane * (hi - lo) * deep * (0.25 + 0.75 * share) * 4.0 * u * (1.0 - u);
+}
+
+fn bowAt(side: f32, run: f32) -> f32 {
+    return bowOf(side, run, BOW_LANE.x, BOW_DEPTH.x, 3) + bowOf(side, run, BOW_LANE.y, BOW_DEPTH.y, 5);
+}
+
+fn airAt(p: vec2f, travelled: f32) -> f32 {
+    let f = airFrame(p);
+    let along = f.x - bowAt(f.y, f.x - travelled);
+    let wide = valueNoise(vec2f(along - travelled, f.y) / GUST_WIDE);
+    let fine = valueNoise(vec2f(along - travelled * GUST_FINE_PACE, f.y) / GUST_FINE + 17.0);
+    let lull = mix(SHARE_LULL.x, SHARE_LULL.y, tileFrame.u_wind.x);
+    return smoothstep(lull, lull + SHARE_EDGE, mix(wide, fine, GUST_FINE_SHARE));
+}
+
+fn bySize(foot: vec2f, tall: f32, tree: bool) -> vec4f {
+    let s = tileFrame.u_wind.x;
+    let travelled = tileFrame.u_wind.y;
+    let pace = tileFrame.u_windPace;
+    let k = select(PLANT_SCALE, TREE_SCALE, tree);
+    let scale = clamp(tall / k.x, 0.4, k.y);
+    let size = smoothstep(SIZE_SPAN.x, SIZE_SPAN.y, tall);
+    let lag = HEAVE_LAG * size;
+    let air = airAt(foot, travelled - pace * lag);
+    var late = air;
+    if (tree) {
+        late = airAt(foot, travelled - pace * (lag + CROWN_LAG));
+    }
+    let trunk = select(0.0, scale * CROWN_LEAN * s * s * (0.5 + 0.5 * air), tree);
+    let ride = scale * select(PLANT_RIDE, TREE_RIDE, tree) * (0.35 * s + 0.65 * late);
+    return vec4f(trunk, ride, air, scale * select(PLANT_LOOP, TREE_LOOP, tree));
 }
 
 fn tileVertex(glyph: GlyphIn, row: RowIn) -> TileOut {
     var pos = (glyph.a_position - view.u_viewOffset) * view.u_zoom;
     var out: TileOut;
-    out.lean = 0.0;
-    out.reach = 0.0;
+    out.bend = vec4f(0.0);
+    out.place = vec4f(0.0);
     out.tree = vec4f(0.0);
     var texCoord = glyph.a_texCoord;
     let span = glyph.a_uvBounds.w - glyph.a_uvBounds.y;
     let wind = tileFrame.u_wind;
     if (row.a_sway > 0.0 && wind.x > 0.0 && span > 0.0) {
+        let texel = tileStatic.u_paintTexelSize;
+        let dir = tileFrame.u_windDir;
         let foot = (row.a_vein.zw + vec2f(0.5, 1.0)) * wind.w;
-        out.lean = leanAt(foot, row.a_sway, wind.y, wind.z);
-        out.reach = ceil(row.a_sway * tileFrame.u_swayReach);
-        if (row.a_tree > 0.0) {
-            let time = tileFrame.u_treeTime;
-            let lag = leanAt(foot, row.a_sway, time.x, time.y) * time.z;
-            out.tree = vec4f(lag, gustAt(foot, wind.y), row.a_tree, foot.x);
-            out.reach += FLUTTER_REACH;
-            if ((i32(row.a_tree) & TREE_CURTAIN) != 0) {
-                let veil = tileFrame.u_treeVeil;
-                out.reach += ceil(wind.x * (veil.x + veil.y + veil.z)) + 1.0;
-            }
+        let local = (glyph.a_texCoord - (glyph.a_uvBounds.xy - vec2f(2.0, 0.0))) / texel;
+        let tall = span / texel.y;
+        let bend = bySize(foot, tall, row.a_tree > 0.0);
+        out.bend = bend;
+        let tempo = 1.0 / mix(SIZE_TEMPO.x, SIZE_TEMPO.y, smoothstep(SIZE_SPAN.x, SIZE_SPAN.y, tall));
+        out.place = vec4f(glyph.a_position * tileStatic.u_atlasScale - local, bowAt(airFrame(foot).y, 0.0), tempo);
+        out.tree = vec4f(1.0, bend.z, row.a_tree, foot.x);
+        let most = bend.x + bend.y + bend.w;
+        let shove = vec2f(most * dir.x, most * dir.y * PIECE_DEPTH_V);
+        var veil = 0.0;
+        if ((i32(row.a_tree) & TREE_CURTAIN) != 0) {
+            let v = tileFrame.u_treeVeil;
+            veil = ceil(wind.x * (v.x + v.y + v.z));
         }
-        let side = select(1.0, -1.0, glyph.a_texCoord.x * 2.0 < glyph.a_uvBounds.x + glyph.a_uvBounds.z - 4.0);
-        pos.x += side * out.reach * tileFrame.u_basePerArt * view.u_zoom.x;
-        texCoord.x += side * out.reach * tileStatic.u_paintTexelSize.x;
+        let left = glyph.a_texCoord.x * 2.0 < glyph.a_uvBounds.x + glyph.a_uvBounds.z - 4.0;
+        let top = glyph.a_texCoord.y * 2.0 < glyph.a_uvBounds.y + glyph.a_uvBounds.w;
+        let reach = vec2f(
+            select(1.0, -1.0, left) * (ceil(max(0.0, select(shove.x, -shove.x, left))) + veil + 1.0),
+            select(ceil(max(0.0, shove.y)) + 1.0, -(ceil(max(0.0, -shove.y) + bend.w * PIECE_LIFT_V) + 1.0), top)
+        );
+        pos += reach * tileFrame.u_basePerArt * view.u_zoom;
+        texCoord += reach * texel;
     }
     out.position = view.u_projection * vec4f(pos, 0.0, 1.0);
     out.position.z = (0.5 - 0.5 * row.a_row * tileStatic.u_rowDepth) * out.position.w;
@@ -153,24 +217,9 @@ fn rockTop(rim: i32, p: vec2i) -> vec3f {
     return textureLoad(u_paintAtlas, vec2i(tileStatic.u_rockRamp) + vec2i(shade, 0), 0).rgb;
 }
 
-fn swayed(uv: vec2f) -> vec2f {
-    if (vary.lean == 0.0) {
-        return uv;
-    }
-    let texel = tileStatic.u_paintTexelSize;
-    let top = vary.uvBounds.y;
-    let rows = (vary.uvBounds.w - top) / texel.y;
-    let row = floor((uv.y - top) / texel.y);
-    let rise = (rows - row + floorMod(row, 3.0)) / rows;
-    var step = 0.0;
-    if (rise > 0.0) {
-        step = floor(vary.lean * rise * sqrt(rise) + 0.5);
-    }
-    return uv - vec2f(step * texel.x, 0.0);
-}
-
 fn offSprite(uv: vec2f) -> bool {
-    return vary.reach > 0.0 && (uv.x < vary.uvBounds.x - 2.0 || uv.x > vary.uvBounds.z - 2.0);
+    let cell = vary.uvBounds - vec4f(2.0, 0.0, 2.0, 0.0);
+    return uv.x < cell.x || uv.x > cell.z || uv.y < cell.y || uv.y > cell.w;
 }
 
 fn paintedUv(uv: vec2f) -> vec2f {
@@ -231,8 +280,7 @@ fn tilePixel(frag: TileOut) -> TilePixel {
         light = textureLoad(u_lightTexture, vec2i(frag.position.xy), 0).rgb * 2.0;
     }
     if (PAINTED && tileDraw.u_shadowPass > 0.5) {
-        let leaned = swayed(frag.texCoord);
-        if (frag.uvBounds.x < 2.0 || offSprite(leaned) || sampled(u_lightAtlas, paintedUv(leaned)).g < 0.5) {
+        if (frag.uvBounds.x < 2.0 || offSprite(frag.texCoord) || sampled(u_lightAtlas, paintedUv(frag.texCoord)).g < 0.5) {
             discard;
         }
         return TilePixel(vec4f(tileStatic.u_shade, 1.0), tileStatic.u_shadowDepth);
@@ -244,28 +292,45 @@ fn tilePixel(frag: TileOut) -> TilePixel {
     let painted = PAINTED && frag.uvBounds.x >= 2.0;
     if (painted) {
         let at = frag.world * tileStatic.u_atlasScale;
-        if (frag.tree.z > 0.0) {
+        if (frag.tree.x > 0.0) {
             g_treeFlags = i32(frag.tree.z + 0.5);
+            g_parts = g_treeFlags > 0;
             let size = vec2f(textureDimensions(u_paintAtlas, 0));
             let cell = frag.uvBounds - vec4f(2.0, 0.0, 2.0, 0.0);
             g_treeOrg = vec2i(floor(cell.xy * size + 0.5));
             g_treeDim = vec2i(floor((cell.zw - cell.xy) * size + 0.5));
-            let px = treePixelAt(vec2i(floor((frag.texCoord - cell.xy) * size)));
+            let q = vec2i(floor((frag.texCoord - cell.xy) * size));
+            var colour = vec4f(0.0);
+            var px: TreePixel;
+            if (g_parts) {
+                px = treePixelAt(q, &colour);
+            } else {
+                px = pieceAt(q);
+                if (px.hit && inTree(px.at)) {
+                    colour = textureLoad(u_paintAtlas, g_treeOrg + px.at, 0);
+                }
+            }
             var glow = px.mark.r;
             sprite = vec4f(0.0);
             if (px.hit) {
-                sprite = treeColor(px, vec2i(floor(at)), &glow);
+                sprite = colour;
+                if (g_parts) {
+                    sprite = treeColor(px, colour, vec2i(floor(at)), &glow);
+                } else {
+                    let rise = clamp(f32(g_treeDim.y - px.at.y) / f32(g_treeDim.y), 0.0, 1.0);
+                    sprite = vec4f(sprite.rgb * (1.0 + SHEEN * frag.bend.z * smoothstep(0.15, 0.9, rise)), sprite.a);
+                }
+                sprite = vec4f(sprite.rgb * px.shade, sprite.a);
             }
             if (tileFrame.u_fieldLit > 0.5 && px.hit && glow > 0.0) {
                 light = mix(tileFrame.u_ambient, vec3f(1.0), glow);
             }
-            if (sprite.a > 0.0 && cutAway(at, px.hit)) {
+            if (sprite.a > 0.0 && cutAway(at, px.hit && (g_parts || (markCode(px.mark) & 15) != 0))) {
                 discard;
             }
         } else {
-            let leaned = swayed(frag.texCoord);
-            let off = offSprite(leaned);
-            let uv = paintedUv(leaned);
+            let off = offSprite(frag.texCoord);
+            let uv = paintedUv(frag.texCoord);
             sprite = vec4f(0.0);
             if (!off) {
                 sprite = sampled(u_paintAtlas, uv);
