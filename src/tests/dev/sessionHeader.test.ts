@@ -4,6 +4,7 @@ import type { GameState } from '$lib/game/core/types';
 
 const build: BuildInfo = {
   commit: '1fa9ee31',
+  sha: '1fa9ee31d5b0c6e34e2f1f6e9a6c1b0a4d3e2f10',
   branch: 'detached',
   refs: 'origin/test/look-perf',
   dirty: 0,

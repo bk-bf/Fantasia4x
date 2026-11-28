@@ -49,6 +49,11 @@ if needs_bootstrap; then
   "$SCRIPT_DIR/install.sh" || { echo "launch.sh: install.sh failed; aborting." >&2; exit 1; }
   echo ""
 fi
+lock_stale() { ! cmp -s "$1/pnpm-lock.yaml" "$1/node_modules/.pnpm/lock.yaml"; }
+if lock_stale "$SCRIPT_DIR"; then
+  echo "launch.sh: node_modules is behind pnpm-lock.yaml — installing (needs network)…" >&2
+  (cd "$SCRIPT_DIR" && pnpm install --frozen-lockfile) || { echo "launch.sh: pnpm install --frozen-lockfile failed; aborting." >&2; exit 1; }
+fi
 LOG_FLAG=""; [[ "$LOG" == true ]] && LOG_FLAG=" --log"
 
 cleanup() {
@@ -156,7 +161,7 @@ run_isolated_electron() {
       log "WARNING: loopback has no IPv4 addr — the dev server won't be reachable in here"
     fi
     log "starting dev server: dev.sh $F4X_NS_SERVER_FLAG --port $F4X_NS_PORT"
-    "$F4X_NS_SCRIPT_DIR/dev.sh" $F4X_NS_SERVER_FLAG --port "$F4X_NS_PORT" &
+    pnpm_config_verify_deps_before_run=false "$F4X_NS_SCRIPT_DIR/dev.sh" $F4X_NS_SERVER_FLAG --port "$F4X_NS_PORT" &
     SRV=$!
     cleanup_ns() { kill "$SRV" 2>/dev/null; wait 2>/dev/null; }
     trap 'cleanup_ns; exit 0' INT TERM
@@ -218,10 +223,10 @@ fi
 
 if [[ -n "$SHELL_TARGET" ]]; then
   SHELL_DIR="$SCRIPT_DIR/tools/dev-shell"
-  if [[ ! -d "$SHELL_DIR/node_modules" ]]; then
-    echo "launch.sh: $SHELL_TARGET deps not installed — installing (first run in this worktree)…" >&2
-    (cd "$SHELL_DIR" && pnpm install --ignore-workspace) || {
-      echo "launch.sh: failed to install $SHELL_TARGET deps (cd $SHELL_DIR && pnpm install --ignore-workspace)." >&2
+  if lock_stale "$SHELL_DIR"; then
+    echo "launch.sh: $SHELL_TARGET deps missing or behind their lockfile — installing…" >&2
+    (cd "$SHELL_DIR" && pnpm install --ignore-workspace --frozen-lockfile) || {
+      echo "launch.sh: failed to install $SHELL_TARGET deps (cd $SHELL_DIR && pnpm install --ignore-workspace --frozen-lockfile)." >&2
       exit 1
     }
   fi

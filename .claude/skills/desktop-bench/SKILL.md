@@ -74,7 +74,8 @@ systemctl --user stop f4x-laptop-tunnel
 ```
 
 - It zooms the owner's camera in and out for about a minute; tell him before it starts, and to
-  keep his hands off the window while it runs.
+  keep his hands off the window while it runs. Start `attach-trace.mjs` with
+  `run_in_background: true` under `timeout 10m`, and stop the tunnel once it exits.
 - `ENV` names the GPU, window size and pixel ratio, `ROW` gives the frame gaps per round, and
   `FRAME` the worst frames by thread. `CommandBufferProxyImpl::WaitForGetOffset` on the renderer
   main thread is time spent waiting for the GPU process; the GPU process's own rows say on what.
@@ -136,6 +137,16 @@ systemd-run --user --collect --unit=f4x-frame-cost -E PATH="$PATH" -E CHROME="$C
   node $T/tools/gpu/frame-cost.mjs $T <label> /tmp/f4x-frame-cost 8
 ```
 
+- Wait for a run with this one command, started with `run_in_background: true`, naming the unit
+  and the output directory; then do other work, or call `t3_background_wait` and end the turn,
+  and read its output when it exits:
+
+```bash
+timeout 30m ssh desktop 'while systemctl --user is-active -q <unit>; do sleep 15; done; journalctl --user -u <unit> -n 60 --no-pager; ls -l <out-dir>'
+```
+
+- Never wait in a foreground `sleep`, `until` or `while` loop, and never poll the background
+  command's own output file: the harness re-invokes the session when the command exits.
 - Alternate the builds (A B A B) and run three rounds each, so a slow minute on the machine shows
   up as spread rather than as a difference.
 - Read `ROW` lines from the log: `maxMs` is the longest frame, `stallMs` the sum of frames over
@@ -143,6 +154,38 @@ systemd-run --user --collect --unit=f4x-frame-cost -E PATH="$PATH" -E CHROME="$C
   paused, and `worstPaused` whether the longest frame fell in a pause. A running row with a
   `pausedShare` above 0 was paused part of the time, by auto-pause or by hand; never report it
   as running.
+
+## Recording
+
+Every run of `frame-cost.mjs`, `steady.mjs` and `zoom-out.mjs`, and every `tools/tickprof/run.sh`
+tick or loop run, writes one entry to the machine's ledger spool when it ends: the tool, scenario,
+the git info of the tree measured, the key numbers in `perf`, the result file and any profiles,
+and the `F4X_FIXTURE` or `PROF_SAVE` save, whose world id becomes `world.save`. The
+`f4x-ledger-sync` timer on ubuntuserver pulls it into the store, and `pnpm ledger list --tool
+frame-cost` there shows it. A spool that cannot be written costs one warning line and nothing else;
+`F4X_LEDGER_OFF=1` turns recording off.
+
+A run started over ssh has no `CLAUDE_CODE_SESSION_ID` or `T3CODE_THREAD_ID`, so it would read as
+the owner's. Name the agent with `F4X_LEDGER_SESSION` and `F4X_LEDGER_THREAD`:
+
+```bash
+systemd-run --user --collect --unit=f4x-steady -E PATH="$PATH" -E CHROME="$CH" \
+  -E F4X_LEDGER_SESSION="$CLAUDE_CODE_SESSION_ID" -E F4X_LEDGER_THREAD="$T3CODE_THREAD_ID" \
+  systemd-inhibit --what=idle:sleep --why=steady node $T/tools/gpu/steady.mjs $T <label> ~/f4x-steady 10
+```
+
+To run a recorded save again through the tick harness at other commits, run this on
+ubuntuserver:
+
+```bash
+pnpm ledger rerun <entry id|world id> --ref origin/dev --ref origin/test/look-overhaul --rounds 2
+```
+
+It copies the save to desktop, sets up a worktree per ref as above, borrows `tools/tickprof` from
+`--harness-ref` (`origin/test/look-overhaul`), waits until no other bench runs on desktop, runs
+the rounds interleaved under `systemd-run`, and records each round as its own entry with the
+original as `parent`, synced into the store at once. `--mode tick`, `--speed`, `--seconds`,
+`--warm`, `--ticks` and `--keep` are in `tools/ledger/rerun.mjs`.
 
 ## Reporting
 

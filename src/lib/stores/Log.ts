@@ -214,16 +214,53 @@ function mirrorToFile(entry: ActivityLogEntry): void {
   if (_mirrorTimer === null) _mirrorTimer = setTimeout(flushMirror, 1000);
 }
 
-function flushMirror(): void {
-  _mirrorTimer = null;
-  if (_mirrorPending.length === 0) return;
-  const entries = _mirrorPending.splice(0);
+export const KEEPALIVE_BODY_LIMIT = 60_000;
+
+const utf8 = new TextEncoder();
+const byteLength = (text: string): number => utf8.encode(text).length;
+
+export function keepaliveBodies<T>(entries: readonly T[], limit = KEEPALIVE_BODY_LIMIT): string[] {
+  const bodies: string[] = [];
+  let batch: string[] = [];
+  let size = 0;
+  const close = () => {
+    if (batch.length) bodies.push(`{"entries":[${batch.join(',')}]}`);
+    batch = [];
+    size = 0;
+  };
+  for (const entry of entries) {
+    const json = JSON.stringify(entry);
+    const bytes = byteLength(json);
+    if (batch.length && size + bytes + 16 > limit) close();
+    batch.push(json);
+    size += bytes + 1;
+  }
+  close();
+  return bodies;
+}
+
+let _keepaliveInFlight = 0;
+
+export function postMirror(body: string): void {
+  const bytes = byteLength(body);
+  const keepalive = _keepaliveInFlight + bytes <= KEEPALIVE_BODY_LIMIT;
+  if (keepalive) _keepaliveInFlight += bytes;
   fetch('/api/log', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ entries }),
-    keepalive: true
-  }).catch(() => {});
+    body,
+    keepalive
+  })
+    .catch(() => {})
+    .finally(() => {
+      if (keepalive) _keepaliveInFlight -= bytes;
+    });
+}
+
+function flushMirror(): void {
+  _mirrorTimer = null;
+  if (_mirrorPending.length === 0) return;
+  for (const body of keepaliveBodies(_mirrorPending.splice(0))) postMirror(body);
 }
 
 export function logWork(

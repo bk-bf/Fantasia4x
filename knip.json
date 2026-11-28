@@ -10,6 +10,7 @@
     "tools/work-pins/*.mjs",
     "tools/gpu/*.mjs",
     "tools/tickprof/*.mjs",
+    "tools/ledger/*.mjs",
     "tools/*.mjs",
     "tools/dev-tools/**/*.mjs",
     "src/tests/**/*.test.ts"

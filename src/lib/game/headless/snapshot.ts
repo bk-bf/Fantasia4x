@@ -8,7 +8,7 @@ export interface HeadlessSnapshot {
   world: SavedTile[][];
 }
 
-function stripTile({
+export function stripTile({
   gCost: _g,
   hCost: _h,
   fCost: _f,
