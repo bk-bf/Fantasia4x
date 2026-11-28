@@ -261,7 +261,7 @@ export class Webgl2Device implements GpuDevice {
           },
           setVertexBuffer: (slot, buffer, offset = 0) => {
             live();
-            this.vertexArrays.set(slot, raw<WebGLBuffer>(buffer), offset);
+            this.vertexArrays.set(slot, buffer as unknown as WebGLBuffer, offset);
           },
           setStencilReference: (reference) => {
             live();
@@ -295,9 +295,9 @@ export class Webgl2Device implements GpuDevice {
     const p = this.pipeline;
     if (!p) throw new Error('draw: no pipeline set');
     if (firstInstance !== 0) throw new Error('draw: WebGL2 has no base instance');
-    this.state.use(p.program);
+    if (this.state.program !== p.program) this.state.use(p.program);
     this.vertexArrays.bind(p);
-    this.bindGroups.apply(p);
+    if (this.bindGroups.applied !== p) this.bindGroups.apply(p);
     this.validator?.draw(
       p.buffers,
       this.vertexArrays.bound,
