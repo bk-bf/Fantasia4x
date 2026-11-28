@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @ts-nocheck
 import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, relative } from 'node:path';
@@ -7,17 +6,28 @@ import { pathToFileURL } from 'node:url';
 
 const BUDGET_FILE = 'tools/ci/warning-budget.json';
 const FILES_FILE = 'tools/ci/warning-files.json';
-const OUTPUT = { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 };
+const OUTPUT = { encoding: /** @type {const} */ ('utf8'), maxBuffer: 256 * 1024 * 1024 };
 
+/** @typedef {'error' | 'warning'} Severity */
+/** @typedef {{ tool: string, severity: Severity, rule: string, file: string, line: number, column: number, message: string }} Finding */
+/** @typedef {{ rule: string, severity: Severity, items: Finding[] }} RuleGroup */
+/** @typedef {{ ok: boolean, line: string }} Verdict */
+
+/** @param {string} file @param {string} cwd */
 const rel = (file, cwd) => (isAbsolute(file) ? relative(cwd, file) : file);
+/** @param {unknown} message */
 const firstLine = (message) => String(message).split('\n')[0];
+/** @param {Finding} f */
 const where = (f) => `${f.file}:${f.line}`;
 
+/** @param {string} out @param {string} [cwd] @returns {Finding[]} */
 export function parseSvelteCheck(out, cwd = process.cwd()) {
+  /** @type {Finding[]} */
   const found = [];
   for (const line of out.split('\n')) {
     const json = line.replace(/^\d+ /, '');
     if (!json.startsWith('{')) continue;
+    /** @type {{ type: string, code?: string | number, source?: string, filename: string, start: { line: number, character: number }, message: string }} */
     const d = JSON.parse(json);
     found.push({
       tool: 'svelte-check',
@@ -32,11 +42,14 @@ export function parseSvelteCheck(out, cwd = process.cwd()) {
   return found;
 }
 
+/** @typedef {{ filePath: string, messages: { severity: number, ruleId: string | null, line?: number, column?: number, message: string }[] }} EslintFile */
+
+/** @param {string} json @param {string} [cwd] @returns {Finding[]} */
 export const parseEslint = (json, cwd = process.cwd()) =>
-  JSON.parse(json).flatMap((f) =>
+  /** @type {EslintFile[]} */ (JSON.parse(json)).flatMap((f) =>
     f.messages.map((m) => ({
       tool: 'eslint',
-      severity: m.severity === 2 ? 'error' : 'warning',
+      severity: /** @type {Severity} */ (m.severity === 2 ? 'error' : 'warning'),
       rule: m.ruleId ?? 'parse',
       file: rel(f.filePath, cwd),
       line: m.line ?? 1,
@@ -45,7 +58,9 @@ export const parseEslint = (json, cwd = process.cwd()) =>
     }))
   );
 
+/** @param {string} out @param {string} [cwd] @returns {Finding[]} */
 export function parseTsc(out, cwd = process.cwd()) {
+  /** @type {Finding[]} */
   const found = [];
   for (const line of out.split('\n')) {
     const m = /^(.+?)\((\d+),(\d+)\): error (TS\d+): (.*)$/.exec(line.trim());
@@ -63,6 +78,10 @@ export function parseTsc(out, cwd = process.cwd()) {
   return found;
 }
 
+/**
+ * @param {string} command @param {string[]} args @param {(out: string) => Finding[]} parse
+ * @param {{ exitsOnFindings?: boolean }} [options]
+ */
 function runTool(command, args, parse, { exitsOnFindings = false } = {}) {
   const r = spawnSync(command, args, OUTPUT);
   if (r.error) throw r.error;
@@ -74,8 +93,10 @@ function runTool(command, args, parse, { exitsOnFindings = false } = {}) {
 
 const TOOLS_TSCONFIG = '.svelte-kit/tsconfig.tools.json';
 
+/** @param {string[]} files */
 function writeToolsTsconfig(files) {
   execFileSync('svelte-kit', ['sync'], OUTPUT);
+  /** @type {{ compilerOptions: { paths: Record<string, string[]> } }} */
   const kit = JSON.parse(readFileSync('.svelte-kit/tsconfig.json', 'utf8'));
   const config = {
     compilerOptions: {
@@ -102,6 +123,7 @@ const toolFiles = () =>
     .split('\0')
     .filter((f) => /\.(mjs|js|ts)$/.test(f) && !f.startsWith('tools/tileset/art/'));
 
+/** @type {Record<string, () => Finding[]>} */
 const RUNNERS = {
   'svelte-check': () =>
     runTool('svelte-check', ['--tsconfig', './tsconfig.json', '--output', 'machine-verbose'], (out) =>
@@ -112,18 +134,22 @@ const RUNNERS = {
     runTool('tsc', ['-p', writeToolsTsconfig(toolFiles()), '--pretty', 'false'], (out) => parseTsc(out), { exitsOnFindings: true })
 };
 
+/** @param {Finding[]} found @returns {RuleGroup[]} */
 export function byRule(found) {
+  /** @type {Map<string, RuleGroup>} */
   const groups = new Map();
   for (const f of found) {
     const key = `${f.severity} ${f.rule}`;
-    if (!groups.has(key)) groups.set(key, { rule: f.rule, severity: f.severity, items: [] });
-    groups.get(key).items.push(f);
+    const group = groups.get(key) ?? { rule: f.rule, severity: f.severity, items: [] };
+    groups.set(key, group);
+    group.items.push(f);
   }
   return [...groups.values()].sort(
     (a, b) => (a.severity === b.severity ? 0 : a.severity === 'error' ? -1 : 1) || b.items.length - a.items.length || a.rule.localeCompare(b.rule)
   );
 }
 
+/** @param {string} tool @param {Finding[]} found @param {number} budget @returns {Verdict} */
 export function verdict(tool, found, budget) {
   const errors = found.filter((f) => f.severity === 'error').length;
   const warnings = found.length - errors;
@@ -135,14 +161,21 @@ export function verdict(tool, found, budget) {
   return { ok: true, line: `${tool}: ${warnings} warnings, at its budget of ${budget}` };
 }
 
+/** @param {Finding[]} found @returns {Record<string, number>} */
 export function warningsPerFile(found) {
+  /** @type {Record<string, number>} */
   const counts = {};
   for (const f of found) if (f.severity === 'warning') counts[f.file] = (counts[f.file] ?? 0) + 1;
   return counts;
 }
 
+/**
+ * @param {string} tool @param {Finding[]} found @param {Record<string, number>} entries @param {number} budget
+ * @returns {{ ok: boolean, lines: string[] }}
+ */
 export function fileVerdict(tool, found, entries, budget) {
   const counts = warningsPerFile(found);
+  /** @type {string[]} */
   const lines = [];
   for (const [file, n] of Object.entries(counts).sort()) {
     const cap = entries[file];
@@ -159,8 +192,10 @@ export function fileVerdict(tool, found, entries, budget) {
   return { ok: lines.length === 0, lines };
 }
 
+/** @param {unknown} s */
 const html = (s) => firstLine(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
+/** @param {string} tool @param {Finding[]} found @param {number} budget @param {Set<string>} changed */
 export function summary(tool, found, budget, changed) {
   const touched = found.filter((f) => changed.has(f.file));
   const lines = [`### ${verdict(tool, found, budget).line}`, ''];
@@ -183,13 +218,18 @@ export function summary(tool, found, budget, changed) {
   return lines.join('\n');
 }
 
+/** @param {string} s */
 const escapeData = (s) => s.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+/** @param {string} s */
 const escapeProperty = (s) => escapeData(s).replaceAll(':', '%3A').replaceAll(',', '%2C');
 
+/** @param {Finding} f */
 export const annotation = (f) =>
   `::${f.severity} file=${escapeProperty(f.file)},line=${f.line},col=${f.column},title=${escapeProperty(`${f.tool} ${f.rule}`)}::${escapeData(firstLine(f.message))}`;
 
+/** @param {string} tool @param {Finding[]} found @param {number} budget @param {Set<string>} changed */
 export function note(tool, found, budget, changed) {
+  /** @param {Finding} f @returns {Finding} */
   const pick = ({ file, line, column, rule, severity, message, tool: t }) => ({
     tool: t,
     file,
@@ -225,8 +265,12 @@ function main() {
     process.stderr.write(`usage: node tools/ci/warnings.mjs <${Object.keys(RUNNERS).join('|')}>\n`);
     process.exit(2);
   }
-  const budget = JSON.parse(readFileSync(new URL('./warning-budget.json', import.meta.url), 'utf8'))[tool];
-  const entries = JSON.parse(readFileSync(new URL('./warning-files.json', import.meta.url), 'utf8'))[tool] ?? {};
+  /** @type {Record<string, number>} */
+  const budgets = JSON.parse(readFileSync(new URL('./warning-budget.json', import.meta.url), 'utf8'));
+  /** @type {Record<string, Record<string, number>>} */
+  const files = JSON.parse(readFileSync(new URL('./warning-files.json', import.meta.url), 'utf8'));
+  const budget = budgets[tool];
+  const entries = files[tool] ?? {};
   const found = RUNNERS[tool]();
   const changed = changedFiles();
   for (const f of found) process.stdout.write(`${where(f)}:${f.column}  ${f.severity}  ${f.rule}  ${firstLine(f.message)}\n`);

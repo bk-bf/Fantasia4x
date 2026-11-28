@@ -31,7 +31,7 @@ const ESLINT = JSON.stringify([
 
 const warning = (file: string, rule: string, message = 'm') => ({
   tool: 'svelte-check',
-  severity: 'warning',
+  severity: 'warning' as const,
   rule,
   file,
   line: 148,
@@ -136,7 +136,7 @@ describe('verdict', () => {
   });
 
   it('fails on any error', () => {
-    expect(verdict('eslint', [{ ...warning('a', 'parse'), severity: 'error' }], 10).ok).toBe(false);
+    expect(verdict('eslint', [{ ...warning('a', 'parse'), severity: 'error' as const }], 10).ok).toBe(false);
   });
 });
 
@@ -179,7 +179,7 @@ describe('fileVerdict', () => {
   });
 
   it('counts warnings, not errors', () => {
-    expect(warningsPerFile([...found, { ...warning('a.svelte', 'x'), severity: 'error' }])).toEqual({ 'a.svelte': 2, 'b.svelte': 1 });
+    expect(warningsPerFile([...found, { ...warning('a.svelte', 'x'), severity: 'error' as const }])).toEqual({ 'a.svelte': 2, 'b.svelte': 1 });
   });
 });
 
@@ -222,7 +222,7 @@ describe('annotation', () => {
 
 describe('note', () => {
   it('keeps the counts, the rules and what to annotate: errors anywhere, warnings in touched files', () => {
-    const found = [warning('src/a.svelte', 'r'), warning('src/b.svelte', 'r'), { ...warning('src/c.ts', '2322'), severity: 'error' }];
+    const found = [warning('src/a.svelte', 'r'), warning('src/b.svelte', 'r'), { ...warning('src/c.ts', '2322'), severity: 'error' as const }];
     const n = note('svelte-check', found, 2, new Set(['src/a.svelte']));
     expect(n).toMatchObject({ tool: 'svelte-check', budget: 2, errors: 1, warnings: 2 });
     expect(n.rules).toEqual([
