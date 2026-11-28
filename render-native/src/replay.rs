@@ -517,6 +517,21 @@ impl Build<'_> {
 }
 
 impl Scene {
+    pub fn skip(&mut self, labels: &[String]) {
+        let mut current = None;
+        let ops = std::mem::take(&mut self.ops);
+        self.ops = ops
+            .into_iter()
+            .filter(|op| {
+                if let Op::Pipeline(p) = op {
+                    current = Some(*p);
+                }
+                let skipped = current.is_some_and(|p| labels.contains(&self.pipeline_labels[p]));
+                !(skipped && matches!(op, Op::Draw(..) | Op::DrawIndexed(..)))
+            })
+            .collect();
+    }
+
     pub fn encode(&self, encoder: &mut CommandEncoder, canvas: &TextureView, queries: Option<&QuerySet>, only_clear: bool) -> usize {
         let mut pass: Option<RenderPass<'static>> = None;
         let mut index = 0u32;

@@ -20,12 +20,13 @@ struct Args {
     backend: wgpu::Backends,
     empty: bool,
     label: String,
+    skip: Vec<String>,
 }
 
 fn args() -> (String, Args) {
     let mut it = std::env::args().skip(1);
     let cmd = it.next().unwrap_or_default();
-    let mut a = Args { capture: String::new(), frames: 0, warmup: 120, backend: wgpu::Backends::VULKAN, empty: false, label: String::new() };
+    let mut a = Args { capture: String::new(), frames: 0, warmup: 120, backend: wgpu::Backends::VULKAN, empty: false, label: String::new(), skip: vec![] };
     while let Some(x) = it.next() {
         match x.as_str() {
             "--frames" => a.frames = it.next().unwrap().parse().unwrap(),
@@ -38,6 +39,7 @@ fn args() -> (String, Args) {
             }
             "--empty" => a.empty = true,
             "--label" => a.label = it.next().unwrap(),
+            "--skip" => a.skip = it.next().unwrap().split(',').map(String::from).collect(),
             other => a.capture = other.to_string(),
         }
     }
@@ -90,7 +92,7 @@ impl App {
     fn init(&mut self, el: &ActiveEventLoop) -> Gpu {
         let (w, h) = self.cap.canvas_size();
         let window = Arc::new(el.create_window(Window::default_attributes().with_title("render-native").with_inner_size(PhysicalSize::new(w, h))).unwrap());
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor { backends: self.args.backend, ..wgpu::InstanceDescriptor::new_without_display_handle() });
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor { backends: self.args.backend, ..wgpu::InstanceDescriptor::new_with_display_handle(Box::new(el.owned_display_handle())) });
         let surface = instance.create_surface(window.clone()).unwrap();
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
@@ -127,7 +129,8 @@ impl App {
             },
         );
         let t0 = Instant::now();
-        let scene = replay::Build { device: &device, queue: &queue, canvas_format: format }.scene(&self.cap);
+        let mut scene = replay::Build { device: &device, queue: &queue, canvas_format: format }.scene(&self.cap);
+        scene.skip(&self.args.skip);
         let build_ms = t0.elapsed().as_secs_f64() * 1000.0;
         let queries = timestamps.then(|| {
             let count = (scene.passes * 2).max(2) as u32;
@@ -236,6 +239,7 @@ impl App {
                 "label": self.args.label,
                 "capture": self.args.capture,
                 "empty": self.args.empty,
+                "skip": self.args.skip,
                 "frames": fps_frames,
                 "fps": round(1000.0 / mean),
                 "frameP50Ms": round(quantile(&mut self.intervals, 0.5)),
