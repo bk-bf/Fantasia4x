@@ -3497,5 +3497,455 @@
    }
   ],
   "note": "desktop /tmp/f4x-webgpu-probe/out: the summary of one probe matrix; a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit; probe/ is the probe as it stood after this last matrix, the only copy kept"
+ },
+ {
+  "supersedes": "20261127T003713Z-desktop-527e39",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T004019Z-desktop-614ef0",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T004326Z-desktop-230d63",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T004633Z-desktop-3c0bfd",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T004939Z-desktop-6089fa",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T005245Z-desktop-d9be63",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T005550Z-desktop-a3d298",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T005855Z-desktop-94390a",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T001408Z-desktop-7cc7e3",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-anim",
+   "commit": "d66d7d3e6560e914c5c860e853fe8396a25354f5",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-anim run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at d66d7d3e; its f4x-428-setup unit reported \"ok anim d66d7d3e\""
+ },
+ {
+  "supersedes": "20261127T001711Z-desktop-1bca1d",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-anim",
+   "commit": "d66d7d3e6560e914c5c860e853fe8396a25354f5",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-anim run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at d66d7d3e; its f4x-428-setup unit reported \"ok anim d66d7d3e\""
+ },
+ {
+  "supersedes": "20261127T002622Z-desktop-e3c39f",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-anim",
+   "commit": "d66d7d3e6560e914c5c860e853fe8396a25354f5",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-anim run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at d66d7d3e; its f4x-428-setup unit reported \"ok anim d66d7d3e\""
+ },
+ {
+  "supersedes": "20261127T001104Z-desktop-425393",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-look",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-look run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at a96826d3, the sha it read from origin/test/look-overhaul on ubuntuserver; its f4x-428-setup unit reported \"ok look a96826d3\""
+ },
+ {
+  "supersedes": "20261127T002015Z-desktop-2df192",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-look",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-look run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at a96826d3, the sha it read from origin/test/look-overhaul on ubuntuserver; its f4x-428-setup unit reported \"ok look a96826d3\""
+ },
+ {
+  "supersedes": "20261127T002317Z-desktop-87a5b7",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-look",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-look run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at a96826d3, the sha it read from origin/test/look-overhaul on ubuntuserver; its f4x-428-setup unit reported \"ok look a96826d3\""
+ },
+ {
+  "supersedes": "20261127T002856Z-desktop-f36225",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-anim",
+   "commit": "d66d7d3e6560e914c5c860e853fe8396a25354f5",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/zoom-out.mjs of bench-428-anim run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at d66d7d3e; its f4x-428-setup unit reported \"ok anim d66d7d3e\""
+ },
+ {
+  "supersedes": "20261127T003013Z-desktop-639682",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-anim",
+   "commit": "d66d7d3e6560e914c5c860e853fe8396a25354f5",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/zoom-out.mjs of bench-428-anim run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at d66d7d3e; its f4x-428-setup unit reported \"ok anim d66d7d3e\""
+ },
+ {
+  "supersedes": "20261127T003403Z-desktop-9743f9",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-anim",
+   "commit": "d66d7d3e6560e914c5c860e853fe8396a25354f5",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/zoom-out.mjs of bench-428-anim run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at d66d7d3e; its f4x-428-setup unit reported \"ok anim d66d7d3e\""
+ },
+ {
+  "supersedes": "20261127T002739Z-desktop-66c173",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-look",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/zoom-out.mjs of bench-428-look run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at a96826d3, the sha it read from origin/test/look-overhaul on ubuntuserver; its f4x-428-setup unit reported \"ok look a96826d3\""
+ },
+ {
+  "supersedes": "20261127T003130Z-desktop-f06cd6",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-look",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/zoom-out.mjs of bench-428-look run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at a96826d3, the sha it read from origin/test/look-overhaul on ubuntuserver; its f4x-428-setup unit reported \"ok look a96826d3\""
+ },
+ {
+  "supersedes": "20261127T003247Z-desktop-04eea8",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-look",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/zoom-out.mjs of bench-428-look run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at a96826d3, the sha it read from origin/test/look-overhaul on ubuntuserver; its f4x-428-setup unit reported \"ok look a96826d3\""
+ },
+ {
+  "supersedes": "20261126T194438Z-desktop-a6e70b",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "aa806e22-107f-44e8-8716-d7d44f765b6a"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-after",
+   "commit": "3bdb421debbdf8f7d852142db6f79ae5b96901ad",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-after run by agent session aa806e22-107f-44e8-8716-d7d44f765b6a, made by agent session aa806e22-107f-44e8-8716-d7d44f765b6a at 19:32 UTC with `git worktree add --detach` at 3bdb421d, which it read back before the run; session 631eae8e read 3bdb421d from it at 20:38 UTC"
+ },
+ {
+  "supersedes": "20261126T200834Z-desktop-0eca45",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "aa806e22-107f-44e8-8716-d7d44f765b6a"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-after",
+   "commit": "3bdb421debbdf8f7d852142db6f79ae5b96901ad",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-after run by agent session aa806e22-107f-44e8-8716-d7d44f765b6a, made by agent session aa806e22-107f-44e8-8716-d7d44f765b6a at 19:32 UTC with `git worktree add --detach` at 3bdb421d, which it read back before the run; session 631eae8e read 3bdb421d from it at 20:38 UTC"
+ },
+ {
+  "supersedes": "20261126T203231Z-desktop-0e607e",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "aa806e22-107f-44e8-8716-d7d44f765b6a"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-after",
+   "commit": "3bdb421debbdf8f7d852142db6f79ae5b96901ad",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-after run by agent session aa806e22-107f-44e8-8716-d7d44f765b6a, made by agent session aa806e22-107f-44e8-8716-d7d44f765b6a at 19:32 UTC with `git worktree add --detach` at 3bdb421d, which it read back before the run; session 631eae8e read 3bdb421d from it at 20:38 UTC"
+ },
+ {
+  "supersedes": "20261126T195635Z-desktop-300d5d",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "aa806e22-107f-44e8-8716-d7d44f765b6a"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-before",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-before run by agent session aa806e22-107f-44e8-8716-d7d44f765b6a, the worktree session 63c8955e-e2a5-455b-9f73-6126d98b3bf9 made at 9659211b; agent session aa806e22-107f-44e8-8716-d7d44f765b6a found it at 9659211b with no changes at 19:32 UTC, and session 631eae8e read 9659211b from it at 20:38 UTC"
+ },
+ {
+  "supersedes": "20261126T202032Z-desktop-54cd67",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "aa806e22-107f-44e8-8716-d7d44f765b6a"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-before",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-before run by agent session aa806e22-107f-44e8-8716-d7d44f765b6a, the worktree session 63c8955e-e2a5-455b-9f73-6126d98b3bf9 made at 9659211b; agent session aa806e22-107f-44e8-8716-d7d44f765b6a found it at 9659211b with no changes at 19:32 UTC, and session 631eae8e read 9659211b from it at 20:38 UTC"
+ },
+ {
+  "supersedes": "20261126T204430Z-desktop-b680b8",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "aa806e22-107f-44e8-8716-d7d44f765b6a"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-before",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-before run by agent session aa806e22-107f-44e8-8716-d7d44f765b6a, the worktree session 63c8955e-e2a5-455b-9f73-6126d98b3bf9 made at 9659211b; agent session aa806e22-107f-44e8-8716-d7d44f765b6a found it at 9659211b with no changes at 19:32 UTC, and session 631eae8e read 9659211b from it at 20:38 UTC"
+ },
+ {
+  "supersedes": "20261126T135901Z-desktop-e5fd9b",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "63c8955e-e2a5-455b-9f73-6126d98b3bf9"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-before",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-before run by agent session 63c8955e-e2a5-455b-9f73-6126d98b3bf9, made by agent session 63c8955e-e2a5-455b-9f73-6126d98b3bf9 at 13:46 UTC with `git worktree add --detach` at 9659211b, which it read back before the run"
+ },
+ {
+  "supersedes": "20261126T141057Z-desktop-81217f",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "63c8955e-e2a5-455b-9f73-6126d98b3bf9"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-before",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-before run by agent session 63c8955e-e2a5-455b-9f73-6126d98b3bf9, made by agent session 63c8955e-e2a5-455b-9f73-6126d98b3bf9 at 13:46 UTC with `git worktree add --detach` at 9659211b, which it read back before the run"
+ },
+ {
+  "supersedes": "20261126T142254Z-desktop-3b34d4",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "63c8955e-e2a5-455b-9f73-6126d98b3bf9"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-before",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-before run by agent session 63c8955e-e2a5-455b-9f73-6126d98b3bf9, made by agent session 63c8955e-e2a5-455b-9f73-6126d98b3bf9 at 13:46 UTC with `git worktree add --detach` at 9659211b, which it read back before the run"
+ },
+ {
+  "supersedes": "20261127T010550Z-desktop-3a3335",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-tree",
+   "commit": "c4cf6551c4b0bba428704eab5e7bce7fe8c2978a",
+   "branch": null,
+   "refs": "origin/feat/tree-ground-patches",
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/steady.mjs with F4X_PROFILE=1 of bench-tg-tree run by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791, made by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 at 00:36 UTC from origin/feat/tree-ground-patches at c4cf6551; this profile ran at 01:03 UTC, before the same session moved it to a00f6b86 at 01:09"
  }
 ]
