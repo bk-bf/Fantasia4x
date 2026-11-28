@@ -3,7 +3,7 @@ import type { GlStencilFace, Webgl2Pipeline } from './pipeline.js';
 const STENCIL_MASK = 0xff;
 
 export class Webgl2State {
-  private program: WebGLProgram | null = null;
+  program: WebGLProgram | null = null;
   private blendOn: boolean | null = null;
   private blendFuncs: readonly number[] | null = null;
   private depthOn: boolean | null = null;
