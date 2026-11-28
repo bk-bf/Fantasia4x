@@ -178,11 +178,11 @@ To run a recorded save again through the tick harness at other commits, run this
 ubuntuserver:
 
 ```bash
-pnpm ledger rerun <entry id|world id> --ref origin/dev --ref origin/test/look-overhaul --rounds 2
+pnpm ledger rerun <entry id|world id> --ref origin/dev --ref "origin/$(jq -r .branch tools/ci/lead.json)" --rounds 2
 ```
 
 It copies the save to desktop, sets up a worktree per ref as above, borrows `tools/tickprof` from
-`--harness-ref` (`origin/test/look-overhaul`), waits until no other bench runs on desktop, runs
+`--harness-ref` (`origin/dev`), waits until no other bench runs on desktop, runs
 the rounds interleaved under `systemd-run`, and records each round as its own entry with the
 original as `parent`, synced into the store at once. `--mode tick`, `--speed`, `--seconds`,
 `--warm`, `--ticks` and `--keep` are in `tools/ledger/rerun.mjs`.

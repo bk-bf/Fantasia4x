@@ -19,7 +19,7 @@ const REMOTE_REPO = 'Documents/Projects/Fantasia4x';
 const QUIET_WAIT_MS = 20 * 60 * 1000;
 
 export const USAGE =
-  'usage: pnpm ledger rerun <entry id|world id> --ref <commit|branch> [--ref ...] [--machine desktop] [--mode loop|tick] [--speed 4] [--seconds 30] [--warm 600] [--ticks 1800] [--rounds N] [--harness-ref origin/test/look-overhaul] [--keep] [--note N]';
+  'usage: pnpm ledger rerun <entry id|world id> --ref <commit|branch> [--ref ...] [--machine desktop] [--mode loop|tick] [--speed 4] [--seconds 30] [--warm 600] [--ticks 1800] [--rounds N] [--harness-ref origin/dev] [--keep] [--note N]';
 
 const positive = (name, raw, int = true) => {
   const n = Number(raw);
@@ -40,7 +40,7 @@ export function parseRerunArgs(args) {
       warm: { type: 'string' },
       ticks: { type: 'string' },
       rounds: { type: 'string', default: '1' },
-      'harness-ref': { type: 'string', default: 'origin/test/look-overhaul' },
+      'harness-ref': { type: 'string', default: 'origin/dev' },
       keep: { type: 'boolean', default: false },
       note: { type: 'string', default: '' }
     }
