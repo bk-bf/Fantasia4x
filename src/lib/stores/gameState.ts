@@ -18,7 +18,7 @@ import {
   dayIndexForTurn,
   getTimeOfDay
 } from '$lib/game/services/EnvironmentService';
-import { cameraTileSize } from '$lib/stores/cameraView';
+import { cameraTileSize, forgetSavedCamera } from '$lib/stores/cameraView';
 import { simWorkerBridge, USE_SIM_WORKER } from '$lib/game/sim/simWorkerClient';
 import { applySimCommand } from '$lib/game/sim/commands';
 import type { SimCommand } from '$lib/game/sim/simProtocol';
@@ -634,6 +634,7 @@ function startGame(mode: 'new' | 'load', saveId?: string) {
   else {
     mintActiveSave();
     setActiveCommitted(false);
+    forgetSavedCamera();
   }
   menuPreviewReady.set(false);
   if (previewActive && USE_SIM_WORKER) simWorkerBridge.setPaused(true);
