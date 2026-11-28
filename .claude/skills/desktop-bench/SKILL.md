@@ -74,7 +74,8 @@ systemctl --user stop f4x-laptop-tunnel
 ```
 
 - It zooms the owner's camera in and out for about a minute; tell him before it starts, and to
-  keep his hands off the window while it runs.
+  keep his hands off the window while it runs. Start `attach-trace.mjs` with
+  `run_in_background: true` under `timeout 10m`, and stop the tunnel once it exits.
 - `ENV` names the GPU, window size and pixel ratio, `ROW` gives the frame gaps per round, and
   `FRAME` the worst frames by thread. `CommandBufferProxyImpl::WaitForGetOffset` on the renderer
   main thread is time spent waiting for the GPU process; the GPU process's own rows say on what.
@@ -132,6 +133,16 @@ systemd-run --user --collect --unit=f4x-frame-cost -E PATH="$PATH" -E CHROME="$C
   node $T/tools/gpu/frame-cost.mjs $T <label> /tmp/f4x-frame-cost 8
 ```
 
+- Wait for a run with this one command, started with `run_in_background: true`, naming the unit
+  and the output directory; then do other work, or call `t3_background_wait` and end the turn,
+  and read its output when it exits:
+
+```bash
+timeout 30m ssh desktop 'while systemctl --user is-active -q <unit>; do sleep 15; done; journalctl --user -u <unit> -n 60 --no-pager; ls -l <out-dir>'
+```
+
+- Never wait in a foreground `sleep`, `until` or `while` loop, and never poll the background
+  command's own output file: the harness re-invokes the session when the command exits.
 - Alternate the builds (A B A B) and run three rounds each, so a slow minute on the machine shows
   up as spread rather than as a difference.
 - Read `ROW` lines from the log: `maxMs` is the longest frame, `stallMs` the sum of frames over
