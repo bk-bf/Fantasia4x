@@ -133,6 +133,8 @@ export function checkEntry(entry, root) {
   for (const f of entry.files ?? []) {
     if (!hasBlob(root, f.sha256)) throw new Error(`entry ${entry.id}: file ${f.name} has no blob ${f.sha256}`);
   }
+  if (entry.supersedes !== undefined && (entry.supersedes === entry.id || !ID.test(entry.supersedes ?? '') || !entryExists(root, entry.supersedes)))
+    throw new Error(`entry ${entry.id}: supersedes ${entry.supersedes}, which is not another entry in the store`);
 }
 
 export function entryExists(root, id) {
@@ -192,8 +194,14 @@ export function allEntries(root) {
 const matches = (value, wanted) =>
   wanted == null || (value != null && String(value).toLowerCase().includes(String(wanted).toLowerCase()));
 
+export function supersededBy(entries) {
+  return new Map(entries.filter((e) => e.supersedes).map((e) => [e.supersedes, e.id]));
+}
+
 export function listEntries(root, f = {}) {
-  const all = allEntries(root);
+  const every = allEntries(root);
+  const replaced = supersededBy(every);
+  const all = f.all ? every : every.filter((e) => !replaced.has(e.id));
   const worldSaves = f.world == null ? [] : all.filter((e) => e.kind === 'save' && (e.world?.save ?? '').startsWith(f.world));
   const savedFrom = new Set(worldSaves.filter((e) => e.parent).map((e) => e.parent));
   const captures = new Set(worldSaves.map((e) => e.captureId ?? e.world?.captureId).filter(Boolean));

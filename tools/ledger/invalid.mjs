@@ -37,3 +37,10 @@ export function withInvalid(entry, has = contains) {
   }
   return { ...entry, invalid: reasons };
 }
+
+export function recheckInvalid(entry, has = contains) {
+  const fixed = new Set(Object.values(FIXES).map((f) => f.reason));
+  const { invalid, ...rest } = entry;
+  const kept = (invalid ?? []).filter((r) => !fixed.has(r));
+  return withInvalid(kept.length ? { ...rest, invalid: kept } : rest, has);
+}
