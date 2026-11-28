@@ -16,6 +16,8 @@ import { carcassConditionByType } from '../core/rules/world/carcassCondition';
 import { buildingsVisualSig } from '../core/state/buildingSig';
 import { gameLogger } from '../debug/gameLogger';
 import type { GameState, WorldTile, DroppedItem } from '../core/types';
+import { LedgerCapturer, postLedgerSave } from './ledgerCapture';
+import { currentBuild } from '$lib/dev/buildStamp';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
 const BATCH_BUDGET_MS = 16;
@@ -55,6 +57,19 @@ function flushLog() {
   post({ kind: 'simlog', events: logBuffer });
   logBuffer = [];
 }
+
+const ledger = new LedgerCapturer({
+  state: () => gameEngine.getGameState(),
+  speed: () => speed,
+  now: () => performance.now(),
+  clock: () => new Date(),
+  savedBy: currentBuild()?.commit ?? null,
+  log: (turn, message) => {
+    simLog.logEvent({ category: 'perf', turn, message });
+    flushLog();
+  },
+  post: postLedgerSave
+});
 function installForwardingLogSink() {
   const fwd =
     (m: string) =>
@@ -421,6 +436,7 @@ function batch() {
     if (performance.now() - start >= BATCH_BUDGET_MS) break;
   }
   if (accMs > MAX_BACKLOG_MS) accMs = MAX_BACKLOG_MS;
+  if (import.meta.env.DEV) ledger.ran(dt);
 
   perfTicksAccum += steps;
   if (perfWindowStart === 0) perfWindowStart = now;
@@ -464,6 +480,7 @@ self.onmessage = async (e: MessageEvent) => {
       setVerboseLogging(!!msg.verbose);
       gameEngine.setGameStateManager(new GameStateManager(msg.state));
       gameEngine.setPreviewMode(!!msg.preview);
+      ledger.reset();
       gameEngine.setOutputSink(publish);
       gameEngine.setCommitSink((s) => publish(s, true, true));
       await pathfinderService.init();
@@ -509,6 +526,12 @@ self.onmessage = async (e: MessageEvent) => {
       paused = msg.paused;
       if (!paused) lastBatch = performance.now();
       else publish(gameEngine.getGameState(), true, true);
+      break;
+    case 'ledger':
+      if (import.meta.env.DEV) ledger.configure(msg.settings);
+      break;
+    case 'ledgerCapture':
+      if (import.meta.env.DEV) void ledger.capture(msg.reason, msg.save);
       break;
     case 'requestSave':
       post({ kind: 'fullState', state: gameEngine.getGameState() });

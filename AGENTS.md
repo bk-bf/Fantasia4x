@@ -190,11 +190,16 @@ one does not land. Commit in logical groups. On ubuntuserver the checkout is rea
 with no editor and no git UI, so an uncommitted tree there is invisible, and the tools that read
 that tree stop on it.
 
-**`dev` takes only crucial work until the look overhaul settles.** Crucial is a perf fix, a fix for
-a crash, a stuck sim or lost state, and tools, CI, tests, agent config and skills.
-Everything else is look work and lands on `test/look-overhaul`, where the owner plays and judges
-it: UI, rendering, art, item and recipe data, map generation, and any new feature. A change that is
-not plainly crucial is look work.
+**`dev` takes only crucial work; everything else lands on the lead branch.** The lead branch is
+the one `tools/ci/lead.json` names. Crucial is a perf fix, a fix for a crash, a stuck sim or lost
+state, and tools, CI, tests, agent config and skills. Everything else is lead work and lands on the
+lead branch, where the owner plays and judges it: UI, rendering, art, item and recipe data, map
+generation, and any new feature. A change that is not plainly crucial is lead work.
+
+CI treats the lead branch as it treats a `test/**` branch: a run on it or on work built on it only
+warns, and its `Bound for dev` job fails. The lead reaches `dev` when the owner says so, as a
+`--no-ff` merge on a branch built on `dev`, which the chain measures against `dev`. A new lead
+branch is set in `tools/ci/lead.json`; every rule here follows it.
 
 **Mockups land on `mockups/live`, never on `dev`.** Change anything under `mockups/` on a branch
 from `origin/mockups/live` in a worktree, rebase onto it and push with
@@ -209,7 +214,7 @@ went to.
 `pnpm promote` and `.github/workflows/promote.yml` hold what a promotion runs. Nothing automated
 writes to `main`.
 
-Branch from `dev` for crucial work, from `test/look-overhaul` for look work and from `mockups/live`
+Branch from `dev` for crucial work, from the lead branch for lead work and from `mockups/live`
 for mockups, and never push `main`.
 
 This applies to subagents you dispatch.
@@ -370,8 +375,8 @@ are refused, naming the blocker. Work on it and test it locally; it is pushed on
 closes. `pnpm issue blocked-by <n> <blocker>` adds the link.
 
 **Work an agent does on an issue goes through a pull request into `dev`.** CI reports on it.
-Crucial work merges once CI passes. A pull request for look work stays unmerged: merge its branch
-into `test/look-overhaul` to put it in front of the owner, and leave its merge into `dev` to him. The pull request is where he reads the diff and where he writes what
+Crucial work merges once CI passes. A pull request for lead work stays unmerged: merge its branch
+into the lead branch to put it in front of the owner, and leave its merge into `dev` to him. The pull request is where he reads the diff and where he writes what
 is wrong with it; read those comments before the next attempt. Several related fixes belong in one branch and one pull request, not one each.
 
 **Read a pull request's Check notes before calling it ready or merging it.** The `perf-notes` job
@@ -384,20 +389,20 @@ that branch current with `dev`, and merge it nowhere, `dev` and the test branche
 its frame cost is at or below the baseline it started from. Report the cost as a number against
 that baseline. Never propose the `perf change accepted` label for an intermediate step.
 
-**A validated perf fix reaches `test/look-overhaul` the moment it reaches `dev`.** Perf comes
-before UI, and the UI work is played and judged on `test/look-overhaul`, so a perf fix missing there
-is a slowdown the owner plays and reports. In the same task that lands the fix on `dev`, merge
-`origin/dev` into `test/look-overhaul`, run the related tests on the merge, push it, and tell him
-the commit to switch to.
+**A validated perf fix reaches the lead branch the moment it reaches `dev`.** Perf comes before
+UI, and the lead work is played and judged on the lead branch, so a perf fix missing there is a
+slowdown the owner plays and reports. In the same task that lands the fix on `dev`, merge
+`origin/dev` into the lead branch, run the related tests on the merge, push it, and tell him the
+commit to switch to.
 
 **Never walk past a broken test.** A failing, flaky, stale or skipped test, or a surviving mutant,
 is acted on when you see it: tell the agent whose change broke it with `SendMessage`, or start a
 child agent to fix it. Test fixes found by the nightly pass land only on `fix/test-health`; the
 `test-health` skill holds that pass.
 
-**Work done in a conversation needs no issue and no pull request.** Look work branches from
-`origin/test/look-overhaul` the same way as below, is rebased onto it, and is pushed with
-`git push origin HEAD:test/look-overhaul`; nothing holds that push, so read the CI run it starts
+**Work done in a conversation needs no issue and no pull request.** Lead work branches from
+`origin/<lead branch>` the same way as below, is rebased onto it, and is pushed with
+`git push origin HEAD:<lead branch>`; nothing holds that push, so read the CI run it starts
 and fix what it reports. Crucial work is pushed straight to `dev`: branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
 <type>/<title> <path> origin/dev`, because a branch that tracks `origin/dev` lets an editor's Sync
 push it without the gate. Commit, bring it up to date with `git fetch origin && git rebase

@@ -25,8 +25,8 @@ ssh laptop 'cd ~/Documents/local/Projects/Fantasia4x && git log -1 --format="%h 
   speed, and the host's battery state, power profile, CPU governor, load and free memory. Every
   line is timestamped, and a `host` line appears when power or profile changes mid-session.
   Match his complaint to its session before measuring anything.
-- **Which branch.** A test branch can lag `dev` by dozens of commits. `test/look-overhaul` once
-  missed six perf merges, so "perf did not improve" was true of what he ran.
+- **Which branch.** A test branch can lag `dev` by dozens of commits. The look-overhaul lead branch
+  once missed six perf merges, so "perf did not improve" was true of what he ran.
 - **Stale WASM.** A checkout whose `src/lib/*-pkg` is older than its Rust source runs with missing
   exports: the worker throws on its first path search and TPS sits at 0 after unpausing. `dev.sh`
   now rebuilds it when the source is newer; check the timestamps anyway when TPS is 0.

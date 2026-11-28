@@ -3,6 +3,7 @@ import { PAINTED_TILES } from '$lib/webgl/painted/flag';
 
 export interface BuildInfo {
   commit: string;
+  sha: string;
   branch: string;
   refs: string;
   dirty: number;

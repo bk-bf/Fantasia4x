@@ -11,6 +11,7 @@ import { vlog, setVerboseLogging } from '../core/util/logSink';
 import { WORK_PINS } from '../../workPins/flag';
 import { connectWorkPins, receiveWorkPins, type WorkPinsReply } from '../../workPins/page';
 import type { SimLogEvent, EntitySync } from './simProtocol';
+import type { LedgerReason, LedgerSettings } from './ledgerCapture';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
 function updateEntityMirror<T extends { id: string }>(
@@ -142,6 +143,12 @@ class SimWorkerBridge {
   }
   requestSave(): void {
     this.w?.postMessage({ kind: 'requestSave' });
+  }
+  ledger(settings: LedgerSettings): void {
+    this.w?.postMessage({ kind: 'ledger', settings });
+  }
+  ledgerCapture(reason: LedgerReason, save?: string | null): void {
+    this.w?.postMessage({ kind: 'ledgerCapture', reason, save });
   }
 
   private markSnow = (y: number, x: number): void =>

@@ -2,6 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { backendOf, gpuSwitch, openGpuGame, sleep } from './session.mjs';
 import { assertSpeed, setSpeed, watchSim } from './sim-speed.mjs';
+import { recordBench } from '../ledger/bench.mjs';
 
 /** @typedef {import('../work-pins/browser-session.mjs').Page} Page */
 /** @typedef {import('../work-pins/browser-session.mjs').CDPSession} CDPSession */
@@ -144,3 +145,4 @@ const rows = [];
 for (const skip of skipSets) await runSkipSet(skip, rows);
 writeFileSync(join(OUT_DIR, `${LABEL}-frame-cost.json`), JSON.stringify({ scenario, args, seconds, rows }, null, 1));
 process.stdout.write(`\n${scenario || process.env.F4X_FIXTURE}, ${args.length ? 'uncapped' : 'vsync-capped'}, ${seconds} s per cell\n\n${table(rows)}\n`);
+await recordBench('frame-cost', { tree: TREE, label: LABEL, rows, result: join(OUT_DIR, `${LABEL}-frame-cost.json`) });

@@ -1,0 +1,41 @@
+2026-11-25T01:50:42.2139289Z ##[group]Run node tools/bench/counts.mjs "$RUNNER_TEMP" --out "$RUNNER_TEMP/codspeed-counts.json"
+2026-11-25T01:50:42.2139857Z [36;1mnode tools/bench/counts.mjs "$RUNNER_TEMP" --out "$RUNNER_TEMP/codspeed-counts.json"[0m
+2026-11-25T01:50:42.2151894Z shell: /usr/bin/bash -e {0}
+2026-11-25T01:50:42.2152320Z env:
+2026-11-25T01:50:42.2152558Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-25T01:50:42.2152858Z   CARGO_HOME: /home/runner/.cargo
+2026-11-25T01:50:42.2153088Z   CARGO_INCREMENTAL: 0
+2026-11-25T01:50:42.2153301Z   CARGO_TERM_COLOR: always
+2026-11-25T01:50:42.2153512Z   CACHE_ON_FAILURE: false
+2026-11-25T01:50:42.2153737Z   CODSPEED_SINCE: 2026-11-25T01:44:01Z
+2026-11-25T01:50:42.2155724Z   GITHUB_TOKEN: ***
+2026-11-25T01:50:42.2155967Z   BASE_SHA: ddf5a6b3a3df4a86d61923d0695c0907e71020b3
+2026-11-25T01:50:42.2156232Z ##[endgroup]
+2026-11-25T01:50:45.0666699Z Exact counts from CodSpeed's profiles; each change is against `dev` at `ddf5a6b3` ([run](https://github.com/bk-bf/Fantasia4x/actions/runs/45485807604)).
+2026-11-25T01:50:45.0667198Z 
+2026-11-25T01:50:45.0667440Z | benchmark | instructions | change | LL misses | change | verdict |
+2026-11-25T01:50:45.0668032Z |---|---:|---:|---:|---:|---|
+2026-11-25T01:50:45.0668503Z | `body.bench.ts::body colony::anatomy` | 240,124 | +0.00% | 2,105 | -10.5% | within noise |
+2026-11-25T01:50:45.0669042Z | `body.bench.ts::body colony::capacities` | 1,713,248 | -0.15% | 6,040 | -5.4% | within noise |
+2026-11-25T01:50:45.0669570Z | `body.bench.ts::body colony::conditions` | 61,589 | -2.01% | 1,280 | -0.2% | **faster** |
+2026-11-25T01:50:45.0670094Z | `body.bench.ts::body colony::part walks` | 700,241 | +1.47% | 2,279 | -7.3% | **slower** |
+2026-11-25T01:50:45.0670610Z | `body.bench.ts::body colony::stats` | 244,198 | -0.06% | 2,095 | +0.5% | within noise |
+2026-11-25T01:50:45.0671124Z | `body.bench.ts::body dev-save::anatomy` | 15,468,361 | +0.00% | 93,080 | -1.1% | within noise |
+2026-11-25T01:50:45.0795473Z ##[group]Run actions/upload-artifact@v7
+2026-11-25T01:50:45.0795733Z with:
+2026-11-25T01:50:45.0795926Z   name: codspeed-counts-1
+2026-11-25T01:50:45.0796191Z   path: /home/runner/work/_temp/codspeed-counts.json
+2026-11-25T01:50:45.0796463Z   if-no-files-found: ignore
+2026-11-25T01:50:45.0796686Z   compression-level: 6
+2026-11-25T01:50:45.0796877Z   overwrite: false
+2026-11-25T01:50:45.0797074Z   include-hidden-files: false
+2026-11-25T01:50:45.0797294Z   archive: true
+2026-11-25T01:50:45.0797463Z env:
+2026-11-25T01:50:45.0797671Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-25T01:50:45.0797947Z   CARGO_HOME: /home/runner/.cargo
+2026-11-25T01:50:45.0798170Z   CARGO_INCREMENTAL: 0
+2026-11-25T01:50:45.0798370Z   CARGO_TERM_COLOR: always
+2026-11-25T01:50:45.0798573Z   CACHE_ON_FAILURE: false
+2026-11-25T01:50:45.0798784Z   CODSPEED_SINCE: 2026-11-25T01:44:01Z
+2026-11-25T01:50:45.0799015Z ##[endgroup]
+2026-11-25T01:50:46.3662385Z Artifact codspeed-counts-1 has been successfully uploaded! Final size is 1754 bytes. Artifact ID is 14983128949

@@ -35,6 +35,7 @@ jobs:
       contents: read
     outputs:
       base: ${{ steps.scope.outputs.base }}
+      measureBase: ${{ steps.scope.outputs.measureBase }}
       warn: ${{ steps.scope.outputs.warn }}
       check: ${{ steps.scope.outputs.check }}
       coverage: ${{ steps.scope.outputs.coverage }}
@@ -55,24 +56,31 @@ jobs:
           BEFORE: ${{ github.event.before }}
         run: |
           warn=false
+          merged=
           base="$(git merge-base HEAD origin/dev)"
-          for t in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/test/); do
-            m="$(git merge-base HEAD "$t")"
-            git merge-base --is-ancestor "$m" origin/dev || { warn=true; base="$m"; break; }
+          line="$(git rev-list --count --first-parent HEAD ^origin/dev)"
+          lead="$(jq -r .branch tools/ci/lead.json)"
+          for t in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/test/ "refs/remotes/origin/$lead"); do
+            m="$(git merge-base --all HEAD "$t" | while read -r c; do git merge-base --is-ancestor "$c" origin/dev || { echo "$c"; break; }; done)"
+            [ -z "$m" ] && continue
+            [ "$GITHUB_EVENT_NAME" != pull_request ] && [ "$(git rev-list --count --first-parent HEAD ^origin/dev "^$t")" = "$line" ] && { { [ -z "$merged" ] || git merge-base --is-ancestor "$merged" "$m"; } && merged="$m"; continue; }
+            warn=true; base="$m"; break
           done
           case "$GITHUB_EVENT_NAME" in
             push)
               case "$GITHUB_REF_NAME" in
                 dev) base="$BEFORE" ;;
-                test/*) warn=true; git cat-file -e "$BEFORE^{commit}" 2>/dev/null && base="$BEFORE" ;;
+                test/*|"$lead") warn=true; git cat-file -e "$BEFORE^{commit}" 2>/dev/null && base="$BEFORE" ;;
               esac ;;
             pull_request)
               base="$(git rev-parse HEAD^1)"
               [ "$GITHUB_BASE_REF" = dev ] || warn=true ;;
           esac
-          [ "$warn" = true ] && echo "::warning::Warn-only run: this work is on or built on a test branch, so a failing gate is reported and does not fail the run. Bound for dev fails, so this commit cannot be pushed to dev."
+          [ "$warn" = true ] && echo "::warning::Warn-only run: this work is on or built on a test branch or the lead branch, so a failing gate is reported and does not fail the run. Bound for dev fails, so this commit cannot be pushed to dev."
           echo "base=$base" >> "$GITHUB_OUTPUT"
           echo "warn=$warn" >> "$GITHUB_OUTPUT"
+          [ "$warn" = true ] && merged=
+          echo "measureBase=${merged:-$base}" >> "$GITHUB_OUTPUT"
           node tools/ci/ci-scope.mjs --base "$base"
 
       - uses: ./.github/actions/prepare
@@ -130,7 +138,7 @@ jobs:
       contents: read
       pull-requests: read
     env:
-      BASE: ${{ needs.precheck.outputs.base }}
+      BASE: ${{ needs.precheck.outputs.measureBase }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -358,7 +366,7 @@ jobs:
       contents: read
       pull-requests: read
     env:
-      BASE: ${{ needs.precheck.outputs.base }}
+      BASE: ${{ needs.precheck.outputs.measureBase }}
     steps:
       - uses: actions/checkout@v7
         with:
