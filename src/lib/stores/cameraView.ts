@@ -10,3 +10,9 @@ export const cameraViewport = writable<{ x: number; y: number; w: number; h: num
   w: 0,
   h: 0
 });
+
+export const CAMERA_STORAGE_KEY = 'fantasia4x-camera';
+
+export function forgetSavedCamera(): void {
+  globalThis.sessionStorage?.removeItem(CAMERA_STORAGE_KEY);
+}
