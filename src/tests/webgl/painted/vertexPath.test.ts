@@ -8,6 +8,7 @@ import type { FontAtlas } from '$lib/webgl/types';
 import type { ShaderManager } from '$lib/webgl/shaders';
 import type { CharacterRenderer } from '$lib/webgl/character-renderer';
 import { buildTileset, parseManifest, spriteAt } from '$lib/webgl/painted/manifest';
+import { Webgl2Device } from '$lib/gpu/webgl2/device';
 
 const FLOATS_PER_VERTEX = 24;
 const UV = 2;
@@ -71,7 +72,7 @@ const glyphTiles: TileData[] = [
 ];
 
 function vertexData(tiles: TileData[], opts: GridRenderOptions): Float32Array {
-  const renderer = new GridRenderer(noopGl, shaders, {} as CharacterRenderer, atlas);
+  const renderer = new GridRenderer(new Webgl2Device(noopGl), shaders, {} as CharacterRenderer, atlas);
   return renderer['generateBatchVertexData'](tiles, opts);
 }
 

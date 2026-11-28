@@ -1,41 +1,36 @@
-import { writable } from 'svelte/store';
 import { animNow } from './animClock';
 import type { CombatProjectileRequest } from '$lib/game/core/util/logSink';
 
 export type { CombatProjectileRequest };
 
 export interface ProjectileEvent extends CombatProjectileRequest {
-  id: string;
+  id: number;
   spawnTime: number;
-  durationMs: number;
 }
 
-const MS_PER_TILE = 26;
-const MIN_FLIGHT_MS = 120;
-const MAX_FLIGHT_MS = 460;
-export const PROJECTILE_IMPACT_MS = 180;
+const MAX_LIFE_MS = 4000;
+const MAX_ACTIVE = 80;
 
-let _seq = 0;
-
-function createProjectileStore() {
-  const { subscribe, update } = writable<ProjectileEvent[]>([]);
+function createProjectiles() {
+  let list: ProjectileEvent[] = [];
+  let seq = 0;
 
   return {
-    subscribe,
-    push(req: CombatProjectileRequest) {
+    push(req: CombatProjectileRequest): void {
       const now = animNow();
-      const dist = Math.hypot(req.toX - req.fromX, req.toY - req.fromY);
-      const durationMs = Math.max(MIN_FLIGHT_MS, Math.min(MAX_FLIGHT_MS, dist * MS_PER_TILE));
-      update((list) => {
-        const live = list.filter((e) => now - e.spawnTime < e.durationMs + PROJECTILE_IMPACT_MS);
-        live.push({ ...req, id: `proj-${now}-${_seq++}`, spawnTime: now, durationMs });
-        return live;
-      });
+      list = list.filter((e) => now - e.spawnTime < MAX_LIFE_MS);
+      list.push({ ...req, id: seq++, spawnTime: now });
+      if (list.length > MAX_ACTIVE) list = list.slice(list.length - MAX_ACTIVE);
     },
-    clear() {
-      update(() => []);
+    live(now: number): readonly ProjectileEvent[] {
+      if (list.length && now - list[0].spawnTime >= MAX_LIFE_MS)
+        list = list.filter((e) => now - e.spawnTime < MAX_LIFE_MS);
+      return list;
+    },
+    clear(): void {
+      list = [];
     }
   };
 }
 
-export const projectiles = createProjectileStore();
+export const projectiles = createProjectiles();

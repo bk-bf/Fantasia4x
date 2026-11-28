@@ -27,6 +27,7 @@ import { nearGatheringPlace } from '../core/defs/amenities';
 import { pawnStatService } from './PawnStatService';
 import {
   combatBark as pickBark,
+  foeName,
   runConversation,
   type CombatBarkKind,
   type ConversationCategory,
@@ -691,12 +692,12 @@ class SocialServiceImpl {
     return relsChanged ? { ...state, relationships: working } : state;
   }
 
-  combatBark(pawn: Pawn, kind: CombatBarkKind, foeName: string | undefined, turn: number): void {
+  combatBark(pawn: Pawn, kind: CombatBarkKind, foe: Pawn | Mob, turn: number): void {
     if (pawn.isAlive === false || !pawn.position) return;
     if (turn - (_lastBark.get(pawn.id) ?? -Infinity) < BARK_COOLDOWN) return;
     if (barkHash(pawn.id, turn, BARK_CHANCE_SALT[kind]) >= BARK_CHANCE[kind]) return;
     _lastBark.set(pawn.id, turn);
-    const text = pickBark(kind, foeName, barkHash(pawn.id, turn, BARK_LINE_SALT));
+    const text = pickBark(kind, foeName(foe), barkHash(pawn.id, turn, BARK_LINE_SALT));
     if (!text) return;
     simLog.pushCombatText({
       worldX: pawn.position.x,

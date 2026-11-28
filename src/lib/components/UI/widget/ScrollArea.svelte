@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
+  import { wheelScrollX } from '$lib/actions/wheelScrollX';
 
   let {
     class: className = '',
@@ -25,6 +26,7 @@
   class="scroll-area {className}"
   class:horizontal
   use:autohideScroll={idleMs}
+  {@attach horizontal && wheelScrollX}
 >
   {@render children?.()}
 </div>

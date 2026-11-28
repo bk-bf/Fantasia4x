@@ -4,20 +4,38 @@ import {
   positionHash,
   spriteAt,
   type PaintedKind,
+  type PaintedPieces,
   type PaintedSprite,
   type PaintedTileset,
-  type PaintedVariant
+  type PaintedVariant,
+  TREE_AGES,
+  type TreeAge,
+  type TreeSeason
 } from './manifest.js';
+
+import { pawnLook, type PawnLookOf, type PawnLookPool } from './pawnLook.js';
 
 export { PAINTED_TILES } from './flag.js';
 
 let active: PaintedTileset | null = null;
+let groundIds: string[] = [];
+let groundIndex = new Map<string, number>();
 
 const NO_PAINT = {};
 const ANY_ID = '*';
 
 export function setPaintedTileset(tileset: PaintedTileset | null): void {
   active = tileset;
+  groundIds = [...(tileset?.lookup.get('subterrain')?.keys() ?? [])];
+  groundIndex = new Map(groundIds.map((id, i) => [id, i + 1]));
+}
+
+export function paintedGroundKind(subType: string): number {
+  return groundIndex.get(subType) ?? 0;
+}
+
+export function paintedGroundIds(): readonly string[] {
+  return groundIds;
 }
 
 export function paintedTileset(): PaintedTileset | null {
@@ -35,6 +53,42 @@ export function paintedTile(
   return spriteAt(pickVariant(variants, positionHash(x, y)), x, y);
 }
 
+export function paintedTree(
+  id: string,
+  age: TreeAge,
+  season: TreeSeason,
+  x: number,
+  y: number
+): PaintedSprite | undefined {
+  const tree = active?.trees.get(id);
+  const variants = (tree?.[age] ?? tree?.mature)?.[season];
+  return variants && spriteAt(pickVariant(variants, positionHash(x, y)), x, y);
+}
+
+export function paintedElder(id: string): boolean {
+  return !!active?.trees.get(id)?.elder;
+}
+
+export function paintedTreeTurns(id: string, a: TreeSeason, b: TreeSeason): boolean {
+  const tree = active?.trees.get(id);
+  return !!tree && TREE_AGES.some((age) => tree[age]?.[a][0] !== tree[age]?.[b][0]);
+}
+
+export function paintedScenery(id: string, x: number, y: number): PaintedSprite | undefined {
+  const variants = active?.scenery.get(id);
+  return variants && spriteAt(pickVariant(variants, positionHash(x, y)), x, y);
+}
+
+export function paintedTileIn(
+  kind: PaintedKind,
+  id: string,
+  state: string | undefined,
+  x: number,
+  y: number
+): PaintedSprite | undefined {
+  return (state && paintedTile(kind, `${id}:${state}`, x, y)) || paintedTile(kind, id, x, y);
+}
+
 export function paintedEntity(
   kind: PaintedKind,
   id: string | undefined,
@@ -43,4 +97,38 @@ export function paintedEntity(
   const ofKind = active?.lookup.get(kind);
   const variants = (id === undefined ? undefined : ofKind?.get(id)) ?? ofKind?.get(ANY_ID);
   return variants ? pickVariant(variants, idHash(entityId)).entity : NO_PAINT;
+}
+
+export function paintedPawn(
+  pawn: PawnLookOf,
+  pool: PawnLookPool
+): PaintedVariant['entity'] | Record<string, never> {
+  const look = active && pawnLook(active.map, pawn, pool);
+  return (look && active?.sprites.get(look)?.entity) || NO_PAINT;
+}
+
+export function paintedPieces(set: string): PaintedPieces | undefined {
+  return active?.pieces.get(set);
+}
+
+export function pieceLayout(
+  pieces: PaintedPieces,
+  isMass: (x: number, y: number) => boolean,
+  x: number,
+  y: number
+): number {
+  let layout = 0;
+  pieces.neighbours.forEach(([dx, dy], bit) => {
+    if (isMass(x + dx, y + dy)) layout |= 1 << bit;
+  });
+  return layout;
+}
+
+export function paintedPiece(
+  pieces: PaintedPieces,
+  isMass: (x: number, y: number) => boolean,
+  x: number,
+  y: number
+): PaintedSprite {
+  return spriteAt(pieces.layouts[pieceLayout(pieces, isMass, x, y)], x, y);
 }

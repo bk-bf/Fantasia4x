@@ -1,11 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fade } from 'svelte/transition';
   import { gameState, currentTurn } from '$lib/stores/gameState';
   import { dayIndexForTurn } from '$lib/game/services/EnvironmentService';
+  import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
+  import KvRow from '$lib/components/UI/widget/KvRow.svelte';
+  import ModalWindow from '$lib/components/UI/window/ModalWindow.svelte';
 
-  const lost = $derived($gameState.deadPawns?.length ?? 0);
+  const dead = $derived($gameState.deadPawns ?? []);
   const days = $derived(Math.max(1, dayIndexForTurn($currentTurn ?? 0)));
+  const home = $derived($gameState.culture?.name);
+  let busy = $state(false);
 
   onMount(() => {
     gameState.pauseGame();
@@ -14,75 +18,43 @@
   function restart() {
     gameState.resetGame();
   }
+  async function toMenu() {
+    if (busy) return;
+    busy = true;
+    await gameState.goToMainMenu();
+  }
 </script>
 
-<div class="game-over" transition:fade={{ duration: 250 }}>
-  <div class="box">
-    <div class="title">GAME OVER</div>
-    <div class="subtitle">Your colony has perished.</div>
-    <div class="stats">
-      <span>{lost} colonist{lost === 1 ? '' : 's'} lost</span>
-      <span class="sep">·</span>
-      <span>survived {days} day{days === 1 ? '' : 's'}</span>
-    </div>
-    <button class="restart" onclick={restart}>RESTART</button>
+<ModalWindow id="gameover" title="The colony is lost" width={380} onclose={toMenu}>
+  <p class="lore">
+    The last fire{home ? ` at ${home}` : ''} has gone out. Nobody is left to bank it.
+  </p>
+  <div class="facts">
+    <KvRow label="Souls lost">{dead.length}</KvRow>
+    <KvRow label="Days endured">{days}</KvRow>
+    {#if dead.length > 0}
+      <KvRow label="Last to fall">{dead[dead.length - 1].name}</KvRow>
+    {/if}
   </div>
-</div>
+  <div class="foot">
+    <ChromeButton onclick={toMenu} disabled={busy}>Main menu</ChromeButton>
+    <ChromeButton kind="verb" onclick={restart} disabled={busy}>Begin again</ChromeButton>
+  </div>
+</ModalWindow>
 
 <style>
-  .game-over {
-    position: fixed;
-    inset: 0;
-    z-index: 1001;
-    background: var(--bg);
+  .lore {
+    margin: 0;
+    color: var(--text-dim);
+    line-height: 17px;
+  }
+  .facts {
+    margin: 6px 0 4px;
+  }
+  .foot {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-mono);
-  }
-  .box {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    width: min(360px, 70vw);
-    align-items: center;
-    text-align: center;
-  }
-  .title {
-    color: var(--danger, #c0392b);
-    font-size: 23px;
-    letter-spacing: 0.5em;
-    text-indent: 0.5em;
-  }
-  .subtitle {
-    color: var(--text);
-    font-size: 14px;
-    letter-spacing: 0.1em;
-  }
-  .stats {
-    color: var(--text-muted, #555);
-    font-size: 12px;
-    letter-spacing: 0.12em;
-    display: flex;
-    gap: 8px;
-  }
-  .sep {
-    opacity: 0.5;
-  }
-  .restart {
-    margin-top: 8px;
-    background: var(--bg-panel);
-    color: var(--accent-hi);
-    border: 1px solid var(--border);
-    font-family: var(--font-mono);
-    font-size: 13px;
-    letter-spacing: 0.25em;
-    text-indent: 0.25em;
-    padding: 8px 24px;
-    cursor: pointer;
-  }
-  .restart:hover {
-    background: var(--accent-hi);
-    color: var(--bg);
+    justify-content: flex-end;
+    gap: 4px;
+    margin-top: 10px;
   }
 </style>

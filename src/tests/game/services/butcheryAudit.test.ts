@@ -8,8 +8,7 @@ import { buildingService } from '$lib/game/services/BuildingService';
 const BUTCHERY_STATIONS = [
   { id: 'butcher_spot' },
   { id: 'dressing_stone' },
-  { id: 'flensing_table' },
-  { id: 'sanguinary_altar' }
+  { id: 'flensing_table' }
 ];
 const KNIVES = { flint_knife: 3, bone_cleaver: 3, iron_butchery_kit: 3, steel_butchery_kit: 3 };
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
@@ -245,23 +244,17 @@ describe('butchery', () => {
     expect(stk(s).antler_rack ?? 0, 'deer butchery drops antlers').toBeGreaterThan(0);
     expect(stk(s).curved_horn ?? 0, 'goat butchery drops horns').toBeGreaterThan(0);
 
-    for (const item of ['fang_charm', 'fang_arrow', 'barbed_bone_arrow'])
+    for (const item of ['fang_arrow', 'barbed_bone_arrow'])
       s.command({ type: 'craftItem', payload: { itemId: item } } as never);
     for (
       let i = 0;
-      i < 30 &&
-      !(
-        (stk(s).fang_charm ?? 0) > 0 &&
-        (stk(s).fang_arrow ?? 0) > 0 &&
-        (stk(s).barbed_bone_arrow ?? 0) > 0
-      );
+      i < 30 && !((stk(s).fang_arrow ?? 0) > 0 && (stk(s).barbed_bone_arrow ?? 0) > 0);
       i++
     )
       s.tick(400);
     console.log(
-      `[ANATOMY] crafts: fang_charm=${stk(s).fang_charm ?? 0} fang_arrow=${stk(s).fang_arrow ?? 0} barbed_bone_arrow=${stk(s).barbed_bone_arrow ?? 0}`
+      `[ANATOMY] crafts: fang_arrow=${stk(s).fang_arrow ?? 0} barbed_bone_arrow=${stk(s).barbed_bone_arrow ?? 0}`
     );
-    expect(stk(s).fang_charm ?? 0, 'great_fang + claws → fang charm').toBeGreaterThan(0);
     expect(stk(s).fang_arrow ?? 0, 'great_fang → fang-tipped arrows').toBeGreaterThan(0);
     expect(stk(s).barbed_bone_arrow ?? 0, 'antler/horn/claw → barbed bone arrows').toBeGreaterThan(
       0

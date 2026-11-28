@@ -1,4 +1,6 @@
-import { writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
+import { isThemeId, type ThemeId } from '$lib/components/UI/theme/themes';
+import { fluidTuning } from './fluidTuning';
 
 const COLLAPSED_RES_CATS_KEY = 'fx.resourcePanel.collapsedCategories';
 const HIDE_EMPTY_RES_CATS_KEY = 'fx.resourcePanel.hideEmptyCategories';
@@ -66,6 +68,8 @@ export const hideEmptyResourceCategories = createPersistedBool(HIDE_EMPTY_RES_CA
 
 export const resourcesMinimized = createPersistedBool('fx.layout.resourcesMin', false);
 export const chronicleMinimized = createPersistedBool('fx.layout.chronicleMin', false);
+export const resourcesHidden = createPersistedBool('fx.layout.resourcesHidden', false);
+export const chronicleHidden = createPersistedBool('fx.layout.chronicleHidden', false);
 
 export const hideSidebars = createPersistedBool(HIDE_SIDEBARS_KEY, true);
 
@@ -105,7 +109,28 @@ export const weatherEffects = createPersistedBool('fx.gfx.weather', true);
 
 export const dayNightTint = createPersistedBool('fx.gfx.dayNightTint', true);
 
+export const vignetteOn = createPersistedBool('fx.gfx.vignette', true);
+export const windSwayOn = createPersistedBool('fx.debug.sway', true);
+export const waveWaterOn = createPersistedBool('fx.debug.waves', true);
+export const waveStrength = createPersistedNumber('fx.debug.waveStrength', 100);
+export const mapMotion = derived(
+  [windSwayOn, waveWaterOn, waveStrength, fluidTuning],
+  ([sway, waves, strength, fluids]) => ({
+    sway,
+    waves,
+    waveMix: strength / 100,
+    fluids
+  })
+);
+
 export const showDialogBubbles = createPersistedBool('fx.gfx.dialogBubbles', false);
+
+export const conditionIcons = createPersistedBool('fx.ui.conditionIcons', true);
+export const conditionText = createPersistedBool('fx.ui.conditionText', true);
+
+export const LABEL_SIZE = { min: 50, max: 200, step: 50 } as const;
+export const floaterSize = createPersistedNumber('fx.ui.floaterSize', 100);
+export const bubbleSize = createPersistedNumber('fx.ui.bubbleSize', 100);
 
 export const showFps = createPersistedBool('fx.display.showFps', true);
 export const showTps = createPersistedBool('fx.display.showTps', true);
@@ -124,3 +149,47 @@ export const masterVolume = createPersistedNumber('fx.audio.master', 70);
 export const musicVolume = createPersistedNumber('fx.audio.music', 70);
 export const sfxVolume = createPersistedNumber('fx.audio.sfx', 80);
 export const ambientVolume = createPersistedNumber('fx.audio.ambient', 70);
+
+function createPersistedChoice<T extends string>(
+  key: string,
+  fallback: T,
+  valid: (v: string) => v is T
+) {
+  const load = (): T => {
+    if (typeof localStorage === 'undefined') return fallback;
+    const raw = localStorage.getItem(key);
+    return raw !== null && valid(raw) ? raw : fallback;
+  };
+  const { subscribe, set } = writable<T>(load());
+  return {
+    subscribe,
+    set: (v: T) => {
+      set(v);
+      if (typeof localStorage === 'undefined') return;
+      try {
+        localStorage.setItem(key, v);
+      } catch {
+        return;
+      }
+    }
+  };
+}
+
+export const uiTheme = createPersistedChoice<ThemeId>('fx.ui.theme', 'timber', isThemeId);
+
+export type TipPlacement = 'cursor' | 'window';
+export const isTipPlacement = (v: string): v is TipPlacement => v === 'cursor' || v === 'window';
+export const tipPlacement = createPersistedChoice<TipPlacement>(
+  'fx.ui.tipPlacement',
+  'cursor',
+  isTipPlacement
+);
+
+export type TileTipStyle = 'hidden' | 'transparent' | 'panel';
+export const isTileTipStyle = (v: string): v is TileTipStyle =>
+  v === 'hidden' || v === 'transparent' || v === 'panel';
+export const tileTipStyle = createPersistedChoice<TileTipStyle>(
+  'fx.ui.tileTipStyle',
+  'panel',
+  isTileTipStyle
+);

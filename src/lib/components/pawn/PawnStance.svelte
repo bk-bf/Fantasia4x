@@ -7,9 +7,13 @@
 
   type Stance = NonNullable<Pawn['combatStance']>;
   const STANCES: { id: Stance; label: string; title: string }[] = [
-    { id: 'aggressive', label: 'AGGRO', title: 'Engage any hostile within vision range' },
-    { id: 'defensive', label: 'DEF', title: 'Only fight once a hostile is adjacent (default)' },
-    { id: 'flee', label: 'FLEE', title: 'Retreat as soon as a hostile is seen' }
+    { id: 'aggressive', label: 'Aggressive', title: 'Engage any hostile within vision range' },
+    {
+      id: 'defensive',
+      label: 'Defensive',
+      title: 'Only fight once a hostile is adjacent (default)'
+    },
+    { id: 'flee', label: 'Flee', title: 'Retreat as soon as a hostile is seen' }
   ];
 
   const current = $derived(pawn.combatStance ?? 'defensive');
@@ -19,4 +23,4 @@
   }
 </script>
 
-<SegmentedRow label="STANCE" options={STANCES} value={current} onSelect={setStance} />
+<SegmentedRow label="Stance" options={STANCES} value={current} onSelect={setStance} />

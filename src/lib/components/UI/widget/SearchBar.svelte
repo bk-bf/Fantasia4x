@@ -3,6 +3,9 @@
 </script>
 
 <script lang="ts">
+  import { chrome } from '$lib/pixelArt/chrome';
+  import PixelGlyph from './PixelGlyph.svelte';
+
   let {
     value = $bindable(''),
     placeholder = 'search…',
@@ -12,7 +15,7 @@
     value?: string;
     placeholder?: string;
     cacheKey?: string;
-    variant?: 'box' | 'inline';
+    variant?: 'box' | 'inline' | 'well';
   } = $props();
 
   let restored = false;
@@ -29,12 +32,23 @@
   });
 </script>
 
-<div class="search-bar" class:inline={variant === 'inline'}>
+{#snippet field()}
   <input type="text" {placeholder} bind:value spellcheck="false" autocomplete="off" />
   {#if value}
     <button class="search-clear" title="clear search" onclick={() => (value = '')}>×</button>
   {/if}
-</div>
+{/snippet}
+
+{#if variant === 'well'}
+  <label class="search-bar well" {@attach chrome('well')}>
+    <PixelGlyph name="eye" />
+    {@render field()}
+  </label>
+{:else}
+  <div class="search-bar" class:inline={variant === 'inline'}>
+    {@render field()}
+  </div>
+{/if}
 
 <style>
   .search-bar {
@@ -73,6 +87,26 @@
   .search-bar.inline input:focus {
     border-color: transparent;
     background: var(--bg-active, var(--bg-panel));
+  }
+  .search-bar.well {
+    gap: 6px;
+    width: 190px;
+    height: 20px;
+    padding: 0 7px;
+    color: var(--text-muted);
+  }
+  .search-bar.well input {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    padding: 0 14px 0 0;
+    border: none;
+    background: none;
+    font: 16px/18px var(--font-pixel);
+    letter-spacing: 0.6px;
+  }
+  .search-bar.well input:focus {
+    background: none;
   }
   .search-clear {
     position: absolute;

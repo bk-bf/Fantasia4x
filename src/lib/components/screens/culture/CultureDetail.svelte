@@ -1,189 +1,117 @@
 <script lang="ts">
+  import { DISPOSITION_TONE } from '$lib/components/util/dispositionTone';
   import type { Culture, CultureRelation } from '$lib/game/core/types';
   import { CORE_STATS } from '$lib/game/core/types';
-  import StatBar from '$lib/components/UI/widget/StatBar.svelte';
+  import type { RampName } from '$lib/pixelArt/palette';
   import TraitCards from '$lib/components/pawn/TraitCards.svelte';
+  import PanelTitle from '$lib/components/UI/widget/PanelTitle.svelte';
+  import Well from '$lib/components/UI/widget/Well.svelte';
+  import KvRow from '$lib/components/UI/widget/KvRow.svelte';
+  import MeterRow from '$lib/components/UI/widget/MeterRow.svelte';
 
-  export let culture: Culture;
-  export let knownCultures: Culture[];
-  export let relations: CultureRelation[];
-  export let headcount = 0;
+  let {
+    culture,
+    knownCultures,
+    relations,
+    headcount = 0
+  }: {
+    culture: Culture;
+    knownCultures: Culture[];
+    relations: CultureRelation[];
+    headcount?: number;
+  } = $props();
 
-  function traitStatBonus(r: Culture, stat: string): number {
+  function traitStatBonus(c: Culture, stat: string): number {
     let b = 0;
-    for (const t of r.guaranteedTraits) {
+    for (const t of c.guaranteedTraits)
       b += (t.effects as Record<string, number>)[`${stat}Bonus`] ?? 0;
-
-    }
     return b;
   }
 
-  function statColor(avg: number): string {
-    if (avg >= 15) return '#4CAF50';
-    if (avg >= 12) return '#FFA726';
-    return '#9E9E9E';
-  }
+  const statRamp = (avg: number): RampName => (avg >= 15 ? 'leaf' : avg >= 12 ? 'honey' : 'ember');
 
-  const DISPOSITION_COLOR: Record<CultureRelation['disposition'], string> = {
-    allied: '#4CAF50',
-    friendly: '#8BC34A',
-    neutral: '#9E9E9E',
-    wary: '#FFA726',
-    hostile: '#E53935'
-  };
+  let relViews = $derived(
+    relations
+      .filter((rel) => rel.a === culture.id || rel.b === culture.id)
+      .map((rel) => {
+        const otherId = rel.a === culture.id ? rel.b : rel.a;
+        const other = knownCultures.find((c) => c.id === otherId);
+        return other ? { other, score: rel.score, disposition: rel.disposition } : null;
+      })
+      .filter((v) => !!v)
+      .sort((a, b) => b.score - a.score)
+  );
 
-  $: relViews = relations
-    .filter((rel) => rel.a === culture.id || rel.b === culture.id)
-    .map((rel) => {
-      const otherId = rel.a === culture.id ? rel.b : rel.a;
-      const other = knownCultures.find((r) => r.id === otherId);
-      return other ? { other, score: rel.score, disposition: rel.disposition } : null;
-    })
-    .filter(
-      (v): v is { other: Culture; score: number; disposition: CultureRelation['disposition'] } =>
-        !!v
-    )
-    .sort((a, b) => b.score - a.score);
+  let body = $derived(culture.physicalTraits);
 </script>
 
-<div class="detail">
+<PanelTitle>{culture.name}<em>— {culture.lore.epithet}</em></PanelTitle>
+<p class="lore">{culture.lore.description}</p>
 
-  <div class="section-hdr">| {culture.name.toUpperCase()} — {culture.lore.epithet}</div>
-  <p class="lore-desc">{culture.lore.description}</p>
-  <div class="row">
-    <span class="lbl">ARCHETYPE</span><span class="val">{culture.archetype}</span>
-  </div>
-  <div class="row"><span class="lbl">COLONY</span><span class="val">{headcount} living</span></div>
-  {#if culture.discoveredVia}
-    <div class="row">
-      <span class="lbl">KNOWN VIA</span><span class="val">{culture.discoveredVia}</span>
-    </div>
-  {/if}
-  <div class="row">
-    <span class="lbl">HOMELAND</span><span class="val">{culture.lore.homeland}</span>
-  </div>
-  <div class="row">
-    <span class="lbl">TEMPERAMENT</span><span class="val">{culture.lore.temperament}</span>
-  </div>
-  <div class="row">
-    <span class="lbl">BELIEF</span><span class="val small">{culture.lore.belief}</span>
-  </div>
+<div class="g2">
+  <Well title="People">
+    <KvRow label="Archetype">{culture.archetype}</KvRow>
+    <KvRow label="Colony">{headcount} living</KvRow>
+    {#if culture.discoveredVia}<KvRow label="Known via">{culture.discoveredVia}</KvRow>{/if}
+    <KvRow label="Homeland">{culture.lore.homeland}</KvRow>
+    <KvRow label="Temperament">{culture.lore.temperament}</KvRow>
+    <KvRow label="Belief">{culture.lore.belief}</KvRow>
+    <h5>Physique</h5>
+    <KvRow label="Build">{body.size}</KvRow>
+    <KvRow label="Height">{body.heightRange[0]}–{body.heightRange[1]} cm</KvRow>
+    <KvRow label="Weight">{body.weightRange[0]}–{body.weightRange[1]} kg</KvRow>
+  </Well>
 
-
-  <div class="section-hdr">| PHYSIQUE <span class="hint">(rolled per pawn)</span></div>
-  <div class="row">
-    <span class="lbl">BUILD</span><span class="val">{culture.physicalTraits.size}</span>
-  </div>
-  <div class="row">
-    <span class="lbl">HEIGHT</span>
-    <span class="val"
-      >{culture.physicalTraits.heightRange[0]}–{culture.physicalTraits.heightRange[1]} cm</span
-    >
-  </div>
-  <div class="row">
-    <span class="lbl">WEIGHT</span>
-    <span class="val"
-      >{culture.physicalTraits.weightRange[0]}–{culture.physicalTraits.weightRange[1]} kg</span
-    >
-  </div>
-
-
-  <div class="section-hdr">| STATS <span class="hint">(each pawn rolls in range)</span></div>
-  {#each CORE_STATS as { id: stat, abbr }}
-    {#if culture.statRanges[stat]}
+  <Well title="Stats" hint="each born within">
+    {#each CORE_STATS as { id: stat, abbr } (stat)}
       {@const range = culture.statRanges[stat]}
-      {@const bonus = traitStatBonus(culture, stat)}
-      {@const effMax = range[1] + bonus}
-      {@const avg = (range[0] + range[1]) / 2 + bonus}
-      <StatBar
-        label={abbr}
-        value={effMax}
-        max={22}
-        color={statColor(avg)}
-        valueText={bonus !== 0
-          ? `${range[0]}–${range[1]} (${bonus > 0 ? '+' : ''}${bonus} → ${range[0] + bonus}–${effMax})`
-          : `${range[0]}–${range[1]}`}
-      />
-    {/if}
-  {/each}
+      {#if range}
+        {@const bonus = traitStatBonus(culture, stat)}
+        <MeterRow
+          label={abbr}
+          value={(range[1] + bonus) / 22}
+          ramp={statRamp((range[0] + range[1]) / 2 + bonus)}
+          title={bonus ? `${range[0] + bonus}–${range[1] + bonus} with traits` : undefined}
+        >
+          {range[0]}–{range[1]}{#if bonus}&nbsp;<b class:good={bonus > 0} class:neg={bonus < 0}
+              >{bonus > 0 ? '+' : ''}{bonus}</b
+            >{/if}
+        </MeterRow>
+      {/if}
+    {/each}
+  </Well>
+</div>
 
-
-  <div class="section-hdr">
-    | TRAITS ({culture.guaranteedTraits.length} identity + {culture.culturalTraitPool.length} possible)
-  </div>
+<Well
+  title="Traits"
+  hint="{culture.guaranteedTraits.length} shared · {culture.culturalTraitPool.length} possible"
+>
   <TraitCards
     traits={[...culture.guaranteedTraits, ...culture.culturalTraitPool]}
     guaranteedCount={culture.guaranteedTraits.length}
   />
+</Well>
 
-
-  {#if relViews.length > 0}
-    <div class="section-hdr">| RELATIONS</div>
-    {#each relViews as rv}
-      <div class="row">
-        <span class="lbl rel-name">{rv.other.name}</span>
-        <span class="val" style="color: {DISPOSITION_COLOR[rv.disposition]}"
+{#if relViews.length > 0}
+  <Well title="Relations">
+    {#each relViews as rv (rv.other.id)}
+      <KvRow label={rv.other.name}>
+        <span style:color={DISPOSITION_TONE[rv.disposition]}
           >{rv.disposition} ({rv.score > 0 ? '+' : ''}{rv.score})</span
         >
-      </div>
+      </KvRow>
     {/each}
-  {/if}
-</div>
+  </Well>
+{/if}
 
 <style>
-  .detail {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text);
+  b {
+    font-weight: normal;
   }
-  .section-hdr {
-    padding: 4px 8px;
-    background: var(--bg-panel);
-    color: var(--accent-hi);
-    letter-spacing: 0.06em;
-    border-bottom: 1px solid var(--border);
-    border-top: 1px solid var(--border);
-    margin-top: 1px;
+  .good {
+    color: var(--pos);
   }
-  .hint {
-    color: var(--text-muted);
-    font-style: italic;
-    letter-spacing: 0;
-  }
-  .lore-desc {
-    padding: 8px 10px;
-    margin: 0;
-    color: var(--text);
-    line-height: 1.55;
-    font-style: italic;
-    border-bottom: 1px solid var(--border);
-  }
-  .row {
-    display: flex;
-    padding: 2px 8px;
-    align-items: baseline;
-    gap: 6px;
-  }
-  .row:hover {
-    background: var(--bg-hover);
-  }
-  .lbl {
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    width: 110px;
-    flex-shrink: 0;
-  }
-  .rel-name {
-    text-transform: none;
-    color: var(--text);
-  }
-  .val {
-    margin-left: auto;
-    text-align: right;
-  }
-  .val.small {
-    font-style: italic;
-    color: var(--text-muted);
+  .neg {
+    color: var(--neg);
   }
 </style>

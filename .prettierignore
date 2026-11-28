@@ -28,3 +28,5 @@ src/lib/spatial-core-pkg
 # Rust build outputs (the WASM crates). Prettier chokes reading the large
 # binary artifacts under target/ ("Invalid string length") and must never touch generated Rust.
 **/target/
+
+mockups/tileset/conditions-data.js

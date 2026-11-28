@@ -5,15 +5,15 @@
   export let rel: PawnRelationship;
 
   const KIND_COLOR: Record<RelationEventKind, string> = {
-    seed: '#8a8a8a',
-    talk: '#6aa0d0',
-    time: '#7a8a6a',
-    rescue: '#5ab070',
-    tend: '#5ab070',
-    battle: '#d0a040',
-    grief: '#a070c0',
-    strife: '#cc5544',
-    romance: '#e06699'
+    seed: 'var(--text-muted)',
+    talk: 'var(--cold)',
+    time: 'var(--text-dim)',
+    rescue: 'var(--pos)',
+    tend: 'var(--pos)',
+    battle: 'var(--accent-hi)',
+    grief: 'var(--text-dim)',
+    strife: 'var(--neg)',
+    romance: 'var(--neg)'
   };
 
   $: entries = [...(rel.log ?? [])].reverse();
@@ -80,7 +80,7 @@
     display: grid;
     grid-template-columns: 52px 1fr 40px;
     gap: 6px;
-    font-size: 11px;
+    font-size: inherit;
     line-height: 1.4;
   }
   button.brk-row {
@@ -108,7 +108,7 @@
     gap: 1px;
   }
   .ts-line {
-    font-size: 11px;
+    font-size: inherit;
     font-style: italic;
     opacity: 0.9;
     line-height: 1.4;
@@ -131,13 +131,13 @@
     color: var(--text-dim, #888);
   }
   .brk-delta.pos {
-    color: #68a030;
+    color: var(--pos);
   }
   .brk-delta.neg {
-    color: #cc5544;
+    color: var(--neg);
   }
   .brk-empty {
-    font-size: 11px;
+    font-size: inherit;
     font-style: italic;
     color: var(--text-dim, #777);
   }

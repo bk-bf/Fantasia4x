@@ -2,59 +2,30 @@ import { uiState } from '$lib/stores/uiState.js';
 import { gameState } from '$lib/stores/gameState.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import { type CreatureDefinition, getCreatureById } from '$lib/game/core/defs/creatures.js';
-import { RELAXATION_NOTEWORTHY, WETNESS_NOTEWORTHY } from '$lib/components/util/pawnUtils';
-import type { Pawn, Mob, Injury } from '$lib/game/core/types.js';
-import { CORE_STATS } from '$lib/game/core/types.js';
+import type { Pawn, Mob, MobState, Injury, LimbState, LimbId } from '$lib/game/core/types.js';
 import { limbLabel, partLabel } from '$lib/components/util/bodyLabels';
 import { woundById } from '$lib/game/core/defs/wounds';
-import { getActiveConditionViews } from '$lib/components/util/conditionInfo.js';
-import { pawnService } from '$lib/game/services/PawnService.js';
 import { pawnStatService } from '$lib/game/services/PawnStatService.js';
 import { itemService } from '$lib/game/services/ItemService.js';
 import type { DryingStatus } from '$lib/game/services/ItemService.js';
 import { jobService } from '$lib/game/services/JobService.js';
 import { stateLabel } from '$lib/game/core/defs/states';
-import {
-  getConditionCurrentStage,
-  conditionStatMultipliers
-} from '$lib/game/core/rules/body/conditions.js';
+import { getConditionCurrentStage } from '$lib/game/core/rules/body/conditions.js';
 import type { GrowthDirection } from '$lib/game/core/rules/world/cropHealth.js';
 import type {
-  SelectedEntityModel,
-  EntityBar,
-  EntityButton,
-  EntityStat,
   HealthModel,
-  MoodModel,
   HealthLimb,
   HealthPart,
   ArmorModel,
   ArmorLimb,
   ArmorPart
-} from '$lib/components/UI/hud/SelectedEntityCard.svelte';
+} from '$lib/components/UI/hud/entityCard';
 import { PART_DEF_MAP } from '$lib/game/core/defs/bodyParts.js';
 import type { StatPillView, StatPillRow } from '$lib/components/UI/widget/StatPills.svelte';
 import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
 
 function woundWarn(inj: Injury): boolean {
   return inj.infected || inj.severity !== 'minor';
-}
-
-export function moveSpeedStat(entity: Pawn | Mob): EntityStat {
-  return {
-    label: 'MOVE',
-    value: `${pawnService.getMoveSpeed(entity).tilesPerSecond.toFixed(1)}/s`
-  };
-}
-
-export function coreStats(entity: Pawn | Mob): EntityStat[] {
-  const sm = conditionStatMultipliers(entity);
-  const cell = (label: string, raw: number, mult: number): EntityStat => {
-    const eff = Math.round(raw * mult);
-    return { label, value: eff, warn: eff < raw };
-  };
-  const s = entity.stats;
-  return CORE_STATS.map(({ id, abbr }) => cell(abbr, s[id], id === 'charisma' ? 1 : sm[id]));
 }
 
 function bestArmorDefense(entity: Pawn | Mob): number {
@@ -75,7 +46,7 @@ function bestArmorDefense(entity: Pawn | Mob): number {
   return best;
 }
 
-const COMBAT_TINT = '#7f96a8';
+const COMBAT_TINT = 'var(--text)';
 
 function combatPills(entity: Pawn | Mob): StatPillView[] {
   const s = (id: string) => pawnStatService.evaluateStat(id, entity);
@@ -206,7 +177,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     health.push({
       label: 'Blood',
       value: bleed > 0 ? `${pct}% (${etaStr})` : `${pct}%`,
-      color: '#ee5544',
+      color: 'var(--neg)',
       warn: pct < 60 || bleed > 0,
       desc: bleed > 0 ? 'losing blood' : 'whole-body blood pool',
       rows
@@ -216,7 +187,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     health.push({
       label: 'Pain',
       value: `${Math.round(entity.pain ?? 0)}%`,
-      color: '#e07050',
+      color: 'var(--ember)',
       warn: (entity.pain ?? 0) >= 40,
       desc: 'rises with injuries, limb damage and bleeding — saps consciousness',
       rows: painLocationRows(entity)
@@ -227,7 +198,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     temp.push({
       label: 'Cold',
       value: `${Math.round(entity.needs?.coldExposure ?? 0)}%`,
-      color: '#4fc3f7',
+      color: 'var(--cold)',
       warn: true,
       desc: 'hypothermia exposure — rises while colder than your tolerance'
     });
@@ -236,7 +207,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     temp.push({
       label: 'Heat',
       value: `${Math.round(entity.needs?.heatExposure ?? 0)}%`,
-      color: '#fb8c00',
+      color: 'var(--ember)',
       warn: true,
       desc: 'heat-stroke exposure — rises while hotter than your tolerance'
     });
@@ -262,7 +233,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     {
       label: 'Cold tol',
       value: `≤${Math.round(tol.coldOnset)}°`,
-      color: '#4fc3f7',
+      color: 'var(--cold)',
       desc: 'cold meter starts rising below this temperature',
       rows: tolRows(
         'Comfort floor',
@@ -276,7 +247,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     {
       label: 'Heat tol',
       value: `≥${Math.round(tol.heatOnset)}°`,
-      color: '#fb8c00',
+      color: 'var(--ember)',
       desc: 'heat meter starts rising above this temperature',
       rows: tolRows(
         'Comfort ceiling',
@@ -296,9 +267,9 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
   return [...health, ...temp, ...combat];
 }
 
-export function buildHealthModel(entity: Pawn | Mob): HealthModel {
-  const limbs: HealthLimb[] = [];
-  for (const limb of entity.limbs ?? []) {
+export function hurtLimbs(all: LimbState[]): (HealthLimb & { id: LimbId })[] {
+  const limbs: (HealthLimb & { id: LimbId })[] = [];
+  for (const limb of all) {
     const parts: HealthPart[] = [];
     for (const part of limb.parts ?? []) {
       const hurt = part.isMissing || part.health < part.maxHp - 0.5 || part.injuries.length > 0;
@@ -323,6 +294,7 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
       limb.isMissing || Math.round(limb.health) < 100 || limb.bleedRate > 0 || parts.length > 0;
     if (!damaged) continue;
     limbs.push({
+      id: limb.id,
       label: limbLabel(limb.id),
       health: limb.health,
       missing: limb.isMissing,
@@ -330,7 +302,11 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
       parts
     });
   }
+  return limbs;
+}
 
+export function buildHealthModel(entity: Pawn | Mob): HealthModel {
+  const limbs = hurtLimbs(entity.limbs ?? []);
   const bleedRate = (entity.limbs ?? []).reduce((s, l) => s + (l.bleedRate ?? 0), 0);
   return {
     blood:
@@ -378,13 +354,6 @@ export function buildArmorModel(mob: Mob, def: CreatureDefinition): ArmorModel |
     )
   }));
   return { limbs };
-}
-
-export function entityDebugLabel(entity: { id: string; debugId?: number }): string {
-  if (import.meta.env.VITE_DEBUG_MODE !== 'true') return '';
-  if (entity.debugId != null) return ` #${entity.debugId}`;
-  const m = entity.id.match(/(\d+)(?!.*\d)/);
-  return m ? ` #${m[1]}` : ` #${entity.id.slice(-4)}`;
 }
 
 export function pawnStateLabel(p: Pawn): string {
@@ -469,159 +438,9 @@ export function toggleHuntMark(mobId: string) {
   gameState.command({ type: 'toggleHuntMark', payload: { mobId }, save: true });
 }
 
-export interface PawnCardDeps {
-  cameraFollowPawnId: string | null;
-  startMark: () => void;
-  armMove: () => void;
-  toggleFood: () => void;
-  foodOpen: boolean;
-  moodModel?: MoodModel;
-}
-
-export interface MobCardDeps {
-  cameraFollowMobId: string | null;
-  startMark: () => void;
-  colonyName?: string;
-}
-
-export function buildPawnCard(
-  pawn: Pawn,
-  selected: boolean,
-  deps: PawnCardDeps
-): SelectedEntityModel {
-  const { cameraFollowPawnId, startMark, armMove, toggleFood, foodOpen, moodModel } = deps;
-  const bars: EntityBar[] = [
-    { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
-    { label: 'REST', value: pawn.needs.fatigue, warn: pawn.needs.fatigue > 60 },
-    { label: 'THIRST', value: pawn.needs.thirst ?? 0, warn: (pawn.needs.thirst ?? 0) > 60 },
-    { label: 'HYGIENE', value: pawn.needs.hygiene ?? 0, warn: (pawn.needs.hygiene ?? 0) > 60 }
-  ];
-  if (pawn.maxBloodVolume) {
-    const curBV = pawn.bloodVolume ?? pawn.maxBloodVolume;
-    bars.push({
-      label: 'BLOOD',
-      value: Math.round((curBV / pawn.maxBloodVolume) * 100),
-      warn: curBV < pawn.maxBloodVolume * 0.6
-    });
-  }
-  if (pawn.maxStamina !== undefined) {
-    const curST = pawn.stamina ?? pawn.maxStamina;
-    bars.push({
-      label: 'STAMINA',
-      value: Math.round((curST / pawn.maxStamina) * 100),
-      warn: curST < pawn.maxStamina * 0.25
-    });
-  }
-  if ((pawn.needs.wetness ?? 0) > WETNESS_NOTEWORTHY) {
-    bars.push({ label: 'WETNESS', value: Math.round(pawn.needs.wetness ?? 0), color: '#4FA3D1' });
-  }
-  const relaxVal = pawn.needs.relaxation ?? 100;
-  if (relaxVal < RELAXATION_NOTEWORTHY) {
-    bars.push({
-      label: 'RELAXATION',
-      value: Math.round(relaxVal),
-      color: relaxVal >= 20 ? '#c8a030' : '#c86030',
-      warn: relaxVal < 20
-    });
-  }
-  const moodValue = moodModel ? Math.round(moodModel.mood) : Math.floor(pawn.state.mood);
-  const stats: EntityStat[] = [
-    ...coreStats(pawn),
-    moveSpeedStat(pawn),
-    { label: 'Mood', value: moodValue, warn: moodValue < 30 }
-  ];
-  const posMeta =
-    [
-      pawn.sex ? (pawn.sex === 'male' ? 'Male' : 'Female') : undefined,
-      pawn.age != null ? `${pawn.age} years` : undefined
-    ]
-      .filter(Boolean)
-      .join(', ') || undefined;
-  return {
-    name: pawn.name + entityDebugLabel(pawn),
-    status: pawn.socialBreak
-      ? pawn.socialBreak.kind === 'crisis'
-        ? 'in crisis'
-        : 'on a break'
-      : pawnStateLabel(pawn),
-    selected,
-    dismissable: selected,
-    stats,
-    conditionViews: getActiveConditionViews(pawn),
-    bars,
-    note:
-      (pawn.pendingGrowth?.length ?? 0) > 0
-        ? `★ growth ready${pawn.pendingGrowth!.length > 1 ? ` (${pawn.pendingGrowth!.length})` : ''}`
-        : undefined,
-    progress:
-      pawn.activeJob && pawn.currentState != null && PROGRESS_BAR_STATES.has(pawn.currentState)
-        ? (pawn.activeJob.progress ?? 0)
-        : undefined,
-    pos: selected ? (pawn.position ?? undefined) : undefined,
-    posMeta,
-    health: buildHealthModel(pawn),
-    moodModel,
-    buttons: selected
-      ? ([
-          {
-            label: 'VIEW',
-            onClick: () =>
-              uiState.update((s) => ({
-                ...s,
-                selectedPawnId: pawn.id,
-                pawnScreenTab: 'status',
-                currentScreen: 'pawns'
-              }))
-          },
-          {
-            label: cameraFollowPawnId === pawn.id ? 'UNFOLLOW' : 'FOLLOW',
-            active: cameraFollowPawnId === pawn.id,
-            onClick: () => uiState.setFollowPawn(cameraFollowPawnId === pawn.id ? null : pawn.id)
-          },
-          {
-            label: pawn.drafted ? 'DRAFTED' : 'DRAFT',
-            active: pawn.drafted ?? false,
-            onClick: () => toggleDraft(pawn.id)
-          },
-          ...(pawn.drafted ? [{ label: 'MOVE', onClick: () => armMove() }] : []),
-          {
-            label: 'WORK',
-            onClick: () =>
-              uiState.update((s) => ({
-                ...s,
-                selectedPawnId: pawn.id,
-                pawnScreenTab: null,
-                currentScreen: 'work'
-              }))
-          },
-          {
-            label: 'GEAR',
-            onClick: () =>
-              uiState.update((s) => ({
-                ...s,
-                selectedPawnId: pawn.id,
-                pawnScreenTab: 'gear',
-                currentScreen: 'pawns'
-              }))
-          },
-          {
-            label: 'FOOD',
-            active: foodOpen,
-            onClick: () => toggleFood()
-          },
-          {
-            label: 'MARK',
-            onClick: () => startMark()
-          }
-        ] satisfies EntityButton[])
-      : undefined,
-    onSelect: !selected
-      ? () => {
-          uiState.selectPawn(pawn.id);
-          uiState.selectMob(null);
-        }
-      : undefined
-  };
+export function openPawnWindow(pawnId: string, tab: 'status' | 'gear') {
+  uiState.update((s) => ({ ...s, selectedPawnId: pawnId, pawnScreenTab: tab }));
+  uiState.openWindow('pawns');
 }
 
 export function mobDisplayName(mob: Mob, def: CreatureDefinition): string {
@@ -634,89 +453,42 @@ export function mobDisplayName(mob: Mob, def: CreatureDefinition): string {
   return speciesLabel === def.name ? def.name : `${speciesLabel}, ${def.name}`;
 }
 
-export function buildMobCard(
-  mob: Mob,
-  def: CreatureDefinition,
-  selected: boolean,
-  deps: MobCardDeps
-): SelectedEntityModel {
-  const { cameraFollowMobId, startMark } = deps;
-  const bars: EntityBar[] = [
-    {
-      label: 'HUNGER',
-      value: mob.needs.hunger,
-      warn: mob.needs.hunger > 60
-    },
-    {
-      label: 'REST',
-      value: mob.needs.fatigue,
-      warn: mob.needs.fatigue > 60
-    },
-    {
-      label: 'BLOOD',
-      value: Math.round(
-        ((mob.bloodVolume ?? mob.maxBloodVolume ?? 100) / (mob.maxBloodVolume ?? 100)) * 100
-      ),
-      warn: (mob.bloodVolume ?? mob.maxBloodVolume ?? 100) / (mob.maxBloodVolume ?? 100) < 0.6
-    }
-  ];
-  if (mob.maxStamina !== undefined) {
-    const curST = mob.stamina ?? mob.maxStamina;
-    bars.push({
-      label: 'STAMINA',
-      value: Math.round((curST / mob.maxStamina) * 100),
-      warn: curST < mob.maxStamina * 0.25
-    });
-  }
-  const effStats = coreStats(mob);
-  return {
-    name: mobDisplayName(mob, def) + entityDebugLabel(mob),
-    flavor: mob.worldKinRelation ?? def.flavor,
-    status:
-      mob.state === 'Traveling' ? `Approaching ${deps.colonyName ?? 'the colony'}` : mob.state,
-    selected,
-    dismissable: selected,
-    stats: [effStats[0], effStats[1], moveSpeedStat(mob)],
-    conditionViews: getActiveConditionViews(mob),
-    bars,
-    note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
-      def.tameable ? ' · tameable' : ''
-    }${mob.age != null ? ` · ${mob.age} yrs` : ''}${
-      mob.sex ? ` · ${mob.sex === 'male' ? '♂' : '♀'}` : ''
-    }`,
-    pos: selected ? { x: mob.x, y: mob.y } : undefined,
-    health: buildHealthModel(mob),
-    armor: buildArmorModel(mob, def),
-    buttons: selected
-      ? ([
-          {
-            label: 'VIEW',
-            onClick: () => {
-              uiState.selectMob(mob.id);
-              uiState.setScreen('entities');
-            }
-          },
-          {
-            label: cameraFollowMobId === mob.id ? 'UNFOLLOW' : 'FOLLOW',
-            active: cameraFollowMobId === mob.id,
-            onClick: () => uiState.setFollowMob(cameraFollowMobId === mob.id ? null : mob.id)
-          },
-          {
-            label: mob.markedForHunt ? 'UNQUEUE' : 'HUNT',
-            active: mob.markedForHunt ?? false,
-            onClick: () => toggleHuntMark(mob.id)
-          },
-          {
-            label: 'MARK',
-            onClick: () => startMark()
-          }
-        ] satisfies EntityButton[])
-      : undefined,
-    onSelect: !selected
-      ? () => {
-          uiState.selectMob(mob.id);
-          uiState.selectPawn(null);
-        }
-      : undefined
-  };
+const MOB_STATE_LABELS: Record<MobState, string> = {
+  Wander: 'Wandering',
+  Alerted: 'On guard',
+  Attacking: 'Attacking',
+  Fleeing: 'Fleeing',
+  Traveling: 'Travelling',
+  Grazing: 'Grazing',
+  Startled: 'Startled',
+  Exhausted: 'Spent',
+  Tamed: 'Tame',
+  Sleeping: 'Asleep',
+  Foraging: 'Foraging',
+  Hunting: 'Hunting',
+  Eating: 'Eating',
+  Collapsed: 'Down',
+  Corpse: 'Dead'
+};
+
+export function mobStateLabel(mob: Mob, colonyName?: string): string {
+  return mob.state === 'Traveling'
+    ? `Approaching ${colonyName ?? 'the colony'}`
+    : MOB_STATE_LABELS[mob.state];
+}
+
+const TEMPERAMENT: Record<CreatureDefinition['behaviour'], string> = {
+  passive: 'shy',
+  neutral: 'wary',
+  aggressive: 'fierce'
+};
+
+export function mobTemperament(mob: Mob, def: CreatureDefinition): string {
+  return [
+    def.entityClass === 'mob' ? 'hostile' : TEMPERAMENT[def.behaviour],
+    def.tameable ? 'tameable' : null,
+    mob.age != null ? `${mob.age} yrs` : null
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }

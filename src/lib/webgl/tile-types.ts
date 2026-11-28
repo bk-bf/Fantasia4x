@@ -1,4 +1,5 @@
 import type { PaintedSprite } from './painted/manifest.js';
+import type { RiverCourse } from '$lib/game/core/types.js';
 
 export const BASE_TILE_PX = 16;
 
@@ -32,8 +33,22 @@ export interface TileData {
   rotation?: 0 | 90 | 180 | 270;
   scale?: number;
   painted?: PaintedSprite;
+  scenery?: boolean;
+  rock?: boolean;
+  underRock?: boolean;
+  ground?: number;
+  waterIce?: number;
+  river?: boolean;
+  riverCourse?: RiverCourse;
+  tufts?: readonly PaintedSprite[];
+  overlays?: readonly TileData[];
   dirty?: boolean;
   lastUpdated?: number;
+}
+
+export function withOverlays(tiles: TileData[]): TileData[] {
+  if (!tiles.some((t) => t.overlays)) return tiles;
+  return tiles.flatMap((t) => (t.overlays ? [t, ...t.overlays] : [t]));
 }
 
 export class GridCoords {

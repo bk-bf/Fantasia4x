@@ -4,6 +4,7 @@ import { GameGrid } from '$lib/webgl/game-grid';
 import type { FontAtlas } from '$lib/webgl/types';
 import type { ShaderManager } from '$lib/webgl/shaders';
 import type { CharacterRenderer } from '$lib/webgl/character-renderer';
+import { Webgl2Device } from '$lib/gpu/webgl2/device';
 
 const MAP = 128;
 const CHUNKS = (MAP / 32) * (MAP / 32);
@@ -34,7 +35,14 @@ function setup() {
     useProgram: () => true,
     setUniform: () => {}
   } as unknown as ShaderManager;
-  const renderer = new GridRenderer(gl, shaders, {} as CharacterRenderer, atlas, false, false);
+  const renderer = new GridRenderer(
+    new Webgl2Device(gl),
+    shaders,
+    {} as CharacterRenderer,
+    atlas,
+    false,
+    false
+  );
   const grid = new GameGrid();
   for (let y = 0; y < MAP; y++)
     for (let x = 0; x < MAP; x++)

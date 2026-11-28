@@ -5408,50 +5408,6 @@
     }
   },
   {
-    "id": "blue_clay",
-    "displayName": "Blue Clay",
-    "subterrain": "clay",
-    "walkable": true,
-    "charSpans": [
-      {
-        "sheet": "tiles",
-        "from": 64,
-        "to": 71
-      }
-    ],
-    "fg": "#ad5c21",
-    "spawn": {
-      "subterrains": {
-        "clay": 0.85,
-        "mud": 0.04,
-        "bog": 0.03,
-        "riverbank": 0.05
-      }
-    },
-    "nodeAmountRange": [
-      2,
-      4
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "dig",
-      "workCategory": "mining",
-      "workAmount": 54,
-      "toolRequirement": null,
-      "yields": [
-        {
-          "itemId": "blue_clay",
-          "min": 1,
-          "max": 3,
-          "skillId": "mining",
-          "skillMultiplier": 0.1
-        }
-      ]
-    }
-  },
-  {
     "id": "riverbank_deposit",
     "displayName": "Riverbank",
     "subterrain": "riverbank",

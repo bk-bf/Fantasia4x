@@ -1,5 +1,6 @@
+export const CREDITS_TAGLINE = 'a 4X colony chronicle';
+
 export const CREDITS: { role: string; lines: string[] }[] = [
-  { role: 'A 4X Colony Chronicle', lines: [] },
   { role: 'Design & Code', lines: ['bk'] },
   {
     role: 'Inspired by',
@@ -36,10 +37,12 @@ export const CREDITS: { role: string; lines: string[] }[] = [
       'Cinzel',
       'Dancing Script',
       'Jacquard 24',
+      'Jersey 10',
       'Jersey 20',
       'VT323',
       '— SIL Open Font License'
     ]
   },
-  { role: 'Audio via', lines: ['OpenGameArt.org', 'CC0 / CC-BY 4.0'] }
+  { role: 'Audio via', lines: ['OpenGameArt.org', 'CC0 / CC-BY 4.0'] },
+  { role: 'Thank you for playing', lines: [] }
 ];

@@ -27,8 +27,19 @@ export const RAMPS = {
   brass: ramp('#2a1c0a #47310e #6e4e14 #987219 #c29628 #e2bd48 #f7e38a'),
   inkwash: ramp('#1c130c #2c1e14 #3e2c1e #54402c #6e583e #8c7454'),
   ochre: ramp('#4a3410 #6e4e16 #94701e #b8922c #d4b44c #ecd480'),
-  verdigris: ramp('#12322c #1c4c42 #2c6c5c #44907a #6cb49a #a4d8c0')
+  verdigris: ramp('#12322c #1c4c42 #2c6c5c #44907a #6cb49a #a4d8c0'),
+  vellum: ramp('#6e5a3c #8c7650 #a89068 #c0a880 #d4c098 #e4d6b2 #f0e6c8'),
+  ember: ramp('#5a1a0c #8c2c10 #bc4a14 #e0781e #f6b23c #ffe89a'),
+  leaf: ramp('#1c3020 #2a482a #3c6436 #558246 #76a05a #a2c47a'),
+  blood: ramp('#3a0f12 #5e161a #8a2222 #b43a30 #d8604a #f09a7a'),
+  water: ramp('#12264a #1c3c6c #2c5890 #4a7cb4 #78a6d4 #b4d4ee'),
+  honey: ramp('#4a3408 #76540e #a47a16 #cca02a #e8c650 #f8e690'),
+  violet: ramp('#24143a #3a2058 #56307c #7648a0 #9c6cc0 #c4a0e0'),
+  vermilion: ramp('#4a1410 #741c14 #a02a18 #c8442a #e46e4a #f4a482'),
+  lapis: ramp('#101c44 #182c68 #24448e #3a62b0 #5e88cc #94b4e4')
 };
+
+export type RampName = keyof typeof RAMPS;
 
 export function pick(r: Ramp, t: number, x: number, y: number, spread = 0.7): Rgb {
   const n = r.length - 1;

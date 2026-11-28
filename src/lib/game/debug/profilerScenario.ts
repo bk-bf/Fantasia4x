@@ -9,7 +9,7 @@ import type {
 } from '../core/types';
 import { initialGameState } from '../core/state/initialState';
 import { generateWorld } from '../world/WorldGenerator';
-import { generatePawns } from '../entities/Pawns';
+import { generatePawns } from '../core/gen/pawnBuild';
 import { workService } from '../services/WorkService';
 import { entityService } from '../services/EntityService';
 import { buildingService } from '../services/BuildingService';

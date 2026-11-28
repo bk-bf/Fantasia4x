@@ -1,4 +1,5 @@
 import type {
+  Culture,
   CultureRelation,
   KinKind,
   MoodModifier,
@@ -6,6 +7,13 @@ import type {
   PawnRelationship,
   RelationStage
 } from '../../types';
+
+export function cultureArchetype(
+  cultureId: string | undefined,
+  pool: readonly Pick<Culture, 'id' | 'archetype'>[] | undefined
+): string | undefined {
+  return pool?.find((c) => c.id === cultureId)?.archetype;
+}
 
 export const STAGE_ORDER: RelationStage[] = [
   'enemies',

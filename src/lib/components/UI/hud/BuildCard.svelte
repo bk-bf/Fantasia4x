@@ -1,300 +1,295 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+  import { chrome } from '$lib/pixelArt/chrome';
   import SpriteIcon from '../widget/SpriteIcon.svelte';
+  import PixelGlyph from '../widget/PixelGlyph.svelte';
+  import ChromeButton from '../widget/ChromeButton.svelte';
   import HoverTip from '../tooltip/HoverTip.svelte';
+  import ScrollArea from '../widget/ScrollArea.svelte';
   import ItemStatTooltip from '../tooltip/ItemStatTooltip.svelte';
   import BuildingStatTooltip from '../tooltip/BuildingStatTooltip.svelte';
+  import type { GlyphName } from '$lib/pixelArt/glyphs';
   import type { Item, Recipe, Building } from '$lib/game/core/types';
-
-  let descTip: { x: number; y: number } | null = null;
-  function onDescEnter(e: MouseEvent) {
-    const el = e.currentTarget as HTMLElement;
-    if (el.scrollHeight > el.clientHeight + 1) descTip = { x: e.clientX, y: e.clientY };
-  }
-  function onDescMove(e: MouseEvent) {
-    if (descTip) descTip = { x: e.clientX, y: e.clientY };
-  }
-  function onDescLeave() {
-    descTip = null;
-  }
-
-  let statTip: { x: number; y: number } | null = null;
-  function onStatEnter(e: MouseEvent) {
-    if (hasStats) statTip = { x: e.clientX, y: e.clientY };
-  }
-  function onStatMove(e: MouseEvent) {
-    if (statTip) statTip = { x: e.clientX, y: e.clientY };
-  }
-  function onStatLeave() {
-    statTip = null;
-  }
 
   type CharSpan = { sheet?: string; id?: number; from?: number; to?: number; literal?: string };
 
-  export let name: string;
-  export let charSpans: CharSpan[] | undefined = undefined;
-  export let description: string | null = null;
-  export let tint = 'var(--accent)';
-  export let badge: string | null = null;
-  export let workAmount: number | null = null;
-  export let station: string | null = null;
-  export let toolTier: number | null = null;
-  export let toolMet = true;
-  export let requiredTool: string | null = null;
-  export let requiredToolMet = true;
-  export let actionLabel: string;
-  export let actionEnabled = true;
-  export let variant: 'ok' | 'missing' | 'blocked' | 'pending' = 'ok';
-  export let onAction: () => void;
-  export let quantities: number[] | null = null;
-  export let onQuantity: ((n: number) => void) | null = null;
-  export let statItem: Item | null = null;
-  export let statRecipe: Recipe | null = null;
-  export let statIngredients: Record<string, string> = {};
-  export let buildingDef: Building | null = null;
-  export let statMaterials: Record<string, string> = {};
-  export let jobLabel: string | null = null;
+  let {
+    name,
+    charSpans = undefined,
+    glyph = null,
+    description = null,
+    badge = null,
+    workAmount = null,
+    station = null,
+    toolTier = null,
+    toolMet = true,
+    requiredTool = null,
+    requiredToolMet = true,
+    actionLabel,
+    actionGlyph,
+    actionEnabled = true,
+    variant = 'ok',
+    onAction,
+    quantities = null,
+    onQuantity = null,
+    statItem = null,
+    statRecipe = null,
+    statIngredients = {},
+    buildingDef = null,
+    statMaterials = {},
+    jobLabel = null,
+    children
+  }: {
+    name: string;
+    charSpans?: CharSpan[];
+    glyph?: GlyphName | null;
+    description?: string | null;
+    badge?: string | null;
+    workAmount?: number | null;
+    station?: string | null;
+    toolTier?: number | null;
+    toolMet?: boolean;
+    requiredTool?: string | null;
+    requiredToolMet?: boolean;
+    actionLabel: string;
+    actionGlyph?: GlyphName;
+    actionEnabled?: boolean;
+    variant?: 'ok' | 'missing' | 'blocked' | 'pending';
+    onAction: () => void;
+    quantities?: number[] | null;
+    onQuantity?: ((n: number) => void) | null;
+    statItem?: Item | null;
+    statRecipe?: Recipe | null;
+    statIngredients?: Record<string, string>;
+    buildingDef?: Building | null;
+    statMaterials?: Record<string, string>;
+    jobLabel?: string | null;
+    children?: Snippet;
+  } = $props();
 
-  $: hasItemStats =
+  let descTip = $state<{ x: number; y: number } | null>(null);
+  let itemTip = $state<{ x: number; y: number } | null>(null);
+  let cardTip = $state<{ x: number; y: number } | null>(null);
+
+  const hasItemStats = $derived(
     !!statItem &&
-    (!!statItem.weaponProperties ||
-      !!statItem.armorProperties ||
-      (statItem.type === 'tool' && !!statItem.toolBoost) ||
-      statItem.nutrition != null ||
-      statItem.medicineQuality != null ||
-      statItem.decaySeconds != null ||
-      Object.keys(statItem.effects ?? {}).length > 0);
-  $: showItemTip = !!statItem && (hasItemStats || !!jobLabel);
-  $: hasStats = showItemTip || !!buildingDef;
+      (!!statItem.weaponProperties ||
+        !!statItem.armorProperties ||
+        (statItem.type === 'tool' && !!statItem.toolBoost) ||
+        statItem.nutrition != null ||
+        statItem.medicineQuality != null ||
+        statItem.decaySeconds != null ||
+        Object.keys(statItem.effects ?? {}).length > 0)
+  );
+  const showItemTip = $derived(!!statItem && (hasItemStats || !!jobLabel));
+  const short = $derived(variant === 'missing' || variant === 'blocked');
+
+  function followCard(e: MouseEvent) {
+    if (buildingDef) cardTip = { x: e.clientX, y: e.clientY };
+  }
+  function enterDesc(e: MouseEvent) {
+    const el = e.currentTarget as HTMLElement;
+    if (!buildingDef && el.scrollHeight > el.clientHeight + 1)
+      descTip = { x: e.clientX, y: e.clientY };
+  }
 </script>
 
-<div class="build-card" class:disabled={!actionEnabled}>
-  <div class="card-accent" style="background: {tint}"></div>
-  <div class="card-body">
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="card-header"
-      class:has-stats={hasStats}
-      on:mouseenter={onStatEnter}
-      on:mousemove={onStatMove}
-      on:mouseleave={onStatLeave}
-    >
-      <SpriteIcon {charSpans} px={18} />
-      <span class="card-name">{name}</span>
-      {#if workAmount != null}<span class="card-work" title="work to complete">⚒{workAmount}</span
-        >{/if}
-      {#if badge}<span class="card-badge">{badge}</span>{/if}
-    </div>
-    {#if description}<div
-        class="card-desc"
-        role="note"
-        on:mouseenter={onDescEnter}
-        on:mousemove={onDescMove}
-        on:mouseleave={onDescLeave}
-      >
-        {description}
-      </div>{/if}
-    {#if station}<div class="card-station" title="required workstation">⚒ {station}</div>{/if}
-    {#if toolTier}<div class="card-tool" class:unmet={!toolMet} title="required tool tier">
-        🔧 tier {toolTier} tools{#if !toolMet}
-          (locked){/if}
-      </div>{/if}
-    {#if requiredTool}<div
-        class="card-tool"
-        class:unmet={!requiredToolMet}
-        title="required implement"
-      >
-        🍲 needs {requiredTool}{#if !requiredToolMet}
-          (none){/if}
-      </div>{/if}
-    <div class="card-cost"><slot /></div>
-    {#if quantities && onQuantity}
-      <div class="card-actions">
-        <button
-          class="card-action card-action--{variant}"
-          disabled={!actionEnabled}
-          title="craft 1"
-          on:click={onAction}
-        >
-          {actionLabel}
-        </button>
-        {#each quantities as q}
-          <button
-            class="card-action card-action--{variant}"
-            disabled={!actionEnabled}
-            title="queue {q}"
-            on:click={() => onQuantity?.(q)}
-          >
-            +{q}
-          </button>
-        {/each}
-      </div>
+<article
+  class="bcard"
+  class:short
+  class:hover={!!cardTip}
+  onmouseenter={followCard}
+  onmousemove={followCard}
+  onmouseleave={() => (cardTip = null)}
+  {@attach chrome('well')}
+>
+  <header
+    role="group"
+    style:cursor={showItemTip ? 'help' : null}
+    onmouseenter={(e) => showItemTip && (itemTip = { x: e.clientX, y: e.clientY })}
+    onmousemove={(e) => itemTip && (itemTip = { x: e.clientX, y: e.clientY })}
+    onmouseleave={() => (itemTip = null)}
+  >
+    {#if glyph && !buildingDef}
+      <span class="gly"><PixelGlyph name={glyph} ramp="honey" /></span>
     {:else}
-      <button
-        class="card-action card-action--{variant}"
-        disabled={!actionEnabled}
-        on:click={onAction}
-      >
-        {actionLabel}
-      </button>
+      <span class="bspr">
+        <SpriteIcon
+          {charSpans}
+          building={buildingDef?.id}
+          item={buildingDef ? undefined : statItem?.id}
+          px={40}
+        />
+      </span>
+    {/if}
+    <div class="ttl">
+      <h5>{name}</h5>
+      {#if workAmount != null}
+        <span class="work"><PixelGlyph name="hammer" />{workAmount}</span>
+      {/if}
+    </div>
+    {#if badge}<span class="badge">{badge}</span>{/if}
+  </header>
+  {#if description}
+    <p
+      onmouseenter={enterDesc}
+      onmousemove={(e) => descTip && (descTip = { x: e.clientX, y: e.clientY })}
+      onmouseleave={() => (descTip = null)}
+    >
+      {description}
+    </p>
+  {/if}
+  {#if station}<div class="at"><PixelGlyph name="flag" /><span>{station}</span></div>{/if}
+  {#if toolTier}
+    <div class="at" class:neg={!toolMet}>
+      <PixelGlyph name="axe" /><span>tier {toolTier} tools{toolMet ? '' : ' (locked)'}</span>
+    </div>
+  {/if}
+  {#if requiredTool}
+    <div class="at" class:neg={!requiredToolMet}>
+      <PixelGlyph name="axe" /><span>needs {requiredTool}{requiredToolMet ? '' : ' (none)'}</span>
+    </div>
+  {/if}
+  <ScrollArea class="cost">{@render children?.()}</ScrollArea>
+  <div class="acts">
+    <ChromeButton
+      class="main {variant}"
+      kind={short ? 'btnOff' : 'btn'}
+      glyph={actionGlyph}
+      disabled={!actionEnabled}
+      onclick={onAction}>{actionLabel}</ChromeButton
+    >
+    {#if quantities && onQuantity && actionEnabled}
+      {#each quantities as q (q)}
+        <ChromeButton class="plus" title="queue {q}" onclick={() => onQuantity?.(q)}
+          >+{q}</ChromeButton
+        >
+      {/each}
     {/if}
   </div>
-</div>
+</article>
 
 {#if descTip && description}
   <HoverTip x={descTip.x} y={descTip.y}>{description}</HoverTip>
 {/if}
 
-{#if statTip && buildingDef}
-  <BuildingStatTooltip
-    building={buildingDef}
-    materials={statMaterials}
-    x={statTip.x}
-    y={statTip.y}
-  />
-{:else if statTip && showItemTip && statItem}
+{#if cardTip && buildingDef}
+  <BuildingStatTooltip building={buildingDef} materials={statMaterials} {...cardTip} />
+{:else if itemTip && showItemTip && statItem}
   <ItemStatTooltip
     item={statItem}
     recipe={statRecipe}
     selectedIngredients={statIngredients}
     {jobLabel}
-    x={statTip.x}
-    y={statTip.y}
+    x={itemTip.x}
+    y={itemTip.y}
   />
 {/if}
 
 <style>
-  .build-card {
-    display: flex;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-    transition: border-color 0.15s ease;
-  }
-  .build-card:hover {
-    border-color: var(--border-hi);
-  }
-  .build-card.disabled {
-    opacity: 0.75;
-  }
-  .card-accent {
-    width: 3px;
-    flex-shrink: 0;
-  }
-  .card-body {
-    padding: 6px 8px;
+  .bcard {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
+    min-width: 0;
+    padding: 7px 9px 8px;
+    font: 16px/16px var(--font-pixel);
+  }
+  .bcard.hover {
+    outline: 1px solid var(--accent-hi);
+    outline-offset: 1px;
+  }
+  header {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .bspr {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: end center;
+  }
+  .gly {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+  }
+  .gly :global(.glyph),
+  .gly :global(img) {
+    width: 26px !important;
+    height: 26px !important;
+  }
+  .ttl {
     flex: 1;
     min-width: 0;
   }
-  .card-header {
-    display: flex;
-    align-items: center;
-    gap: 5px;
+  h5 {
+    margin: 0;
+    color: var(--text);
+    font: 16px/18px var(--font-pixel);
+    letter-spacing: 0.6px;
   }
-  .card-header.has-stats {
-    cursor: help;
-  }
-  .card-name {
-    color: var(--accent-hi);
-    font-size: 12px;
-    letter-spacing: 0.04em;
-    font-weight: 600;
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .card-work {
+  .short h5 {
     color: var(--text-dim);
-    font-size: 10px;
-    flex-shrink: 0;
-    white-space: nowrap;
   }
-  .card-badge {
-    color: var(--accent-hi);
-    font-size: 11px;
-    flex-shrink: 0;
-  }
-  .card-desc {
+  .work {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
     color: var(--text-muted);
-    font-size: 11px;
-    line-height: 1.35;
+  }
+  .badge {
+    align-self: flex-start;
+    color: var(--accent-hi);
+  }
+  p {
+    flex: none;
+    height: 32px;
+    margin: 0;
+    color: var(--text-dim);
+    overflow: hidden;
     display: -webkit-box;
+    -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
-  .card-station {
-    color: var(--text-dim);
-    font-size: 10px;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .card-tool {
-    color: var(--text-dim);
-    font-size: 10px;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .card-tool.unmet {
-    color: var(--neg, #d05050);
-  }
-  .card-cost {
-    color: var(--text-dim);
-    font-size: 11px;
-    line-height: 1.4;
-    min-height: 14px;
-  }
-  .card-actions {
-    margin-top: 2px;
+  .at {
     display: flex;
+    gap: 5px;
     align-items: center;
-    gap: 4px;
-    flex-wrap: wrap;
+    height: 17px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
   }
-  .card-action {
-    margin-top: 2px;
-    align-self: flex-start;
-    padding: 2px 8px;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.05em;
-    cursor: pointer;
+  .at.neg {
+    color: var(--neg);
   }
-  .card-actions .card-action {
-    margin-top: 0;
-    padding: 2px 6px;
-  }
-  .card-action--ok {
-    border-color: var(--accent-hi);
-    color: var(--accent-hi);
-  }
-  .card-action--ok:hover {
-    background: color-mix(in srgb, var(--accent-hi) 18%, transparent);
-  }
-  .card-action--pending {
-    border-color: var(--text-dim);
+  .bcard :global(.scroll-area.cost) {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    scrollbar-gutter: auto;
     color: var(--text-dim);
   }
-  .card-action--pending:hover {
-    background: color-mix(in srgb, var(--text-dim) 18%, transparent);
+  .acts {
+    display: flex;
+    gap: 2px;
+    margin-top: auto;
+    padding-top: 3px;
   }
-  .card-action--missing {
-    color: var(--neg, #d05050);
-    border-color: var(--neg, #d05050);
+  .acts :global(.main) {
+    flex: 1;
   }
-  .card-action--blocked {
-    color: var(--text-muted, #777);
+  .acts :global(.plus) {
+    padding: 0 5px;
+  }
+  .acts :global(.missing),
+  .acts :global(.blocked) {
+    color: var(--text-muted);
   }
 </style>

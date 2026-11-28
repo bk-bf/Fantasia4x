@@ -53,7 +53,7 @@ describe('a kingdom party travelling to the colony', () => {
       generateCultureRelations(cultures),
       cultures[0].id
     );
-    rng.reseed(4);
+    rng.reseed(3);
     const out = spawnKingdomParty(
       { ...base, culturePool: cultures, kingdoms, kingdomRelations } as GameState,
       kingdoms[0],

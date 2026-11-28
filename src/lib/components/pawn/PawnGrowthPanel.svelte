@@ -78,19 +78,16 @@
     align-items: baseline;
     padding: 4px 8px;
     color: var(--accent-hi, #f0c060);
-    font-size: 12px;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
   }
   .growth-kind {
     color: var(--text-dim);
-    font-size: 10px;
     letter-spacing: 0.03em;
   }
   .growth-sub {
     padding: 2px 8px;
     color: var(--text-dim);
-    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -105,7 +102,6 @@
     border-top: 1px solid var(--border);
     color: var(--text);
     font-family: inherit;
-    font-size: 12px;
     text-align: left;
     cursor: pointer;
   }
@@ -148,7 +144,6 @@
     color: #1a1206;
     border: none;
     font-family: inherit;
-    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.08em;
     cursor: pointer;

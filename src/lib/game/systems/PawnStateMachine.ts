@@ -37,6 +37,7 @@ import { memoryService } from '../services/MemoryService';
 import { simLog } from '../core/util/logSink';
 import { gameLogger } from '../debug/gameLogger';
 import { perTick, SECONDS_PER_TICK } from '../core/util/time';
+import { thinkPhase } from '../services/entity/entityHelpers';
 import {
   driveNeedConditions,
   decayIntoxication,
@@ -84,7 +85,7 @@ import {
   isFullMoon
 } from '../services/EnvironmentService';
 import { getNightVision, dampenLightByNightVision } from '../core/rules/body/vision';
-import { calcBloodRegenRate } from '../entities/Pawns';
+import { calcBloodRegenRate } from '../core/rules/body/vitals';
 import { rng } from '../core/util/rng';
 import { pawnById } from '../core/state/pawnIndex';
 
@@ -669,7 +670,8 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     prevStages,
     conditions,
     pawn.position?.x ?? -1,
-    pawn.position?.y ?? -1
+    pawn.position?.y ?? -1,
+    pawn.id
   );
   memoryService.recordConditionOnsets(gameState, pawn, prevStages, conditions);
   for (const esc of detectVitalEscalations(prevVitalStages, conditions)) {
@@ -709,7 +711,7 @@ function splintBoneHeal(pawn: Pawn): ((partId: string) => number) | undefined {
   };
 }
 
-export function healWounds(pawn: Pawn, turn = 0, buildings?: PlacedBuilding[]): Pawn {
+export function healWounds(pawn: Pawn, turn = 0, buildings?: PlacedBuilding[], ticks = 1): Pawn {
   const limbs = pawn.limbs;
   const hasWounds = limbs?.some((l) => (l.parts ?? []).some((p) => p.injuries.length > 0));
   if (!limbs || !hasWounds) return pawn;
@@ -739,7 +741,7 @@ export function healWounds(pawn: Pawn, turn = 0, buildings?: PlacedBuilding[]): 
     mult *= HEALING_CONFIG.wellFedMultiplier;
   if ((pawn.state?.mood ?? 50) >= HEALING_CONFIG.goodMood)
     mult *= HEALING_CONFIG.goodMoodMultiplier;
-  const baseHeal = HEALING_CONFIG.baseHealPerTick * healRate * mult;
+  const baseHeal = HEALING_CONFIG.baseHealPerTick * healRate * mult * ticks;
   if (baseHeal <= 0) return pawn;
 
   const newLimbs = healLimbs(limbs, baseHeal, turn, true, true, splintBoneHeal(pawn));
@@ -763,6 +765,7 @@ export function healWounds(pawn: Pawn, turn = 0, buildings?: PlacedBuilding[]): 
   };
 }
 
+const HEAL_INTERVAL_TICKS = 10;
 const AURA_INTERVAL_TICKS = 180;
 const AURA_DEFAULT_LINGER_SECONDS = 8;
 
@@ -1011,7 +1014,9 @@ export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
           worldY: pawn.position.y,
           text: f.name,
           kind: 'condition',
-          color: f.color
+          color: f.color,
+          entityId: pawn.id,
+          conditionId: id
         });
     }
   }
@@ -1127,8 +1132,16 @@ class PawnStateMachineImpl {
         afterConditions.currentState === PAWN_STATE.FLEEING ||
         afterConditions.currentState === PAWN_STATE.HUNTING ||
         (afterConditions.drafted === true && afterConditions.draftTarget?.type === 'attack');
-      if (!inMelee) {
-        const healed = healWounds(afterConditions, state.turn, state.buildings);
+      if (
+        !inMelee &&
+        state.turn % HEAL_INTERVAL_TICKS === thinkPhase(afterConditions.id) % HEAL_INTERVAL_TICKS
+      ) {
+        const healed = healWounds(
+          afterConditions,
+          state.turn,
+          state.buildings,
+          HEAL_INTERVAL_TICKS
+        );
         if (healed !== afterConditions) {
           afterConditions = healed;
           state = {

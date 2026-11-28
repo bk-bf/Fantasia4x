@@ -47,7 +47,7 @@ import {
 } from '../core/defs/wounds';
 import { scaleWeaponQuality, scaleArmorQuality } from '../core/rules/gear/itemQuality';
 import { pawnStatService } from '../services/PawnStatService';
-import { calcMaxStamina } from '../entities/Pawns';
+import { calcMaxStamina } from '../core/rules/body/vitals';
 import conditionsData from '../database/pawns/conditions.json';
 import type { ConditionDef, TransientConditionDef } from '../core/types';
 import { simLog, type CombatTextKind } from '../core/util/logSink';
@@ -475,7 +475,7 @@ const ARMOR_DAMAGE_TYPE_RESISTANCE_FIELD: Partial<Record<DamageType, keyof Armor
 
 function armorTypeResistance(ap: ArmorProps, damageType: DamageType): number {
   const field = ARMOR_DAMAGE_TYPE_RESISTANCE_FIELD[damageType];
-  return field ? (ap[field] as number | undefined) ?? 0 : 0;
+  return field ? ((ap[field] as number | undefined) ?? 0) : 0;
 }
 
 export function partArmorReduction(
@@ -1086,7 +1086,7 @@ class CombatServiceImpl implements CombatService {
     for (const id of ['knockdown', 'collapse']) {
       if ((durations[id] ?? 0) > 0 && !transientConditions.includes(id)) {
         transientConditions.push(id);
-        this.emitConditionFloat(cpos.x, cpos.y, id, 13 * condTier++);
+        this.emitConditionFloat(entity.id, cpos.x, cpos.y, id, 13 * condTier++);
       }
     }
 
@@ -1153,12 +1153,25 @@ class CombatServiceImpl implements CombatService {
     return { x: e.position?.x ?? -1, y: e.position?.y ?? -1 };
   }
 
-  private emitFloat(x: number, y: number, kind: CombatTextKind, text: string, dy?: number): void {
+  private emitFloat(
+    entityId: string,
+    x: number,
+    y: number,
+    kind: CombatTextKind,
+    text: string,
+    dy?: number
+  ): void {
     if (x < 0 || y < 0) return;
-    simLog.pushCombatText({ worldX: x, worldY: y, text, kind, dy });
+    simLog.pushCombatText({ worldX: x, worldY: y, text, kind, dy, entityId });
   }
 
-  private emitConditionFloat(x: number, y: number, id: string, dy?: number): void {
+  private emitConditionFloat(
+    entityId: string,
+    x: number,
+    y: number,
+    id: string,
+    dy?: number
+  ): void {
     if (x < 0 || y < 0) return;
     const f = getConditionFloater(id);
     if (!f) return;
@@ -1168,7 +1181,9 @@ class CombatServiceImpl implements CombatService {
       text: f.name,
       kind: 'condition',
       color: f.color,
-      dy
+      dy,
+      entityId,
+      conditionId: id
     });
     const sound = conditionAudio(id);
     if (sound) simLog.pushCombatSound({ sound, worldX: x, worldY: y });
@@ -1259,16 +1274,16 @@ class CombatServiceImpl implements CombatService {
     );
 
     if (result.parried) {
-      this.emitFloat(pos.x, pos.y, 'dodge', 'PARRY');
+      this.emitFloat(target.id, pos.x, pos.y, 'dodge', 'PARRY');
       state = this.performAttack(target, attacker, state, turn, undefined, true).state;
       return { state, staminaCost: result.staminaCost };
     }
     if (result.blocked) {
-      this.emitFloat(pos.x, pos.y, 'dodge', 'BLOCK');
+      this.emitFloat(target.id, pos.x, pos.y, 'dodge', 'BLOCK');
       return { state, staminaCost: result.staminaCost };
     }
     if (!result.hit) {
-      this.emitFloat(pos.x, pos.y, 'dodge', 'dodge');
+      this.emitFloat(target.id, pos.x, pos.y, 'dodge', 'dodge');
       if (witnessed)
         simLog.logCombatSwing(
           attacker.id,
@@ -1287,7 +1302,7 @@ class CombatServiceImpl implements CombatService {
           }
         );
       if (!('entityClass' in attacker) && attacker.isAlive !== false)
-        socialService.combatBark(attacker as Pawn, 'miss', targetName, turn);
+        socialService.combatBark(attacker as Pawn, 'miss', target, turn);
       return { state, staminaCost: result.staminaCost };
     }
     if (!result.injury) return { state, staminaCost: result.staminaCost };
@@ -1316,7 +1331,7 @@ class CombatServiceImpl implements CombatService {
             ? this.applyInjuryToMob(behind.id, carried, next, false)
             : this.applyInjury(behind.id, carried, next, false);
         const bpos = this.entityPos(behind);
-        this.emitFloat(bpos.x, bpos.y, 'damage', `-${carried.damage}`);
+        this.emitFloat(behind.id, bpos.x, bpos.y, 'damage', `-${carried.damage}`);
       }
     }
 
@@ -1324,7 +1339,7 @@ class CombatServiceImpl implements CombatService {
       next = isTargetMob
         ? this.applyInjuryToMob(target.id, result.fractureInjury, next, false)
         : this.applyInjury(target.id, result.fractureInjury, next, false);
-      this.emitFloat(pos.x, pos.y, 'fracture', 'Fractured!', 26);
+      this.emitFloat(target.id, pos.x, pos.y, 'fracture', 'Fractured!', 26);
       const fxSound = conditionAudio('fractured');
       if (fxSound) simLog.pushCombatSound({ sound: fxSound, worldX: pos.x, worldY: pos.y });
     }
@@ -1333,7 +1348,7 @@ class CombatServiceImpl implements CombatService {
       next = isTargetMob
         ? this.applyInjuryToMob(target.id, result.organInjury, next, false)
         : this.applyInjury(target.id, result.organInjury, next, false);
-      this.emitFloat(pos.x, pos.y, 'fracture', 'Organ hit!', 26);
+      this.emitFloat(target.id, pos.x, pos.y, 'fracture', 'Organ hit!', 26);
     }
 
     if (!override) next = this.applyShieldBash(next, attacker, target, isTargetMob, pos, apos);
@@ -1343,13 +1358,14 @@ class CombatServiceImpl implements CombatService {
       result.injury.severity === 'critical' ||
       result.injury.severity === 'destroyed';
     this.emitFloat(
+      target.id,
       pos.x,
       pos.y,
       critFloater ? 'crit' : 'damage',
       result.crit ? `-${result.injury.damage}!` : `-${result.injury.damage}`
     );
     if (!result.knockdown && result.injury.bleeding > 0)
-      this.emitFloat(pos.x, pos.y, 'bleed', 'bleed', 13);
+      this.emitFloat(target.id, pos.x, pos.y, 'bleed', 'bleed', 13);
 
     if (witnessed)
       simLog.logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
@@ -1437,9 +1453,9 @@ class CombatServiceImpl implements CombatService {
       });
     }
     if (!('entityClass' in attacker) && attacker.isAlive !== false)
-      socialService.combatBark(attacker as Pawn, justDied ? 'kill' : 'hit', targetName, turn);
+      socialService.combatBark(attacker as Pawn, justDied ? 'kill' : 'hit', target, turn);
     if (!isTargetMob && !justDied && (target as Pawn).isAlive !== false)
-      socialService.combatBark(target as Pawn, 'hurt', attackerName, turn);
+      socialService.combatBark(target as Pawn, 'hurt', attacker, turn);
     if (justDied && isTargetMob && 'traits' in attacker) {
       const live = next.pawns.find((p) => p.id === attacker.id);
       if (live) {
@@ -1572,7 +1588,7 @@ class CombatServiceImpl implements CombatService {
       transientConditions,
       bloodVolume
     };
-    if (eff.condition) this.emitConditionFloat(pos.x, pos.y, eff.condition, 39);
+    if (eff.condition) this.emitConditionFloat(target.id, pos.x, pos.y, eff.condition, 39);
 
     let s = this.spliceEntity(state, targetId, updated as Pawn | Mob, isMob);
     if (fed && attacker && attacker.isAlive !== false) {
@@ -1603,7 +1619,7 @@ class CombatServiceImpl implements CombatService {
             ? live.transientConditions!
             : [...(live.transientConditions ?? []), FEASTED_CONDITION];
           const apos = this.entityPos(live);
-          this.emitConditionFloat(apos.x, apos.y, FEASTED_CONDITION, 39);
+          this.emitConditionFloat(live.id, apos.x, apos.y, FEASTED_CONDITION, 39);
           s = this.spliceEntity(
             s,
             live.id,
@@ -1750,7 +1766,7 @@ class CombatServiceImpl implements CombatService {
           conditionTimers: timers,
           transientConditions
         };
-    this.emitConditionFloat(nx, ny, 'staggered', 26);
+    this.emitConditionFloat(target.id, nx, ny, 'staggered', 26);
     return this.spliceEntity(state, target.id, moved as Pawn | Mob, isMob);
   }
 
@@ -2146,7 +2162,7 @@ class CombatServiceImpl implements CombatService {
       if (!transientConditions.includes(WINDED)) {
         transientConditions = [...transientConditions, WINDED];
         const wpos = this.entityPos(e);
-        this.emitConditionFloat(wpos.x, wpos.y, WINDED);
+        this.emitConditionFloat(e.id, wpos.x, wpos.y, WINDED);
       }
     } else {
       delete durations.winded;

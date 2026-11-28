@@ -23,3 +23,7 @@ export function limbLabel(id: string): string {
 export function partLabel(id: string): string {
   return humanize(id);
 }
+
+export function limbName(id: string): string {
+  return humanize(id).toLowerCase();
+}

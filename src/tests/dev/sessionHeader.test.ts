@@ -13,8 +13,8 @@ const build: BuildInfo = {
 
 const client: ClientInfo = {
   shell: 'electron',
-  query: '?painted=1&blend=1',
-  switches: 'painted-tiles=1',
+  query: '?scenario=large-wilderness',
+  switches: 'ground-blend=0',
   gpu: 'ANGLE (Intel, Mesa "Arc")',
   window: '1440x900@2',
   screen: '2880x1800',
@@ -51,7 +51,7 @@ describe('sessionHeaderLine', () => {
       dirty: '0',
       mode: 'debug',
       renderer: 'painted',
-      query: '?painted=1&blend=1'
+      query: '?scenario=large-wilderness'
     });
   });
 

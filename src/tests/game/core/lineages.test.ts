@@ -8,7 +8,7 @@ import {
 } from '$lib/game/core/defs/lineages';
 import { feedOnVictim, sateBloodHunger } from '$lib/game/core/defs/lineages';
 import { rng } from '$lib/game/core/util/rng';
-import { drawPawnTraits } from '$lib/game/core/gen/culture';
+import { drawPawnTraits } from '$lib/game/core/gen/pawnTraits';
 import { createBodyPlanLimbs } from '$lib/game/systems/Combat';
 import type { Culture, Pawn, Trait } from '$lib/game/core/types';
 

@@ -2,12 +2,12 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
-import { BAKE_ART, HAND_PORTED, REGISTRY_ART, mockupName } from './sources.mjs';
+import { BAKE_ART, COLONY_ART, HAND_PORTED, REGISTRY_ART, mockupName } from './sources.mjs';
 
 const ART = join(dirname(fileURLToPath(import.meta.url)), 'art');
 
 export const syncedFiles = () =>
-  [...new Set([...BAKE_ART, ...REGISTRY_ART])].filter((f) => !HAND_PORTED.includes(f));
+  [...new Set([...BAKE_ART, ...REGISTRY_ART, ...COLONY_ART])].filter((f) => !HAND_PORTED.includes(f));
 
 const LITERALS = new Set([
   ts.SyntaxKind.StringLiteral,

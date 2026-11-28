@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { RightPress, releaseClicks } from './rightPress';
   import { onMount, onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { browser } from '$app/environment';
-  import { wasdPan, debugMode } from '$lib/stores/uiPrefs';
-  import { WebGLRenderer } from '$lib/webgl/renderer.js';
+  import { wasdPan, debugMode, vignetteOn, mapMotion } from '$lib/stores/uiPrefs';
+  import { WebGLRenderer, type SpriteLayer } from '$lib/webgl/renderer.js';
   import { crashBreadcrumb } from '$lib/webgl/crashLog.js';
   import { startFreezeWatchdog, beat, stopFreezeWatchdog } from '$lib/webgl/freezeWatchdog.js';
   import { passOn } from '$lib/webgl/passes.js';
@@ -44,7 +45,6 @@
     PlacedBuilding,
     DesignationType,
     DroppedItem,
-    Item,
     Mob,
     ZoneInstance,
     EquipmentSlot
@@ -52,51 +52,34 @@
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
-  import { PAINTED_TILES, paintedEntity } from '$lib/webgl/painted/tileset.js';
+  import { PAINTED_TILES, paintedEntity, paintedPawn } from '$lib/webgl/painted/tileset.js';
+  import { PAINTED_LIGHT } from '$lib/webgl/painted/flag.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { pathfinderService } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';
   import {
     environmentService,
-    computeTileLightLevel,
-    tileTemperature,
-    seasonBakedTemp,
-    tileWetness,
-    computeThermalAt,
-    effectiveWindAt,
-    windDegreeWord,
-    ICE_VISIBLE
+    computeTileLightLevel
   } from '$lib/game/services/EnvironmentService.js';
   import { lightingService } from '$lib/game/services/LightingService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
-  import { worldEffects } from '$lib/stores/fx/worldEffects.js';
-  import type { GlyphFloat, GlyphFloatKind } from '$lib/stores/fx/worldEffects.js';
-  import { combatFeedback, floatTtl, type CombatTextEvent } from '$lib/stores/fx/combatFeedback.js';
   import { animNow, setAnimPaused } from '$lib/stores/fx/animClock.js';
   import {
     attackLunges,
     LUNGE_TTL_MS,
     type AttackLungeEvent
   } from '$lib/stores/fx/attackLunges.js';
-  import { projectiles, type ProjectileEvent } from '$lib/stores/fx/projectiles.js';
+  import { worldFx } from './worldFx/layer';
   import { renderFps } from '$lib/stores/perfStats.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
   import { roomFor } from '$lib/game/core/rules/gear/vessels';
-  import {
-    resolveCharSpans,
-    BIOMES,
-    SUBTERRAINS,
-    soilFertilityPct,
-    soilTierForTile,
-    SOIL_TIER_NAME
-  } from '$lib/game/core/defs/terrains.js';
+  import { resolveCharSpans } from '$lib/game/core/defs/terrains.js';
   import {
     resourceObjectService,
     isGrowableResource
   } from '$lib/game/services/ResourceObjectService.js';
   import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/rules/world/growthStages.js';
-  import { cropGrowthDirection } from '$lib/game/core/rules/world/cropHealth.js';
   import { isHarvestableTileNow } from '$lib/game/services/jobs/filters.js';
   import { itemService } from '$lib/game/services/ItemService.js';
   import { jobService } from '$lib/game/services/JobService.js';
@@ -105,17 +88,40 @@
   import { getRangedWeapon } from '$lib/game/systems/rangedCombat.js';
   import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
   import { hasUntendedWound, pickTendMedicine } from '$lib/game/services/jobs/caretake';
-  import { conditionPriority } from '$lib/game/core/rules/body/conditions';
   import { getCreatureById } from '$lib/game/core/defs/creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/util/time.js';
   import { vlog } from '$lib/game/core/util/logSink.js';
   import { simTarget } from '$lib/game/services/MovementSystem.js';
-  import SelectedEntityCard from '$lib/components/UI/hud/SelectedEntityCard.svelte';
-  import type {
-    SelectedEntityModel,
-    EntityBar,
-    EntityButton
-  } from '$lib/components/UI/hud/SelectedEntityCard.svelte';
+  import {
+    brackets,
+    dragBox,
+    MARK_INK,
+    type ScreenRect
+  } from '$lib/components/UI/canvas/selectionMarks';
+  import {
+    BUILDING_SPRITES,
+    drawnFirst,
+    drawnItemTile,
+    drawnTile,
+    hoveredDrop,
+    RESOURCE_SPRITES,
+    spriteRect,
+    type TileLayer
+  } from '$lib/components/UI/canvas/drawnSelection';
+  import { drawStackBadges, stackBadges } from '$lib/components/UI/canvas/stackBadges';
+  import VerbTag from '$lib/components/UI/hud/VerbTag.svelte';
+  import PawnCard from '$lib/components/UI/hud/PawnCard.svelte';
+  import BuildingCard from '$lib/components/UI/hud/BuildingCard.svelte';
+  import CreatureCard from '$lib/components/UI/hud/CreatureCard.svelte';
+  import ItemCard from '$lib/components/UI/hud/ItemCard.svelte';
+  import ZoneCard from '$lib/components/UI/hud/ZoneCard.svelte';
+  import {
+    designationVerb,
+    keyTiles,
+    type TagVerb,
+    type VerbTagModel
+  } from '$lib/components/UI/canvas/verbTag';
+  import type { EntityButton } from '$lib/components/UI/hud/entityCard';
   import {
     SHEET_CELL_W,
     SHEET_CELL_H,
@@ -125,28 +131,16 @@
     type SheetName
   } from '$lib/components/UI/canvas/spriteSheets';
   import { redrawHudSpriteIcons } from '$lib/components/UI/canvas/hudSpriteIcon';
-  import BuildingFuelPanel from '$lib/components/UI/canvas/BuildingFuelPanel.svelte';
-  import BuildingRepairPanel from '$lib/components/UI/canvas/BuildingRepairPanel.svelte';
-  import BuildingStoragePanel from '$lib/components/UI/canvas/BuildingStoragePanel.svelte';
-  import FoodFilterPanel from '$lib/components/UI/canvas/FoodFilterPanel.svelte';
-  import { bloodFrac } from '$lib/components/UI/canvas/healthColors';
-  import StockpileZonePanel from '$lib/components/UI/canvas/StockpileZonePanel.svelte';
-  import EnvReadout from '$lib/components/UI/canvas/EnvReadout.svelte';
+  import { buildingTarget, storeTarget } from '$lib/components/UI/canvas/windowTargets';
+  import TileTip from '$lib/components/UI/canvas/TileTip.svelte';
+  import ContextMenu from '$lib/components/UI/canvas/ContextMenu.svelte';
+  import QtyPrompt from '$lib/components/UI/canvas/QtyPrompt.svelte';
+  import ModeBanner, { type BannerModel } from '$lib/components/UI/canvas/ModeBanner.svelte';
+  import { envFacts, tileFacts } from '$lib/components/UI/canvas/tileFacts';
   import BuildingInfo from '$lib/components/UI/canvas/BuildingInfo.svelte';
-  import {
-    buildPawnCard,
-    buildMobCard,
-    dryingIndicator,
-    growthIndicator,
-    PROGRESS_BAR_STATES
-  } from '$lib/components/UI/canvas/selectionCard';
   import { overlayDroppedItems, overlayBuildings } from '$lib/components/UI/canvas/overlay';
   import { buildingsVisualSig } from '$lib/game/core/state/buildingSig';
   import { lineFormationTargets } from '$lib/game/sim/commands';
-  import type { ItemPillView } from '$lib/components/UI/widget/ItemPills.svelte';
-  import itemsData from '$lib/game/database/items/items.json';
-
-  const ITEMS_DATABASE = itemsData as unknown as Item[];
 
   export let menuPreview = false;
   const MENU_PREVIEW_ZOOM = 2;
@@ -182,6 +176,7 @@
 
   let canvas: HTMLCanvasElement;
   let designCanvas: HTMLCanvasElement;
+  let markCanvas: HTMLCanvasElement;
   let _ambientLight = 1;
   let _ambientTint: [number, number, number] = [1, 1, 1];
   let container: HTMLDivElement;
@@ -273,28 +268,20 @@
   const PAN_SMOOTH_TAU = 0.09;
   const FOLLOW_VERTICAL = 0.42;
 
-  let _glyphFloatKey = '';
-  let _progressOverlayKey = '';
-  let _healthOverlayKey = '';
-  let _draftOverlayKey = '';
-  let _floatTextKey = '';
-  let _projOverlayKey = '';
-
-  let combatTexts: CombatTextEvent[] = [];
-  const unsubCombatFeedback = combatFeedback.subscribe((list) => {
-    combatTexts = list;
+  let simPaused = false;
+  const unsubAnimPause = gameState.isPaused.subscribe((p) => {
+    simPaused = p;
+    setAnimPaused(p);
   });
-
-  const unsubAnimPause = gameState.isPaused.subscribe((p) => setAnimPaused(p));
+  const unsubVignette = vignetteOn.subscribe((on) => renderer?.setVignette(on));
+  const unsubSway = mapMotion.subscribe((motion) => {
+    renderer?.setMotion(motion);
+    markRenderDirty();
+  });
 
   let attackLungeList: AttackLungeEvent[] = [];
   const unsubAttackLunges = attackLunges.subscribe((list) => {
     attackLungeList = list;
-  });
-
-  let projectileList: ProjectileEvent[] = [];
-  const unsubProjectiles = projectiles.subscribe((list) => {
-    projectileList = list;
   });
 
   const LUNGE_DISTANCE = 0.4;
@@ -329,10 +316,9 @@
 
   let resourceGlowEmitters: import('$lib/game/services/LightingService.js').LightEmitter[] = [];
   function refreshEmitters(buildingList = buildings) {
-    lightingService.setEmitters([
-      ...lightingService.collectEmitters(buildingList),
-      ...resourceGlowEmitters
-    ]);
+    const emitters = [...lightingService.collectEmitters(buildingList), ...resourceGlowEmitters];
+    lightingService.setEmitters(emitters);
+    if (PAINTED_LIGHT) renderer?.setPointLights(emitters);
     renderer?.setDynamicLight(lightingService.hasEmitters());
     renderer?.setLightVersion(lightingService.getEmittersVersion());
     renderer?.setLightBounds(lightingService.getLitBounds());
@@ -424,16 +410,7 @@
   let _cycleTileX = -1;
   let _cycleTileY = -1;
   let _cycleIndex = 0;
-  let similarDragMode = false;
-  let similarDragResourceId = '';
-  let similarDragDisplayName = '';
-  let similarDragDesignationType: DesignationType = 'harvest';
-  let similarDragActive = false;
   let highlightedResourceTiles: Set<string> = new Set();
-  let similarAnchorX = 0;
-  let similarAnchorY = 0;
-  let similarEndX = 0;
-  let similarEndY = 0;
 
   let markKind: 'pawn' | 'mob' | null = null;
   let markDragActive = false;
@@ -452,7 +429,7 @@
   let moveAimEndX = 0;
   let moveAimEndY = 0;
   let moveAimSlots: { x: number; y: number }[] = [];
-  let _aimCommitted = false;
+  const rightPress = new RightPress();
 
   let zoneAnchorX = 0;
   let zoneAnchorY = 0;
@@ -484,6 +461,21 @@
     ? (zoneTiles[`${hoverTile.x},${hoverTile.y}`]?.[0] ??
       designations[`${hoverTile.x},${hoverTile.y}`] ??
       null)
+    : null;
+  $: hoverFactsInput = hoverTile
+    ? {
+        tile: hoverTile,
+        light: hoverTileLight,
+        floorName: hoverFloorName ?? null,
+        resourceId: hoverDisplayResource,
+        zoneType: hoverZoneType,
+        buildings,
+        worldMap,
+        season: $currentSeason,
+        weather: $currentWeather,
+        ambientTurn: environmentService.ambientTurn($gameState ?? { turn: 0 }),
+        debug: $debugMode
+      }
     : null;
   $: hoverTileLight = hoverTile
     ? computeTileLightLevel(
@@ -536,26 +528,10 @@
   $: selectedMob = selectedMobId ? (mobs.find((m) => m.id === selectedMobId) ?? null) : null;
   $: selectedMobDef = selectedMob ? (getCreatureById(selectedMob.creatureId) ?? null) : null;
 
-  $: selectedPawnCard = selectedPawn
-    ? buildPawnCard(selectedPawn, true, {
-        cameraFollowPawnId,
-        startMark: () => startMarkDrag('pawn'),
-        armMove: () => armMoveAim(),
-        toggleFood: () => toggleFoodSettingsPanel(),
-        foodOpen: showFoodSettings,
-        moodModel: $gameState ? pawnService.getMoodBreakdown(selectedPawn, $gameState) : undefined
-      })
-    : null;
-  $: hoverPawnCard = hoverPawn
-    ? buildPawnCard(hoverPawn, false, {
-        cameraFollowPawnId,
-        startMark: () => startMarkDrag('pawn'),
-        armMove: () => armMoveAim(),
-        toggleFood: () => {},
-        foodOpen: false,
-        moodModel: $gameState ? pawnService.getMoodBreakdown(hoverPawn, $gameState) : undefined
-      })
-    : null;
+  $: selectedPawnMood =
+    selectedPawn && $gameState ? pawnService.getMoodBreakdown(selectedPawn, $gameState) : undefined;
+  $: hoverPawnMood =
+    hoverPawn && $gameState ? pawnService.getMoodBreakdown(hoverPawn, $gameState) : undefined;
 
   $: markedDraftedCount =
     markedKind === 'pawn' ? pawns.filter((p) => p.drafted && markedSet.has(p.id)).length : 0;
@@ -570,77 +546,52 @@
         : 0;
 
   $: hoverMob = hoverMobId ? (mobs.find((m) => m.id === hoverMobId) ?? null) : null;
-
-  $: hoverMobCard = (() => {
-    if (!hoverMob) return null;
-    const def = getCreatureById(hoverMob.creatureId);
-    return def
-      ? buildMobCard(hoverMob, def, false, {
-          cameraFollowMobId,
-          startMark: () => startMarkDrag('mob'),
-          colonyName: $gameState?.culture?.name
-        })
-      : null;
-  })();
-
-  $: selectedMobCard = (() => {
-    if (!selectedMob || !selectedMobDef) return null;
-    return buildMobCard(selectedMob, selectedMobDef, true, {
-      cameraFollowMobId,
-      startMark: () => startMarkDrag('mob'),
-      colonyName: $gameState?.culture?.name
-    });
-  })();
+  $: hoverMobDef = hoverMob ? (getCreatureById(hoverMob.creatureId) ?? null) : null;
 
   $: hasBuildJobs = ($gameState?.jobs ?? []).some((j) => j.type === 'construct');
   $: hasHarvestJobs = ($gameState?.jobs ?? []).some((j) => j.type === 'harvest');
 
-  $: markedGroupCard = ((): SelectedEntityModel | null => {
+  $: markedTag = ((): VerbTagModel | null => {
     if (!markedKind || markedIds.length < 1) return null;
     const n = markedIds.length;
-    const plural = n !== 1;
-    const status = plural ? 'multiple targets' : 'marked';
     if (markedKind === 'pawn') {
-      const names = pawns.filter((p) => markedSet.has(p.id)).map((p) => p.name);
-      const btns: EntityButton[] = [
-        {
-          label: markedAllDrafted ? 'UNDRAFT' : 'DRAFT',
-          active: markedAllDrafted,
-          onClick: () => draftMarkedPawns()
-        }
+      const marked = pawns.filter((p) => markedSet.has(p.id));
+      const verbs: TagVerb[] = [
+        { label: markedAllDrafted ? 'Undraft' : 'Draft', glyph: 'sword', onClick: draftMarkedPawns }
       ];
-      if (markedDraftedCount > 0) {
-        btns.push({ label: `MOVE (${markedDraftedCount})`, onClick: () => armMoveAim() });
-      }
+      if (markedDraftedCount > 0) verbs.push({ label: 'Move', quiet: true, onClick: armMoveAim });
       if (hasBuildJobs)
-        btns.push({ label: 'BUILD', onClick: () => forceMarkedPawnsJob('construct') });
+        verbs.push({
+          label: 'Build',
+          quiet: true,
+          onClick: () => forceMarkedPawnsJob('construct')
+        });
       if (hasHarvestJobs)
-        btns.push({ label: 'HARVEST', onClick: () => forceMarkedPawnsJob('harvest') });
-      btns.push({ label: 'CLEAR', onClick: () => clearMark() });
+        verbs.push({
+          label: 'Harvest',
+          quiet: true,
+          onClick: () => forceMarkedPawnsJob('harvest')
+        });
       return {
-        name: `${n} pawn${plural ? 's' : ''} selected`,
-        status,
-        selected: true,
-        dismissable: true,
-        note: markedDraftedCount > 0 ? `${markedDraftedCount} of ${n} drafted` : 'none drafted',
-        lines: [names.join(', ')],
-        buttons: btns
-      } satisfies SelectedEntityModel;
+        what: n === 1 ? (marked[0]?.name ?? 'Pawn') : 'Pawns',
+        count: n,
+        verbs,
+        tiles: marked.flatMap((p) => (p.position ? [p.position] : [])),
+        onClear: clearMark
+      };
     }
-    const names = mobs
-      .filter((m) => markedSet.has(m.id))
-      .map((m) => m.name ?? getCreatureById(m.creatureId)?.name ?? 'creature');
+    const marked = mobs.filter((m) => markedSet.has(m.id));
+    const def =
+      new Set(marked.map((m) => m.creatureId)).size === 1
+        ? getCreatureById(marked[0].creatureId)
+        : undefined;
     return {
-      name: `${n} entit${plural ? 'ies' : 'y'} selected`,
-      status,
-      selected: true,
-      dismissable: true,
-      lines: [names.join(', ')],
-      buttons: [
-        { label: 'HUNT', onClick: () => huntMarkedMobs() },
-        { label: 'CLEAR', onClick: () => clearMark() }
-      ]
-    } satisfies SelectedEntityModel;
+      what: n === 1 ? (marked[0]?.name ?? def?.name ?? 'Creature') : (def?.name ?? 'Creatures'),
+      count: n,
+      verbs: [{ label: 'Hunt', glyph: 'bow', onClick: huntMarkedMobs }],
+      tiles: marked.map((m) => ({ x: m.x, y: m.y })),
+      onClear: clearMark
+    };
   })();
 
   $: hoverBuilding =
@@ -679,25 +630,9 @@
         selectedResourceTile.resourceId
       ] ?? 0)
     : 0;
-  $: selectedResourceDesignation = selectedResourceTile
-    ? (designations[`${selectedResourceTile.x},${selectedResourceTile.y}`] ?? null)
-    : null;
 
-  function tileEnv(t: { x: number; y: number; terrainType: string; moisture?: number }) {
-    const thermal = computeThermalAt(t.x, t.y, buildings, worldMap);
-    const envTurn = environmentService.ambientTurn($gameState ?? { turn: 0 });
-    return {
-      light: computeTileLightLevel(envTurn, buildings, t.x, t.y, worldMap),
-      temp: Math.round(
-        tileTemperature(t.terrainType, $currentSeason, envTurn, $currentWeather, thermal)
-      ),
-      wet: tileWetness(t.moisture ?? 0, $currentWeather, thermal),
-      wind: windDegreeWord(effectiveWindAt(t.x, t.y, $currentWeather, thermal, worldMap))
-    };
-  }
-
-  $: buildingModel = ((): SelectedEntityModel | null => {
-    if (!selectedBuilding) return null;
+  $: buildingVerbs = ((): EntityButton[] => {
+    if (!selectedBuilding) return [];
     const bDef = buildingService.getBuildingById(selectedBuilding.type);
     const isBlueprint = selectedBuilding.status !== 'complete';
     const canConfigFuel =
@@ -710,292 +645,132 @@
       !isBlueprint &&
       !selectedBuilding.deconstructQueued &&
       buildingService.deterioratingRate(selectedBuilding.type) > 0;
-    const status = isBlueprint
-      ? selectedBuilding.paused
-        ? 'paused'
-        : 'building'
-      : `complete${selectedBuilding.deconstructQueued ? ' ⊢ demolish' : ''}`;
     const btns: EntityButton[] = [];
     if (isBlueprint) {
       btns.push({
-        label: selectedBuilding.paused ? 'RESUME' : 'PAUSE',
+        label: selectedBuilding.paused ? 'Resume' : 'Pause',
         onClick: togglePauseBlueprintBuilding
       });
-      btns.push({ label: 'ABORT', onClick: cancelBlueprintBuilding });
+      btns.push({ label: 'Abort', onClick: cancelBlueprintBuilding });
     } else if (selectedBuilding.deconstructQueued) {
-      btns.push({ label: 'CANCEL', onClick: cancelDeconstructBuilding });
+      btns.push({ label: 'Cancel', onClick: cancelDeconstructBuilding });
     } else {
-      btns.push({ label: 'BUILD', onClick: buildAnother });
-      btns.push({ label: 'DEMOLISH', onClick: deconstructBuilding });
+      btns.push({ label: 'Build', onClick: buildAnother });
+      btns.push({ label: 'Demolish', onClick: deconstructBuilding });
       if (canConfigFuel) {
-        btns.push({ label: 'FUEL', active: showFuelSettings, onClick: toggleFuelSettingsPanel });
+        btns.push({ label: 'Fuel', active: showFuelSettings, onClick: toggleFuelSettingsPanel });
       }
       if (canRepair) {
         btns.push({
-          label: 'REPAIR',
+          label: 'Repair',
           active: showRepairSettings,
           onClick: toggleRepairSettingsPanel
         });
       }
       if (canConfigStorage) {
         btns.push({
-          label: 'FILTER',
+          label: 'Stores',
           active: showStorageSettings,
           onClick: toggleStorageSettingsPanel
         });
       }
     }
-    return {
-      name: bDef?.name ?? selectedBuilding.type,
-      status,
-      selected: true,
-      dismissable: true,
-      buttons: btns
-    } satisfies SelectedEntityModel;
+    return btns;
   })();
 
-  $: resourceCard = (() => {
+  function deselectResource() {
+    selectedResourceTile = null;
+    highlightedResourceTiles = new Set();
+    selectedResourceTypes = new Set();
+    drawDesignations();
+  }
+
+  $: resourceTag = ((): VerbTagModel | null => {
     if (!selectedResourceTile || !selectedResourceDef) return null;
-    const activeInteractions = selectedResourceDef.interactions ?? [
-      selectedResourceDef.interaction
-    ];
-    const lines: string[] = [];
-    lines.push(`${selectedResourceDef.displayName} — ×${selectedResourceAmount} nodes`);
-    const growthPct = isGrowableResource(selectedResourceDef)
-      ? (worldMap[selectedResourceTile.y]?.[selectedResourceTile.x]?.growth?.[
-          selectedResourceTile.resourceId
-        ] ?? 100)
-      : undefined;
+    const def = selectedResourceDef;
+    const { x, y, resourceId } = selectedResourceTile;
     const tileKeys =
-      highlightedResourceTiles.size > 0
-        ? [...highlightedResourceTiles]
-        : [`${selectedResourceTile.x},${selectedResourceTile.y}`];
+      highlightedResourceTiles.size > 0 ? [...highlightedResourceTiles] : [`${x},${y}`];
     const designatedCount = tileKeys.filter((k) => designations[k]).length;
-    const anyDesignated = designatedCount > 0;
-    const allDesignated = designatedCount === tileKeys.length;
-    if (highlightedResourceTiles.size > 0) {
-      lines.push(`◈ ${highlightedResourceTiles.size} tiles selected`);
-    }
-    if (anyDesignated) {
-      lines.push(`⊢ ${designatedCount}/${tileKeys.length} marked for harvest`);
-    }
-    const growthMult = growthPct === undefined ? 1 : Math.max(0, Math.min(1, growthPct / 100));
-    const pillMap = new Map<string, { min: number; max: number }>();
-    if (!allDesignated) {
-      for (const iact of activeInteractions) {
-        for (const y of iact.yields) {
-          if (growthPct !== undefined && growthPct < (y.minGrowth ?? 0)) continue;
-          const lo =
-            growthPct === undefined ? (y.min ?? 0) : Math.ceil((y.amount ?? 0) * growthMult);
-          const hi = growthPct === undefined ? (y.max ?? 0) : lo;
-          if (hi <= 0) continue;
-          const prev = pillMap.get(y.itemId);
-          pillMap.set(y.itemId, {
-            min: Math.min(prev?.min ?? lo, lo),
-            max: Math.max(prev?.max ?? hi, hi)
-          });
-        }
-      }
-    }
-    const itemPills: ItemPillView[] = [...pillMap].map(([itemId, { min, max }]) => ({
-      itemId,
-      qty: min === max ? `×${max}` : `${min}–${max}`
-    }));
-    const harvestGate = resourceObjectService.minHarvestGrowth(selectedResourceTile.resourceId);
-    const isRegrowing =
-      selectedResourceAmount <= 0 && growthPct !== undefined && growthPct < harvestGate;
-    if (isRegrowing) lines.push('regrowing — not ready to harvest');
-    const harvestableNow = (dtype: DesignationType) =>
-      tileKeys.some((k) => {
-        const [hx, hy] = k.split(',').map(Number);
-        return isHarvestableTileNow({ worldMap }, hx, hy, dtype);
-      });
-    const btns: EntityButton[] = [];
-    let withheldImmature = false;
-    if (!allDesignated && !isRegrowing) {
-      for (const iact of activeInteractions) {
-        const label = selectedResourceDef.lair
-          ? 'DESTROY'
-          : iact.designationType === 'woodcut'
-            ? 'CUT'
-            : iact.designationType === 'forage'
-              ? 'FORAGE'
-              : iact.designationType === 'mine'
-                ? 'MINE'
-                : iact.designationType === 'dig'
-                  ? 'DIG'
-                  : 'HARVEST';
+    const growthPct = isGrowableResource(def)
+      ? (worldMap[y]?.[x]?.growth?.[resourceId] ?? 100)
+      : undefined;
+    const regrowing =
+      selectedResourceAmount <= 0 &&
+      growthPct !== undefined &&
+      growthPct < resourceObjectService.minHarvestGrowth(resourceId);
+    const ripe = (dtype: DesignationType) =>
+      keyTiles(tileKeys).some((t) => isHarvestableTileNow({ worldMap }, t.x, t.y, dtype));
+    const verbs: TagVerb[] = [];
+    let unripe = false;
+    if (designatedCount < tileKeys.length && !regrowing) {
+      for (const iact of def.interactions ?? [def.interaction]) {
         const dtype = iact.designationType;
-        if (dtype && !harvestableNow(dtype)) {
-          withheldImmature = true;
+        if (dtype && !ripe(dtype)) {
+          unripe = true;
           continue;
         }
-        btns.push({ label, onClick: () => designateResource(dtype) });
+        const [label, glyph] = designationVerb(dtype, !!def.lair);
+        if (verbs.some((v) => v.label === label)) continue;
+        verbs.push({
+          label,
+          glyph,
+          quiet: verbs.length > 0,
+          onClick: () => designateResource(dtype)
+        });
       }
     }
-    if (withheldImmature && growthPct !== undefined)
-      lines.push(`not ready — ${Math.round(growthPct)}% grown (needs ${harvestGate}%)`);
-    if (anyDesignated) {
-      btns.push({ label: 'CANCEL', onClick: cancelResourceDesignation });
-    }
-    btns.push({ label: 'MARK', onClick: startSimilarSelect });
+    if (designatedCount > 0)
+      verbs.push({ label: 'Cancel', quiet: true, onClick: cancelResourceDesignation });
     return {
-      name: selectedResourceDef.displayName,
-      status:
-        selectedResourceDesignation ??
-        activeInteractions[0]?.designationType ??
-        activeInteractions[0]?.action ??
-        'harvest',
-      selected: true,
-      dismissable: true,
-      lines,
-      growthPct,
-      itemPills,
-      buttons: btns
-    } satisfies SelectedEntityModel;
+      what: def.displayName,
+      count: tileKeys.length,
+      note: regrowing
+        ? 'regrowing'
+        : unripe && growthPct !== undefined
+          ? `${Math.round(growthPct)}% grown`
+          : undefined,
+      verbs,
+      tiles: keyTiles(tileKeys),
+      onClear: deselectResource
+    };
   })();
 
-  $: multiResourceCard = ((): SelectedEntityModel | null => {
+  $: multiResourceTag = ((): VerbTagModel | null => {
     if (selectedResourceTypes.size < 2) return null;
-    const typeNames = [...selectedResourceTypes].map(
-      (id) => resourceObjectService.getById(id)?.displayName ?? id
+    const names = [...selectedResourceTypes].flatMap(
+      (id) => resourceObjectService.getById(id)?.displayName ?? []
     );
     const marked = highlightedResourceTiles.size;
     const designatedCount = [...highlightedResourceTiles].filter((k) => designations[k]).length;
-    const allDesignated = marked > 0 && designatedCount === marked;
-    const btns: EntityButton[] = [];
-    if (marked > 0 && !allDesignated) {
-      btns.push({
-        label: `DESIGNATE (${marked - designatedCount})`,
-        onClick: () => designateMarkedMulti()
-      });
-    }
-    if (designatedCount > 0) {
-      btns.push({ label: `CANCEL (${designatedCount})`, onClick: () => cancelMarkedMulti() });
-    }
-    btns.push({ label: 'CLEAR', onClick: () => clearResourceMark() });
-    return {
-      name: `${selectedResourceTypes.size} resource types`,
-      status: 'mark brush',
-      selected: true,
-      dismissable: true,
-      note:
-        marked === 0
-          ? 'Shift+drag a box to highlight all of these'
-          : designatedCount > 0
-            ? `${designatedCount}/${marked} marked for harvest`
-            : `${marked} tiles highlighted`,
-      lines: [typeNames.join(', ')],
-      buttons: btns
-    } satisfies SelectedEntityModel;
+    const verbs: TagVerb[] = [];
+    if (marked > designatedCount)
+      verbs.push({ label: 'Harvest', glyph: 'sprout', onClick: designateMarkedMulti });
+    if (designatedCount > 0)
+      verbs.push({ label: 'Cancel', quiet: true, onClick: cancelMarkedMulti });
+    const tiles =
+      marked > 0
+        ? keyTiles(highlightedResourceTiles)
+        : selectedResourceTile
+          ? [selectedResourceTile]
+          : [];
+    if (tiles.length === 0) return null;
+    return { what: names.join(', '), count: marked, verbs, tiles, onClear: deselectResource };
   })();
 
-  $: hoverDroppedItem =
-    hoverTileX >= 0 && hoverTileY >= 0
-      ? (droppedItems.find((d) => d.x === hoverTileX && d.y === hoverTileY) ?? null)
-      : null;
+  $: verbTag = markedTag ?? multiResourceTag ?? resourceTag;
+
+  let hoverItemTile = '';
+  $: hoverDroppedItem = hoveredDrop(droppedItems, hoverTileX, hoverTileY, hoverItemTile);
 
   function needBar(value: number): string {
     const filled = Math.round(value / 10);
     return '█'.repeat(filled) + '░'.repeat(10 - filled);
   }
 
-  function itemBarColor(goodPct: number): string {
-    if (goodPct >= 66) return '#4CAF50';
-    if (goodPct >= 33) return '#FFA726';
-    return '#D32F2F';
-  }
-
   $: selectedItem = selectedItemId
     ? (droppedItems.find((d) => d.id === selectedItemId) ?? null)
     : null;
-
-  function toggleDropForbidden(d: DroppedItem) {
-    gameState.command({
-      type: 'setDropForbidden',
-      payload: { dropId: d.id, forbidden: !d.forbidden },
-      save: true
-    });
-  }
-  function toggleDropUrgent(d: DroppedItem) {
-    gameState.command({
-      type: 'setDropUrgent',
-      payload: { dropId: d.id, urgent: !d.urgent },
-      save: true
-    });
-  }
-  function buildItemCard(d: DroppedItem, selected = false): SelectedEntityModel {
-    const itemDef = ITEMS_DATABASE.find((i) => i.id === d.resourceId);
-    const maxDur = itemDef?.maxDurability ?? 100;
-    const freshPct =
-      itemDef?.decaySeconds && itemDef.decaySeconds > 0
-        ? Math.round(Math.max(0, 1 - (d.decayAcc ?? 0) / itemDef.decaySeconds) * 100)
-        : null;
-    const durPct = Math.round((Math.min(maxDur, d.durability ?? maxDur) / maxDur) * 100);
-    const displayName =
-      itemDef?.dynamicName && d.name ? d.name : (itemDef?.name ?? d.resourceId.replace(/_/g, ' '));
-    const bars: EntityBar[] = [];
-    if (freshPct !== null) {
-      bars.push({
-        label: 'FRESH',
-        value: freshPct,
-        color: itemBarColor(freshPct),
-        valueText: `${freshPct}%`
-      });
-    }
-    bars.push({
-      label: 'COND',
-      value: durPct,
-      color: itemBarColor(durPct),
-      valueText: `${durPct}%`
-    });
-    const dryStatus = itemService.dryingStatus(d, $gameState);
-    if (dryStatus) {
-      const dryPct = Math.round(Math.min(1, dryStatus.progress / dryStatus.target) * 100);
-      const ind = dryingIndicator(dryStatus);
-      bars.push({
-        label: 'DRY',
-        value: dryPct,
-        color: ind.color,
-        valueText: `${dryPct}% ${ind.glyph}`,
-        title: ind.title
-      });
-    }
-    return {
-      name: `★ ${displayName}`,
-      status: `×${d.quantity}`,
-      itemPills: [{ itemId: d.resourceId }],
-      bars,
-      note: d.stored
-        ? 'stored'
-        : d.forbidden
-          ? 'forbidden — pawns will not haul this'
-          : d.urgent
-            ? 'urgent — hauled before other work'
-            : 'dropped item — awaiting hauler',
-      buttons:
-        selected && !d.stored
-          ? [
-              {
-                label: d.forbidden ? 'ALLOW HAUL' : 'FORBID HAUL',
-                active: !d.forbidden,
-                onClick: () => toggleDropForbidden(d)
-              },
-              ...(!d.forbidden
-                ? [
-                    {
-                      label: d.urgent ? 'NORMAL HAUL' : 'URGENT HAUL',
-                      active: !!d.urgent,
-                      onClick: () => toggleDropUrgent(d)
-                    }
-                  ]
-                : [])
-            ]
-          : undefined
-    } satisfies SelectedEntityModel;
-  }
-  $: hoverItemCard = hoverDroppedItem ? buildItemCard(hoverDroppedItem) : null;
-  $: selectedItemCard = selectedItem ? buildItemCard(selectedItem, true) : null;
 
   $: selectedZone = selectedZoneId
     ? (zoneInstances.find((z) => z.id === selectedZoneId) ?? null)
@@ -1005,15 +780,11 @@
         Object.values(designationZoneId[k] ?? {}).includes(selectedZoneId!)
       )
     : [];
-  $: selectedZoneInventory = (() => {
-    if (!selectedZoneId) return {} as Record<string, number>;
+  $: selectedZoneFilled = (() => {
     const tiles = new Set(selectedZoneTileKeys);
-    const inv: Record<string, number> = {};
-    for (const d of droppedItems) {
-      if (!d.stored || !tiles.has(`${d.x},${d.y}`)) continue;
-      inv[d.resourceId] = (inv[d.resourceId] ?? 0) + d.quantity;
-    }
-    return inv;
+    return new Set(
+      droppedItems.filter((d) => d.stored && tiles.has(`${d.x},${d.y}`)).map((d) => `${d.x},${d.y}`)
+    ).size;
   })();
   $: zoneToolDrawing = designationMode && activeZoneInstanceId === selectedZoneId && !zoneEraseMode;
   $: zoneToolClearing = designationMode && activeZoneInstanceId === selectedZoneId && zoneEraseMode;
@@ -1023,39 +794,15 @@
     uiState.activateDesignation('stockpile', instanceId);
   }
 
-  $: zoneStoredTotal = Object.values(selectedZoneInventory).reduce((a, b) => a + b, 0);
-  $: zoneCard = ((): SelectedEntityModel | null => {
-    if (!selectedZone) return null;
-    const allowed = selectedZone.filter.allowedCategories.length === 0 ? 'all items' : 'filtered';
-    const id = selectedZone.id;
-    return {
-      name: selectedZone.label,
-      status: 'stockpile',
-      selected: true,
-      dismissable: true,
-      lines: [
-        `${selectedZoneTileKeys.length} tiles · ${Math.floor(zoneStoredTotal)} stored`,
-        `haul filter: ${allowed}`
-      ],
-      buttons: [
-        {
-          label: 'FILTER',
-          active: showZoneFilter,
-          onClick: () => (showZoneFilter = !showZoneFilter)
-        },
-        { label: 'DRAW', active: zoneToolDrawing, onClick: () => paintZoneTool(id, false) },
-        { label: 'CLEAR', active: zoneToolClearing, onClick: () => paintZoneTool(id, true) }
-      ]
-    } satisfies SelectedEntityModel;
-  })();
-
-  function moveCostLabel(cost: number): { label: string; color: string } {
-    if (cost <= 0) return { label: 'impassable', color: '#cc4444' };
-    if (cost <= 1.0) return { label: 'normal', color: '#70bb70' };
-    if (cost <= 1.5) return { label: 'light', color: '#99cc77' };
-    if (cost <= 2.0) return { label: 'slow', color: '#ccaa44' };
-    if (cost <= 3.0) return { label: 'very slow', color: '#cc7733' };
-    return { label: 'barely passable', color: '#cc4444' };
+  function deleteSelectedZone() {
+    if (!selectedZoneId) return;
+    if (designationMode && activeZoneInstanceId === selectedZoneId) uiState.deactivateDesignation();
+    gameState.command({
+      type: 'removeZoneInstance',
+      payload: { instanceId: selectedZoneId },
+      save: true
+    });
+    selectedZoneId = null;
   }
 
   let selDragActive = false;
@@ -1064,29 +811,6 @@
   let selEndX = 0;
   let selEndY = 0;
   let selectedResourceTypes = new Set<string>();
-
-  const ZONE_META: Record<string, { label: string; color: string; desc: string }> = {
-    stockpile: {
-      label: 'STOCKPILE ZONE',
-      color: '#e8a020',
-      desc: 'Haulers deposit carried resources here'
-    },
-    drink: { label: 'DRINK ZONE', color: '#4fc3f7', desc: 'Thirsty pawns come here to drink' },
-    wash: { label: 'WASH ZONE', color: '#80d8c0', desc: 'Dirty pawns come here to wash' },
-    grow: {
-      label: 'GROW ZONE',
-      color: '#6fae3a',
-      desc: 'Farmers sow the chosen seed on fertile soil here'
-    },
-    restrict: {
-      label: 'RESTRICT ZONE',
-      color: '#b06cd0',
-      desc: 'Assigned pawns stay confined to this zone'
-    },
-    harvest: { label: 'HARVEST', color: '#4ccc44', desc: 'Single-tile harvest designation' },
-    mine: { label: 'MINE', color: '#cc8833', desc: 'Single-tile mining designation' },
-    construct: { label: 'CONSTRUCT', color: '#44aacc', desc: 'Construction site' }
-  };
 
   const unsubState = gameState.subscribe((s) => {
     worldMap = s.worldMap ?? [];
@@ -1132,7 +856,7 @@
       const { light, tint } = environmentService.getAmbient(environmentService.ambientTurn(s));
       const season = environmentService.effectiveSeason(s);
       const tinted = environmentService.getMapAmbientTint(tint, season, s.weather);
-      renderer.setAmbient(light, tinted);
+      renderer.setAmbient(light, tinted, tint, s.weather, season);
       lightingService.setAmbient(light, tinted);
       _ambientLight = light;
       _ambientTint = tinted;
@@ -1194,15 +918,11 @@
     vy: number,
     box: HTMLDivElement,
     tW: number,
-    tH: number,
-    selPawnId: string | null,
-    selMobId: string | null,
-    marked: 'pawn' | 'mob' | null,
-    markedIds: Set<string>
+    tH: number
   ) {
     pawnOverlayGrid.clear();
-    itemOverlayGrid.clear();
-    overlayDroppedItems(itemOverlayGrid, items, isHiddenTile);
+    const world = { map, buildings: buildingList, zoneTiles, rev: _prevTerrainRev };
+    overlayDroppedItems(itemOverlayGrid, items, isHiddenTile, world);
     buildingOverlayGrid.clear();
     overlayBuildings(buildingOverlayGrid, buildingList, isHiddenTile);
     const clampedDt = Math.min(dt, 0.05);
@@ -1242,20 +962,17 @@
       const cellX = Math.round(rm.x);
       const cellY = Math.round(rm.y);
       if (isHiddenTile(cellX, cellY)) continue;
-      const isSelected = mob.id === selMobId || (marked === 'mob' && markedIds.has(mob.id));
       const mLunge = lungeOffset(mob.id, nowMs);
       const mTier = def.tier;
       const mScale = mTier != null ? TIER_GLYPH_SCALE[mTier] : undefined;
       const mTint = mTier != null ? TIER_GLYPH_TINT[mTier] : 1;
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: def.chars[0],
-        foreground: isSelected
-          ? { r: 1.0, g: 0.9, b: 0.1 }
-          : {
-              r: Math.min(1, def.fg[0] * mTint),
-              g: Math.min(1, def.fg[1] * mTint),
-              b: Math.min(1, def.fg[2] * mTint * (mTier === 5 ? 0.85 : 1))
-            },
+        foreground: {
+          r: Math.min(1, def.fg[0] * mTint),
+          g: Math.min(1, def.fg[1] * mTint),
+          b: Math.min(1, def.fg[2] * mTint * (mTier === 5 ? 0.85 : 1))
+        },
         background: { r: 0, g: 0, b: 0 },
         ...(mScale != null && mScale !== 1 ? { scale: mScale } : {}),
         ...(PAINTED_TILES ? paintedEntity('creature', def.id, mob.id) : null),
@@ -1293,7 +1010,6 @@
       const cellX = Math.round(rp.x);
       const cellY = Math.round(rp.y);
       if (isHiddenTile(cellX, cellY)) continue;
-      const isSelected = pawn.id === selPawnId || (marked === 'pawn' && markedIds.has(pawn.id));
       const isSleeping = pawn.currentState === 'Sleeping';
       const isCollapsed = pawn.currentState === 'Collapsed';
       const isResting = isSleeping && needsRecovery(pawn as never);
@@ -1314,7 +1030,7 @@
       const pLunge = lungeOffset(pawn.id, nowMs);
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: PAWN_SPRITES[i % PAWN_SPRITES.length],
-        foreground: isSelected ? { r: 1.0, g: 0.9, b: 0.1 } : baseColor,
+        foreground: baseColor,
         background: isDrafted ? { r: 0.3, g: 0, b: 0 } : { r: 0, g: 0, b: 0 },
         position: { x: cellX, y: cellY },
         animationOffset: {
@@ -1322,7 +1038,7 @@
           y: (rp.y - cellY) * BASE_TILE_PX + pLunge.y
         },
         rotation: isSleeping || isCollapsed ? 90 : undefined,
-        ...(PAINTED_TILES ? paintedEntity('pawn', pawn.cultureId, pawn.id) : null)
+        ...(PAINTED_TILES ? paintedPawn(pawn, freshState.culturePool) : null)
       });
     }
 
@@ -1333,308 +1049,26 @@
     }
   }
 
-  function updateWorldEffectOverlays(
-    pawnList: Pawn[],
-    mobList: Mob[],
-    buildingList: PlacedBuilding[],
-    vx: number,
-    vy: number,
-    box: HTMLDivElement,
-    tW: number,
-    tH: number
-  ) {
-    const W = box?.clientWidth ?? 0;
-    const H = box?.clientHeight ?? 0;
+  let _selectionRingKey = '';
 
-    const glyphOf = (id: string, x: number, y: number, kind: GlyphFloatKind): GlyphFloat => ({
-      id,
-      left: (x - vx + 0.5) * tW,
-      top: (y - vy) * tH - 18,
-      kind
-    });
-    const onScreen = (o: { left: number; top: number }) => o.left >= 0 && o.top >= 0 && o.left <= W;
-    const newGlyphs: GlyphFloat[] = [];
-    const prioCollapse = conditionPriority('collapse');
-    const prioSleeping = conditionPriority('sleeping');
-    const prioWinded = conditionPriority('winded');
-    for (const p of pawnList) {
-      if (!p.position) continue;
-      if (p.carriedBy) continue;
-      if (isHiddenTile(p.position.x, p.position.y)) continue;
-      let kind: GlyphFloatKind | null = null;
-      let prio = -1;
-      if (p.currentState === 'Collapsed' && prioCollapse > prio) {
-        prio = prioCollapse;
-        kind = 'collapse';
-      }
-      if (p.currentState === 'Sleeping' && prioSleeping > prio) {
-        prio = prioSleeping;
-        kind = needsRecovery(p as never) ? 'rest' : 'sleep';
-      }
-      if ((p.transientConditions ?? []).includes('winded') && prioWinded > prio) {
-        prio = prioWinded;
-        kind = 'winded';
-      }
-      if (kind) {
-        const o = glyphOf(p.id, p.position.x, p.position.y, kind);
-        if (onScreen(o)) newGlyphs.push(o);
-      }
+  function updateSelectionRings(vx: number, vy: number, tW: number, tH: number) {
+    const ids =
+      markedKind && markedSet.size > 0
+        ? [...markedSet]
+        : [selectedPawnId, selectedMobId].filter((id): id is string => !!id);
+    const w = Math.round(tW * 1.2);
+    const next: { x: number; y: number; w: number; h: number }[] = [];
+    for (const id of ids) {
+      const rp = pawnRenderPos.get(id) ?? mobRenderPos.get(id);
+      if (!rp) continue;
+      const x = Math.round((rp.x - vx + 0.5) * tW - w / 2);
+      next.push({ x, y: Math.round((rp.y - vy + 1) * tH - w * 0.3), w, h: Math.round(w * 0.4) });
     }
-    const mobsDrawn = tW >= ENTITY_RENDER_MIN_PX;
-    for (const m of mobsDrawn ? mobList : []) {
-      if (m.state === 'Corpse') continue;
-      if (isHiddenTile(m.x, m.y)) continue;
-      let kind: GlyphFloatKind | null = null;
-      let prio = -1;
-      if (m.state === 'Collapsed' && prioCollapse > prio) {
-        prio = prioCollapse;
-        kind = 'collapse';
-      }
-      if (m.state === 'Sleeping' && prioSleeping > prio) {
-        prio = prioSleeping;
-        kind = 'sleep';
-      }
-      if ((m.transientConditions ?? []).includes('winded') && prioWinded > prio) {
-        prio = prioWinded;
-        kind = 'winded';
-      }
-      if (m.partyRole === 'trader') kind = 'trade';
-      if (kind) {
-        const rp = mobRenderPos.get(m.id);
-        const o = glyphOf(m.id, rp?.x ?? m.x, rp?.y ?? m.y, kind);
-        if (onScreen(o)) newGlyphs.push(o);
-      }
-    }
-    for (const b of buildingList) {
-      if (b.type !== 'campfire' || b.status !== 'complete' || b.lit !== true) continue;
-      const o: GlyphFloat = {
-        id: b.id,
-        left: (b.x - vx + 0.5) * tW,
-        top: (b.y - vy + 0.5) * tH,
-        kind: 'campfire'
-      };
-      if (o.left >= 0 && o.top >= 0 && o.left <= W) newGlyphs.push(o);
-    }
-    const glyphKey = newGlyphs
-      .map((o) => `${o.kind}:${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
-      .join('|');
-    if (glyphKey !== _glyphFloatKey) {
-      _glyphFloatKey = glyphKey;
-      worldEffects.setGlyphFloats(newGlyphs);
-    }
-
-    const newProgress = [
-      ...pawnList
-        .filter(
-          (p) =>
-            p.position &&
-            !isHiddenTile(p.position.x, p.position.y) &&
-            p.currentState != null &&
-            PROGRESS_BAR_STATES.has(p.currentState) &&
-            p.activeJob &&
-            (p.activeJob.progress ?? 0) >= 0
-        )
-        .map((p) => ({
-          id: p.id,
-          left: (p.position!.x - vx + 0.5) * tW,
-          top: (p.position!.y - vy) * tH - 6,
-          progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
-        }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...pawnList
-        .filter(
-          (p) =>
-            p.draftTarget?.type === 'tend' &&
-            (p.tendProgress ?? -1) >= 0 &&
-            p.position &&
-            !isHiddenTile(p.position.x, p.position.y)
-        )
-        .map((p) => ({
-          id: p.id,
-          left: (p.position!.x - vx + 0.5) * tW,
-          top: (p.position!.y - vy) * tH - 6,
-          progress: Math.max(0, Math.min(1, p.tendProgress ?? 0))
-        }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...mobList
-        .filter((m) => (m.eatProgress ?? 0) > 0 && !isHiddenTile(m.x, m.y))
-        .map((m) => ({
-          id: m.id,
-          left: (m.x - vx + 0.5) * tW,
-          top: (m.y - vy) * tH - 6,
-          progress: Math.max(0, Math.min(1, m.eatProgress ?? 0))
-        }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W)
-    ];
-    const progressKey = newProgress
-      .map(
-        (o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.progress * 20)}`
-      )
-      .join('|');
-    if (progressKey !== _progressOverlayKey) {
-      _progressOverlayKey = progressKey;
-      worldEffects.setProgressOverlays(newProgress);
-    }
-
-    const newHealth = [
-      ...pawnList
-        .filter(
-          (p) =>
-            p.position &&
-            !isHiddenTile(p.position.x, p.position.y) &&
-            p.isAlive !== false &&
-            bloodFrac(p) < 1
-        )
-        .map((p) => ({
-          id: `hp-${p.id}`,
-          left: (p.position!.x - vx + 0.5) * tW,
-          top: (p.position!.y - vy) * tH - 10,
-          health: bloodFrac(p),
-          type: 'pawn' as const
-        }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...mobList
-        .filter((m) => m.state !== 'Corpse' && bloodFrac(m) < 1 && !isHiddenTile(m.x, m.y))
-        .map((m) => ({
-          id: `hp-${m.id}`,
-          left: (m.x - vx + 0.5) * tW,
-          top: (m.y - vy) * tH - 10,
-          health: bloodFrac(m),
-          type: 'mob' as const
-        }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W)
-    ];
-    const healthKey = newHealth
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.health * 20)}`)
-      .join('|');
-    if (healthKey !== _healthOverlayKey) {
-      _healthOverlayKey = healthKey;
-      worldEffects.setHealthOverlays(newHealth);
-    }
-
-    const newDraftTargets = pawnList
-      .filter((p) => p.position && p.drafted && p.draftTarget)
-      .map((p) => {
-        const target = p.draftTarget!;
-        const rp = pawnRenderPos.get(p.id) ?? p.position!;
-        const points: Array<{ x: number; y: number }> = [
-          { x: (rp.x - vx + 0.5) * tW, y: (rp.y - vy + 0.5) * tH }
-        ];
-        const path = p.path ?? [];
-        const pathIdx = p.pathIndex ?? 0;
-        for (let i = pathIdx; i < path.length; i++) {
-          const tile = path[i];
-          points.push({ x: (tile.x - vx + 0.5) * tW, y: (tile.y - vy + 0.5) * tH });
-        }
-        if (target.type === 'attack') {
-          let tx = p.position!.x;
-          let ty = p.position!.y;
-          if (target.targetType === 'mob') {
-            const m = mobList.find((mm) => mm.id === target.targetId);
-            if (m) {
-              tx = m.x;
-              ty = m.y;
-            }
-          } else {
-            const pp = pawnList.find((q) => q.id === target.targetId);
-            if (pp?.position) {
-              tx = pp.position.x;
-              ty = pp.position.y;
-            }
-          }
-          points.push({ x: (tx - vx + 0.5) * tW, y: (ty - vy + 0.5) * tH });
-        } else if (pathIdx >= path.length && 'x' in target) {
-          points.push({ x: (target.x - vx + 0.5) * tW, y: (target.y - vy + 0.5) * tH });
-        }
-        return { id: `draft-${p.id}`, points };
-      })
-      .filter((o) =>
-        o.points.some((p) => p.x >= -tW && p.y >= -tH && p.x <= W + tW && p.y <= H + tH)
-      );
-    const draftKey = newDraftTargets
-      .map(
-        (o) => `${o.id}:${o.points.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join('|')}`
-      )
-      .join(';');
-    if (draftKey !== _draftOverlayKey) {
-      _draftOverlayKey = draftKey;
-      worldEffects.setDraftTargetOverlays(newDraftTargets);
-    }
-
-    const now = animNow();
-    const newFloats = combatTexts
-      .filter((e) => now - e.spawnTime < floatTtl(e.kind))
-      .map((e) => ({
-        id: e.id,
-        left: (e.worldX - vx + 0.5) * tW,
-        top: (e.worldY - vy) * tH - 14 + (e.dy ?? 0),
-        text: e.text,
-        kind: e.kind,
-        color: e.color
-      }))
-      .filter((o) => o.left >= -tW && o.top >= -tH && o.left <= W + tW && o.top <= H + tH);
-    const flScale = Math.min(1.2, Math.max(0.25, tW / 20));
-    const CHAR_W = 5;
-    const MAX_TXT_W = 152;
-    const LINE_H = 15;
-    const boxOf = (text: string) => {
-      const full = Math.max(text.length * CHAR_W, 30);
-      return {
-        w: Math.min(MAX_TXT_W, full) + 8,
-        h: Math.max(1, Math.ceil(full / MAX_TXT_W)) * LINE_H + 6
-      };
-    };
-    const SEAT_EPS = 0.5;
-    const placedSocial: { left: number; top: number; w: number; h: number }[] = [];
-    for (const o of newFloats) {
-      if (o.kind !== 'social') continue;
-      const ob = boxOf(o.text);
-      for (let pass = 0; pass < placedSocial.length; pass++) {
-        let moved = false;
-        for (const p of placedSocial) {
-          const horiz = Math.abs(p.left - o.left) < (flScale * (p.w + ob.w)) / 2 + 2;
-          if (!horiz) continue;
-          const gap = (flScale * (p.h + ob.h)) / 2 + 2;
-          if (Math.abs(p.top + p.h / 2 - (o.top + ob.h / 2)) < gap) {
-            o.top = p.top + p.h / 2 + gap + SEAT_EPS - ob.h / 2;
-            moved = true;
-          }
-        }
-        if (!moved) break;
-      }
-      placedSocial.push({ left: o.left, top: o.top, w: ob.w, h: ob.h });
-    }
-    const floatKey = newFloats
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
-      .join('|');
-    if (floatKey !== _floatTextKey) {
-      _floatTextKey = floatKey;
-      worldEffects.setFloatingTextOverlays(newFloats);
-    }
-
-    const newProjectiles = projectileList
-      .map((e) => {
-        const progress = (now - e.spawnTime) / e.durationMs;
-        const tc = Math.min(1, progress);
-        const wx = e.fromX + (e.toX - e.fromX) * tc;
-        const wy = e.fromY + (e.toY - e.fromY) * tc;
-        return {
-          id: e.id,
-          left: (wx - vx + 0.5) * tW,
-          top: (wy - vy + 0.5) * tH,
-          angle: (Math.atan2(e.toY - e.fromY, e.toX - e.fromX) * 180) / Math.PI,
-          effect: e.effect,
-          progress
-        };
-      })
-      .filter((o) => o.left >= -tW && o.top >= -tH && o.left <= W + tW && o.top <= H + tH);
-    const projKey = newProjectiles
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}:${o.progress >= 1 ? 1 : 0}`)
-      .join('|');
-    if (projKey !== _projOverlayKey) {
-      _projOverlayKey = projKey;
-      worldEffects.setProjectileOverlays(newProjectiles);
-    }
+    const key = next.map((r) => `${r.x},${r.y},${r.w}`).join('|');
+    if (key === _selectionRingKey) return;
+    _selectionRingKey = key;
+    renderer?.setGroundRings(next, MARK_INK);
+    markRenderDirty();
   }
 
   function redrawOverlay() {
@@ -1800,7 +1234,7 @@
       if (!t) continue;
       applyTileToGrid(_terrainGrid, t, hiddenMask);
       if (_resourceGrid && _resourceTallGrid)
-        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason);
+        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason, map);
       if (_snowGrid) applySnowToGrid(_snowGrid, t, hiddenMask);
       if (_updateEmitterAt(y, x, t)) emittersChanged = true;
     }
@@ -1889,7 +1323,14 @@
         const p = _foliagePending[i];
         const t = worldMap[p.y]?.[p.x];
         if (t) {
-          applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason);
+          applyResourceToGrid(
+            _resourceGrid,
+            _resourceTallGrid,
+            t,
+            hiddenMask,
+            _renderSeason,
+            worldMap
+          );
           due.push({ x: p.x, y: p.y });
         }
       }
@@ -1918,7 +1359,7 @@
       const p = P[_foliageIdx++];
       const t = map[p.y]?.[p.x];
       if (t) {
-        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason);
+        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason, map);
         due.push({ x: p.x, y: p.y });
         budget--;
       }
@@ -2016,8 +1457,58 @@
     }
   }
 
+  function tileRect(x: number, y: number): ScreenRect {
+    return { x: (x - viewX) * tileWidth, y: (y - viewY) * tileHeight, w: tileWidth, h: tileHeight };
+  }
+
+  function markRect(layers: readonly SpriteLayer[], x: number, y: number): ScreenRect {
+    const view = { viewX, viewY, tileWidth, tileHeight };
+    return spriteRect(renderer, layers, x, y, view) ?? tileRect(x, y);
+  }
+
+  function tileBoxRect(minX: number, minY: number, maxX: number, maxY: number): ScreenRect {
+    return {
+      x: (minX - viewX) * tileWidth,
+      y: (minY - viewY) * tileHeight,
+      w: (maxX - minX + 1) * tileWidth,
+      h: (maxY - minY + 1) * tileHeight
+    };
+  }
+
+  function tilesInBox(
+    minX: number,
+    minY: number,
+    maxX: number,
+    maxY: number,
+    W: number,
+    H: number,
+    keep: (x: number, y: number) => boolean
+  ): ScreenRect[] {
+    const out: ScreenRect[] = [];
+    const x1 = Math.min(maxX, viewX + Math.ceil(W / tileWidth));
+    const y1 = Math.min(maxY, viewY + Math.ceil(H / tileHeight));
+    for (let ry = Math.max(minY, viewY); ry <= y1; ry++)
+      for (let rx = Math.max(minX, viewX); rx <= x1; rx++)
+        if (keep(rx, ry)) out.push(markRect(RESOURCE_SPRITES, rx, ry));
+    return out;
+  }
+
+  function keyRects(keys: Set<string>, W: number, H: number): ScreenRect[] {
+    const out: ScreenRect[] = [];
+    const colW = Math.ceil(W / tileWidth);
+    const rowH = Math.ceil(H / tileHeight);
+    for (const key of keys) {
+      const ci = key.indexOf(',');
+      const wx = +key.slice(0, ci);
+      const wy = +key.slice(ci + 1);
+      if (wx < viewX - 1 || wy < viewY - 1 || wx > viewX + colW || wy > viewY + rowH) continue;
+      out.push(markRect(RESOURCE_SPRITES, wx, wy));
+    }
+    return out;
+  }
+
   function drawDesignations() {
-    if (!designCanvas || !container || !worldMap.length) return;
+    if (!designCanvas || !markCanvas || !container || !worldMap.length) return;
     markRenderDirty();
     const W = container.clientWidth;
     const H = container.clientHeight;
@@ -2032,6 +1523,14 @@
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
+    if (markCanvas.width !== bw || markCanvas.height !== bh) {
+      markCanvas.width = bw;
+      markCanvas.height = bh;
+    }
+    const mctx = markCanvas.getContext('2d');
+    if (!mctx) return;
+    mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    mctx.clearRect(0, 0, W, H);
 
     {
       const byColor = new Map<string, Set<string>>();
@@ -2115,54 +1614,12 @@
       ctx.restore();
     }
 
-    if (similarDragActive) {
-      const minX = Math.min(similarAnchorX, similarEndX);
-      const maxX = Math.max(similarAnchorX, similarEndX);
-      const minY = Math.min(similarAnchorY, similarEndY);
-      const maxY = Math.max(similarAnchorY, similarEndY);
-      const vx0 = Math.max(minX, viewX);
-      const vy0 = Math.max(minY, viewY);
-      const vx1 = Math.min(maxX, viewX + Math.ceil(W / tileWidth));
-      const vy1 = Math.min(maxY, viewY + Math.ceil(H / tileHeight));
-      ctx.save();
-      for (let ry = vy0; ry <= vy1; ry++) {
-        for (let rx = vx0; rx <= vx1; rx++) {
-          const sx2 = (rx - viewX) * tileWidth;
-          const sy2 = (ry - viewY) * tileHeight;
-          const match = (worldMap[ry]?.[rx]?.resources?.[similarDragResourceId] ?? 0) > 0;
-          ctx.fillStyle = match ? 'rgba(76, 204, 68, 0.42)' : 'rgba(76, 204, 68, 0.14)';
-          ctx.fillRect(sx2, sy2, tileWidth, tileHeight);
-        }
-      }
-      const ox = (minX - viewX) * tileWidth;
-      const oy = (minY - viewY) * tileHeight;
-      const ow = (maxX - minX + 1) * tileWidth;
-      const oh = (maxY - minY + 1) * tileHeight;
-      ctx.strokeStyle = 'rgba(160, 255, 160, 0.95)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(ox + 0.5, oy + 0.5, ow - 1, oh - 1);
-      ctx.restore();
-    }
-
     if (highlightedResourceTiles.size > 0) {
-      paintTileRegion(
-        ctx,
-        highlightedResourceTiles,
-        'rgba(240, 208, 32, 0.22)',
-        'rgba(240, 208, 32, 0.95)'
-      );
-    }
-
-    if (selectedResourceTile) {
-      const sx = (selectedResourceTile.x - viewX) * tileWidth;
-      const sy = (selectedResourceTile.y - viewY) * tileHeight;
-      ctx.save();
-      ctx.fillStyle = 'rgba(255, 220, 40, 0.22)';
-      ctx.fillRect(sx, sy, tileWidth, tileHeight);
-      ctx.strokeStyle = 'rgba(255, 220, 40, 0.95)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(sx + 0.5, sy + 0.5, tileWidth - 1, tileHeight - 1);
-      ctx.restore();
+      brackets(mctx, keyRects(highlightedResourceTiles, W, H));
+    } else if (selectedResourceTile) {
+      brackets(mctx, [markRect(RESOURCE_SPRITES, selectedResourceTile.x, selectedResourceTile.y)]);
+    } else if (selectedBuilding) {
+      brackets(mctx, [markRect(BUILDING_SPRITES, selectedBuilding.x, selectedBuilding.y)]);
     }
 
     if (selDragActive) {
@@ -2170,11 +1627,6 @@
       const minY = Math.min(selAnchorY, selEndY);
       const maxX = Math.max(selAnchorX, selEndX);
       const maxY = Math.max(selAnchorY, selEndY);
-      const sx = (minX - viewX) * tileWidth;
-      const sy = (minY - viewY) * tileHeight;
-      const rw = (maxX - minX + 1) * tileWidth;
-      const rh = (maxY - minY + 1) * tileHeight;
-      ctx.save();
       if (dragMarkKind() === 'resource') {
         const types =
           selectedResourceTypes.size > 0
@@ -2182,38 +1634,17 @@
             : selectedResourceTile
               ? new Set([selectedResourceTile.resourceId])
               : new Set<string>();
-        const vx0 = Math.max(minX, viewX);
-        const vy0 = Math.max(minY, viewY);
-        const vx1 = Math.min(maxX, viewX + Math.ceil(W / tileWidth));
-        const vy1 = Math.min(maxY, viewY + Math.ceil(H / tileHeight));
-        for (let ry = vy0; ry <= vy1; ry++) {
-          for (let rx = vx0; rx <= vx1; rx++) {
-            if (isHiddenTile(rx, ry)) continue;
+        brackets(
+          mctx,
+          tilesInBox(minX, minY, maxX, maxY, W, H, (rx, ry) => {
+            if (isHiddenTile(rx, ry)) return false;
             const res = worldMap[ry]?.[rx]?.resources;
-            let match = false;
-            if (res)
-              for (const t of types)
-                if ((res[t] ?? 0) > 0) {
-                  match = true;
-                  break;
-                }
-            ctx.fillStyle = match ? 'rgba(240, 208, 32, 0.42)' : 'rgba(240, 208, 32, 0.10)';
-            ctx.fillRect(
-              (rx - viewX) * tileWidth,
-              (ry - viewY) * tileHeight,
-              tileWidth,
-              tileHeight
-            );
-          }
-        }
-      } else {
-        ctx.fillStyle = 'rgba(255, 200, 90, 0.18)';
-        ctx.fillRect(sx, sy, rw, rh);
+            if (res) for (const t of types) if ((res[t] ?? 0) > 0) return true;
+            return false;
+          })
+        );
       }
-      ctx.strokeStyle = 'rgba(255, 220, 120, 0.95)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(sx + 0.5, sy + 0.5, rw - 1, rh - 1);
-      ctx.restore();
+      dragBox(mctx, tileBoxRect(minX, minY, maxX, maxY));
     }
 
     if (markDragActive) {
@@ -2221,73 +1652,12 @@
       const minY = Math.min(markAnchorY, markEndY);
       const maxX = Math.max(markAnchorX, markEndX);
       const maxY = Math.max(markAnchorY, markEndY);
-      const sx = (minX - viewX) * tileWidth;
-      const sy = (minY - viewY) * tileHeight;
-      const rw = (maxX - minX + 1) * tileWidth;
-      const rh = (maxY - minY + 1) * tileHeight;
-      ctx.save();
-      ctx.fillStyle = 'rgba(255, 200, 90, 0.22)';
-      ctx.fillRect(sx, sy, rw, rh);
-      ctx.strokeStyle = 'rgba(255, 210, 110, 0.95)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(sx + 0.5, sy + 0.5, rw - 1, rh - 1);
-      ctx.restore();
+      dragBox(mctx, tileBoxRect(minX, minY, maxX, maxY));
     }
 
-    if (moveAimActive) {
-      const ax = (moveAimAnchorX - viewX + 0.5) * tileWidth;
-      const ay = (moveAimAnchorY - viewY + 0.5) * tileHeight;
-      const bx = (moveAimEndX - viewX + 0.5) * tileWidth;
-      const by = (moveAimEndY - viewY + 0.5) * tileHeight;
-      ctx.save();
-      ctx.strokeStyle = 'rgba(255, 200, 90, 0.85)';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([5, 4]);
-      ctx.beginPath();
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(bx, by);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      const r = Math.max(2, tileWidth * 0.22);
-      for (const s of moveAimSlots) {
-        const dx = (s.x - viewX + 0.5) * tileWidth;
-        const dy = (s.y - viewY + 0.5) * tileHeight;
-        ctx.beginPath();
-        ctx.arc(dx, dy, r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 200, 90, 0.35)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 220, 120, 0.95)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    const STACK_BADGE_MIN_TILE = 16;
-    const STACK_BADGE_FONT_PX = 5;
-    if (tileWidth >= STACK_BADGE_MIN_TILE && droppedItems.length > 0) {
-      const tileTotals = new Map<string, number>();
-      for (const d of droppedItems) {
-        const k = `${d.x},${d.y}`;
-        tileTotals.set(k, (tileTotals.get(k) ?? 0) + (d.quantity ?? 1));
-      }
-      ctx.save();
-      ctx.font = `bold ${STACK_BADGE_FONT_PX}px monospace`;
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'bottom';
-      ctx.fillStyle = '#ffffff';
-      for (const [k, total] of tileTotals) {
-        if (total < 2) continue;
-        const [wx, wy] = k.split(',').map(Number);
-        const sx = (wx - viewX) * tileWidth;
-        const sy = (wy - viewY) * tileHeight;
-        if (sx < -tileWidth || sy < -tileHeight || sx > W + tileWidth || sy > H + tileHeight)
-          continue;
-        const label = total > 999 ? '999+' : String(total);
-        ctx.fillText(label, sx + tileWidth - 1, sy + tileHeight - 1);
-      }
-      ctx.restore();
-    }
+    const itemOffset = (x: number, y: number) => itemOverlayGrid.getTile(x, y)?.animationOffset;
+    const view = { viewX, viewY, tileWidth, tileHeight };
+    drawStackBadges(ctx, stackBadges(droppedItems, view, W, H, itemOffset));
 
     if (buildings.length > 0) {
       const tintCanvas = document.createElement('canvas');
@@ -2428,7 +1798,7 @@
       );
     }
 
-    const darken = Math.max(0, 1 - _ambientLight);
+    const darken = PAINTED_LIGHT ? 0 : Math.max(0, 1 - _ambientLight);
     if (darken > 0.001) {
       ctx.globalCompositeOperation = 'source-atop';
       const tr = Math.round(_ambientTint[0] * 255);
@@ -2472,14 +1842,6 @@
       position: { x: tx, y: ty }
     });
   }
-
-  type TileLayer =
-    | { kind: 'pawn'; id: string }
-    | { kind: 'mob'; id: string }
-    | { kind: 'building'; id: string }
-    | { kind: 'zone'; id: string }
-    | { kind: 'item'; id: string }
-    | { kind: 'resource'; resourceId: string };
 
   function applyTileLayer(layer: TileLayer, x: number, y: number): void {
     selectedPawnId = null;
@@ -2663,16 +2025,18 @@
       moveAimArmed = false;
     }
 
-    const layers = tileLayers(hoverTileX, hoverTileY);
+    const view = { viewX, viewY, tileWidth, tileHeight };
+    const hit = drawnTile(renderer, lastCursorCx, lastCursorCy, view);
+    const layers = drawnFirst(tileLayers(hit.x, hit.y), hit.layer);
     if (layers.length > 0) {
-      if (hoverTileX === _cycleTileX && hoverTileY === _cycleTileY) {
+      if (hit.x === _cycleTileX && hit.y === _cycleTileY) {
         _cycleIndex = (_cycleIndex + 1) % layers.length;
       } else {
-        _cycleTileX = hoverTileX;
-        _cycleTileY = hoverTileY;
+        _cycleTileX = hit.x;
+        _cycleTileY = hit.y;
         _cycleIndex = 0;
       }
-      applyTileLayer(layers[_cycleIndex], hoverTileX, hoverTileY);
+      applyTileLayer(layers[_cycleIndex], hit.x, hit.y);
       drawDesignations();
       return;
     }
@@ -2716,10 +2080,10 @@
     unsubState();
     unsubUI();
     unsubWorldGen();
-    unsubCombatFeedback();
     unsubAnimPause();
+    unsubVignette();
+    unsubSway();
     unsubAttackLunges();
-    unsubProjectiles();
     _unsubMenuPerf();
     if (menuPreview) menuPreviewRendered.set(false);
     else rendererReady.set(false);
@@ -2772,6 +2136,8 @@
 
       const ok = await renderer.waitForInitialization();
       if (!ok || !renderer.isReady()) throw new Error('Renderer init failed');
+      renderer.setVignette(get(vignetteOn));
+      renderer.setMotion(get(mapMotion));
 
       if (worldMap.length > 0) {
         _fullRebuildTerrain();
@@ -2788,7 +2154,7 @@
           $gameState ? environmentService.effectiveSeason($gameState) : undefined,
           $gameState?.weather
         );
-        renderer.setAmbient(light, tinted);
+        renderer.setAmbient(light, tinted, tint, $gameState?.weather);
         lightingService.setAmbient(light, tinted);
         if (worldMap.length === 0) refreshEmitters();
         _ambientLight = light;
@@ -2994,11 +2360,7 @@
             vy,
             box,
             tW,
-            tH,
-            selectedPawnId,
-            selectedMobId,
-            markedKind,
-            markedSet
+            tH
           );
         }
         if (cursorOverCanvas && (followPawnId || followMobId)) {
@@ -3019,7 +2381,26 @@
           drawDesignations();
         }
         if (passOn('effects'))
-          updateWorldEffectOverlays(pawnList, mobList, buildingList, vx, vy, box, tW, tH);
+          worldFx.frame(
+          {
+            pawns: pawnList,
+            mobs: mobList,
+            pawnPos: pawnRenderPos,
+            mobPos: mobRenderPos,
+            renderer,
+            hidden: isHiddenTile,
+            mobsDrawn: tW >= ENTITY_RENDER_MIN_PX,
+            aim: moveAimActive
+              ? {
+                  from: [moveAimAnchorX, moveAimAnchorY],
+                  to: [moveAimEndX, moveAimEndY],
+                  slots: moveAimSlots
+                }
+              : null
+          },
+          { vx, vy, tW, tH, paused: simPaused }
+        );
+        updateSelectionRings(vx, vy, tW, tH);
         if (
           _terrainDirty &&
           (_forceTerrainRebuild || now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS)
@@ -3033,7 +2414,7 @@
         if (_snowDirty && now - _lastSnowBuild >= TERRAIN_REBUILD_MIN_MS) {
           _snowDirty = false;
           _lastSnowBuild = now;
-          queueSnowRenderTiles();
+          if (_snowGrid) queueSnowRenderTiles();
         }
         if (pendingSnowRenderChunks() > 0) repaintSnowNow(map);
         if (_foliagePending.length > 0) {
@@ -3244,36 +2625,21 @@
           uiState.deactivateDebugBrush();
           redrawOverlay();
         } else if (showFuelSettings) {
-          showFuelSettings = false;
+          uiState.closeWindow('fuel');
         } else if (showRepairSettings) {
-          showRepairSettings = false;
-        } else if (showStorageSettings) {
-          showStorageSettings = false;
+          uiState.closeWindow('repair');
+        } else if (storesOpen) {
+          uiState.closeWindow('stores');
         } else if (showFoodSettings) {
-          showFoodSettings = false;
-        } else if (showZoneFilter) {
-          showZoneFilter = false;
+          uiState.closeWindow('food');
         } else if (moveAimActive || moveAimArmed) {
-          moveAimActive = false;
-          moveAimArmed = false;
-          moveAimSlots = [];
-          drawDesignations();
+          stopMoveAim();
         } else if (markKind || markedKind) {
           clearMark();
-        } else if (similarDragMode) {
-          similarDragMode = false;
-          similarDragActive = false;
-          redrawOverlay();
         } else if (designationMode) {
-          uiState.deactivateDesignation();
-          zoneEraseMode = false;
-          zoneDragActive = false;
-          drawDesignations();
+          stopDesignation();
         } else if (selectedResourceTile) {
-          selectedResourceTile = null;
-          highlightedResourceTiles = new Set();
-          selectedResourceTypes = new Set();
-          drawDesignations();
+          deselectResource();
         } else if (selectedItemId) {
           selectedItemId = null;
         } else if (selectedZoneId) {
@@ -3285,11 +2651,7 @@
         } else if (selectedBuildingId) {
           selectedBuildingId = null;
         } else if (blueprintBuildingId) {
-          uiState.deactivateBlueprint();
-          blueprintDragActive = false;
-          blueprintAnchorX = -1;
-          blueprintAnchorY = -1;
-          redrawOverlay();
+          stopBlueprint();
         } else if (
           designationMode ||
           selectedPawnId ||
@@ -3396,6 +2758,7 @@
   function handleMouseDown(e: MouseEvent) {
     if (menuPreview) return;
     if (e.button === 2) {
+      rightPress.down();
       if (moveAimCount === 0 || hoverTileX < 0 || hoverTileY < 0) return;
       const groupMove = markedKind === 'pawn' && markedDraftedCount > 0;
       if (groupMove) {
@@ -3406,6 +2769,7 @@
           droppedItems.some((d) => d.x === hoverTileX && d.y === hoverTileY && d.quantity > 0);
         if (hasMenu) return;
       }
+      rightPress.aim();
       startMoveAim();
       return;
     }
@@ -3420,15 +2784,6 @@
       markAnchorY = hoverTileY;
       markEndX = hoverTileX;
       markEndY = hoverTileY;
-      drawDesignations();
-      return;
-    }
-    if (similarDragMode) {
-      similarDragActive = true;
-      similarAnchorX = hoverTileX;
-      similarAnchorY = hoverTileY;
-      similarEndX = hoverTileX;
-      similarEndY = hoverTileY;
       drawDesignations();
       return;
     }
@@ -3476,6 +2831,7 @@
       lastCursorCy = cy;
       hoverTileX = Math.floor(cx / tileWidth + viewX);
       hoverTileY = Math.floor(cy / tileHeight + viewY);
+      hoverItemTile = drawnItemTile(renderer, cx, cy, { viewX, viewY, tileWidth, tileHeight });
       cursorOverCanvas = true;
       updateHoverEntity();
     }
@@ -3495,12 +2851,6 @@
     if (markDragActive) {
       markEndX = hoverTileX;
       markEndY = hoverTileY;
-      drawDesignations();
-      return;
-    }
-    if (similarDragActive) {
-      similarEndX = hoverTileX;
-      similarEndY = hoverTileY;
       drawDesignations();
       return;
     }
@@ -3526,17 +2876,13 @@
     );
   }
 
-  function handleMouseUp() {
+  function handleMouseUp(e: MouseEvent) {
     if (moveAimActive) {
       commitMoveAim();
       return;
     }
     if (markDragActive) {
       completeMarkDrag();
-      return;
-    }
-    if (similarDragActive) {
-      completeSimilarDrag();
       return;
     }
     if (blueprintDragActive) {
@@ -3602,7 +2948,7 @@
       drawDesignations();
       return;
     }
-    if (dragDistance < 3 && !customMapPreview && !menuPreview) {
+    if (releaseClicks(e.button) && dragDistance < 3 && !customMapPreview && !menuPreview) {
       hoverTileX = Math.floor(lastCursorCx / tileWidth + viewX);
       hoverTileY = Math.floor(lastCursorCy / tileHeight + viewY);
       handleTileClick();
@@ -3830,12 +3176,6 @@
     drawDesignations();
   }
 
-  function clearResourceMark() {
-    highlightedResourceTiles = new Set();
-    selectedResourceTypes = new Set();
-    drawDesignations();
-  }
-
   function startMarkDrag(kind: 'pawn' | 'mob') {
     markKind = kind;
     markDragActive = false;
@@ -3867,6 +3207,106 @@
     markDragActive = false;
     drawDesignations();
   }
+
+  function stopMoveAim() {
+    moveAimActive = false;
+    moveAimArmed = false;
+    moveAimSlots = [];
+    drawDesignations();
+  }
+
+  function stopDesignation() {
+    uiState.deactivateDesignation();
+    zoneEraseMode = false;
+    zoneDragActive = false;
+    drawDesignations();
+  }
+
+  function stopBlueprint() {
+    uiState.deactivateBlueprint();
+    blueprintDragActive = false;
+    blueprintAnchorX = -1;
+    blueprintAnchorY = -1;
+    redrawOverlay();
+  }
+
+  const dragSize = (ax: number, ay: number, bx: number, by: number) =>
+    `${Math.abs(bx - ax) + 1} × ${Math.abs(by - ay) + 1}`;
+
+  const BRUSH_NAMES = {
+    regrow: 'Regrow',
+    building: 'Raise building',
+    kill: 'Strike down',
+    resurrect: 'Raise the dead',
+    resource: 'Sow resource'
+  } as const;
+
+  $: banner = ((): BannerModel | null => {
+    if (debugBrush)
+      return {
+        lead: 'Brush',
+        subject: BRUSH_NAMES[debugBrush.kind],
+        verbs: [
+          {
+            label: 'Stop',
+            verb: true,
+            onClick: () => {
+              uiState.deactivateDebugBrush();
+              redrawOverlay();
+            }
+          }
+        ]
+      };
+    if (designationMode) {
+      const zone = zoneInstances.find((z) => z.id === activeZoneInstanceId);
+      return {
+        lead: zoneEraseMode ? 'Erasing' : 'Painting',
+        subject: zone?.label ?? designationVerb(designationTypeActive, false)[0],
+        size: zoneDragActive ? dragSize(zoneAnchorX, zoneAnchorY, zoneEndX, zoneEndY) : null,
+        verbs: [
+          {
+            label: 'Erase',
+            glyph: 'x',
+            on: zoneEraseMode,
+            onClick: () => (zoneEraseMode = !zoneEraseMode)
+          },
+          { label: 'Done', verb: true, onClick: stopDesignation }
+        ]
+      };
+    }
+    if (selDragActive) {
+      const kind = dragMarkKind();
+      return {
+        lead: 'Marking',
+        subject: kind === 'resource' ? 'resources' : kind === 'mob' ? 'creatures' : 'colonists',
+        size: dragSize(selAnchorX, selAnchorY, selEndX, selEndY),
+        verbs: []
+      };
+    }
+    if (blueprintBuildingId)
+      return {
+        lead: 'Placing',
+        subject: buildingService.getBuildingById(blueprintBuildingId)?.name ?? '',
+        size: blueprintDragActive
+          ? dragSize(blueprintAnchorX, blueprintAnchorY, hoverTileX, hoverTileY)
+          : null,
+        verbs: [{ label: 'Done', verb: true, onClick: stopBlueprint }]
+      };
+    if (markKind)
+      return {
+        lead: 'Marking',
+        subject: markKind === 'pawn' ? 'colonists' : 'creatures',
+        size: markDragActive ? dragSize(markAnchorX, markAnchorY, markEndX, markEndY) : null,
+        verbs: [{ label: 'Done', verb: true, onClick: clearMark }]
+      };
+    if (moveAimActive || moveAimArmed)
+      return {
+        lead: 'Moving',
+        subject: `${moveAimCount} drafted`,
+        verbs: [{ label: 'Cancel', onClick: stopMoveAim }]
+      };
+    return null;
+  })();
 
   function clearMark() {
     markKind = null;
@@ -3967,7 +3407,6 @@
     moveAimActive = false;
     moveAimArmed = false;
     moveAimSlots = [];
-    _aimCommitted = true;
     if (ids.length > 0 && bx >= 0 && by >= 0) {
       const dragLen = Math.abs(bx - ax) + Math.abs(by - ay);
       if (ids.length === 1) {
@@ -3989,110 +3428,58 @@
     drawDesignations();
   }
 
-  function startSimilarSelect() {
-    if (!selectedResourceTile || !selectedResourceDef) return;
-    const dtype = (selectedResourceDef.designationTypes?.[0] ?? 'harvest') as DesignationType;
-    similarDragResourceId = selectedResourceTile.resourceId;
-    similarDragDisplayName = selectedResourceDef.displayName;
-    similarDragDesignationType = dtype;
-    similarDragMode = true;
-    similarDragActive = false;
-  }
-
-  function highlightSimilarTiles() {
-    if (!selectedResourceTile) return;
-    const resourceId = selectedResourceTile.resourceId;
-    const newHighlighted = new Set<string>();
-    for (const row of worldMap) {
-      for (const tile of row) {
-        if ((tile.resources?.[resourceId] ?? 0) > 0) {
-          newHighlighted.add(`${tile.x},${tile.y}`);
-        }
-      }
-    }
-    highlightedResourceTiles = newHighlighted;
-    drawDesignations();
-  }
-
-  function completeSimilarDrag() {
-    const minX = Math.min(similarAnchorX, similarEndX);
-    const maxX = Math.max(similarAnchorX, similarEndX);
-    const minY = Math.min(similarAnchorY, similarEndY);
-    const maxY = Math.max(similarAnchorY, similarEndY);
-    const newHighlighted = new Set<string>();
-    for (let ry = minY; ry <= maxY; ry++) {
-      for (let rx = minX; rx <= maxX; rx++) {
-        const wt = worldMap[ry]?.[rx];
-        if ((wt?.resources?.[similarDragResourceId] ?? 0) > 0) {
-          newHighlighted.add(`${rx},${ry}`);
-        }
-      }
-    }
-    highlightedResourceTiles = newHighlighted;
-    similarDragActive = false;
-    similarDragMode = false;
-    drawDesignations();
-  }
-
   let showShelterAssign = false;
-  let showFuelSettings = false;
-  let showStorageSettings = false;
-  let showRepairSettings = false;
+  $: showFuelSettings = $uiState.windows.includes('fuel');
+  $: showRepairSettings = $uiState.windows.includes('repair');
+  $: storesOpen = $uiState.windows.includes('stores');
+  $: showStorageSettings = storesOpen && $storeTarget?.kind === 'building';
+  $: showZoneFilter = storesOpen && $storeTarget?.kind === 'zone';
   let fuelSettingsForBuildingId: string | null = null;
 
   $: {
     const nextId = selectedBuilding?.id ?? null;
     if (nextId !== fuelSettingsForBuildingId) {
-      showFuelSettings = false;
-      showStorageSettings = false;
-      showRepairSettings = false;
+      uiState.closeWindow('fuel');
+      uiState.closeWindow('repair');
+      if (get(storeTarget)?.kind === 'building') uiState.closeWindow('stores');
       fuelSettingsForBuildingId = nextId;
     }
   }
 
   function toggleFuelSettingsPanel() {
-    showFuelSettings = !showFuelSettings;
-    if (showFuelSettings) {
-      showStorageSettings = false;
-      showRepairSettings = false;
-    }
+    if (!selectedBuilding) return;
+    buildingTarget.set(selectedBuilding.id);
+    uiState.toggleWindow('fuel');
   }
 
   function toggleStorageSettingsPanel() {
-    showStorageSettings = !showStorageSettings;
-    if (showStorageSettings) {
-      showFuelSettings = false;
-      showRepairSettings = false;
-    }
+    if (!selectedBuilding) return;
+    storeTarget.set({ kind: 'building', id: selectedBuilding.id });
+    uiState.toggleWindow('stores');
   }
 
   function toggleRepairSettingsPanel() {
-    showRepairSettings = !showRepairSettings;
-    if (showRepairSettings) {
-      showFuelSettings = false;
-      showStorageSettings = false;
-    }
+    if (!selectedBuilding) return;
+    buildingTarget.set(selectedBuilding.id);
+    uiState.toggleWindow('repair');
   }
 
-  let showFoodSettings = false;
-  let foodSettingsForPawnId: string | null = null;
-  $: {
-    const nextPawnId = selectedPawn?.id ?? null;
-    if (nextPawnId !== foodSettingsForPawnId) {
-      showFoodSettings = false;
-      foodSettingsForPawnId = nextPawnId;
-    }
-  }
+  $: showFoodSettings = $uiState.windows.includes('food');
   function toggleFoodSettingsPanel() {
-    showFoodSettings = !showFoodSettings;
+    uiState.toggleWindow('food');
   }
 
-  let showZoneFilter = false;
+  function toggleZoneFilter() {
+    if (!selectedZoneId) return;
+    storeTarget.set({ kind: 'zone', id: selectedZoneId });
+    uiState.toggleWindow('stores');
+  }
+
   let zoneFilterForId: string | null = null;
   $: {
     const nextZoneId = selectedZoneId;
     if (nextZoneId !== zoneFilterForId) {
-      showZoneFilter = false;
+      if (get(storeTarget)?.kind === 'zone') uiState.closeWindow('stores');
       zoneFilterForId = nextZoneId;
     }
   }
@@ -4165,10 +3552,7 @@
   function handleContextMenu(e: MouseEvent) {
     e.preventDefault();
     if (menuPreview) return;
-    if (_aimCommitted) {
-      _aimCommitted = false;
-      return;
-    }
+    if (rightPress.swallowsMenu()) return;
     equipMenu = null;
     if (hoverTileX < 0 || hoverTileY < 0) return;
 
@@ -4389,7 +3773,7 @@
         });
         if (qty > 1) {
           entries.push({
-            label: `Pick up X ${name}…`,
+            label: `Pick up ${name}…`,
             run: () => {
               qtyPrompt = {
                 pawnId,
@@ -4517,449 +3901,145 @@
 >
   <canvas bind:this={canvas}></canvas>
   <canvas bind:this={designCanvas} class="desig-layer"></canvas>
+  <canvas bind:this={markCanvas} class="desig-layer mark-layer"></canvas>
 
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
   {/if}
 
-  {#if debugBrush}
-    <div class="designation-hud" style:border-color="#c8a048" style:color="#e0b868">
-      [DEBUG: {debugBrush.kind === 'regrow'
-        ? 'REGROW'
-        : debugBrush.kind === 'building'
-          ? 'SPAWN BUILDING'
-          : debugBrush.kind === 'kill'
-            ? 'KILL'
-            : debugBrush.kind === 'resurrect'
-              ? 'RESURRECT'
-              : 'SPAWN RESOURCE'}] click {debugBrush.kind === 'kill'
-        ? 'a pawn/mob to kill it'
-        : debugBrush.kind === 'resurrect'
-          ? 'a corpse to revive it'
-          : 'tiles to apply'} · Esc to stop
-    </div>
-  {:else if designationMode}
-    <div
-      class="designation-hud"
-      style:border-color={zoneEraseMode ? '#cc3322' : undefined}
-      style:color={zoneEraseMode ? '#ff6655' : undefined}
-    >
-      {#if zoneEraseMode}
-        [ERASE] drag to remove · X to paint · Esc cancel
-      {:else}
-        [{designationTypeActive.toUpperCase()}] drag to paint · X to erase · Esc cancel
-      {/if}
-      {#if zoneDragActive}
-        — {zoneEraseMode ? 'erasing' : 'selecting'} ({Math.abs(zoneEndX - zoneAnchorX) +
-          1}×{Math.abs(zoneEndY - zoneAnchorY) + 1})
-      {/if}
-    </div>
-  {:else if selDragActive}
-    <div class="designation-hud" style:color="#ffd66a" style:border-color="#ffd66a">
-      [⊞ MARK {dragMarkKind() === 'resource'
-        ? 'RESOURCES'
-        : dragMarkKind() === 'mob'
-          ? 'CREATURES'
-          : 'PAWNS'}] ({Math.abs(selEndX - selAnchorX) + 1}×{Math.abs(selEndY - selAnchorY) + 1}) —
-      release to mark · Esc cancel
-    </div>
-  {:else if blueprintBuildingId}
-    <div class="designation-hud">
-      [◆ {buildingService.getBuildingById(blueprintBuildingId)?.name ??
-        blueprintBuildingId}]{#if blueprintDragActive}
-        ({Math.abs(hoverTileX - blueprintAnchorX) + 1}×{Math.abs(hoverTileY - blueprintAnchorY) +
-          1}){/if} — drag a box to fill · stays active · Esc cancel
-    </div>
-  {:else if similarDragMode}
-    <div class="designation-hud">
-      [⊞ SELECT {similarDragDisplayName.toUpperCase()}] — drag to designate all · Esc cancel{#if similarDragActive}
-        — ({Math.abs(similarEndX - similarAnchorX) + 1}×{Math.abs(similarEndY - similarAnchorY) +
-          1}){/if}
-    </div>
-  {:else if markKind}
-    <div class="designation-hud" style:color="#ffc85a" style:border-color="#ffc85a">
-      [⊞ MARK {markKind === 'pawn' ? 'PAWNS' : 'ENTITIES'}] — drag a box to highlight · Esc cancel{#if markDragActive}
-        — ({Math.abs(markEndX - markAnchorX) + 1}×{Math.abs(markEndY - markAnchorY) + 1}){/if}
-    </div>
-  {:else if moveAimActive}
-    <div class="designation-hud" style:color="#ffc85a" style:border-color="#ffc85a">
-      [⊞ MOVE] — drag a line, release to spread {moveAimCount} drafted pawn{moveAimCount !== 1
-        ? 's'
-        : ''} along it · Esc cancel
-    </div>
-  {:else if moveAimArmed}
-    <div class="designation-hud" style:color="#ffc85a" style:border-color="#ffc85a">
-      [⊞ MOVE] — right-drag a line (or click) to send {moveAimCount} drafted pawn{moveAimCount !== 1
-        ? 's'
-        : ''} · Esc cancel
-    </div>
-  {/if}
+  {#if banner}<ModeBanner model={banner} />{/if}
 
   {#if !customMapPreview && !menuPreview}
-    {#if markedGroupCard}
-      <SelectedEntityCard model={markedGroupCard} />
-    {:else if selectedPawnCard}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
+    {#if verbTag && container && !selDragActive}
+      <VerbTag
+        model={verbTag}
+        view={{
+          x: viewX,
+          y: viewY,
+          tw: tileWidth,
+          th: tileHeight,
+          w: container.clientWidth,
+          h: container.clientHeight
+        }}
+      />
+    {/if}
+    {#if markedTag}{:else if selectedPawn}
       <div
         class="bld-row"
         role="presentation"
         on:mousedown|stopPropagation
         on:mouseup|stopPropagation
       >
-        <SelectedEntityCard model={selectedPawnCard} embedded />
-        <FoodFilterPanel open={showFoodSettings} />
+        <PawnCard
+          pawn={selectedPawn}
+          selected
+          moodModel={selectedPawnMood}
+          foodOpen={showFoodSettings}
+          onmove={armMoveAim}
+          onfood={toggleFoodSettingsPanel}
+        />
       </div>
-    {:else if selectedMobCard}
-      <SelectedEntityCard model={selectedMobCard} />
+    {:else if selectedMob && selectedMobDef}
+      <div
+        class="bld-row"
+        role="presentation"
+        on:mousedown|stopPropagation
+        on:mouseup|stopPropagation
+      >
+        <CreatureCard
+          mob={selectedMob}
+          def={selectedMobDef}
+          selected
+          colonyName={$gameState?.culture?.name}
+        />
+      </div>
     {:else if selectedBuilding}
-      {@const canConfigureFuel =
-        selectedBuilding.status === 'complete' &&
-        !selectedBuilding.deconstructQueued &&
-        buildingService.getBuildingById(selectedBuilding.type)?.maxFuel !== undefined}
-      {@const canConfigureStorage =
-        selectedBuilding.status === 'complete' &&
-        !selectedBuilding.deconstructQueued &&
-        (buildingService.getBuildingById(selectedBuilding.type)?.effects?.storageStacks ?? 0) > 0}
-      {@const canConfigureRepair =
-        selectedBuilding.status === 'complete' &&
-        !selectedBuilding.deconstructQueued &&
-        buildingService.deterioratingRate(selectedBuilding.type) > 0}
-      {@const bt = worldMap[selectedBuilding.y]?.[selectedBuilding.x]}
       {@const clickedBin = buildingIsStorageBin(selectedBuilding)
         ? droppedItems.filter(
             (d) => d.stored && d.x === selectedBuilding.x && d.y === selectedBuilding.y
           )
         : []}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="bld-row"
         role="presentation"
         on:mousedown|stopPropagation
         on:mouseup|stopPropagation
       >
-        {#if buildingModel}
-          <SelectedEntityCard model={buildingModel} embedded>
-            {#snippet body()}
-              <BuildingInfo
-                building={selectedBuilding}
-                detailed
-                showHeader={false}
-                binContents={clickedBin}
-                gameState={$gameState}
-              />
-              {#if bt}
-                {@const benv = tileEnv(bt)}
-                <EnvReadout
-                  light={benv.light}
-                  temp={benv.temp}
-                  wet={benv.wet}
-                  wind={benv.wind}
-                  debugTemp={$debugMode ? seasonBakedTemp(bt.terrainType, $currentSeason) : null}
-                />
-              {/if}
-            {/snippet}
-          </SelectedEntityCard>
-        {/if}
-        {#if canConfigureFuel}
-          <BuildingFuelPanel building={selectedBuilding} {pawns} open={showFuelSettings} />
-        {/if}
-        {#if canConfigureRepair}
-          <BuildingRepairPanel building={selectedBuilding} {pawns} open={showRepairSettings} />
-        {/if}
-        {#if canConfigureStorage}
-          <BuildingStoragePanel building={selectedBuilding} open={showStorageSettings} />
-        {/if}
+        <BuildingCard building={selectedBuilding} verbs={buildingVerbs} stored={clickedBin} />
       </div>
-    {:else if selectedZone && zoneCard}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
+    {:else if selectedZone}
       <div
         class="bld-row"
         role="presentation"
         on:mousedown|stopPropagation
         on:mouseup|stopPropagation
       >
-        <SelectedEntityCard model={zoneCard} embedded />
-        <StockpileZonePanel
-          instanceId={selectedZone.id}
-          filter={selectedZone.filter}
-          priority={selectedZone.priority ?? 'normal'}
-          containerBudget={selectedZone.containerBudget ?? 0}
-          open={showZoneFilter}
+        <ZoneCard
+          zone={selectedZone}
+          tiles={selectedZoneTileKeys.length}
+          filled={selectedZoneFilled}
+          filterOpen={showZoneFilter}
+          painting={zoneToolDrawing}
+          erasing={zoneToolClearing}
+          onfilter={toggleZoneFilter}
+          onpaint={(erase) => selectedZone && paintZoneTool(selectedZone.id, erase)}
+          ondelete={deleteSelectedZone}
         />
       </div>
-    {:else if selectedItemCard}
-      <SelectedEntityCard model={selectedItemCard} />
-    {:else if multiResourceCard}
-      <SelectedEntityCard model={multiResourceCard} />
-    {:else if resourceCard}
-      <SelectedEntityCard model={resourceCard} />
-    {:else if hoverPawnCard}
-      <SelectedEntityCard model={hoverPawnCard} />
-    {:else if hoverMobCard}
-      <SelectedEntityCard model={hoverMobCard} />
-    {:else if hoverBuilding && !hoverPawn}
-      <div class="tile-hud tile-hud--building">
-        <div class="tile-hud-body">
-          <BuildingInfo building={hoverBuilding} binContents={hoverBin ? hoverBinContents : []} />
-          {#if hoverTile}
-            {@const env = tileEnv(hoverTile)}
-            <EnvReadout
-              light={env.light}
-              temp={env.temp}
-              wet={env.wet}
-              wind={env.wind}
-              debugTemp={$debugMode ? seasonBakedTemp(hoverTile.terrainType, $currentSeason) : null}
-            />
-          {/if}
-        </div>
+    {:else if selectedItem}
+      <div
+        class="bld-row"
+        role="presentation"
+        on:mousedown|stopPropagation
+        on:mouseup|stopPropagation
+      >
+        <ItemCard drop={selectedItem} selected />
       </div>
-    {:else if hoverItemCard}
-      <SelectedEntityCard model={hoverItemCard} />
-    {:else if hoverTile}
-      {@const tileThermal = computeThermalAt(hoverTile.x, hoverTile.y, buildings, worldMap)}
-      {@const tileTemp = Math.round(
-        tileTemperature(
-          hoverTile.terrainType,
-          $currentSeason,
-          environmentService.ambientTurn($gameState ?? { turn: 0 }),
-          $currentWeather,
-          tileThermal
-        )
-      )}
-      {@const tileIce = Math.round(hoverTile.ice ?? 0)}
-      {@const tileWet =
-        tileWetness(hoverTile.moisture ?? 0, $currentWeather, tileThermal, tileIce) *
-        (hoverTile.floor ? 1 - hoverTile.floor.dryness : 1)}
-      {@const windWord = windDegreeWord(
-        effectiveWindAt(hoverTile.x, hoverTile.y, $currentWeather, tileThermal, worldMap)
-      )}
-      {@const tileSnow = Math.round(hoverTile.snow ?? 0)}
-      {@const soilTier = soilTierForTile(hoverTile)}
-      {@const soilPct = soilFertilityPct(hoverTile)}
-      <div class="tile-hud">
-        <div class="tile-hud-body">
-          <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
-            >{BIOMES[hoverTile.terrainType]?.displayName ??
-              hoverTile.terrainType},{hoverFloorName ??
-              SUBTERRAINS[hoverTile.subType]?.displayName ??
-              hoverTile.subType},{hoverDisplayResource
-              ? (resourceObjectService.getById(hoverDisplayResource)?.displayName ??
-                hoverDisplayResource)
-              : '—'}</span
-          >
-          {#if !hoverTile.walkable}
-            <div class="tile-move" style="color:#cc4444">move: impassable</div>
-          {:else}
-            {@const effMoveCost = (hoverTile.movementCost ?? 1) * (1 + (tileSnow + tileIce) / 100)}
-            {@const mc = moveCostLabel(effMoveCost)}
-            <div class="tile-move" style="color:{mc.color}">
-              move ×{effMoveCost.toFixed(1)}{#if tileSnow > 0}<span style="color:#cdd6e0">
-                  (snow)</span
-                >{/if}
-            </div>
-          {/if}
-          {#if hoverZoneType && ZONE_META[hoverZoneType]}
-            <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">
-              {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
-            </div>
-          {/if}
-          <EnvReadout
-            light={hoverTileLight}
-            temp={tileTemp}
-            wet={tileWet}
-            wind={windWord}
-            debugTemp={$debugMode ? seasonBakedTemp(hoverTile.terrainType, $currentSeason) : null}
-          />
-          <div class="tile-env">
-            {#if tileThermal.roofed}
-              {@const roofB = buildings.find(
-                (b) =>
-                  b.x === hoverTile.x &&
-                  b.y === hoverTile.y &&
-                  b.status === 'complete' &&
-                  isRoofBuilding(b)
-              )}
-              {@const roofDef = roofB ? buildingService.getBuildingById(roofB.type) : null}
-              <span
-                style="color:#7e9fbf"
-                title="under cover — this roof keeps rain and wind off the tile"
-                >{roofDef?.name ?? 'roofed'}</span
-              >{#if roofDef?.conditionDecayPerTurn}{@const cond = Math.round(
-                  roofB?.condition ?? 100
-                )}<span
-                  style="color:{cond >= 70 ? '#68b030' : cond >= 35 ? '#c8a13a' : '#cc5544'}"
-                  title="roof condition — weather wears it down; repair before it fails"
-                >
-                  {cond}%</span
-                >{/if}
-            {/if}
-            {#if hoverDisplayResource && hoverTile.walkable}
-              {@const growRes = resourceObjectService.getById(hoverDisplayResource)}
-              {#if growRes && isGrowableResource(growRes)}
-                {@const gpct = Math.round(hoverTile.growth?.[hoverDisplayResource] ?? 100)}
-                {@const dir = growRes.crop
-                  ? cropGrowthDirection(gpct, growRes.crop, {
-                      soilTier,
-                      temp: tileTemp,
-                      moisture: hoverTile.moisture ?? 0,
-                      snow: tileSnow
-                    })
-                  : gpct >= 100
-                    ? 'mature'
-                    : 'rising'}
-                {@const gi = growthIndicator(dir)}
-                <span
-                  style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
-                  title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
-                  >growth {gpct}%</span
-                ><span style="color:{gi.color}" title={gi.title}>{gi.glyph}</span>
-              {/if}
-            {/if}
-            <span
-              style="color:{soilTier >= 4
-                ? '#6fae3a'
-                : soilTier === 3
-                  ? '#86ac3a'
-                  : soilTier === 2
-                    ? '#9aac3a'
-                    : soilTier === 1
-                      ? '#a89a4a'
-                      : '#8a7a5a'}"
-              title="soil fertility ({SOIL_TIER_NAME[
-                soilTier
-              ]}) — drives what crops grow here and how fast">fertility {soilPct}%</span
-            >
-            {#if hoverTile.walkable && tileSnow > 0}<span style="color:#cdd6e0"
-                >snow {tileSnow}%</span
-              >{/if}
-            {#if hoverTile.walkable && tileIce >= ICE_VISIBLE}<span
-                style="color:#9fc8e0"
-                title="frozen layer — suppresses wetness; thick ice on water turns it walkable but slippery"
-                >ice {tileIce}%</span
-              >{/if}
-          </div>
-        </div>
+    {:else if hoverPawn}
+      <div class="bld-row hover-card">
+        <PawnCard pawn={hoverPawn} selected={false} moodModel={hoverPawnMood} />
       </div>
+    {:else if hoverMob && hoverMobDef}
+      <div class="bld-row hover-card">
+        <CreatureCard mob={hoverMob} def={hoverMobDef} selected={false} />
+      </div>
+    {:else if hoverBuilding && !hoverPawn && hoverFactsInput}
+      <BuildingInfo
+        building={hoverBuilding}
+        binContents={hoverBin ? hoverBinContents : []}
+        env={envFacts(hoverFactsInput)}
+      />
+    {:else if hoverDroppedItem}
+      <div class="bld-row hover-card"><ItemCard drop={hoverDroppedItem} /></div>
+    {:else if hoverFactsInput}
+      {@const facts = tileFacts(hoverFactsInput)}
+      <TileTip title={facts.title} desc={facts.desc} rows={facts.rows} />
     {/if}
   {/if}
 
   {#if equipMenu}
-    <div
-      class="ctx-backdrop"
-      role="presentation"
-      on:click={() => (equipMenu = null)}
-      on:contextmenu|preventDefault={() => (equipMenu = null)}
-    ></div>
-    <div class="ctx-menu" style="left:{equipMenu.x}px; top:{equipMenu.y}px">
-      {#each equipMenu.entries as entry}
-        <button
-          class="ctx-item"
-          on:click={() => {
-            entry.run();
-            equipMenu = null;
-          }}>{entry.label}</button
-        >
-      {/each}
-    </div>
+    <ContextMenu
+      x={equipMenu.x}
+      y={equipMenu.y}
+      entries={equipMenu.entries}
+      onclose={() => (equipMenu = null)}
+    />
   {/if}
 
   {#if qtyPrompt}
-    <div
-      class="ctx-backdrop"
-      role="presentation"
-      on:click={() => (qtyPrompt = null)}
-      on:contextmenu|preventDefault={() => (qtyPrompt = null)}
-    ></div>
-    <div class="ctx-menu qty-prompt" style="left:{qtyPrompt.x}px; top:{qtyPrompt.y}px">
-      <div class="qty-label">Pick up {qtyPrompt.name} (max {qtyPrompt.max})</div>
-      <!-- svelte-ignore a11y_autofocus -->
-      <input
-        class="qty-input"
-        type="number"
-        min="1"
-        max={qtyPrompt.max}
-        bind:value={qtyPrompt.value}
-        on:keydown={(ev) => {
-          if (ev.key === 'Enter') confirmQtyPickup();
-          else if (ev.key === 'Escape') qtyPrompt = null;
-        }}
-        autofocus
-      />
-      <div class="qty-actions">
-        <button class="ctx-item" on:click={confirmQtyPickup}>OK</button>
-        <button class="ctx-item" on:click={() => (qtyPrompt = null)}>Cancel</button>
-      </div>
-    </div>
+    <QtyPrompt
+      x={qtyPrompt.x}
+      y={qtyPrompt.y}
+      name={qtyPrompt.name}
+      max={qtyPrompt.max}
+      bind:value={qtyPrompt.value}
+      onconfirm={confirmQtyPickup}
+      onclose={() => (qtyPrompt = null)}
+    />
   {/if}
 </div>
 
 <style>
-  .ctx-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 998;
-  }
-  .ctx-menu {
-    position: fixed;
-    z-index: 999;
-    display: flex;
-    flex-direction: column;
-    min-width: 160px;
-    background: var(--bg-panel);
-    border: 1px solid var(--border-hi);
-    border-radius: 2px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
-    filter: url(#ambient-tint);
-  }
-  .ctx-item {
-    text-align: left;
-    padding: 5px 10px;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--border);
-    color: var(--text);
-    font-size: 12px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .ctx-item:last-child {
-    border-bottom: none;
-  }
-  .ctx-item:hover {
-    background: var(--bg-active);
-    color: var(--accent-hi);
-  }
-  .qty-prompt {
-    padding: 6px;
-    gap: 6px;
-  }
-  .qty-label {
-    font-size: 12px;
-    color: var(--text);
-    white-space: nowrap;
-  }
-  .qty-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 3px 6px;
-    background: var(--bg);
-    border: 1px solid var(--border-hi);
-    color: var(--text);
-    font-size: 13px;
-    font-family: inherit;
-  }
-  .qty-actions {
-    display: flex;
-    gap: 6px;
-  }
-  .qty-actions .ctx-item {
-    flex: 1;
-    text-align: center;
-    border: 1px solid var(--border-hi);
-    border-bottom: 1px solid var(--border-hi);
-  }
-
   .canvas-wrap {
     position: relative;
     width: 100%;
@@ -4972,6 +4052,9 @@
   }
   .canvas-wrap.dragging {
     cursor: var(--app-cursor), grabbing;
+  }
+  .desig-layer.mark-layer {
+    filter: none;
   }
   .desig-layer {
     position: absolute;
@@ -4999,90 +4082,18 @@
     font-family: var(--font-mono);
     font-size: 13px;
   }
-  .tile-hud {
-    position: absolute;
-    bottom: 6px;
-    left: 6px;
-    width: 340px;
-    box-sizing: border-box;
-    background: transparent;
-    border: 1px solid transparent;
-    color: #a07840;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    line-height: 1.5;
-    padding: 2px 7px;
-    pointer-events: none;
-    white-space: normal;
-    overflow-wrap: break-word;
-    z-index: 10;
-  }
-  .tile-hud::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background: rgba(28, 16, 6, 0.92);
-    box-shadow: inset 0 0 0 1px #6b4a2a;
-    filter: url(#ambient-tint);
-    pointer-events: none;
-  }
-  .tile-hud-body {
-    position: relative;
-    z-index: 1;
-    filter: url(#ambient-tint-legible);
-  }
-
-  .tile-zone {
-    font-size: 10px;
-    margin-top: 1px;
-  }
-  .tile-move {
-    font-size: 10px;
-    margin-top: 1px;
-  }
-  .tile-env {
-    font-size: 10px;
-    margin-top: 1px;
-    display: flex;
-    gap: 8px;
-  }
-  .designation-hud {
-    position: absolute;
-    top: 6px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 20, 10, 0.92);
-    border: 1px solid #3aaa60;
-    color: #50ee80;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: bold;
-    padding: 3px 10px;
-    pointer-events: none;
-    white-space: nowrap;
-    z-index: 10;
-  }
-  .tile-hud--building {
-    pointer-events: none;
-  }
   .bld-row {
     position: absolute;
     bottom: 6px;
-    left: 6px;
+    left: calc(var(--hud-left-inset, 0px) + 6px);
     display: flex;
     align-items: stretch;
     gap: 4px;
     pointer-events: all;
     z-index: 10;
   }
-  .tile-coord {
-    color: #e8b86a;
-    font-weight: bold;
-    margin-right: 5px;
-  }
-  .tile-layers {
-    color: #b08848;
+  .hover-card {
+    pointer-events: none;
   }
   .error {
     color: #c04040;

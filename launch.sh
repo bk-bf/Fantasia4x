@@ -13,7 +13,7 @@ if [[ $# -gt 0 && "$1" != -* ]]; then
   git -C "$SCRIPT_DIR" fetch origin || exit 1
   git -C "$SCRIPT_DIR" switch --detach "origin/$BRANCH" || exit 1
   echo "launch.sh: on $BRANCH at $(git -C "$SCRIPT_DIR" rev-parse --short HEAD)"
-  F4X_PAINTED="${F4X_PAINTED:-1}" exec "$SCRIPT_DIR/launch.sh" "${ARGS[@]}"
+  exec "$SCRIPT_DIR/launch.sh" "${ARGS[@]}"
 fi
 
 PROFILER=false

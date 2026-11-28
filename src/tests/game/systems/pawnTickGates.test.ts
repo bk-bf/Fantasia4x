@@ -8,6 +8,7 @@ import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { rebuildThermalField } from '$lib/game/services/EnvironmentService';
 import { applyShock, TIRED_FATIGUE_THRESHOLD } from '$lib/game/core/rules/body/conditions';
 import { HEALING_CONFIG } from '$lib/game/core/defs/wounds';
+import { thinkPhase } from '$lib/game/services/entity/entityHelpers';
 import type {
   EntityCondition,
   GameState,
@@ -75,6 +76,15 @@ const state = (pawn: Pawn, turn = 31, over: Partial<GameState> = {}) =>
 
 const tick = (gs: GameState) => pawnStateMachineService.tick(gs);
 
+function tickThrough(gs: GameState, ticks: number, onTick?: (before: Pawn, after: Pawn) => void) {
+  for (let i = 0; i < ticks; i++) {
+    const before = gs.pawns[0];
+    gs = tick({ ...gs, turn: gs.turn + 1 });
+    onTick?.(before, gs.pawns[0]);
+  }
+  return gs;
+}
+
 function consciousnessAt(blood: number): number {
   const conditions: EntityCondition[] = [];
   applyShock(conditions, 0, 1 - blood / 100);
@@ -119,6 +129,12 @@ const wounded = (over: Partial<Pawn> = {}) =>
     ] as unknown as Pawn['limbs'],
     ...over
   });
+
+const healTurn = (p: Pawn) => {
+  let t = 31;
+  while (t % 10 !== thinkPhase(p.id) % 10) t++;
+  return t;
+};
 
 const chestDamage = (p: Pawn) =>
   p.limbs!.flatMap((l) => l.parts ?? []).find((q) => q.id === 'chest')!.injuries[0].damage;
@@ -179,11 +195,30 @@ describe('forced sleep', () => {
 describe('healing in the tick', () => {
   it('a pawn in a fight does not mend its wounds', () => {
     const p = wounded({ currentState: 'Fighting' });
-    expect(chestDamage(tick(state(p)).pawns[0])).toBe(5);
+    expect(chestDamage(tick(state(p, healTurn(p))).pawns[0])).toBe(5);
   });
 
   it('a pawn out of a fight does mend them', () => {
-    expect(chestDamage(tick(state(wounded())).pawns[0])).toBeLessThan(5);
+    const p = wounded();
+    expect(chestDamage(tick(state(p, healTurn(p))).pawns[0])).toBeLessThan(5);
+  });
+
+  it('wounds mend once every ten ticks, by ten ticks of healing at a time', () => {
+    const p = wounded();
+    const perTick = 5 - chestDamage(healWounds(p, 31));
+    let mends = 0;
+    const out = tickThrough(state(p), 20, (before, after) => {
+      if (chestDamage(after) !== chestDamage(before)) mends++;
+    });
+    expect(mends).toBe(2);
+    expect(5 - chestDamage(out.pawns[0])).toBeCloseTo(20 * perTick, 6);
+  });
+
+  it('ten ticks of healing at once mend a wound as far as ten single ticks do', () => {
+    let stepped = wounded({ currentState: 'Sleeping' });
+    for (let t = 0; t < 10; t++) stepped = healWounds(stepped, 100 + t);
+    const batched = healWounds(wounded({ currentState: 'Sleeping' }), 100, undefined, 10);
+    expect(chestDamage(batched)).toBeCloseTo(chestDamage(stepped), 6);
   });
 
   it('sleep mends wounds at the sleeping multiplier over the active rate', () => {

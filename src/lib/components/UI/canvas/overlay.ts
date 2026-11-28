@@ -6,7 +6,10 @@ import { itemService } from '$lib/game/services/ItemService.js';
 import { buildingService } from '$lib/game/services/BuildingService.js';
 import { isFloorBuilding, isRoofBuilding } from '$lib/webgl/fantasia-world.js';
 import { PAINTED_TILES } from '$lib/webgl/painted/flag.js';
-import { paintedTile } from '$lib/webgl/painted/tileset.js';
+import { paintedTile, paintedTileIn, paintedTileset } from '$lib/webgl/painted/tileset.js';
+import type { PaintedTileset } from '$lib/webgl/painted/manifest.js';
+import { dropProps, type DropWorld } from './dropProps.js';
+import { fireIsOut } from '$lib/game/services/LightingService.js';
 
 function hexToRgb(hex?: string): { r: number; g: number; b: number } | null {
   if (!hex) return null;
@@ -36,9 +39,70 @@ function dropVisFor(resourceId: string): {
   return v;
 }
 
+interface DrawnDrops {
+  grid: GameGrid;
+  drops: readonly DroppedItem[];
+  world: DropWorld;
+  tileset: PaintedTileset;
+  first: { x: number; y: number } | undefined;
+}
+
+let drawnDrops: DrawnDrops | null = null;
+
+const sameDrops = (a: readonly DroppedItem[], b: readonly DroppedItem[]): boolean =>
+  a === b || (a.length === b.length && a.every((d, i) => d === b[i]));
+
+const sameWorld = (a: DropWorld, b: DropWorld): boolean =>
+  a.map === b.map && a.buildings === b.buildings && a.zoneTiles === b.zoneTiles && a.rev === b.rev;
+
+function stillDrawn(
+  grid: GameGrid,
+  drops: readonly DroppedItem[],
+  world: DropWorld,
+  tileset: PaintedTileset
+): boolean {
+  const last = drawnDrops;
+  return (
+    last !== null &&
+    last.grid === grid &&
+    last.tileset === tileset &&
+    sameWorld(last.world, world) &&
+    sameDrops(last.drops, drops) &&
+    (last.first === undefined || grid.hasTile(last.first.x, last.first.y))
+  );
+}
+
+function overlayDropProps(
+  grid: GameGrid,
+  drops: DroppedItem[],
+  world: DropWorld,
+  tileset: PaintedTileset,
+  isHidden?: (x: number, y: number) => boolean
+): void {
+  if (stillDrawn(grid, drops, world, tileset)) return;
+  const { tiles, flat } = dropProps(drops, world, tileset, isHidden);
+  grid.clear();
+  overlayFlatDrops(grid, flat);
+  for (const tile of tiles) grid.setTile(tile.position.x, tile.position.y, tile);
+  const first = tiles[0]?.position ?? flat[0];
+  drawnDrops = { grid, drops, world: { ...world }, tileset, first: first && { ...first } };
+}
+
 export function overlayDroppedItems(
   grid: GameGrid,
   drops: DroppedItem[],
+  isHidden?: (x: number, y: number) => boolean,
+  world?: DropWorld
+): void {
+  const tileset = PAINTED_TILES && world ? paintedTileset() : null;
+  if (tileset?.drops && world) return overlayDropProps(grid, drops, world, tileset, isHidden);
+  grid.clear();
+  overlayFlatDrops(grid, drops, isHidden);
+}
+
+function overlayFlatDrops(
+  grid: GameGrid,
+  drops: readonly DroppedItem[],
   isHidden?: (x: number, y: number) => boolean
 ): void {
   const STAR_GLYPH = glyph(SHEET.MAP, 42);
@@ -62,7 +126,8 @@ export function overlayDroppedItems(
       char,
       foreground,
       background: existing?.background ?? { r: 0, g: 0, b: 0 },
-      position: { x: drop.x, y: drop.y }
+      position: { x: drop.x, y: drop.y },
+      ...(PAINTED_TILES ? { painted: paintedTile('item', drop.resourceId, drop.x, drop.y) } : null)
     });
   }
 }
@@ -72,18 +137,19 @@ const DECONSTRUCT_FG = { r: 1.0, g: 0.25, b: 0.05 };
 
 const _buildingVisCache = new Map<
   string,
-  { sprite: string; color: { r: number; g: number; b: number } }
+  { sprite: string; color: { r: number; g: number; b: number }; maxFuel?: number }
 >();
 function buildingVisFor(typeId: string): {
   sprite: string;
   color: { r: number; g: number; b: number };
+  maxFuel?: number;
 } {
   let v = _buildingVisCache.get(typeId);
   if (!v) {
     const def = buildingService.getBuildingById(typeId);
     const sprite = def?.charSpans ? (resolveCharSpans(def.charSpans as CharSpan[])[0] ?? '#') : '#';
     const color = hexToRgb(def?.color) ?? { r: 0.87, g: 0.62, b: 0.12 };
-    v = { sprite, color };
+    v = { sprite, color, maxFuel: def?.maxFuel };
     _buildingVisCache.set(typeId, v);
   }
   return v;
@@ -98,14 +164,22 @@ export function overlayBuildings(
     if (b.status !== 'complete') continue;
     if (isFloorBuilding(b) || isRoofBuilding(b)) continue;
     if (isHidden?.(b.x, b.y)) continue;
-    const { sprite, color } = buildingVisFor(b.type);
+    const { sprite, color, maxFuel } = buildingVisFor(b.type);
     grid.setTile(b.x, b.y, {
       char: b.deconstructQueued ? DECONSTRUCT_GLYPH : sprite,
       foreground: b.deconstructQueued ? DECONSTRUCT_FG : color,
       background: { r: 0, g: 0, b: 0 },
       position: { x: b.x, y: b.y },
       ...(PAINTED_TILES && !b.deconstructQueued
-        ? { painted: paintedTile('building', b.type, b.x, b.y) }
+        ? {
+            painted: paintedTileIn(
+              'building',
+              b.type,
+              fireIsOut(maxFuel, b) ? 'idle' : undefined,
+              b.x,
+              b.y
+            )
+          }
         : null)
     });
   }

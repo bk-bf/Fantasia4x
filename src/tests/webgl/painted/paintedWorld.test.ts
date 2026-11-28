@@ -1,15 +1,18 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { WorldTile, PlacedBuilding } from '$lib/game/core/types';
+import type { WorldTile, PlacedBuilding, DroppedItem } from '$lib/game/core/types';
 
-vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true }));
-vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true }));
+vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: false }));
+vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true, GROUND_BLEND: false }));
 
 const { buildTileset, parseManifest } = await import('$lib/webgl/painted/manifest');
-const { setPaintedTileset, paintedEntity } = await import('$lib/webgl/painted/tileset');
+const { setPaintedTileset, paintedEntity, paintedPawn, paintedTile } =
+  await import('$lib/webgl/painted/tileset');
 const { applyResourceToGrid, applyTileToGrid } = await import('$lib/webgl/fantasia-world');
-const { overlayBuildings } = await import('$lib/components/UI/canvas/overlay');
+const { overlayBuildings, overlayDroppedItems } = await import(
+  '$lib/components/UI/canvas/overlay'
+);
 const { GameGrid } = await import('$lib/webgl/game-grid');
 
 const raw = JSON.parse(readFileSync(join(__dirname, 'fixture', 'manifest.json'), 'utf8'));
@@ -74,5 +77,49 @@ describe('painted sprites reach the grids when the flag is on', () => {
     expect(paintedEntity('pawn', undefined, 'pawn-1')).toHaveProperty('painted');
     expect(paintedEntity('creature', 'dragon', 'mob-1')).toEqual({});
     setPaintedTileset(buildTileset(parseManifest(raw)).tileset);
+  });
+});
+
+describe('painted sprites for ground items, fires and folk', () => {
+  const withMap = (edit: (map: Record<string, Record<string, string[]>>) => void) => {
+    const m = structuredClone(raw);
+    edit(m.map);
+    setPaintedTileset(buildTileset(parseManifest(m)).tileset);
+  };
+  const reset = () => setPaintedTileset(buildTileset(parseManifest(raw)).tileset);
+
+  it('paints an item lying on the ground, and leaves an unmapped one on its glyph', () => {
+    withMap((map) => (map.item = { apple: ['bush_berry'] }));
+    const grid = new GameGrid();
+    const drop = (id: string, x: number) =>
+      ({ id: `d-${id}`, resourceId: id, x, y: 1, quantity: 1 }) as DroppedItem;
+    overlayDroppedItems(grid, [drop('apple', 1), drop('no_such_item', 2)]);
+    expect(grid.getTile(1, 1)!.painted).toEqual(paintedTile('item', 'apple', 1, 1));
+    expect(grid.getTile(2, 1)!.painted).toBeUndefined();
+    reset();
+  });
+
+  it('draws a fuelled building unlit until its fire burns', () => {
+    withMap((map) => {
+      map.building = { campfire: ['tree_oak'], 'campfire:idle': ['tree_birch'] };
+    });
+    const grid = new GameGrid();
+    const fire = (x: number, lit: boolean) =>
+      ({ id: `b${x}`, type: 'campfire', x, y: 1, status: 'complete', lit }) as PlacedBuilding;
+    overlayBuildings(grid, [fire(1, true), fire(2, false)]);
+    expect(grid.getTile(1, 1)!.painted).toEqual(paintedTile('building', 'campfire', 1, 1));
+    expect(grid.getTile(2, 1)!.painted).toEqual(paintedTile('building', 'campfire:idle', 2, 1));
+    reset();
+  });
+
+  it("draws a pawn as the folk of its culture's archetype, and the catch-all without one", () => {
+    withMap((map) => (map.pawn = { Verdant: ['pawn_red'], '*': ['pawn_blue'] }));
+    const pool = [{ id: 'morix', archetype: 'Verdant' }];
+    const red = paintedEntity('pawn', 'Verdant', 'pawn-1');
+    const blue = paintedEntity('pawn', undefined, 'pawn-1');
+    expect(red).not.toEqual(blue);
+    expect(paintedPawn({ id: 'pawn-1', cultureId: 'morix' }, pool)).toEqual(red);
+    expect(paintedPawn({ id: 'pawn-1', cultureId: 'gone' }, pool)).toEqual(blue);
+    reset();
   });
 });

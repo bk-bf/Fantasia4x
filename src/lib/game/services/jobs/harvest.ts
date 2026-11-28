@@ -21,6 +21,19 @@ import {
   resourceMatchesFilter
 } from './filters';
 
+function blocksTile(resourceId: string): boolean {
+  return resourceObjectService.getById(resourceId)?.walkable === false;
+}
+
+function blockingCoOccupants(
+  resources: Record<string, number> | undefined,
+  resourceId: string
+): string[] {
+  return Object.entries(resources ?? {})
+    .filter(([id, amt]) => id !== resourceId && amt > 0 && blocksTile(id))
+    .map(([id]) => id);
+}
+
 function keepHarvestJob(j: Job, gs: GameState, key: string): boolean {
   const designationType = gs.designations?.[key];
   if (!designationType || !HARVEST_DTYPES.includes(designationType)) return false;
@@ -48,6 +61,12 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     return true;
   });
 
+  const blockedTileJobs = new Set<string>();
+  for (const j of jobs) {
+    if (j.type === 'harvest' && blocksTile(j.resourceId ?? ''))
+      blockedTileJobs.add(`${j.targetX},${j.targetY}`);
+  }
+
   const designations = gs.designations ?? {};
   for (const key in designations) {
     const dtype = designations[key];
@@ -69,6 +88,10 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
       const interaction = resourceObjectService.getInteractionByDesignationType(resourceId, dtype);
       if (!meetsGrowthGate(interaction, tile.growth?.[resourceId])) continue;
 
+      if (blocksTile(resourceId)) {
+        if (blockedTileJobs.has(key)) continue;
+        blockedTileJobs.add(key);
+      }
       if (!taken) jobbed.set(key, (taken = new Set()));
       taken.add(resourceId);
 
@@ -114,6 +137,15 @@ export function complete(job: Job, gs: GameState): GameState {
     designationType,
     growthPct
   );
+  const growthAfter = interaction?.growthAfter;
+  const clearsTile = growthAfter === undefined;
+  const carried = clearsTile ? blockingCoOccupants(tile.resources, job.resourceId) : [];
+  for (const id of carried) {
+    for (const [itemId, qty] of Object.entries(
+      resourceObjectService.calculateYield(id, pawn, designationType)
+    ))
+      yields[itemId] = (yields[itemId] ?? 0) + qty;
+  }
   const yieldEntries = Object.entries(yields);
 
   if (pawn?.lineagePaths?.length) {
@@ -127,10 +159,9 @@ export function complete(job: Job, gs: GameState): GameState {
   }
 
   const col = gs.worldMap[job.targetY][job.targetX];
-  const growthAfter = interaction?.growthAfter;
-  const clearsTile = growthAfter === undefined;
   if (clearsTile) {
     col.resources = { ...col.resources, [job.resourceId]: 0 };
+    for (const id of carried) col.resources[id] = 0;
     if (interaction?.harvestSubType && SUBTERRAINS[interaction.harvestSubType]) {
       col.subType = interaction.harvestSubType;
     }
@@ -201,7 +232,9 @@ export function complete(job: Job, gs: GameState): GameState {
     state = wearWorkingPawnTool(job.claimedBy, interaction.workCategory, state);
   }
 
-  if (clearsTile && def?.overheadRoof) {
+  const leavesRoof =
+    def?.overheadRoof || carried.some((id) => resourceObjectService.getById(id)?.overheadRoof);
+  if (clearsTile && leavesRoof) {
     state = buildingService.placeBuilding('mountain_roof', job.targetX, job.targetY, state);
     state = buildingService.removeUnsupportedRoofs(state, job.targetX, job.targetY);
   }

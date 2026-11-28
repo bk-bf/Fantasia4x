@@ -1,13 +1,26 @@
 <script lang="ts">
-  export let tabs: { id: string; label: string; count?: number }[];
-  export let selected: string;
-  export let onSelect: (id: string) => void;
+  import { chrome } from '$lib/pixelArt/chrome';
+
+  let {
+    tabs,
+    selected,
+    onSelect
+  }: {
+    tabs: { id: string; label: string; count?: number }[];
+    selected: string;
+    onSelect: (id: string) => void;
+  } = $props();
 </script>
 
 <nav class="filter-tabs">
-  {#each tabs as t}
-    <button class="filter-tab" class:active={selected === t.id} on:click={() => onSelect(t.id)}>
-      {t.label}{#if t.count != null}<span class="ft-count">{t.count}</span>{/if}
+  {#each tabs as t (t.id)}
+    <button
+      class="filter-tab"
+      class:active={selected === t.id}
+      onclick={() => onSelect(t.id)}
+      {@attach chrome(selected === t.id ? 'cellOn' : 'cell')}
+    >
+      <span>{t.label}</span>{#if t.count != null}<span class="ft-count">{t.count}</span>{/if}
     </button>
   {/each}
 </nav>
@@ -15,52 +28,31 @@
 <style>
   .filter-tabs {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     flex-shrink: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    background: var(--bg);
-    border-bottom: 2px solid var(--border-hi);
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  .filter-tabs::-webkit-scrollbar {
-    display: none;
+    gap: 2px;
   }
   .filter-tab {
     flex-shrink: 0;
-    white-space: nowrap;
-    padding: 5px 10px;
-    background: transparent;
-    border: none;
-    border-right: 1px solid var(--border);
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    cursor: pointer;
+    height: 20px;
+    padding: 0 9px;
+    border: 0;
+    background: none;
+    color: var(--text-dim);
+    font: 16px/18px var(--font-pixel);
+    letter-spacing: 1.4px;
     text-transform: uppercase;
-    transition: color 0.12s;
-    position: relative;
+    white-space: nowrap;
+    cursor: pointer;
   }
   .filter-tab:hover {
     color: var(--text);
   }
   .filter-tab.active {
-    color: var(--accent-hi);
-  }
-  .filter-tab.active::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: var(--accent-hi);
+    color: var(--ember);
   }
   .ft-count {
     margin-left: 4px;
-    color: var(--text-dim);
-    font-size: 10px;
+    color: var(--text-muted);
   }
 </style>

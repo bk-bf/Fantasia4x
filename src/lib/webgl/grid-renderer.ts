@@ -1,20 +1,26 @@
 import type { GameGrid } from './game-grid.js';
-import type { TileData, Viewport } from './tile-types.js';
+import { withOverlays, type TileData, type Viewport } from './tile-types.js';
 import type { CharacterRenderer } from './character-renderer.js';
 import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
-import { checkWebGLError } from './utils.js';
-import { paintedQuad } from './painted/manifest.js';
+import { tileQuad } from './drawnSprites.js';
+import { tuftTiles } from './painted/tufts.js';
+import {
+  FLOAT32_FORMATS,
+  type GpuBuffer,
+  type GpuDevice,
+  type GpuVertexLayout
+} from '../gpu/device.js';
 
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
 const ZERO_LIGHT: [number, number, number] = [0, 0, 0];
 const NO_OUTLINE = [0, 0, 0];
 const PAINTED_UV_SHIFT = 2;
-const paintedCorners = [0, 0, 0, 0];
+const corners = [0, 0, 0, 0];
 const GLYPH_VERTEX_FLOATS = 24;
-const ROW_VERTEX_FLOATS = 25;
-export const ALPHA_CUT = 0.5;
-export const SHADOW_FLOOR = 0.5 / 255;
+const ROW_VERTEX_FLOATS = 32;
+const NO_VEIN = { x: -1, y: -1, near: 0 };
+export { ALPHA_CUT } from './drawnSprites.js';
 
 export interface GridRenderOptions {
   tileWidth: number;
@@ -29,7 +35,7 @@ export interface GridRenderOptions {
   litBounds?: { minX: number; minY: number; maxX: number; maxY: number } | null;
   renderAllTiles?: boolean;
   cacheVersion?: number;
-  chunkLayer?: 'terrain' | 'resource' | 'resourceTall' | 'snow';
+  chunkLayer?: 'terrain' | 'resource' | 'resourceTall' | 'snow' | 'decor';
   pointLightActive?: boolean;
   rowPasses?: boolean;
 }
@@ -42,8 +48,8 @@ export interface GridRenderStats {
 }
 
 interface TerrainChunk {
-  vao: WebGLVertexArrayObject | null;
-  vbo: WebGLBuffer | null;
+  vao: GpuVertexLayout | null;
+  vbo: GpuBuffer | null;
   count: number;
   builtVersion: number;
   builtLight: number;
@@ -57,7 +63,7 @@ interface WarmState {
 }
 
 export class GridRenderer {
-  private gl: WebGL2RenderingContext;
+  private gpu: GpuDevice;
   private shaderManager: ShaderManager;
   private characterRenderer: CharacterRenderer;
   private fontAtlas: FontAtlas;
@@ -65,8 +71,8 @@ export class GridRenderer {
   private vertexFloats: number;
   private drawnChunks: TerrainChunk[] = [];
 
-  private gridVAO: WebGLVertexArrayObject | null = null;
-  private gridVBO: WebGLBuffer | null = null;
+  private gridVAO: GpuVertexLayout | null = null;
+  private gridVBO: GpuBuffer | null = null;
   private currentVertexCount: number = 0;
 
   private static readonly CHUNK_SIZE = 32;
@@ -76,10 +82,14 @@ export class GridRenderer {
   private resourceChunks: Map<string, TerrainChunk> = new Map();
   private resourceTallChunks: Map<string, TerrainChunk> = new Map();
   private snowChunks: Map<string, TerrainChunk> = new Map();
+  private decorChunks: Map<string, TerrainChunk> = new Map();
   private warmState = new Map<Map<string, TerrainChunk>, WarmState>();
   chunksRebuiltLastRender = 0;
+  skipBlendedGround = false;
+  skipWaterIce = false;
   private chunkDirty = new Map<string, number>();
   private snowChunkDirty = new Map<string, number>();
+  private decorChunkDirty = new Map<string, number>();
   private chunkDirtyCounter = 0;
 
   private stats: GridRenderStats = {
@@ -90,14 +100,14 @@ export class GridRenderer {
   };
 
   constructor(
-    gl: WebGL2RenderingContext,
+    gpu: GpuDevice,
     shaderManager: ShaderManager,
     characterRenderer: CharacterRenderer,
     fontAtlas: FontAtlas,
     debug = false,
     rowDepth = false
   ) {
-    this.gl = gl;
+    this.gpu = gpu;
     this.shaderManager = shaderManager;
     this.characterRenderer = characterRenderer;
     this.fontAtlas = fontAtlas;
@@ -122,7 +132,9 @@ export class GridRenderer {
             ? this.resourceTallChunks
             : options.chunkLayer === 'snow'
               ? this.snowChunks
-              : this.terrainChunks;
+              : options.chunkLayer === 'decor'
+                ? this.decorChunks
+                : this.terrainChunks;
       const drawnTiles = this.renderTerrainChunked(grid, options, chunks);
       this.stats = {
         tilesRendered: drawnTiles,
@@ -140,9 +152,9 @@ export class GridRenderer {
       height: options.viewportHeight
     };
 
-    const visibleTiles = options.renderAllTiles
-      ? grid.getAllTiles()
-      : grid.getVisibleTiles(viewport);
+    const visibleTiles = withOverlays(
+      options.renderAllTiles ? grid.getAllTiles() : grid.getVisibleTiles(viewport)
+    );
 
     if (visibleTiles.length > 0) {
       const vertexData = this.generateBatchVertexData(visibleTiles, options);
@@ -171,10 +183,21 @@ export class GridRenderer {
   }
 
   markSnowChunksDirty(tiles: ReadonlyArray<{ x: number; y: number }>): void {
+    this.markDirty(this.snowChunkDirty, tiles);
+  }
+
+  markDecorChunksDirty(tiles: ReadonlyArray<{ x: number; y: number }>): void {
+    this.markDirty(this.decorChunkDirty, tiles);
+  }
+
+  private markDirty(
+    map: Map<string, number>,
+    tiles: ReadonlyArray<{ x: number; y: number }>
+  ): void {
     const CS = GridRenderer.CHUNK_SIZE;
     for (const t of tiles) {
       const key = `${Math.floor(t.x / CS)}:${Math.floor(t.y / CS)}`;
-      this.snowChunkDirty.set(key, ++this.chunkDirtyCounter);
+      map.set(key, ++this.chunkDirtyCounter);
     }
   }
 
@@ -201,7 +224,12 @@ export class GridRenderer {
       return 0;
     }
 
-    const dirtyMap = options.chunkLayer === 'snow' ? this.snowChunkDirty : this.chunkDirty;
+    const dirtyMap =
+      options.chunkLayer === 'snow'
+        ? this.snowChunkDirty
+        : options.chunkLayer === 'decor'
+          ? this.decorChunkDirty
+          : this.chunkDirty;
 
     let drawnVerts = 0;
     this.drawnChunks.length = 0;
@@ -220,7 +248,7 @@ export class GridRenderer {
       }
     }
 
-    if (options.rowPasses) this.drawShadowTexels(() => this.redrawChunks());
+    if (options.rowPasses) this.drawShadows(() => this.redrawChunks());
     this.warmOneChunk(grid, options, cacheVersion, lightVersion, chunks, dirtyMap);
     this.currentVertexCount = drawnVerts;
     return drawnVerts / 6;
@@ -250,10 +278,10 @@ export class GridRenderer {
       if (!chunk) return 0;
     }
     if (chunk.count > 0 && chunk.vao) {
-      const gl = this.gl;
-      gl.bindVertexArray(chunk.vao);
-      gl.drawArrays(gl.TRIANGLES, 0, chunk.count);
-      gl.bindVertexArray(null);
+      const gpu = this.gpu;
+      gpu.setVertexLayout(chunk.vao);
+      gpu.draw('triangle-list', chunk.count);
+      gpu.setVertexLayout(null);
       this.drawnChunks.push(chunk);
       return chunk.count;
     }
@@ -270,11 +298,19 @@ export class GridRenderer {
     dirtyStamp: number,
     chunks: Map<string, TerrainChunk>
   ): TerrainChunk | undefined {
-    const gl = this.gl;
+    const gpu = this.gpu;
     const CS = GridRenderer.CHUNK_SIZE;
     const key = `${cx}:${cy}`;
     let chunk = chunks.get(key);
-    const tiles = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
+    const region = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
+    const tiles =
+      chunks === this.decorChunks
+        ? region.flatMap(tuftTiles)
+        : this.skipBlendedGround && chunks === this.terrainChunks
+          ? region.flatMap((t) => (t.ground ? tuftTiles(t) : [t]))
+          : this.skipWaterIce && chunks === this.snowChunks
+            ? region.filter((t) => t.waterIce === undefined)
+            : region;
     if (!chunk) {
       chunk = {
         vao: null,
@@ -291,16 +327,16 @@ export class GridRenderer {
     } else {
       const data = this.generateBatchVertexData(tiles, options);
       if (!chunk.vao || !chunk.vbo) {
-        chunk.vao = gl.createVertexArray();
-        chunk.vbo = gl.createBuffer();
+        chunk.vao = gpu.createVertexLayout();
+        chunk.vbo = gpu.createBuffer();
         if (!chunk.vao || !chunk.vbo) {
           console.error('❌ Failed to create terrain chunk VAO/VBO');
           return undefined;
         }
         this.setupGridAttribs(chunk.vao, chunk.vbo);
       }
-      gl.bindBuffer(gl.ARRAY_BUFFER, chunk.vbo);
-      gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      gpu.setVertexBuffer(chunk.vbo);
+      gpu.writeBuffer(data, 'static');
       chunk.count = data.length / this.vertexFloats;
     }
     chunk.builtVersion = version;
@@ -349,23 +385,23 @@ export class GridRenderer {
   }
 
   private redrawChunks(): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
     for (const chunk of this.drawnChunks) {
-      gl.bindVertexArray(chunk.vao);
-      gl.drawArrays(gl.TRIANGLES, 0, chunk.count);
+      gpu.setVertexLayout(chunk.vao);
+      gpu.draw('triangle-list', chunk.count);
     }
-    gl.bindVertexArray(null);
+    gpu.setVertexLayout(null);
   }
 
-  private drawShadowTexels(draw: () => void): void {
-    const gl = this.gl;
-    gl.depthMask(false);
-    this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', SHADOW_FLOOR);
-    this.shaderManager.setUniform('tileRenderer', 'u_alphaCeil', ALPHA_CUT);
+  private drawShadows(draw: () => void): void {
+    const gpu = this.gpu;
+    gpu.setDepthCompare('less');
+    gpu.setBlendFunc('zero', 'src');
+    this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 1);
     draw();
-    this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', ALPHA_CUT);
-    this.shaderManager.setUniform('tileRenderer', 'u_alphaCeil', 0);
-    gl.depthMask(true);
+    this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 0);
+    gpu.setBlendFunc('src-alpha', 'one-minus-src-alpha');
+    gpu.setDepthCompare('less-equal');
   }
 
   private uploadAndDraw(vertexData: Float32Array, rowPasses = false): void {
@@ -375,28 +411,28 @@ export class GridRenderer {
     }
     if (vertexData.length === 0) return;
 
-    const gl = this.gl;
+    const gpu = this.gpu;
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.gridVBO);
-    gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.DYNAMIC_DRAW);
+    gpu.setVertexBuffer(this.gridVBO);
+    gpu.writeBuffer(vertexData, 'dynamic');
 
     if (!this.shaderManager.useProgram('tileRenderer')) {
       console.error('❌ Failed to use tile renderer shader');
       return;
     }
 
-    gl.bindVertexArray(this.gridVAO);
+    gpu.setVertexLayout(this.gridVAO);
 
     const vertexCount = vertexData.length / this.vertexFloats;
-    gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
-    if (rowPasses) this.drawShadowTexels(() => gl.drawArrays(gl.TRIANGLES, 0, vertexCount));
+    gpu.draw('triangle-list', vertexCount);
+    if (rowPasses) this.drawShadows(() => gpu.draw('triangle-list', vertexCount));
 
-    gl.bindVertexArray(null);
+    gpu.setVertexLayout(null);
 
     this.currentVertexCount = vertexCount;
 
     if (this.debug) {
-      checkWebGLError(gl, 'grid batch rendering');
+      gpu.checkError('grid batch rendering');
     }
   }
 
@@ -419,22 +455,10 @@ export class GridRenderer {
         }
       }
 
-      const screenX = tile.position.x * options.tileWidth;
-      const screenY = tile.position.y * options.tileHeight;
-
-      const offsetX = tile.animationOffset?.x || 0;
       const offsetY = tile.animationOffset?.y || 0;
-
-      const scale = tile.scale && tile.scale > 0 ? tile.scale : 1;
-      const tileW = options.tileWidth;
       const tileH = options.tileHeight;
-      const drawW = tileW * scale;
-      const drawH = tileH * scale;
-      let x1 = screenX + offsetX - (drawW - tileW) / 2;
-      let y1 =
-        scale >= 1 ? screenY + offsetY - (drawH - tileH) : screenY + offsetY + (tileH - drawH) / 2;
-      let x2 = x1 + drawW;
-      let y2 = y1 + drawH;
+      tileQuad(tile, options.tileWidth, tileH, corners);
+      const [x1, y1, x2, y2] = corners;
 
       let u1 = charInfo ? charInfo.x / this.fontAtlas.atlasWidth : 0;
       let v1 = charInfo ? charInfo.y / this.fontAtlas.atlasHeight : 0;
@@ -464,21 +488,6 @@ export class GridRenderer {
 
       const painted = tile.painted;
       if (painted) {
-        paintedQuad(
-          painted,
-          tile.position.x,
-          tile.position.y,
-          tileW,
-          offsetX,
-          offsetY,
-          scale,
-          tile.rotation === 90 || tile.rotation === 270,
-          paintedCorners
-        );
-        x1 = paintedCorners[0];
-        y1 = paintedCorners[1];
-        x2 = paintedCorners[2];
-        y2 = paintedCorners[3];
         u1 = painted.u1;
         v1 = painted.v1;
         u2 = painted.u2;
@@ -700,11 +709,21 @@ export class GridRenderer {
       if (vertexFloats === GLYPH_VERTEX_FLOATS) out.set(charVertices, o);
       else {
         const row = tile.position.y + offsetY / tileH;
+        const vein = painted?.vein ?? NO_VEIN;
+        const sway = tile.rotation ? 0 : (painted?.sway ?? 0);
+        const tree = tile.rotation ? 0 : (painted?.tree ?? 0);
         for (let v = 0; v < 6; v++) {
           const at = o + v * ROW_VERTEX_FLOATS;
           for (let f = 0; f < GLYPH_VERTEX_FLOATS; f++)
             out[at + f] = charVertices[v * GLYPH_VERTEX_FLOATS + f];
           out[at + GLYPH_VERTEX_FLOATS] = row;
+          out[at + GLYPH_VERTEX_FLOATS + 1] = vein.x;
+          out[at + GLYPH_VERTEX_FLOATS + 2] = vein.y;
+          out[at + GLYPH_VERTEX_FLOATS + 3] = tile.position.x;
+          out[at + GLYPH_VERTEX_FLOATS + 4] = tile.position.y;
+          out[at + GLYPH_VERTEX_FLOATS + 5] = vein.near;
+          out[at + GLYPH_VERTEX_FLOATS + 6] = sway;
+          out[at + GLYPH_VERTEX_FLOATS + 7] = tree;
         }
       }
       o += FLOATS_PER_TILE;
@@ -714,10 +733,10 @@ export class GridRenderer {
   }
 
   private initializeGridRendering(): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
 
-    this.gridVAO = gl.createVertexArray();
-    this.gridVBO = gl.createBuffer();
+    this.gridVAO = gpu.createVertexLayout();
+    this.gridVBO = gpu.createBuffer();
     if (!this.gridVAO || !this.gridVBO) throw new Error('Failed to create grid VAO/VBO');
     this.setupGridAttribs(this.gridVAO, this.gridVBO);
 
@@ -726,10 +745,10 @@ export class GridRenderer {
     }
   }
 
-  private setupGridAttribs(vao: WebGLVertexArrayObject, vbo: WebGLBuffer): void {
-    const gl = this.gl;
-    gl.bindVertexArray(vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+  private setupGridAttribs(vao: GpuVertexLayout, vbo: GpuBuffer): void {
+    const gpu = this.gpu;
+    gpu.setVertexLayout(vao);
+    gpu.setVertexBuffer(vbo);
     const stride = this.vertexFloats * 4;
     const attribs: [string, number, number][] = [
       ['a_position', 2, 0],
@@ -741,15 +760,21 @@ export class GridRenderer {
       ['a_uvBounds', 4, 17],
       ['a_light', 3, 21]
     ];
-    if (this.vertexFloats === ROW_VERTEX_FLOATS) attribs.push(['a_row', 1, GLYPH_VERTEX_FLOATS]);
+    if (this.vertexFloats === ROW_VERTEX_FLOATS)
+      attribs.push(
+        ['a_row', 1, GLYPH_VERTEX_FLOATS],
+        ['a_vein', 4, GLYPH_VERTEX_FLOATS + 1],
+        ['a_veinNear', 1, GLYPH_VERTEX_FLOATS + 5],
+        ['a_sway', 1, GLYPH_VERTEX_FLOATS + 6],
+        ['a_tree', 1, GLYPH_VERTEX_FLOATS + 7]
+      );
     for (const [name, size, offset] of attribs) {
       const loc = this.shaderManager.getAttributeLocation('tileRenderer', name);
       if (loc >= 0) {
-        gl.enableVertexAttribArray(loc);
-        gl.vertexAttribPointer(loc, size, gl.FLOAT, false, stride, offset * 4);
+        gpu.vertexAttribute(loc, { format: FLOAT32_FORMATS[size - 1], stride, offset: offset * 4 });
       }
     }
-    gl.bindVertexArray(null);
+    gpu.setVertexLayout(null);
   }
 
   private estimateCulledTiles(grid: GameGrid, viewport: Viewport): number {
@@ -764,23 +789,25 @@ export class GridRenderer {
   }
 
   dispose(): void {
-    const gl = this.gl;
+    const gpu = this.gpu;
 
     if (this.gridVBO) {
-      gl.deleteBuffer(this.gridVBO);
+      gpu.destroyBuffer(this.gridVBO);
       this.gridVBO = null;
     }
 
     if (this.gridVAO) {
-      gl.deleteVertexArray(this.gridVAO);
+      gpu.destroyVertexLayout(this.gridVAO);
       this.gridVAO = null;
     }
 
-    for (const chunk of this.terrainChunks.values()) {
-      if (chunk.vbo) gl.deleteBuffer(chunk.vbo);
-      if (chunk.vao) gl.deleteVertexArray(chunk.vao);
+    for (const chunks of [this.terrainChunks, this.decorChunks]) {
+      for (const chunk of chunks.values()) {
+        if (chunk.vbo) gpu.destroyBuffer(chunk.vbo);
+        if (chunk.vao) gpu.destroyVertexLayout(chunk.vao);
+      }
+      chunks.clear();
     }
-    this.terrainChunks.clear();
 
     if (this.debug) {
       console.log('🧹 Grid renderer disposed');

@@ -1,22 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { createHash } from 'node:crypto';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
-import { readMapGeneratorFlag, usesLandforms } from '$lib/game/world/mapGenerator';
 import { isSpawnableTile } from '$lib/game/core/defs/terrains';
 import type { WorldTile } from '$lib/game/core/types';
 
 const SEED = 1337;
 const L = 750;
 const WATER = new Set(['water', 'shallow_water', 'rapids']);
-
-const digest = (world: WorldTile[][]) =>
-  createHash('sha1').update(JSON.stringify(world)).digest('hex');
-
-function share(world: WorldTile[][], pick: (t: WorldTile) => boolean): number {
-  let hits = 0;
-  for (const row of world) for (const t of row) if (pick(t)) hits++;
-  return hits / (world.length * world[0].length);
-}
 
 function reachableFromCentre(world: WorldTile[][], open: (t: WorldTile) => boolean): Uint8Array {
   const h = world.length;
@@ -47,45 +36,12 @@ function reachableFromCentre(world: WorldTile[][], open: (t: WorldTile) => boole
   return seen;
 }
 
-describe('map generator switch', () => {
-  it('reads the launch option before the stored choice and defaults to landforms', () => {
-    expect(readMapGeneratorFlag('', null)).toBe('landforms');
-    expect(readMapGeneratorFlag('', 'classic')).toBe('classic');
-    expect(readMapGeneratorFlag('?mapgen=landforms', 'classic')).toBe('landforms');
-    expect(readMapGeneratorFlag('?mapgen=classic', null)).toBe('classic');
-    expect(readMapGeneratorFlag('?mapgen=nonsense', null)).toBe('landforms');
-  });
-
-  it('only takes the new generator on maps of L size and larger', () => {
-    expect(usesLandforms('landforms', L, L)).toBe(true);
-    expect(usesLandforms('landforms', 1000, 1000)).toBe(true);
-    expect(usesLandforms('landforms', 500, 500)).toBe(false);
-    expect(usesLandforms('classic', L, L)).toBe(false);
-  });
-
-  it('leaves smaller maps exactly as the old generator lays them', () => {
-    const old = generateWorld(120, 90, SEED, { generator: 'classic' });
-    const asked = generateWorld(120, 90, SEED, { generator: 'landforms' });
-    expect(digest(asked)).toBe(digest(old));
-  });
-});
-
 describe('landforms on an L map', () => {
-  let classic: WorldTile[][];
   let world: WorldTile[][];
 
   beforeAll(() => {
-    classic = generateWorld(L, L, SEED, { generator: 'classic', skipResources: true });
-    world = generateWorld(L, L, SEED, { generator: 'landforms', skipResources: true });
+    world = generateWorld(L, L, SEED, { skipResources: true });
   }, 120_000);
-
-  it('differs from the old map of the same seed', () => {
-    let differ = 0;
-    for (let y = 0; y < L; y++)
-      for (let x = 0; x < L; x++)
-        if (world[y][x].terrainType !== classic[y][x].terrainType) differ++;
-    expect(differ / (L * L)).toBeGreaterThan(0.2);
-  });
 
   it('starts the colony on open ground at the centre', () => {
     expect(isSpawnableTile(world[L / 2][L / 2])).toBe(true);
@@ -97,13 +53,6 @@ describe('landforms on an L map', () => {
     let cutOff = 0;
     for (const row of world) for (const t of row) if (open(t) && !seen[t.y * L + t.x]) cutOff++;
     expect(cutOff).toBe(0);
-  });
-
-  it('keeps the old share of mountain and water', () => {
-    const mountain = (t: WorldTile) => t.terrainType === 'mountain';
-    const water = (t: WorldTile) => WATER.has(t.subType);
-    expect(Math.abs(share(world, mountain) - share(classic, mountain))).toBeLessThan(0.03);
-    expect(Math.abs(share(world, water) - share(classic, water))).toBeLessThan(0.04);
   });
 
   it('puts deep water only well away from the shore', () => {
@@ -122,5 +71,46 @@ describe('landforms on an L map', () => {
     }
     expect(deep).toBeGreaterThan(0);
     expect(nearShore).toBe(0);
+  });
+
+  it('marks every river tile and gives its centreline a downstream course', () => {
+    let river = 0;
+    let course = 0;
+    for (const row of world)
+      for (const t of row) {
+        if (t.river) {
+          river++;
+          expect(WATER.has(t.subType)).toBe(true);
+        }
+        if (!t.riverCourse) continue;
+        course++;
+        expect(t.river).toBe(true);
+        expect(t.riverCourse.down).not.toBe(4);
+        expect(t.riverCourse.discharge).toBeGreaterThanOrEqual(1);
+      }
+    expect(course).toBeGreaterThan(500);
+    expect(river).toBeGreaterThan(course * 2);
+  });
+
+  it('follows each course downstream to standing water or the map edge, gathering water as it goes', () => {
+    const step = (t: WorldTile) => {
+      const code = t.riverCourse!.down;
+      return world[t.y + Math.floor(code / 3) - 1]?.[t.x + (code % 3) - 1];
+    };
+    let ends = 0;
+    for (const row of world)
+      for (const start of row) {
+        if (!start.riverCourse) continue;
+        let t: WorldTile | undefined = start;
+        let last = start.riverCourse.discharge;
+        for (let k = 0; t?.riverCourse && k < L * 4; k++) {
+          expect(t.riverCourse.discharge).toBeGreaterThanOrEqual(last);
+          last = t.riverCourse.discharge;
+          t = step(t);
+        }
+        expect(t === undefined || WATER.has(t.subType)).toBe(true);
+        if (t && !t.river) ends++;
+      }
+    expect(ends).toBeGreaterThan(0);
   });
 });

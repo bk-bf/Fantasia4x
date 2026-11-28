@@ -11,7 +11,7 @@ export interface PlankOptions {
   hi?: number;
 }
 
-function boards(n: number, seed: number, lo: number, hi: number) {
+export function boards(n: number, seed: number, lo: number, hi: number) {
   const id = new Int16Array(n);
   const pos = new Int16Array(n);
   const wid = new Int16Array(n);
@@ -56,6 +56,7 @@ export const ironPx = (x: number, y: number, k: number): Rgb =>
 export interface TimberOptions extends PlankOptions {
   beam?: number;
   strap?: number;
+  studs?: boolean;
 }
 
 function strapPx(
@@ -86,7 +87,8 @@ function beamPx(
   y: number,
   e: { l: number; r: number; t: number; b: number; d: number },
   bw: number,
-  seed: number
+  seed: number,
+  studs: boolean
 ): Rgb {
   const horiz = e.d === e.t || e.d === e.b;
   const side = e.d === e.t ? 1 : e.d === e.b ? 2 : e.d === e.l ? 3 : 4;
@@ -97,8 +99,8 @@ function beamPx(
   else k += e.r === bw ? 0.1 : e.r === 1 ? -0.22 : 0;
   if (Math.min(e.l, e.r) === Math.min(e.t, e.b)) k -= 0.2;
   const along = horiz ? x : y;
-  if (e.d === 3 && along % 72 === 36) return RAMPS.iron[6];
-  if (e.d === 4 && along % 72 === 37) return INK;
+  if (studs && e.d === 3 && along % 72 === 36) return RAMPS.iron[6];
+  if (studs && e.d === 4 && along % 72 === 37) return INK;
   return pick(RAMPS.beam, k, x, y, 0.8);
 }
 
@@ -106,6 +108,7 @@ export function timber(w: number, h: number, o: TimberOptions = {}): HTMLCanvasE
   const bw = o.beam ?? 5;
   const strap = o.strap ?? 12;
   const seed = (o.seed ?? 1) + 40;
+  const studs = o.studs ?? true;
   const face = planks(w, h, o);
   const fn: Painter = (x, y) => {
     const e = { l: x, r: w - 1 - x, t: y, b: h - 1 - y, d: 0 };
@@ -115,10 +118,30 @@ export function timber(w: number, h: number, o: TimberOptions = {}): HTMLCanvasE
     const cy = Math.min(e.t, e.b);
     if (strap && cx < strap && cy < strap && (cx <= bw + 1 || cy <= bw + 1))
       return strapPx(x, y, e, bw, strap);
-    if (e.d <= bw) return beamPx(x, y, e, bw, seed);
+    if (e.d <= bw) return beamPx(x, y, e, bw, seed, studs);
     if (e.d === bw + 1) return RAMPS.oakDark[0];
     const c = face(x, y);
     return e.t === bw + 2 || e.l === bw + 2 ? tone(c, 0.72) : c;
   };
   return paint(w, h, fn);
+}
+
+const NAIL = ['..###..', '.#####.', '#######', '#######', '#######', '.#####.', '..###..'];
+const NAIL_SHADOW: Rgb = [INK[0], INK[1], INK[2], 115];
+
+export function nail(): HTMLCanvasElement {
+  const on = (i: number, j: number) => j >= 0 && j < 7 && i >= 0 && i < 7 && NAIL[j][i] === '#';
+  return paint(11, 11, (X, Y) => {
+    const i = X - 1;
+    const j = Y - 1;
+    if (on(i, j)) {
+      if (i === 2 && j === 2) return RAMPS.iron[6];
+      const edge = !on(i - 1, j) || !on(i, j - 1);
+      const under = !on(i + 1, j) || !on(i, j + 1);
+      const d = i + j;
+      return RAMPS.iron[edge && !under ? 5 : under && !edge ? 1 : d < 5 ? 4 : d > 7 ? 2 : 3];
+    }
+    if (on(i - 1, j) || on(i + 1, j) || on(i, j - 1) || on(i, j + 1)) return INK;
+    return on(i - 2, j - 2) || on(i - 1, j - 2) || on(i - 2, j - 1) ? NAIL_SHADOW : null;
+  });
 }

@@ -94,7 +94,6 @@
     margin: 0.4rem 0;
   }
   .hdr {
-    font-size: 0.7rem;
     letter-spacing: 0.1em;
     color: var(--text-dim, #8a8a8a);
     margin-bottom: 0.25rem;
@@ -103,7 +102,6 @@
     display: flex;
     gap: 0.4rem;
     align-items: baseline;
-    font-size: 0.74rem;
     margin-top: 0.3rem;
   }
   .nm {
@@ -114,7 +112,6 @@
   }
   .cures {
     margin-left: auto;
-    font-size: 0.66rem;
     color: var(--text-dim, #6a6a6a);
   }
   .targets {
@@ -126,7 +123,6 @@
   .give {
     text-align: left;
     padding: 0.15rem 0.35rem;
-    font-size: 0.68rem;
     background: var(--bg-alt, #17171a);
     color: var(--text-dim, #8a8a8a);
     border: 1px solid var(--border, #2c2c31);

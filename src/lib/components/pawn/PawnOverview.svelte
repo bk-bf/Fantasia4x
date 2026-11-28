@@ -1,16 +1,8 @@
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
   import type { GameState } from '$lib/game/core/types';
-  import {
-    getMoodColor,
-    getMoodDescription,
-    getHealthColor,
-    getHealthDescription,
-    getPawnTaskSummary
-  } from '$lib/components/util/pawnUtils';
-  import { pawnService } from '$lib/game/services/PawnService';
-  import { effectiveMood } from '$lib/game/core/rules/social/social';
-  import { sizeFromHeight } from '$lib/game/core/gen/culture';
+  import { getPawnTaskSummary, pawnCultureLabel } from '$lib/components/util/pawnUtils';
+  import { sizeFromHeight } from '$lib/game/core/rules/body/size';
   import {
     getBackgroundById,
     describeBackgroundEffects,
@@ -23,24 +15,27 @@
   import PawnAdminister from './PawnAdminister.svelte';
   import PawnForceWork from './PawnForceWork.svelte';
   import PawnGrowthPanel from './PawnGrowthPanel.svelte';
-  import { DAYS_PER_SEASON, SEASON_IDS, SEASON_LABELS } from '$lib/game/services/EnvironmentService';
+  import {
+    DAYS_PER_SEASON,
+    SEASON_IDS,
+    SEASON_LABELS
+  } from '$lib/game/services/EnvironmentService';
 
   export let pawn: Pawn;
   export let gameState: GameState;
 
   $: birthdayLabel =
     pawn.birthDayOfYear != null
-      ? `born ${SEASON_LABELS[
-          SEASON_IDS[Math.floor(pawn.birthDayOfYear / DAYS_PER_SEASON) % SEASON_IDS.length]
-        ]} day ${(pawn.birthDayOfYear % DAYS_PER_SEASON) + 1}`
+      ? `born ${
+          SEASON_LABELS[
+            SEASON_IDS[Math.floor(pawn.birthDayOfYear / DAYS_PER_SEASON) % SEASON_IDS.length]
+          ]
+        } day ${(pawn.birthDayOfYear % DAYS_PER_SEASON) + 1}`
       : '';
 
   $: taskSummary = getPawnTaskSummary(pawn, gameState);
-  $: moveSpeed = pawnService.getMoveSpeed(pawn);
   $: culture = gameState.culturePool?.find((r) => r.id === pawn.cultureId);
-  $: cultureLabel = pawn.cultureName
-    ? `${pawn.cultureName}${culture?.archetype ? ` · ${culture.archetype}` : ''}`
-    : 'unknown';
+  $: cultureLabel = pawnCultureLabel(pawn, gameState.culturePool);
   $: homeKingdom = pawn.homeKingdomId
     ? gameState.kingdoms?.find((k) => k.id === pawn.homeKingdomId)
     : undefined;
@@ -67,13 +62,13 @@
       case 'moving_to_resource':
       case 'moving_to_deposit':
       case 'moving_to_need':
-        return '#4a9';
+        return 'var(--pos)';
       case 'hungry':
       case 'eating':
-        return '#f44';
+        return 'var(--neg)';
       case 'tired':
       case 'sleeping':
-        return '#fa0';
+        return 'var(--ember)';
       default:
         return 'var(--text-muted)';
     }
@@ -81,17 +76,15 @@
 </script>
 
 <div class="pawn-overview">
-  <div class="section-hdr">| STATUS</div>
-
   <PawnGrowthPanel {pawn} />
 
   <div class="row">
-    <span class="lbl">CULTURE</span>
+    <span class="lbl">Culture</span>
     <span class="val culture-val" title={culture?.lore?.epithet ?? ''}>{cultureLabel}</span>
   </div>
   {#if pawn.childhoodId}
     <div class="row">
-      <span class="lbl">ORIGIN</span>
+      <span class="lbl">Origin</span>
       <span class="val" title={homeKingdom?.lore?.epithet ?? ''}>{originLabel}</span>
     </div>
     <div
@@ -101,7 +94,7 @@
       on:mousemove={bgMove}
       on:mouseleave={bgLeave}
     >
-      <span class="lbl">CHILDHOOD</span>
+      <span class="lbl">Childhood</span>
       <span class="val bg-val">{childhood?.title ?? '—'}</span>
     </div>
     {#if pawn.adulthoodId}
@@ -112,30 +105,36 @@
         on:mousemove={bgMove}
         on:mouseleave={bgLeave}
       >
-        <span class="lbl">ADULTHOOD</span>
+        <span class="lbl">Adulthood</span>
         <span class="val bg-val">{adulthood?.title ?? '—'}</span>
       </div>
     {:else}
       <div class="row">
-        <span class="lbl">ADULTHOOD</span>
+        <span class="lbl">Adulthood</span>
         <span class="val dim-val">still young</span>
       </div>
     {/if}
   {/if}
   {#if pawn.age != null}
     <div class="row">
-      <span class="lbl">AGE</span><span class="val" title={birthdayLabel}>{pawn.age} yrs</span>
+      <span class="lbl">Age</span><span class="val" title={birthdayLabel}>{pawn.age} yrs</span>
     </div>
   {/if}
   {#if pawn.sex}
     <div class="row">
-      <span class="lbl">SEX</span><span class="val"
+      <span class="lbl">Sex</span><span class="val"
         >{pawn.sex === 'male' ? '♂ Male' : '♀ Female'}</span
       >
     </div>
   {/if}
   <div class="row">
-    <span class="lbl">STATE</span>
+    <span class="lbl">Build</span><span class="val"
+      >{sizeFromHeight(pawn.physicalTraits.height)} · {pawn.physicalTraits.height} cm · {pawn
+        .physicalTraits.weight} kg</span
+    >
+  </div>
+  <div class="row">
+    <span class="lbl">State</span>
     <span class="val" style="color: {stateColor(pawn.currentState)}"
       >{taskSummary.currentState}</span
     >
@@ -145,59 +144,16 @@
   <PawnMedicinePolicy {pawn} />
   <PawnAdminister {pawn} />
   <PawnForceWork {pawn} />
-  <div class="row">
-    <span class="lbl">WORK</span><span class="val">{taskSummary.workAssignment}</span>
-  </div>
-  <div class="row">
-    <span class="lbl">TASK</span><span class="val">{taskSummary.currentTask}</span>
-  </div>
-  <div class="row">
-    <span class="lbl">NEXT</span><span class="val">{taskSummary.nextTask}</span>
-  </div>
-  <div class="row">
-    <span class="lbl">SPEED</span>
-    <span class="val" title={moveSpeed.sources.join('  ')}
-      >{moveSpeed.tilesPerSecond.toFixed(1)} t/s</span
-    >
-  </div>
-  <div class="row">
-    <span class="lbl">HEIGHT</span><span class="val">{pawn.physicalTraits.height}cm</span>
-  </div>
-  <div class="row">
-    <span class="lbl">WEIGHT</span><span class="val">{pawn.physicalTraits.weight}kg</span>
-  </div>
-  <div class="row">
-    <span class="lbl">SIZE</span><span class="val"
-      >{sizeFromHeight(pawn.physicalTraits.height)}</span
-    >
-  </div>
-
-  <div class="row">
-    <span class="lbl">MOOD</span>
-    <span class="val" style="color: {getMoodColor(effectiveMood(pawn, gameState.turn))}"
-      >{Math.round(effectiveMood(pawn, gameState.turn))}% — {getMoodDescription(
-        effectiveMood(pawn, gameState.turn)
-      )}</span
-    >
-  </div>
   {#if pawn.socialBreak}
     <div class="row">
-      <span class="lbl">STATE</span>
-      <span class="val" style="color: #ee8844"
+      <span class="lbl">State</span>
+      <span class="val" style="color: var(--ember)"
         >{pawn.socialBreak.kind === 'crisis'
           ? 'past the breaking point'
           : 'refusing work for a while'}</span
       >
     </div>
   {/if}
-  <div class="row">
-    <span class="lbl">HEALTH</span>
-    <span class="val" style="color: {getHealthColor(pawn.state.health ?? 100)}"
-      >{Math.round(pawn.state.health ?? 100)}% — {getHealthDescription(
-        pawn.state.health ?? 100
-      )}</span
-    >
-  </div>
 </div>
 
 {#if bgTip}
@@ -217,43 +173,28 @@
 {/if}
 
 <style>
-  .section-hdr {
-    padding: 4px 8px;
-    background: var(--bg-panel);
-    color: var(--accent-hi);
-    font-size: 12px;
-    letter-spacing: 0.06em;
-    border-bottom: 1px solid var(--border);
+  .pawn-overview {
+    display: flex;
+    flex-direction: column;
   }
-
   .row {
     display: flex;
-    padding: 2px 8px;
+    justify-content: space-between;
     align-items: baseline;
-    gap: 6px;
+    gap: 10px;
+    min-height: 18px;
   }
-  .row:hover {
-    background: var(--bg-hover);
-  }
-
   .lbl {
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    color: var(--text);
     white-space: nowrap;
-    min-width: 80px;
     flex-shrink: 0;
   }
-
   .val {
     color: var(--text);
-    margin-left: auto;
     text-align: right;
   }
   .culture-val {
     color: var(--accent-hi);
-    font-weight: bold;
-    letter-spacing: 0.03em;
   }
   .dim-val {
     color: var(--text-muted);

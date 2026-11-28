@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { socialService } from '$lib/game/services/SocialService';
-import { linkStartingKin, remapKinIds } from '$lib/game/entities/Pawns';
+import { linkStartingKin, remapKinIds } from '$lib/game/core/gen/pawnKin';
 import { findRelationship, activeMoodModifiers } from '$lib/game/core/rules/social/social';
 import { computePrestige } from '$lib/game/core/rules/social/prestige';
 import { rng } from '$lib/game/core/util/rng';

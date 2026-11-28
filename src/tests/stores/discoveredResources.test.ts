@@ -51,7 +51,7 @@ beforeAll(async () => {
   rows = () => get(dr.discoveredResources);
   snapshot(0);
   dr.discoveredResources.subscribe(() => rebuilds++);
-  uiState.setScreen('exploration');
+  uiState.openWindow('exploration');
 });
 
 describe('discovered resources while the Exploration screen is open', () => {

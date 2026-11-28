@@ -11,7 +11,7 @@ import { recordBench } from '../ledger/bench.mjs';
 
 const [TREE, LABEL, OUT_DIR, SECONDS = '8'] = process.argv.slice(2);
 const USAGE =
-  'usage: CHROME=<chromium binary> [F4X_QUERY=?painted=1&blend=1] [F4X_SCENARIO=large-wilderness | F4X_FIXTURE=<save.json.gz>] [F4X_SKIP="none;gl;terrain,snow"] [F4X_CAPPED=1] node tools/gpu/frame-cost.mjs <app tree> <label> <out dir> [seconds per cell]';
+  'usage: CHROME=<chromium binary> [F4X_QUERY=?painted=0] [F4X_SCENARIO=large-wilderness | F4X_FIXTURE=<save.json.gz>] [F4X_SKIP="none;gl;terrain,snow"] [F4X_CAPPED=1] node tools/gpu/frame-cost.mjs <app tree> <label> <out dir> [seconds per cell]';
 const UNCAPPED = ['--disable-gpu-vsync', '--disable-frame-rate-limit'];
 const MAX_SPEED = 1000;
 const SETTLE_MS = 3000;

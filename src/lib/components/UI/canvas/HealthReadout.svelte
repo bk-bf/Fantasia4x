@@ -1,9 +1,9 @@
 <script lang="ts">
-  import type { HealthModel } from '$lib/components/UI/hud/SelectedEntityCard.svelte';
+  import type { HealthModel } from '$lib/components/UI/hud/entityCard';
   import { healthPctColor } from './healthColors';
   import StatPills from '$lib/components/UI/widget/StatPills.svelte';
 
-  let { health }: { health: HealthModel | undefined } = $props();
+  let { health, pills = true }: { health: HealthModel | undefined; pills?: boolean } = $props();
 
   const damaged = $derived(
     !!health &&
@@ -17,7 +17,7 @@
 
 {#if health}
   <div class="health-readout">
-    <StatPills pills={health.pills ?? []} />
+    {#if pills}<StatPills pills={health.pills ?? []} />{/if}
 
     {#if !damaged}
       <div class="hp-ok">no damage</div>
@@ -71,54 +71,50 @@
 
 <style>
   .health-readout {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    line-height: 1.5;
-    color: #c0a040;
+    font: 16px/18px var(--font-pixel);
+    color: var(--text);
   }
   .hp-ok {
-    color: #68a030;
-    padding-left: 2px;
+    color: var(--pos);
+    margin-top: 4px;
   }
   .hp-limb {
-    margin-top: 3px;
-    border-top: 1px solid rgba(122, 94, 40, 0.4);
-    padding-top: 2px;
+    margin-top: 4px;
   }
   .hp-limb-hdr {
-    color: #d0a850;
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: baseline;
   }
   .hp-limb-name {
-    color: #e0b860;
-    min-width: 48px;
+    flex: 1;
+    color: var(--text);
   }
   .hp-bleed {
-    color: #ee8844;
+    color: var(--ember);
   }
   .hp-part {
+    display: flex;
+    gap: 8px;
     padding-left: 10px;
-    color: #a08840;
+    color: var(--text-dim);
+    white-space: nowrap;
   }
   .hp-part-name {
-    color: #b89850;
+    min-width: 76px;
+    color: var(--text-dim);
     text-transform: capitalize;
   }
-  .hp-part-hp {
-    color: #8a7036;
-    margin-left: 4px;
-  }
   .hp-wound {
-    margin-left: 4px;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .hp-warn {
-    color: #ee8844;
+    color: var(--ember);
   }
   .hp-treated {
-    color: #68a030;
-    font-weight: bold;
+    color: var(--pos);
     margin-left: 2px;
   }
   .hp-gone,
@@ -126,7 +122,7 @@
   .hp-gone .hp-part-hp,
   .hp-gone .hp-wound,
   .hp-gone .hp-warn {
-    color: var(--text-dim);
-    opacity: 0.55;
+    color: var(--text-muted);
+    opacity: 0.7;
   }
 </style>

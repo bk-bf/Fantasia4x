@@ -7,6 +7,7 @@ import lootpoolData from '$lib/game/database/items/lootpool.json';
 import { itemMatchesCostCategory } from '$lib/game/core/defs/items';
 import { recipeItemMatchesCategory } from '$lib/game/services/RecipeService';
 import itemsData from '$lib/game/database/items/items.json';
+import { RUNED_CONCEPT_ITEMS } from './runedConceptItems';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const BUILDINGS = buildingsData as any[];
@@ -105,6 +106,7 @@ describe('every item can say which age it belongs to', () => {
       if (CARCASS_TIER.has(r.id)) return false;
       if (nodeItems.has(r.id)) return false;
       if (DROPS.has(r.id)) return false;
+      if (RUNED_CONCEPT_ITEMS.has(r.id)) return false;
       return true;
     }).map(
       (r) =>
