@@ -20,6 +20,9 @@ export class Webgl2VertexArrays {
   private readonly pipelineLayouts = new WeakMap<Webgl2Pipeline, number>();
   private empty: WebGLVertexArrayObject | null = null;
   private boundArray: WebGLVertexArrayObject | null = null;
+  private slotsChanged = true;
+  private lastLayout = -1;
+  private lastArray: WebGLVertexArrayObject | null = null;
 
   constructor(private readonly gl: WebGL2RenderingContext) {}
 
@@ -30,22 +33,31 @@ export class Webgl2VertexArrays {
   set(slot: number, buffer: WebGLBuffer, offset: number): void {
     const current = this.slots[slot];
     if (current) {
+      if (current.buffer === buffer && current.offset === offset) return;
       current.buffer = buffer;
       current.offset = offset;
     } else this.slots[slot] = { buffer, offset };
+    this.slotsChanged = true;
   }
 
   bind(p: Webgl2Pipeline): void {
-    const vao =
-      p.buffers.length === 0
-        ? (this.empty ??= this.gl.createVertexArray())
-        : (this.find(p) ?? this.build(p));
+    let vao: WebGLVertexArrayObject;
+    if (p.buffers.length === 0) vao = this.empty ??= this.gl.createVertexArray();
+    else {
+      const layout = this.pipelineLayouts.get(p) ?? this.layoutId(p);
+      if (!this.slotsChanged && layout === this.lastLayout && this.boundArray === this.lastArray) return;
+      vao = this.find(p, layout) ?? this.build(p, layout);
+      this.slotsChanged = false;
+      this.lastLayout = layout;
+      this.lastArray = vao;
+    }
     if (vao === this.boundArray) return;
     this.gl.bindVertexArray(vao);
     this.boundArray = vao;
   }
 
   forget(buffer: WebGLBuffer): void {
+    this.slotsChanged = true;
     for (const cached of this.byBuffer.get(buffer) ?? []) {
       this.gl.deleteVertexArray(cached.vao);
       if (cached.vao === this.boundArray) this.boundArray = null;
@@ -86,27 +98,23 @@ export class Webgl2VertexArrays {
     return slot;
   }
 
-  private find(p: Webgl2Pipeline): WebGLVertexArrayObject | null {
-    const layout = this.layoutId(p);
-    const candidates = this.byFirst.get(this.slot(0).buffer);
+  private find(p: Webgl2Pipeline, layout: number): WebGLVertexArrayObject | null {
+    const candidates = this.byFirst.get((this.slots[0] ?? this.slot(0)).buffer);
     if (!candidates) return null;
-    for (const cached of candidates) {
+    const count = p.buffers.length;
+    candidates: for (const cached of candidates) {
       if (cached.layout !== layout) continue;
-      if (this.matches(cached, p.buffers.length)) return cached.vao;
+      for (let i = 0; i < count; i++) {
+        const slot = this.slots[i] ?? this.slot(i);
+        const held = cached.slots[i];
+        if (slot.buffer !== held.buffer || slot.offset !== held.offset) continue candidates;
+      }
+      return cached.vao;
     }
     return null;
   }
 
-  private matches(cached: Cached, count: number): boolean {
-    for (let i = 0; i < count; i++) {
-      const slot = this.slot(i);
-      const held = cached.slots[i];
-      if (slot.buffer !== held.buffer || slot.offset !== held.offset) return false;
-    }
-    return true;
-  }
-
-  private build(p: Webgl2Pipeline): WebGLVertexArrayObject {
+  private build(p: Webgl2Pipeline, layout: number): WebGLVertexArrayObject {
     const gl = this.gl;
     const vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
@@ -127,7 +135,7 @@ export class Webgl2VertexArrays {
         if (layout.stepMode === 'instance') gl.vertexAttribDivisor(a.shaderLocation, 1);
       }
     });
-    const cached: Cached = { layout: this.layoutId(p), slots, vao };
+    const cached: Cached = { layout, slots, vao };
     this.index(this.byFirst, slots[0].buffer, cached);
     for (const buffer of new Set(slots.map((s) => s.buffer)))
       this.index(this.byBuffer, buffer, cached);
