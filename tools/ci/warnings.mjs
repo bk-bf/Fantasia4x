@@ -6,6 +6,7 @@ import { isAbsolute, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const BUDGET_FILE = 'tools/ci/warning-budget.json';
+const FILES_FILE = 'tools/ci/warning-files.json';
 const OUTPUT = { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 };
 
 const rel = (file, cwd) => (isAbsolute(file) ? relative(cwd, file) : file);
@@ -115,6 +116,30 @@ export function verdict(tool, found, budget) {
   return { ok: true, line: `${tool}: ${warnings} warnings, at its budget of ${budget}` };
 }
 
+export function warningsPerFile(found) {
+  const counts = {};
+  for (const f of found) if (f.severity === 'warning') counts[f.file] = (counts[f.file] ?? 0) + 1;
+  return counts;
+}
+
+export function fileVerdict(tool, found, entries, budget) {
+  const counts = warningsPerFile(found);
+  const lines = [];
+  for (const [file, n] of Object.entries(counts).sort()) {
+    const cap = entries[file];
+    if (cap === undefined)
+      lines.push(`${file}: ${n} ${tool} warning(s); a file not in ${FILES_FILE} must have none`);
+    else if (n > cap) lines.push(`${file}: ${n} ${tool} warnings, over its entry of ${cap} in ${FILES_FILE}`);
+    else if (n < cap) lines.push(`${file}: ${n} ${tool} warnings, under its entry of ${cap}; lower it to ${n} in ${FILES_FILE}`);
+  }
+  for (const file of Object.keys(entries).sort())
+    if (!counts[file]) lines.push(`${file}: no ${tool} warnings left; remove its entry from ${FILES_FILE}`);
+  const sum = Object.values(entries).reduce((s, n) => s + n, 0);
+  if (sum !== budget)
+    lines.push(`${tool}: its entries in ${FILES_FILE} sum to ${sum}, but its budget in ${BUDGET_FILE} is ${budget}; make them agree`);
+  return { ok: lines.length === 0, lines };
+}
+
 const html = (s) => firstLine(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 export function summary(tool, found, budget, changed) {
@@ -182,18 +207,24 @@ function main() {
     process.exit(2);
   }
   const budget = JSON.parse(readFileSync(new URL('./warning-budget.json', import.meta.url), 'utf8'))[tool];
+  const entries = JSON.parse(readFileSync(new URL('./warning-files.json', import.meta.url), 'utf8'))[tool] ?? {};
   const found = RUNNERS[tool]();
   const changed = changedFiles();
   for (const f of found) process.stdout.write(`${where(f)}:${f.column}  ${f.severity}  ${f.rule}  ${firstLine(f.message)}\n`);
   const v = verdict(tool, found, budget);
+  const perFile = fileVerdict(tool, found, entries, budget);
   process.stdout.write(`${v.line}\n`);
+  for (const line of perFile.lines) process.stdout.write(`${line}\n`);
   if (process.env.GITHUB_ACTIONS)
     for (const f of found) if (f.severity === 'error' || changed.has(f.file)) process.stdout.write(`${annotation(f)}\n`);
   if (process.env.GITHUB_STEP_SUMMARY)
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary(tool, found, budget, changed)}\n`);
+    appendFileSync(
+      process.env.GITHUB_STEP_SUMMARY,
+      `${summary(tool, found, budget, changed)}\n${perFile.lines.map((l) => `- ${html(l)}`).join('\n')}\n`
+    );
   if (process.env.WARNINGS_NOTES)
     appendFileSync(process.env.WARNINGS_NOTES, `${JSON.stringify(note(tool, found, budget, changed))}\n`);
-  process.exit(v.ok ? 0 : 1);
+  process.exit(v.ok && perFile.ok ? 0 : 1);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) main();

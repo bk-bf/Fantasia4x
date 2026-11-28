@@ -172,7 +172,8 @@ Run them by hand only while you work.
 **`pnpm check` is the gate**, and every tool its `package.json` script runs must stay green. Warning
 counts are frozen per tool in `tools/ci/warning-budget.json`; `tools/ci/warnings.mjs` fails
 a count past its budget and says when one has dropped below it. Lower the budget then, and never
-raise it.
+raise it. The same holds per file against `tools/ci/warning-files.json`, whose entries sum to the
+budget, and a file it does not list must have no warnings.
 
 **The data files are strict `.json`.** No comments, no trailing commas — the parser rejects
 both, which is how the no-comments rule is enforced rather than remembered.

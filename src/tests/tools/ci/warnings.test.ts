@@ -4,6 +4,8 @@ import {
   parseEslint,
   parseTsc,
   verdict,
+  fileVerdict,
+  warningsPerFile,
   summary,
   annotation,
   note
@@ -135,6 +137,63 @@ describe('verdict', () => {
 
   it('fails on any error', () => {
     expect(verdict('eslint', [{ ...warning('a', 'parse'), severity: 'error' }], 10).ok).toBe(false);
+  });
+});
+
+describe('fileVerdict', () => {
+  const found = [warning('a.svelte', 'r'), warning('a.svelte', 'r'), warning('b.svelte', 'r')];
+
+  it('passes when every file is at its entry and the entries sum to the budget', () => {
+    expect(fileVerdict('svelte-check', found, { 'a.svelte': 2, 'b.svelte': 1 }, 3)).toEqual({ ok: true, lines: [] });
+  });
+
+  it('fails a warning in a file that has no entry', () => {
+    const v = fileVerdict('svelte-check', found, { 'a.svelte': 2 }, 2);
+    expect(v.ok).toBe(false);
+    expect(v.lines).toEqual(['b.svelte: 1 svelte-check warning(s); a file not in tools/ci/warning-files.json must have none']);
+  });
+
+  it('fails a file over its entry', () => {
+    const v = fileVerdict('svelte-check', found, { 'a.svelte': 1, 'b.svelte': 1 }, 2);
+    expect(v.lines).toEqual(['a.svelte: 2 svelte-check warnings, over its entry of 1 in tools/ci/warning-files.json']);
+  });
+
+  it('fails a file under its entry until the entry is lowered', () => {
+    const v = fileVerdict('svelte-check', found, { 'a.svelte': 3, 'b.svelte': 1 }, 4);
+    expect(v.ok).toBe(false);
+    expect(v.lines).toEqual([
+      'a.svelte: 2 svelte-check warnings, under its entry of 3; lower it to 2 in tools/ci/warning-files.json'
+    ]);
+  });
+
+  it('fails an entry for a file with no warnings left until it is removed', () => {
+    const v = fileVerdict('svelte-check', found, { 'a.svelte': 2, 'b.svelte': 1, 'c.svelte': 1 }, 4);
+    expect(v.lines).toEqual(['c.svelte: no svelte-check warnings left; remove its entry from tools/ci/warning-files.json']);
+  });
+
+  it('fails entries that do not sum to the total budget', () => {
+    const v = fileVerdict('svelte-check', found, { 'a.svelte': 2, 'b.svelte': 1 }, 5);
+    expect(v.lines).toEqual([
+      'svelte-check: its entries in tools/ci/warning-files.json sum to 3, but its budget in tools/ci/warning-budget.json is 5; make them agree'
+    ]);
+  });
+
+  it('counts warnings, not errors', () => {
+    expect(warningsPerFile([...found, { ...warning('a.svelte', 'x'), severity: 'error' }])).toEqual({ 'a.svelte': 2, 'b.svelte': 1 });
+  });
+});
+
+describe('the committed per-file list', () => {
+  it('sums to each total budget', async () => {
+    const { readFileSync } = await import('node:fs');
+    const read = (name: string) => JSON.parse(readFileSync(new URL(`../../../../tools/ci/${name}`, import.meta.url), 'utf8'));
+    const budget: Record<string, number> = read('warning-budget.json');
+    const files: Record<string, Record<string, number>> = read('warning-files.json');
+    for (const [tool, total] of Object.entries(budget)) {
+      const entries = Object.values(files[tool] ?? {});
+      expect(entries.every((n) => n > 0)).toBe(true);
+      expect(entries.reduce((s, n) => s + n, 0)).toBe(total);
+    }
   });
 });
 
