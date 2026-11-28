@@ -18,7 +18,6 @@ const IGNORES = [
   'sim-core/**',
   'static/**',
   'tools/tileset/art/**',
-  'mockups/**',
   '**/*.json',
   '**/*.jsonc'
 ];

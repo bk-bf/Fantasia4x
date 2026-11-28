@@ -6,7 +6,6 @@ ROOT="$(git rev-parse --show-toplevel)"
 NEW=()
 BRANCHES=()
 CHANGED=""
-MOCKUPS=""
 while read -r _local_ref local_sha remote_ref remote_sha; do
   [[ "$local_sha" =~ ^0+$ ]] && continue
   [[ "$remote_ref" == refs/heads/* ]] || continue
@@ -14,20 +13,11 @@ while read -r _local_ref local_sha remote_ref remote_sha; do
   [[ "$remote_sha" =~ ^0+$ ]] && NEW+=("${remote_ref#refs/heads/}")
   if [[ "$remote_ref" == refs/heads/dev && ! "$remote_sha" =~ ^0+$ ]]; then
     base="$remote_sha"
-    MOCKUPS+="$(git diff --name-only --diff-filter=d "$base" "$local_sha" -- mockups)"
   else
     base="$(git merge-base "$local_sha" origin/dev 2>/dev/null || true)"
   fi
   [[ -n "$base" ]] && CHANGED+="$(git diff --name-only --diff-filter=d "$base" "$local_sha")"$'\n'
 done
-
-if [[ -n "$MOCKUPS" ]]; then
-  echo "pre-push: refused. dev takes no mockups; these belong on mockups/live:" >&2
-  printf '%s\n' "$MOCKUPS" | head -10 | sed 's/^/  /' >&2
-  echo "  Move the commits with: git rebase --onto origin/mockups/live origin/dev" >&2
-  echo "  Then: git push origin HEAD:mockups/live. AGENTS.md, \"Mockups land on mockups/live\"." >&2
-  exit 1
-fi
 
 if [[ -n "${CHANGED//[$'\n']/}" ]]; then
   printf '%s' "$CHANGED" | node --input-type=module -e "
