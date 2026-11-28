@@ -34,7 +34,7 @@ try {
       log(`ROW ${JSON.stringify(row)}`);
     }
   }
-} catch (e) { log(`FAIL ${e.stack}`); }
+} catch (e) { log(`FAIL ${e instanceof Error ? e.stack : String(e)}`); }
 writeFileSync(join(OUT_DIR, `${LABEL}-results.json`), JSON.stringify(results, null, 1));
 await finish();
 await recordBench('zoom-out', {

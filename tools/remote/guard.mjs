@@ -11,10 +11,12 @@ const TICKPROF_LOCAL = new Set(['tick', 'loop', 'kernel']);
 const WRAPPERS = new Set(['bgr', 'nice', 'ionice', 'env', 'time', 'sudo', 'command', 'exec']);
 const SHELLS = new Set(['sh', 'bash', 'zsh']);
 
+/** @param {string} segment @returns {string[]} */
 function words(segment) {
   return (segment.match(/'[^']*'|"[^"]*"|\S+/g) ?? []).map((w) => w.replace(/^['"]|['"]$/g, ''));
 }
 
+/** @param {string} segment @returns {boolean} */
 function localTest(segment) {
   const w = words(segment.trim());
   while (w.length && (/^\w+=/.test(w[0]) || WRAPPERS.has(w[0]) || /^-/.test(w[0]))) w.shift();
@@ -35,6 +37,7 @@ function localTest(segment) {
 
 const REMOTE_SCRIPT = /\bssh\b[^'"\n;&|]*(['"])[\s\S]*?\1/g;
 
+/** @param {string} command @returns {boolean} */
 function localTests(command) {
   return command
     .replace(REMOTE_SCRIPT, 'ssh')

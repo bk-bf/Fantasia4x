@@ -8,8 +8,10 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../..');
 const OUT = join(ROOT, '.devtools-dist');
 
+/** @param {number} s */
 const kb = (s) => `${(s / 1024).toFixed(0)} KB`;
 
+/** @param {string} path @param {string} mime */
 function dataUri(path, mime) {
   return `data:${mime};base64,${readFileSync(path).toString('base64')}`;
 }
@@ -52,6 +54,7 @@ function packGearDb() {
   const built = join(OUT, 'geardb');
   let html = readFileSync(join(built, 'index.html'), 'utf8');
   const assets = join(built, 'assets');
+  /** @param {string} ext */
   const find = (ext) => readdirSync(assets).find((f) => f.endsWith(ext));
 
   const js = find('.js');

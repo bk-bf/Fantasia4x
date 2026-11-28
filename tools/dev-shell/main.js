@@ -73,6 +73,7 @@ function createWindow() {
       return null;
     }
   })();
+  /** @param {string} u */
   const isLoopbackUrl = (u) => {
     try {
       return LOOPBACK_HOSTS.has(new URL(u).hostname);
@@ -80,6 +81,7 @@ function createWindow() {
       return false;
     }
   };
+  /** @param {string} u */
   const isAppOrigin = (u) => {
     if (!APP) return false;
     try {
@@ -95,6 +97,7 @@ function createWindow() {
       return false;
     }
   };
+  /** @param {string} url */
   const shouldOpenExternal = (url) =>
     /^https?:\/\//i.test(url) && !isLoopbackUrl(url) && !isAppOrigin(url);
 

@@ -5,8 +5,14 @@ import { join } from 'node:path';
 
 import { ROOT, git, prepareWorktree } from './lib/harness.mjs';
 
+/** @typedef {{ name: string, status: string, conclusion: string }} Job */
+/** @typedef {{ databaseId: number, status: string, conclusion: string, url: string }} Run */
+
+/** @param {string} n */
 const flag = (n) => process.argv.includes(`--${n}`);
+/** @param {string} s */
 const out = (s) => process.stdout.write(s + '\n');
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const wt = join(ROOT, '.claude', 'worktrees', 'promote');
@@ -15,6 +21,7 @@ const WORKFLOW = 'promote.yml';
 const POLL_MS = 60_000;
 const WAIT_MS = 7 * 3600_000;
 
+/** @param {string[]} args */
 const gh = (args) =>
   execFileSync('gh', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
@@ -47,14 +54,17 @@ function reusableCandidate() {
   return parents[0] === mainSha && parents[1] === devSha ? sha : null;
 }
 
+/** @param {string} sha @returns {Promise<{ run: Run, jobs: Job[] } | null>} */
 async function waitForRun(sha) {
   const until = Date.now() + WAIT_MS;
   let shown = '';
   while (Date.now() < until) {
+    /** @type {Run[]} */
     const [run] = JSON.parse(
       gh(['run', 'list', '--workflow', WORKFLOW, '--commit', sha, '--limit', '1', '--json', 'databaseId,status,conclusion,url'])
     );
     if (run) {
+      /** @type {{ jobs: Job[] }} */
       const { jobs } = JSON.parse(gh(['run', 'view', String(run.databaseId), '--json', 'jobs']));
       const line = jobs.map((j) => `${j.name} ${j.conclusion || j.status}`).join(', ');
       if (line !== shown) out(`    ${line}`);
@@ -119,7 +129,7 @@ try {
     out(`--- pushed ${sha.slice(0, 8)} to main after ${run.url}`);
   }
 } catch (e) {
-  out(`--- ${e.message}`);
+  out(`--- ${e instanceof Error ? e.message : String(e)}`);
   out('main is untouched.');
   code = 1;
 } finally {

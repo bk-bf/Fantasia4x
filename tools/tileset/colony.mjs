@@ -12,6 +12,8 @@ const FPS = 10;
 const FRAMES = 64;
 const REST = 3;
 
+/** @typedef {{ leafy: unknown[], gm: Uint8Array, season: string, W: number, H: number, water: ArrayLike<unknown>, gw: Record<string, Uint32Array> }} World */
+
 const loadArt = () =>
   new Function(
     `'use strict';\n${COLONY_ART.map((f) => readFileSync(join(HERE, 'art', f), 'utf8').replace(/^'use strict';\n/, '')).join('\n')}\nreturn { buildScene, renderWorld, present };`
@@ -26,12 +28,14 @@ const surface = {
   putImageData: () => undefined
 };
 
+/** @param {World} r */
 function withoutParticles(r) {
   r.leafy = [];
   r.gm = new Uint8Array(r.W * r.H);
   r.season = '';
 }
 
+/** @param {World} r @param {string} [time] */
 function stillWater(r, time = '') {
   const n = r.water.length;
   const all = r.gw[time];

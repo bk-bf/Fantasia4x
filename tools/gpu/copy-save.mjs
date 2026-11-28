@@ -8,13 +8,16 @@ if (!ENDPOINT || !OUT) {
 }
 const SLICE = 8_000_000;
 
-const target = (await (await fetch(`${ENDPOINT}/json/list`)).json()).find((t) => t.type === 'page' && !t.url.startsWith('devtools://'));
+/** @type {{ type: string, url: string, webSocketDebuggerUrl: string }[]} */
+const targets = await (await fetch(`${ENDPOINT}/json/list`)).json();
+const target = targets.find((t) => t.type === 'page' && !t.url.startsWith('devtools://'));
 if (!target) throw new Error('no page target on that endpoint');
 const ws = new WebSocket(target.webSocketDebuggerUrl);
 await new Promise((r, j) => { ws.addEventListener('open', r); ws.addEventListener('error', j); });
 let n = 0;
 const waiting = new Map();
 ws.addEventListener('message', (e) => { const m = JSON.parse(e.data); waiting.get(m.id)?.(m); });
+/** @param {string} expression */
 const evaluate = (expression) => new Promise((resolve) => {
   const id = ++n;
   waiting.set(id, resolve);

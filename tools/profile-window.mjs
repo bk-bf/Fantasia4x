@@ -20,14 +20,19 @@ const nums = args.filter((a) => /^\d+$/.test(a)).map(Number);
 const earlySec = nums[0] ?? 6;
 const topN = nums[1] ?? 20;
 
+/** @typedef {{ samples: { length: number, time?: number[], stack: (number | null)[], weight?: (number | null)[] } }} ProfileThread */
+
 const p = JSON.parse(fs.readFileSync(file, 'utf8'));
 const { stackTable: ST, frameTable: FT, funcTable: FN, stringArray: SA } = p.shared;
 const isJS = FN.isJS;
+/** @param {number} fn @returns {string} */
 const nameOf = (fn) => SA[FN.name[fn]] ?? '?';
 
+/** @param {ProfileThread} thread @param {number} t0 @param {number} t1 */
 function jsSelfWindow(thread, t0, t1) {
   const S = thread.samples;
   const time = S.time;
+  /** @type {Map<number, number>} */
   const self = new Map();
   let total = 0;
   for (let i = 0; i < S.length; i++) {
@@ -50,6 +55,7 @@ function jsSelfWindow(thread, t0, t1) {
   return { self, total };
 }
 
+/** @param {{ self: Map<number, number>, total: number }} counts */
 function topRows({ self, total }) {
   return [...self.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -101,6 +107,7 @@ for (const [n, v] of er) {
   if (d >= 1.5) console.log(`  +${d.toFixed(1)}%  ${n}  (early ${v}% vs steady ${sv}%)`);
 }
 
+/** @param {ProfileThread} thread @param {number} t0 @param {number} t1 */
 function leafFrames(thread, t0, t1) {
   const S = thread.samples;
   const time = S.time;

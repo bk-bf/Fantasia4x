@@ -10,8 +10,11 @@ const ROOT = resolve(HERE, '../../..');
 function readAudit() {
   const dir = join(ROOT, 'static/audit');
   if (!existsSync(dir)) return null;
+  /** @type {Record<string, unknown>} */
   const meta = {};
+  /** @type {Record<string, unknown>} */
   const pawnFit = {};
+  /** @type {unknown[]} */
   const creatures = [];
   let generated = '';
   if (existsSync(join(dir, 'index.json'))) {
@@ -38,7 +41,9 @@ function auditDataPlugin() {
   const id = 'virtual:gear-db-audit';
   return {
     name: 'gear-db-audit',
+    /** @param {string} source */
     resolveId: (source) => (source === id ? `\0${id}` : undefined),
+    /** @param {string} resolved */
     load: (resolved) =>
       resolved === `\0${id}` ? `export default ${JSON.stringify(readAudit())}` : undefined
   };

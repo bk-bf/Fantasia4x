@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { walkFiles, extractRepo } from './extract.mjs';
 
 /** Drop comments, so prose naming a function is not read as a call to it. */
+/** @param {string} t */
 const stripComments = (t) =>
   t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
@@ -21,6 +22,7 @@ const stripCommentsKeepPositions = (t = '') =>
  * symbol whose body calls it is a finding. Symbol bodies come from the same AST spans the
  * ledger is built from, so "which function is this call inside" is exact.
  */
+/** @param {string} root @param {import('./extract.mjs').AuditSymbol[]} symbols */
 export function seamViolations(root, symbols) {
   const rulePath = join(dirname(fileURLToPath(import.meta.url)), 'seams.json');
   if (!existsSync(rulePath)) return { rules: 0, findings: [] };
@@ -80,13 +82,19 @@ export function seamViolations(root, symbols) {
 
 export const COMPONENT_LINE_LIMIT = 200;
 
+/** @param {string} text */
 const lineCount = (text) => (text.match(/\n/g) ?? []).length;
 
+/** @param {string} root */
 export function componentSizeViolations(root) {
   const basePath = join(dirname(fileURLToPath(import.meta.url)), 'component-sizes.json');
+  /** @type {Record<string, number>} */
   const frozen = existsSync(basePath) ? JSON.parse(readFileSync(basePath, 'utf8')) : {};
+  /** @type {{ where: string, detail: string }[]} */
   const findings = [];
+  /** @type {{ where: string, detail: string }[]} */
   const notes = [];
+  /** @type {Set<string>} */
   const present = new Set();
 
   for (const abs of walkFiles(join(root, 'src'), ['.svelte'])) {
@@ -114,8 +122,10 @@ export function componentSizeViolations(root) {
 
 function main() {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  /** @param {string} line */
   const out = (line) => process.stdout.write(`${line}\n`);
   const inActions = process.env.GITHUB_ACTIONS === 'true';
+  /** @param {string} props @param {string} text */
   const warn = (props, text) => {
     if (inActions) out(`::warning ${props}::${text}`);
   };

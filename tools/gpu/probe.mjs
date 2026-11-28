@@ -29,6 +29,7 @@ void main() {
   color = vec4(v, 0.0, 0.0, 1.0);
 }`;
 
+/** @param {{ draws: number, vertex: string, fragment: string }} shaders */
 function drawLoop({ draws, vertex, fragment }) {
   const canvas = document.createElement('canvas');
   canvas.width = 1280;
@@ -38,11 +39,11 @@ function drawLoop({ draws, vertex, fragment }) {
   const info = gl.getExtension('WEBGL_debug_renderer_info');
   const renderer = gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER);
   const program = gl.createProgram();
-  for (const [type, source] of [
+  for (const [type, source] of /** @type {[number, string][]} */ ([
     [gl.VERTEX_SHADER, vertex],
     [gl.FRAGMENT_SHADER, fragment]
-  ]) {
-    const shader = gl.createShader(type);
+  ])) {
+    const shader = /** @type {WebGLShader} */ (gl.createShader(type));
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     gl.attachShader(program, shader);
@@ -61,6 +62,7 @@ function drawLoop({ draws, vertex, fragment }) {
   return { renderer, msPerDraw: (performance.now() - start) / draws };
 }
 
+/** @param {keyof typeof MODES} mode @param {keyof typeof FLAGS} flags */
 async function measure(mode, flags) {
   const browser = await chromium.launch({
     ...MODES[mode],
@@ -77,13 +79,13 @@ async function measure(mode, flags) {
 }
 
 process.stdout.write('| headless | flags | WebGL2 renderer | ms per draw |\n|---|---|---|---:|\n');
-for (const mode of Object.keys(MODES)) {
-  for (const flags of Object.keys(FLAGS)) {
+for (const mode of /** @type {(keyof typeof MODES)[]} */ (Object.keys(MODES))) {
+  for (const flags of /** @type {(keyof typeof FLAGS)[]} */ (Object.keys(FLAGS))) {
     try {
       const { renderer, msPerDraw } = await measure(mode, flags);
       process.stdout.write(`| ${mode} | ${flags} | ${renderer} | ${msPerDraw?.toFixed(2) ?? '-'} |\n`);
     } catch (e) {
-      process.stdout.write(`| ${mode} | ${flags} | failed: ${e.message.split('\n')[0]} | - |\n`);
+      process.stdout.write(`| ${mode} | ${flags} | failed: ${(e instanceof Error ? e.message : String(e)).split('\n')[0]} | - |\n`);
     }
   }
 }

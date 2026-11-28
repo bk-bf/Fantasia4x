@@ -24,20 +24,25 @@ function newestProfile() {
 const file = process.argv[2] && !/^\d+$/.test(process.argv[2]) ? process.argv[2] : newestProfile();
 const topN = Number(process.argv.find((a, i) => i >= 2 && /^\d+$/.test(a))) || 25;
 
+/** @typedef {{ samples: { length: number, time?: number[], stack: (number | null)[], weight?: (number | null)[] } }} ProfileThread */
+
 const p = JSON.parse(fs.readFileSync(file, 'utf8'));
 const { stackTable: ST, frameTable: FT, funcTable: FN, stringArray: SA } = p.shared;
 const isJS = FN.isJS;
+/** @param {number} fn @returns {string} */
 const nameOf = (fn) => SA[FN.name[fn]] ?? '?';
 
+/** @param {ProfileThread} thread */
 function jsSelf(thread) {
   const S = thread.samples;
+  /** @type {Map<number, number>} */
   const self = new Map();
   let total = 0,
     idle = 0;
   for (let i = 0; i < S.length; i++) {
     let cur = S.stack[i];
     if (cur == null) continue;
-    const w = S.weight && S.weight[i] != null ? S.weight[i] : 1;
+    const w = S.weight?.[i] ?? 1;
     total += w;
     let found = -1;
     while (cur != null) {

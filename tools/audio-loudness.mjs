@@ -6,6 +6,7 @@ import { join } from 'node:path';
 const TABLE = 'src/lib/audio/bedLoudness.json';
 const BED_DIR = 'static/audio/ambient';
 
+/** @param {string} file */
 function integratedLufs(file) {
   const run = spawnSync(
     'ffmpeg',

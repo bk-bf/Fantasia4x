@@ -13,6 +13,7 @@ const SSH_UNREACHABLE = 255;
 const WRONG_COMMIT = 3;
 const DIRTY_LISTED = 10;
 
+/** @param {string} msg @param {number} [code] @returns {never} */
 const die = (msg, code = 2) => {
   process.stderr.write(`[remote] ${msg}\n`);
   process.exit(code);
@@ -27,7 +28,9 @@ if (process.env.CI === 'true' || hostname() === TEST_HOSTNAME) {
   process.exit(r.status ?? 1);
 }
 
+/** @param {...string} args */
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+/** @param {unknown} s */
 const quote = (s) => `'${String(s).replaceAll("'", `'\\''`)}'`;
 const top = git('rev-parse', '--show-toplevel');
 const dir = `${RUNS_DIR}/${basename(top)}`;
@@ -45,6 +48,7 @@ const sha = git('rev-parse', 'HEAD');
 
 const SSH_OPTIONS = ['-o', 'BatchMode=yes', '-o', 'ServerAliveInterval=30', '-o', 'ServerAliveCountMax=10'];
 
+/** @param {string} script @param {Partial<import('node:child_process').SpawnSyncOptionsWithStringEncoding>} [opts] */
 function ssh(script, opts = {}) {
   return spawnSync('ssh', [...SSH_OPTIONS, HOST, `bash -c ${quote(script)}`], {
     encoding: 'utf8',
@@ -53,6 +57,7 @@ function ssh(script, opts = {}) {
   });
 }
 
+/** @param {import('node:child_process').SpawnSyncReturns<string>} r @param {string} what */
 function checked(r, what) {
   if (r.status === SSH_UNREACHABLE || r.error)
     die(`cannot reach ${HOST} (${what}); tests never run on this machine`, SSH_UNREACHABLE);
@@ -94,6 +99,7 @@ function ensureCommit() {
   );
 }
 
+/** @param {string} arg */
 function localPath(arg) {
   return isAbsolute(arg) && arg.startsWith(`${top}/`) ? relative(top, arg) : arg;
 }
@@ -104,6 +110,7 @@ function runScript() {
     .map(([k, v]) => `${k}=${quote(v)}`);
   if (process.stdout.isTTY) env.push('FORCE_COLOR=1');
   const command = argv.map((a) => quote(localPath(a))).join(' ');
+  /** @param {string} msg */
   const refuse = (msg) => `{ echo ${quote(`[remote] ${msg}`)} >&2; exit ${WRONG_COMMIT}; }`;
   return [
     'set -e',

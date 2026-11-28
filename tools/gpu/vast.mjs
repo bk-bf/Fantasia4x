@@ -26,8 +26,12 @@ const SESSION_REFRESH =
   'uvx vastai tfa login --method-type totp -c "$C" --api-key "$K" && ' +
   'gh secret set VAST_API_KEY --repo bk-bf/Fantasia4x < ~/.config/vastai/vast_tfa_key; unset K C';
 
+/** @typedef {{ ssh_host: string, ssh_port: number, public_ipaddr: string, ports?: Record<string, { HostPort: string }[]>, actual_status?: string, status_msg?: string }} Instance */
+
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** @param {number} status @param {string} text */
 function sessionProblem(status, text) {
   if (status === 404 && text.includes('Session expired'))
     return 'the two-factor session in VAST_API_KEY has expired';
@@ -36,6 +40,7 @@ function sessionProblem(status, text) {
   return null;
 }
 
+/** @param {string} method @param {string} path @param {unknown} [body] */
 async function call(method, path, body) {
   if (!process.env.VAST_API_KEY) throw new Error('VAST_API_KEY is not set');
   const res = await fetch(`${API}${path}`, {
@@ -53,6 +58,7 @@ async function call(method, path, body) {
   return text ? JSON.parse(text) : {};
 }
 
+/** @param {string} key @param {unknown} value */
 function output(key, value) {
   process.stdout.write(`${key}=${value}\n`);
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
@@ -66,6 +72,7 @@ async function cheapestOffer() {
   return offers[0];
 }
 
+/** @param {number | string} id @returns {Promise<Instance>} */
 async function waitRunning(id) {
   const until = Date.now() + WAIT_MS;
   while (Date.now() < until) {
@@ -77,11 +84,13 @@ async function waitRunning(id) {
   throw new Error(`instance ${id} was not running after ${WAIT_MS / 60_000} minutes`);
 }
 
+/** @param {number | string} id */
 async function attachKey(id) {
   const pub = process.env.VAST_SSH_PUB;
   if (pub) await call('POST', `/v0/instances/${id}/ssh/`, { ssh_key: readFileSync(pub, 'utf8').trim() });
 }
 
+/** @param {Instance} instance */
 function outputAddress(instance) {
   output('host', instance.ssh_host);
   output('port', instance.ssh_port);
@@ -112,6 +121,7 @@ async function up() {
   outputAddress(instance);
 }
 
+/** @param {number | string} id */
 async function start(id) {
   await call('PUT', `/v0/instances/${id}/`, { state: 'running' });
   const instance = await waitRunning(id);
@@ -119,23 +129,26 @@ async function start(id) {
   outputAddress(instance);
 }
 
+/** @param {number | string} id */
 async function stop(id) {
   await call('PUT', `/v0/instances/${id}/`, { state: 'stopped' });
   process.stdout.write(`stopping instance ${id}\n`);
 }
 
 async function labelled() {
+  /** @type {{ instances?: { id: number, label: string }[] }} */
   const { instances = [] } = await call('GET', '/v0/instances/?owner=me');
   return instances.filter((i) => i.label === LABEL).map((i) => i.id);
 }
 
+/** @param {string | undefined} known */
 async function down(known) {
   const ids = new Set(known ? [Number(known)] : []);
   let failed = false;
   try {
     for (const id of await labelled()) ids.add(id);
   } catch (e) {
-    process.stderr.write(`listing instances failed: ${e.message}\n`);
+    process.stderr.write(`listing instances failed: ${e instanceof Error ? e.message : String(e)}\n`);
     failed = true;
   }
   for (const id of ids) {
@@ -143,7 +156,7 @@ async function down(known) {
       await call('DELETE', `/v0/instances/${id}/`);
       process.stdout.write(`destroyed instance ${id}\n`);
     } catch (e) {
-      process.stderr.write(`destroying instance ${id} failed: ${e.message}\n`);
+      process.stderr.write(`destroying instance ${id} failed: ${e instanceof Error ? e.message : String(e)}\n`);
       failed = true;
     }
   }
