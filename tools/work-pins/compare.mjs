@@ -226,7 +226,9 @@ export function compareRuns(baseRuns, headRuns) {
     rows.push(...counterRows(scenario, 'counter', b.counters ?? {}, h.counters ?? {}));
     totals.push({ scenario, fn: 'all calls', where: '', base: totalCalls(b), head: totalCalls(h) });
     for (const [key, head] of Object.entries(h.counters ?? {}))
-      totals.push({ scenario, fn: `counter ${key}`, where: '', base: b.counters?.[key] ?? 0, head });
+      if (b.counters?.[key] === undefined)
+        notes.push(`scenario \`${scenario}\`: counter \`${key}\` is new on head, not compared`);
+      else totals.push({ scenario, fn: `counter ${key}`, where: '', base: b.counters[key], head });
     if (hasCreatures(b) && hasCreatures(h)) {
       for (const key of /** @type {const} */ (['placed', 'added', 'alive']))
         if (b.creatures[key] !== h.creatures[key])
