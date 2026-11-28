@@ -6,6 +6,24 @@ export interface OccupancyService {
   blockedTilesShared(state: GameState): Set<number>;
   isBlocked(state: GameState, x: number, y: number, excludeId?: string): boolean;
   movingTargets(state: GameState): Map<number, { id: string; target: number }>;
+  indexTiles(state: GameState): void;
+  dropTileIndex(): void;
+}
+
+interface TileIndex {
+  pawns: GameState['pawns'];
+  mobs: GameState['mobs'];
+  width: number;
+  height: number;
+  head: Int32Array;
+  next: Int32Array;
+  ids: string[];
+}
+
+const SCANS_BEFORE_INDEX = 8;
+
+function onGrid(x: number, y: number, width: number, height: number): boolean {
+  return Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < width && y < height;
 }
 
 class OccupancyServiceImpl implements OccupancyService {
@@ -15,6 +33,74 @@ class OccupancyServiceImpl implements OccupancyService {
   private _mtMobs: unknown = null;
   private _mtPawns: unknown = null;
   private _mtMap: Map<number, { id: string; target: number }> | null = null;
+  private _tiles: TileIndex | null = null;
+  private _head = new Int32Array(0);
+  private _written: number[] = [];
+  private _pinned: GameState | null = null;
+  private _scans = 0;
+
+  indexTiles(state: GameState): void {
+    this._tiles = null;
+    this._pinned = state;
+    this._scans = 0;
+  }
+
+  private buildTiles(state: GameState): void {
+    const height = state.worldMap.length;
+    const width = state.worldMap[0]?.length ?? 0;
+    let head = this._head;
+    const written = this._written;
+    if (head.length !== width * height) {
+      head = this._head = new Int32Array(width * height).fill(-1);
+    } else {
+      for (let i = 0; i < written.length; i++) head[written[i]] = -1;
+    }
+    written.length = 0;
+    const pawns = state.pawns;
+    const mobs = state.mobs ?? [];
+    const next = new Int32Array(pawns.length + mobs.length);
+    const ids: string[] = [];
+    const np = pawns.length;
+    for (let j = 0; j < np + mobs.length; j++) {
+      let x: number;
+      let y: number;
+      let id: string;
+      if (j < np) {
+        const pos = pawns[j].position;
+        if (!pos) continue;
+        x = pos.x;
+        y = pos.y;
+        id = pawns[j].id;
+      } else {
+        const m = mobs[j - np];
+        if (m.state === 'Corpse') continue;
+        x = m.x;
+        y = m.y;
+        id = m.id;
+      }
+      if (
+        !Number.isInteger(x) ||
+        !Number.isInteger(y) ||
+        x < 0 ||
+        y < 0 ||
+        x >= width ||
+        y >= height
+      )
+        return;
+      const k = y * width + x;
+      const i = ids.length;
+      ids.push(id);
+      next[i] = head[k];
+      head[k] = i;
+      written.push(k);
+    }
+    this._tiles = { pawns, mobs: state.mobs, width, height, head, next, ids };
+  }
+
+  dropTileIndex(): void {
+    this._tiles = null;
+    this._pinned = null;
+  }
 
   blockedTilesShared(state: GameState): Set<number> {
     if (this._sharedMobs === state.mobs && this._sharedPawns === state.pawns && this._sharedSet)
@@ -66,6 +152,27 @@ class OccupancyServiceImpl implements OccupancyService {
   }
 
   isBlocked(state: GameState, x: number, y: number, excludeId?: string): boolean {
+    const pinned = this._pinned;
+    if (
+      pinned &&
+      pinned.pawns === state.pawns &&
+      pinned.mobs === state.mobs &&
+      ++this._scans > SCANS_BEFORE_INDEX
+    ) {
+      this._pinned = null;
+      this.buildTiles(pinned);
+    }
+    const ix = this._tiles;
+    if (
+      ix &&
+      ix.pawns === state.pawns &&
+      ix.mobs === state.mobs &&
+      onGrid(x, y, ix.width, ix.height)
+    ) {
+      for (let i = ix.head[y * ix.width + x]; i >= 0; i = ix.next[i])
+        if (ix.ids[i] !== excludeId) return true;
+      return false;
+    }
     const pawns = state.pawns;
     for (let i = 0; i < pawns.length; i++) {
       const p = pawns[i];
