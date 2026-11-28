@@ -26,6 +26,7 @@ if (spawnSync('git', ['push', 'origin', `HEAD:refs/heads/${branch}`], { stdio: '
 const pull = JSON.parse(read('gh', ['pr', 'list', '--head', branch, '--state', 'open', '--json', 'number']))[0];
 const event = pull && !pre ? 'pull_request' : pre ? 'workflow_dispatch' : 'push';
 const chainRef = `chain/${branch.replaceAll('/', '-')}`;
+const runRef = event === 'push' ? chainRef : branch;
 const since = Date.now() - 5_000;
 if (event === 'workflow_dispatch')
   read('gh', ['workflow', 'run', WORKFLOW, '--ref', branch, '-f', 'mode=pre']);
@@ -37,10 +38,12 @@ async function findRun() {
     const runs = JSON.parse(
       read('gh', [
         'run', 'list', '--workflow', WORKFLOW, '--commit', sha, '--event', event,
-        '--limit', '5', '--json', 'databaseId,createdAt,url'
+        '--limit', '20', '--json', 'databaseId,createdAt,url,headBranch'
       ])
     );
-    const found = runs.find((r) => event === 'pull_request' || Date.parse(r.createdAt) >= since);
+    const found = runs.find(
+      (r) => event === 'pull_request' || (r.headBranch === runRef && Date.parse(r.createdAt) >= since)
+    );
     if (found) return found;
     await sleep(3_000);
   }
@@ -55,5 +58,11 @@ const watched = spawnSync('gh', ['run', 'watch', String(found.databaseId), '--ex
   stdio: 'inherit'
 });
 if (event === 'push') spawnSync('git', ['push', 'origin', '--delete', chainRef], { stdio: 'inherit' });
-process.stdout.write(`pnpm chain: ${watched.status === 0 ? 'green' : 'red'}, ${found.url}\n`);
-process.exit(watched.status ?? 1);
+const jobs = JSON.parse(read('gh', ['run', 'view', String(found.databaseId), '--json', 'jobs'])).jobs;
+const precheck = jobs.find((j) => j.name.startsWith('Pre-check'));
+const ran = precheck && precheck.conclusion !== 'skipped';
+if (watched.status === 0 && !ran)
+  process.stderr.write(`pnpm chain: the run passed without running its pre-check, so it checked nothing\n`);
+const green = watched.status === 0 && ran;
+process.stdout.write(`pnpm chain: ${green ? 'green' : 'red'}, ${found.url}\n`);
+process.exit(green ? 0 : (watched.status || 1));
