@@ -61,6 +61,28 @@ describe('the work pins budget and the perf change accepted label', () => {
   });
 });
 
+describe('a counter the base does not record', () => {
+  it('is noted as new on head and kept out of the budget', async () => {
+    const { compareRuns } = await import(
+      new URL('../../../../tools/work-pins/compare.mjs', import.meta.url).href
+    );
+    const run = (counters: Record<string, number>) => ({
+      scenario: 'idle',
+      turn: 10,
+      functions: {},
+      messages: {},
+      counters
+    });
+    const result = compareRuns(
+      new Map([['idle', run({ clears: 100 })]]),
+      new Map([['idle', run({ clears: 100, uniformUploadBytes: 4096 })]])
+    );
+    expect(result.over).toEqual([]);
+    expect(result.notes).toContain('scenario `idle`: counter `uniformUploadBytes` is new on head, not compared');
+    expect(result.totals.map((t: { fn: string }) => t.fn)).toContain('counter clears');
+  });
+});
+
 function creatureRun(scenario: string, placed: number, upserts: number) {
   return {
     scenario,
