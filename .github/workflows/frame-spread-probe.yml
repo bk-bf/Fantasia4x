@@ -1,0 +1,28 @@
+name: Frame budget spread probe
+
+on:
+  push:
+    branches: [ci/frame-budget-spread-probe]
+
+jobs:
+  probe:
+    name: Frame budget on runner ${{ matrix.n }}
+    strategy:
+      fail-fast: false
+      matrix:
+        n: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/prepare
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
+      - run: lscpu
+      - run: node tools/work-pins/frame-budget.mjs --out "$RUNNER_TEMP/frame-budget" --no-check
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: frame-budget-${{ matrix.n }}
+          path: ${{ runner.temp }}/frame-budget/frame-budget.json

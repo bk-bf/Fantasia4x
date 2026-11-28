@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { cpus } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -21,6 +22,7 @@ import {
   watchScenarioLoad
 } from './browser-session.mjs';
 import { checkBudgets, median } from './budgets.mjs';
+import { referenceFrame } from './reference-frame.mjs';
 
 /** @typedef {import('./browser-session.mjs').Page} Page */
 /** @typedef {import('./browser-session.mjs').CDPSession} CDPSession */
@@ -42,6 +44,7 @@ const STEADY = [
   { name: 'run-4x', paused: false, ticks: 4 }
 ];
 const ZOOM = 'zoom-out-and-back';
+const REFERENCE_FRAMES = 40;
 
 const { values: opts } = parseArgs({
   allowNegative: true,
@@ -224,20 +227,33 @@ async function main() {
   });
   /** @type {Round[]} */
   let results = [];
+  /** @type {Awaited<ReturnType<typeof referenceFrame>>[]} */
+  const reference = [];
+  const runner = { cpu: cpus()[0]?.model ?? 'unknown', cores: cpus().length };
+  log(`runner ${runner.cpu}, ${runner.cores} cores`);
   try {
     const { page, cdp } = game;
     await waitForScenario(page, SCENARIO);
     log(`${SCENARIO} loaded`);
     await cdp.send('Performance.enable');
     await freezeClock(page);
+    const browser = page.context().browser();
+    if (!browser) throw new Error('the page has no browser');
+    const sample = async (/** @type {string} */ when) => {
+      const r = await referenceFrame(browser, REFERENCE_FRAMES);
+      log(`reference frame ${when}: median ${r.medianMs.toFixed(1)} ms`);
+      reference.push(r);
+    };
+    await sample('before');
     results = await measure(page, cdp, Number(opts.frames), Number(opts.rounds));
+    await sample('after');
   } finally {
     await game.close();
   }
   if (game.errors.length) log(`page errors:\n${game.errors.join('\n')}`);
   writeFileSync(
     join(out, 'frame-budget.json'),
-    JSON.stringify({ scenario: SCENARIO, results }, null, 1)
+    JSON.stringify({ scenario: SCENARIO, runner, reference, results }, null, 1)
   );
   if (!opts.check) return true;
   return checkBudgets(`browser frames on ${SCENARIO}`, budgetsOf(results));
