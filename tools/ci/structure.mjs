@@ -53,7 +53,7 @@ export function seamViolations(root, symbols) {
     }
     if (r.kind === 'name') {
       const named = new RegExp(`\\b${r.target}\\b`);
-      const allowed = (file) =>
+      const allowed = (/** @type {string} */ file) =>
         [...allow].some((a) => (a.endsWith('/') ? file.startsWith(a) : file === a));
       for (const { file, text } of sources)
         if (!allowed(file) && named.test(text))

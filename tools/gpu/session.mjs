@@ -53,7 +53,8 @@ export function gpuSwitch(env = process.env) {
   return { gpu, args: gpu ? ['--enable-unsafe-webgpu', '--enable-features=Vulkan'] : [], apply };
 }
 
-export const backendOf = (page) => page.evaluate(() => globalThis.__f4xGpu ?? null);
+/** @param {import('../work-pins/browser-session.mjs').Page} page */
+export const backendOf = (page) => page.evaluate(() => window.__f4xGpu ?? null);
 
 export function patchChromium(chromium, { chrome, socket, cleanEnv, query, servedSave, args }) {
   const origLaunch = chromium.launch.bind(chromium);
