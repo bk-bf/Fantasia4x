@@ -2,14 +2,14 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { randomBytes } from 'node:crypto';
 import { buildEntry, hostRecord, LOAD_LIMIT, parseKv, snapshot } from './bench.mjs';
 import { resolveSave } from './fetch.mjs';
 import { harnessPerf } from './ingest.mjs';
 import { spoolDir, writeEntry } from './spool.mjs';
-import { allEntries, entryExists, getEntry, ingestSpool, readBlob, withLock } from './store.mjs';
+import { allEntries, entryExists, getEntry, ingestSpool, isLiveStore, readBlob, withLock } from './store.mjs';
 
 const REPO = new URL('../..', import.meta.url).pathname;
 const ENTRY_ID = /^\d{8}T\d{6}Z-/;
@@ -282,7 +282,8 @@ export async function recordRound(root, c) {
 
 export function syncSpool(root, dir, waitMs) {
   try {
-    const report = withLock(root, () => ingestSpool(root, dir, { remove: true }), waitMs == null ? {} : { waitMs });
+    const remove = isLiveStore(root) || resolve(dir) !== resolve(spoolDir({}));
+    const report = withLock(root, () => ingestSpool(root, dir, { remove }), waitMs == null ? {} : { waitMs });
     if (report.errors.length) console.error(`ledger: ${report.errors.join('; ')}`);
     return true;
   } catch (err) {

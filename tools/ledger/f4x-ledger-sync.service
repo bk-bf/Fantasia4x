@@ -5,6 +5,7 @@ After=network-online.target
 [Service]
 Type=oneshot
 WorkingDirectory=@CHECKOUT@
+ExecStartPre=-/usr/bin/git -C @CHECKOUT@ pull --ff-only --quiet
 ExecStart=/usr/bin/env node @CHECKOUT@/tools/ledger/cli.mjs sync
 TimeoutStartSec=45min
 Nice=10

@@ -4,7 +4,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameS
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, relative } from 'node:path';
 import { sha256Of } from './spool.mjs';
-import { ingestSpool, storeDir } from './store.mjs';
+import { ingestSpool, isLiveStore, storeDir } from './store.mjs';
 import { ingestPerfLog } from './ingest.mjs';
 import { ingestCI } from './ci.mjs';
 
@@ -119,7 +119,7 @@ function ingestCheckout(root, machine, checkout, dir, timeZone, report) {
   }
 }
 
-export function pullSpool(root, machine, cfg, report, spool = SPOOL) {
+export function pullSpool(root, machine, cfg, report, { spool = SPOOL, clear = isLiveStore(root) } = {}) {
   const stage = join(root, 'incoming', machine, 'spool');
   const r = pull(cfg, `${spool}/`, `${stage}/`, ['--include=/blobs/***', '--include=/entries/***', '--exclude=*.tmp-*', '--exclude=*']);
   if (r.status !== 0 && /No such file|change_dir/.test(r.stderr)) return;
@@ -133,7 +133,7 @@ export function pullSpool(root, machine, cfg, report, spool = SPOOL) {
   const rel = [...got.removable.entries, ...got.removable.blobs]
     .map((p) => relative(stage, p))
     .filter((p) => /^(blobs\/[0-9a-f]{2}\/[0-9a-f]{64}|entries\/[\w.-]+\.json)$/.test(p));
-  if (!rel.length) return;
+  if (!rel.length || !clear) return;
   const del = shell(cfg, `cd "${spool}" && xargs -0 rm -f --`, { input: rel.join('\0'), limit: '60s' });
   if (del.status === 0) {
     for (const p of rel) spawnSync('rm', ['-f', '--', join(stage, p)]);
@@ -141,7 +141,7 @@ export function pullSpool(root, machine, cfg, report, spool = SPOOL) {
   } else report.errors.push(`${machine}: could not clear the spool: ${del.stderr.trim().slice(0, 200)}`);
 }
 
-export function pullMachine(root, machine, cfg, report) {
+export function pullMachine(root, machine, cfg, report, { clear } = {}) {
   const { reached, tz } = timeZoneOf(cfg);
   if (!reached) {
     report.skipped.push(machine);
@@ -149,7 +149,7 @@ export function pullMachine(root, machine, cfg, report) {
   }
   report.reached.push(machine);
   if (!tz) report.errors.push(`${machine}: /etc/localtime names no zone; its perf.log times are read as UTC`);
-  pullSpool(root, machine, cfg, report);
+  pullSpool(root, machine, cfg, report, { clear: clear ?? isLiveStore(root) });
   for (const checkout of worktreesOf(root, machine, cfg)) {
     const stage = join(root, 'incoming', machine, 'logs', slug(checkout));
     const r = pull(cfg, `${checkout}/.debug/`, `${stage}/`, ['--include=perf.log*', '--exclude=*']);

@@ -20,7 +20,9 @@ import {
   reindex,
   ingestSpool,
   readBlob,
-  verifyBlob
+  verifyBlob,
+  keyedEntry,
+  putKeyed
 } from '../../../../tools/ledger/store.mjs';
 import { splitSessions, sessionPerf } from '../../../../tools/ledger/perflog.mjs';
 import { ingestBench, ingestPerfLog, ingestResult, ingestSave } from '../../../../tools/ledger/ingest.mjs';
@@ -445,6 +447,34 @@ describe('saves', () => {
     expect(assembleSave(dir, save).length).toBeGreaterThan(0);
   });
 
+  it('completes a keyed write that died between its entry and its key', () => {
+    const key = 'ci|bk-bf/Fantasia4x|1|2';
+    const id = newId('github', new Date('2026-11-28T01:00:00Z'), key);
+    const record = { v: 1, id, kind: 'ci', machine: 'github', files: [] };
+    const sha = createHash('sha256').update(key).digest('hex');
+    const keyDir = join(dir, 'keys', sha.slice(0, 2));
+    mkdirSync(join(dir, 'keys'), { recursive: true });
+    writeFileSync(keyDir, '');
+    expect(() => putKeyed(dir, key, record)).toThrow();
+    expect(getEntry(dir, id).id).toBe(id);
+    expect(keyedEntry(dir, key)).toBeNull();
+    rmSync(keyDir);
+    expect(putKeyed(dir, key, record)).toEqual({ id, created: false });
+    expect(keyedEntry(dir, key)).toBe(id);
+    expect(putKeyed(dir, key, record)).toEqual({ id, created: false });
+    expect(listEntries(dir, { kind: 'ci' }).map((e) => e.id)).toEqual([id]);
+  });
+
+  it('ingests a save again after its key was lost', () => {
+    const path = join(dir, 'save.json.gz');
+    writeFileSync(path, gzipSync(JSON.stringify({ dynamic: { turn: 1, seed: 2, pawns: [], mobs: [] }, world: [[{}]] })));
+    utimesSync(path, new Date('2026-11-28T01:00:00Z'), new Date('2026-11-28T01:00:00Z'));
+    const first = ingestSave(dir, { machine: 'laptop', path });
+    rmSync(join(dir, 'keys'), { recursive: true });
+    expect(ingestSave(dir, { machine: 'laptop', path })).toMatchObject({ id: first.id, created: false });
+    expect(ingestSave(dir, { machine: 'laptop', path })).toMatchObject({ id: first.id, created: false });
+  });
+
   it('takes the start counts from the save and keeps the result counts as the end', () => {
     const old = join(dir, 'old.json');
     writeFileSync(old, JSON.stringify({ scenario: 'owner-save', pawns: 5, mobs: 1274, turn: 17736, tps: 40 }));
@@ -479,6 +509,24 @@ describe('sync from a machine', () => {
   };
   const sha = (b: string | Buffer) => createHash('sha256').update(b).digest('hex');
 
+  it('leaves the machine spool alone when syncing into a store other than the live one', () => {
+    const home = join(dir, 'home');
+    const store = join(dir, 'store');
+    const blob = Buffer.from('spooled blob');
+    const id = newId('test', new Date('2026-11-28T01:00:00Z'));
+    const spooled = { v: 1, id, kind: 'play', machine: 'test', files: [{ role: 'log', name: 'b', sha256: sha(blob), bytes: blob.length }] };
+    const files = {
+      [`${SPOOL}/blobs/${sha(blob).slice(0, 2)}/${sha(blob)}`]: blob,
+      [`${SPOOL}/entries/${id}.json`]: JSON.stringify(spooled)
+    };
+    tree(home, files);
+    const report = { reached: [] as string[], skipped: [] as string[], entries: 0, play: 0, open: 0, removed: 0, errors: [] as string[] };
+    pullMachine(store, 'test', { ssh: null, root: home, checkouts: [] }, report);
+    expect(report).toMatchObject({ entries: 1, removed: 0, errors: [] });
+    expect(getEntry(store, id).id).toBe(id);
+    for (const rel of Object.keys(files)) expect(existsSync(join(home, rel))).toBe(true);
+  });
+
   it('clears from the spool only what the store holds and verifies, and touches nothing else', () => {
     const home = join(dir, 'home');
     const store = join(dir, 'store');
@@ -505,7 +553,7 @@ describe('sync from a machine', () => {
       [`${SPOOL}/entries/${changedId}.json`]: JSON.stringify(changed)
     });
     const report = { reached: [] as string[], skipped: [] as string[], entries: 0, play: 0, open: 0, removed: 0, errors: [] as string[] };
-    pullMachine(store, 'test', { ssh: null, root: home, checkouts: ['proj'] }, report);
+    pullMachine(store, 'test', { ssh: null, root: home, checkouts: ['proj'] }, report, { clear: true });
     expect(report.reached).toEqual(['test']);
     expect(report.entries).toBe(1);
     expect(report.removed).toBe(2);

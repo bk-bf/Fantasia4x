@@ -13,7 +13,7 @@ import {
   writeFileSync
 } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { blobPath, sha256Of, writeBlobAt, writeOnce } from './spool.mjs';
 
 const KINDS = new Set(['play', 'bench', 'harness', 'ci', 'save']);
@@ -89,6 +89,10 @@ export function withLock(root, fn, { waitMs = lockWaitMs() } = {}) {
 
 export function storeDir(env = process.env) {
   return env.F4X_LEDGER_DIR || join(homedir(), '.local', 'share', 'fantasia4x-ledger');
+}
+
+export function isLiveStore(root) {
+  return resolve(root) === resolve(storeDir({}));
 }
 
 export function putBlob(root, bufferOrPath) {
@@ -231,9 +235,11 @@ export function putKeyed(root, key, entry) {
   return withLock(root, () => {
     const existing = keyedEntry(root, key);
     if (existing) return { id: existing, created: false };
-    putEntry(root, entry);
+    const halfWritten = entryExists(root, entry.id);
+    if (halfWritten) appendFileSync(join(root, 'index.jsonl'), JSON.stringify(getEntry(root, entry.id)) + '\n');
+    else putEntry(root, entry);
     writeOnce(keyPath(root, key), entry.id + '\n');
-    return { id: entry.id, created: true };
+    return { id: entry.id, created: !halfWritten };
   });
 }
 
