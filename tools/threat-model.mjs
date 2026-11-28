@@ -21,8 +21,15 @@ const ATTACKER_ARMOR_PEN = 0.12;
 const TOP = 58;
 const COMPRESS = 0.55;
 
+/** @typedef {{ damage: number, critMod?: number, weight?: number, onHitCondition?: { condition: string }, onHitWound?: { wound: string }[] }} Weapon */
+/** @typedef {{ slots?: { mainHand?: { pick?: { id: string, w?: number }[], chance?: number } }, quality?: [number, number][] }} LootPool */
+/** @typedef {{ str: number, dex: number, con: number, per: number }} Stats */
+/** @typedef {{ id: string, stats?: Stats, statRanges?: Partial<Record<keyof Stats, [number, number]>>, bodyScale?: number, naturalArmor?: number, naturalWeapons?: string[], lootPool?: string }} Creature */
+
+/** @type {Record<string, number>} */
 const ONHIT_BUMP = { envenomed: 1.3, bloodletting: 1.25, disoriented: 1.08, ensnared: 1.08 };
 
+/** @param {string} text */
 function parseJsonc(text) {
   let out = '';
   let inStr = false;
@@ -60,9 +67,12 @@ function parseJsonc(text) {
   return JSON.parse(out);
 }
 
+/** @type {Creature[]} */
 const creatures = parseJsonc(fs.readFileSync(CREATURES, 'utf8'));
 const items = parseJsonc(fs.readFileSync(ITEMS, 'utf8'));
+/** @type {Record<string, LootPool>} */
 const lootpools = parseJsonc(fs.readFileSync(LOOTPOOL, 'utf8')).pools ?? {};
+/** @type {Map<string, Weapon>} */
 const WEAPONS = new Map();
 for (const it of items) {
   if (it.weaponProperties) {
@@ -74,11 +84,12 @@ for (const it of items) {
   }
 }
 
+/** @param {string | undefined} lootPool @param {number} str @param {number} dex @param {number} per */
 function expectedWieldedDamage(lootPool, str, dex, per) {
   const pool = lootPool ? lootpools[lootPool] : null;
   const mh = pool?.slots?.mainHand;
   if (!mh || !mh.pick?.length) return null;
-  const qmult = expectedQualityMult(pool);
+  const qmult = expectedQualityMult(/** @type {LootPool} */ (pool));
   let dmgW = 0;
   let wsum = 0;
   let bump = 1;
@@ -95,6 +106,7 @@ function expectedWieldedDamage(lootPool, str, dex, per) {
   return { dmgPerLanded: dmgW / wsum, bump, chance: mh.chance ?? 1 };
 }
 
+/** @param {LootPool} pool */
 function expectedQualityMult(pool) {
   const table = pool.quality;
   if (!table || table.length === 0) return 1.0;
@@ -108,6 +120,7 @@ function expectedQualityMult(pool) {
   return tw > 0 ? acc / tw : 1.0;
 }
 
+/** @param {Weapon} w @param {number} str @param {number} dex @param {number} per @param {number} scale @param {boolean} isNatural */
 function weaponDamage(w, str, dex, per, scale, isNatural) {
   const bd = w.damage * (isNatural ? 1 + (scale - 1) * NATURAL_DAMAGE_BODYSCALE_FACTOR : 1);
   const raw = (bd * str) / STAT_SCALE;
@@ -120,13 +133,17 @@ function weaponDamage(w, str, dex, per, scale, isNatural) {
   return { dmg: raw * (1 + crit * 0.5), bump };
 }
 
+/** @param {Creature} c @returns {Stats} */
 function midStats(c) {
   if (c.stats) return c.stats;
+  /** @type {Partial<Record<keyof Stats, [number, number]>>} */
   const sr = c.statRanges ?? {};
+  /** @param {[number, number] | undefined} r @param {number} f */
   const mid = (r, f) => (Array.isArray(r) ? Math.round((r[0] + r[1]) / 2) : f);
   return { str: mid(sr.str, 10), dex: mid(sr.dex, 10), con: mid(sr.con, 10), per: mid(sr.per, 10) };
 }
 
+/** @param {Creature} c */
 function model(c) {
   const { str, dex, con, per } = midStats(c);
   const scale = c.bodyScale ?? 1;
@@ -167,6 +184,7 @@ function model(c) {
   return { id: c.id, dps, effHP, power: dps * effHP };
 }
 
+/** @param {number} dps @param {number} effHP */
 function profile(dps, effHP) {
   const r = dps / effHP;
   if (dps >= 12 && effHP >= 150) return 'bruiser';
@@ -176,7 +194,9 @@ function profile(dps, effHP) {
   return 'skirmisher';
 }
 
-const rows = creatures.map(model);
+const rows = /** @type {(ReturnType<typeof model> & { threat: number, dpsR: number, effHPR: number, profile: string })[]} */ (
+  creatures.map(model)
+);
 const maxP = Math.max(...rows.map((r) => r.power));
 for (const r of rows) {
   r.threat = Math.max(1, Math.round(TOP * Math.pow(r.power / maxP, COMPRESS)));
@@ -187,6 +207,7 @@ for (const r of rows) {
 
 function readAnnotations() {
   const raw = fs.readFileSync(CREATURES, 'utf8');
+  /** @type {Map<string, { threat: number | null, dps: number | null, effHP: number | null, profile: string | null }>} */
   const ann = new Map();
   const re =
     /"id"\s*:\s*"([^"]+)"[\s\S]*?"threatLevel"\s*:\s*(\d+)\s*,?\s*(?:\/\/\s*DPS\s*([\d.]+)\s*\|\s*effHP\s*(\d+)\s*\|\s*([a-z-]+))?/g;
@@ -205,6 +226,7 @@ function readAnnotations() {
 const args = process.argv.slice(2);
 if (args.includes('--check')) {
   const ann = readAnnotations();
+  /** @type {string[]} */
   const drift = [];
   for (const r of rows) {
     const a = ann.get(r.id);
@@ -212,6 +234,7 @@ if (args.includes('--check')) {
       drift.push(`${r.id}: no committed annotation found`);
       continue;
     }
+    /** @type {string[]} */
     const issues = [];
     if (a.threat !== r.threat) issues.push(`threatLevel ${a.threat} → ${r.threat}`);
     if (a.dps == null || Math.abs(a.dps - r.dpsR) > 0.05) issues.push(`DPS ${a.dps} → ${r.dpsR}`);

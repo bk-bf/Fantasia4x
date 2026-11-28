@@ -10,11 +10,13 @@ const LIMITS = 'ir=5%';
 const REGRESSION = 3;
 const PERF_CHANGE_ACCEPTED = process.env.PERF_CHANGE_ACCEPTED === 'true';
 
+/** @param {string} name @param {string} fallback */
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
   return i >= 0 ? process.argv[i + 1] : fallback;
 }
 
+/** @param {string} crateDir @param {string} targetDir @param {string[]} args @param {import('node:child_process').ExecFileSyncOptions} options */
 function cargo(crateDir, targetDir, args, options) {
   return execFileSync('cargo', args, {
     cwd: crateDir,
@@ -23,14 +25,15 @@ function cargo(crateDir, targetDir, args, options) {
   });
 }
 
+/** @param {string} crate @param {string} crateDir @param {string} targetDir @returns {string[]} */
 function benchExecutables(crate, crateDir, targetDir) {
   cargo(crateDir, targetDir, ['clean', '--release', '--package', crate], { stdio: 'inherit' });
-  const out = cargo(
+  const out = String(cargo(
     crateDir,
     targetDir,
     ['bench', '--no-run', '--message-format=json-render-diagnostics'],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], maxBuffer: 64 << 20 }
-  );
+  ));
   return out
     .split('\n')
     .filter((line) => line.startsWith('{'))
@@ -40,6 +43,7 @@ function benchExecutables(crate, crateDir, targetDir) {
     .filter(Boolean);
 }
 
+/** @param {string} crateDir @param {string[]} executables @param {string} home @param {string[]} args */
 function runBenches(crateDir, executables, home, args) {
   const statuses = executables.map((exe) => {
     process.stdout.write(`$ ${exe} --bench ${args.join(' ')}\n`);
@@ -53,6 +57,7 @@ function runBenches(crateDir, executables, home, args) {
   return statuses.find((s) => s !== 0 && s !== REGRESSION) ?? statuses.find((s) => s !== 0) ?? 0;
 }
 
+/** @param {string} crate @param {string} baseTree @param {string} targetDir @param {string} home */
 function measureBase(crate, baseTree, targetDir, home) {
   const baseCrate = join(baseTree, crate);
   for (const entry of HARNESS) {
@@ -77,6 +82,7 @@ const base = arg('--base', 'HEAD');
 const home = resolve(arg('--home', join(tmpdir(), 'gungraun')));
 const scratch = mkdtempSync(join(tmpdir(), 'gungraun-base-'));
 const baseTree = join(scratch, 'tree');
+/** @type {{ crate: string, compared: boolean, status: number }[]} */
 const results = [];
 try {
   process.stdout.write(`base ${execFileSync('git', ['rev-parse', base], { encoding: 'utf8' })}`);

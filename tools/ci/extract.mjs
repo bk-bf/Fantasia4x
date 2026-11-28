@@ -11,6 +11,10 @@ import { join, relative, extname } from 'node:path';
 import ts from 'typescript';
 import { createHash } from 'node:crypto';
 
+/** @typedef {{ key: string, file: string, lang: string, kind: string, name: string, className: string | null, exported: boolean, module: string, group: string, layer: string | null, startByte: number, endByte: number, startLine: number, endLine: number, loc: number, chars: number, contentHash: string, signature: string | null, flags: string[], text: string }} AuditSymbol */
+/** @typedef {{ node: import('typescript').Node, name: string, kind: string, className: string | null, exported: boolean, start: number, end: number }} Found */
+
+/** @param {string} s */
 const sha = (s) => createHash('sha256').update(s).digest('hex').slice(0, 16);
 
 const LAYERS = {
@@ -42,9 +46,11 @@ const SKIP_DIRS = new Set([
   '.ledger'
 ]);
 
+/** @param {string} root @param {string[]} [exts] */
 export function walkFiles(root, exts = ['.ts', '.svelte', '.json']) {
+  /** @type {string[]} */
   const out = [];
-  (function rec(dir) {
+  (/** @param {string} dir */ function rec(dir) {
     for (const e of readdirSync(dir)) {
       if (SKIP_DIRS.has(e) || e.startsWith('.')) continue;
       const p = join(dir, e);
@@ -58,11 +64,13 @@ export function walkFiles(root, exts = ['.ts', '.svelte', '.json']) {
 
 // Line lookup runs off a per-file offset table built once; scanning the text per symbol
 // made extraction quadratic in file size.
+/** @param {string} text */
 const lineOffsets = (text) => {
   const offs = [0];
   for (let i = 0; i < text.length; i++) if (text[i] === '\n') offs.push(i + 1);
   return offs;
 };
+/** @param {number[]} offs @param {number} byte */
 const lineAtIdx = (offs, byte) => {
   let lo = 0,
     hi = offs.length - 1;
@@ -74,12 +82,14 @@ const lineAtIdx = (offs, byte) => {
   return lo + 1;
 };
 
+/** @param {string} file */
 function layerOf(file) {
   const m = file.match(/src\/lib\/(?:game\/)?([a-z-]+)\//) || file.match(/src\/(routes|lib)\//);
   const seg = m?.[1];
   return seg && seg in LAYERS ? seg : file.includes('src/routes') ? 'routes' : null;
 }
 
+/** @param {string} file */
 function moduleOf(file) {
   return file
     .replace(/^src\/lib\//, '')
@@ -94,8 +104,11 @@ function moduleOf(file) {
 const UNIT_WORDS =
   /\b(tick|ticks|turn|turns|ms|millis|seconds?|secs?|minutes?|hours?|days?|pct|percent|ratio|fraction|kg|litres?|liters?|tiles?|px|hz|tps|fps)\b/i;
 
+/** @param {string} text @param {{ kind: string, lang: string }} where */
 export function computeFlags(text, { kind, lang }) {
+  /** @type {string[]} */
   const f = [];
+  /** @param {RegExp} re */
   const has = (re) => re.test(text);
   if (has(/\bcatch\s*\(/)) f.push('hasCatch');
   if (has(/\bcatch\s*(\([^)]*\))?\s*\{\s*\}/)) f.push('emptyCatch');
@@ -129,20 +142,25 @@ export function computeFlags(text, { kind, lang }) {
 
 // --- TypeScript --------------------------------------------------------------
 
+/** @param {string} text @param {string} file @param {{ offset?: number, lang?: string, outerText?: string | null }} [options] @returns {AuditSymbol[]} */
 function extractTs(text, file, { offset = 0, lang = 'ts', outerText = null } = {}) {
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const src = outerText ?? text;
   const offs = lineOffsets(src);
+  /** @type {Found[]} */
   const found = [];
 
+  /** @param {{ modifiers?: import('typescript').NodeArray<import('typescript').ModifierLike> }} n */
   const isExported = (n) => !!n.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
 
+  /** @param {import('typescript').Node} node @param {string} name @param {string} kind @param {string | null} className @param {boolean} exported */
   const push = (node, name, kind, className, exported) => {
     const start = node.getStart(sf, true) + offset;
     const end = node.getEnd() + offset;
     found.push({ node, name, kind, className, exported, start, end });
   };
 
+  /** @param {import('typescript').Node} node @param {string | null} [className] */
   const visit = (node, className = null) => {
     if (ts.isFunctionDeclaration(node) && node.name) {
       push(node, node.name.text, 'function', null, isExported(node));
@@ -216,6 +234,7 @@ function extractTs(text, file, { offset = 0, lang = 'ts', outerText = null } = {
     .sort((a, b) => a.start - b.start || b.end - a.end)
     .filter((s, i, arr) => !arr.some((o, j) => j < i && o.start <= s.start && o.end >= s.end));
 
+  /** @type {Map<string, number>} */
   const seen = new Map();
   return top.map((s) => {
     const qual = s.className ? `${s.className}.${s.name}` : s.name;
@@ -251,9 +270,12 @@ function extractTs(text, file, { offset = 0, lang = 'ts', outerText = null } = {
 // Script blocks are located textually rather than through svelte/compiler's parse, so
 // the extractor does not break on a compiler version bump.
 
+/** @param {string} text @param {string} file @returns {AuditSymbol[]} */
 function extractSvelte(text, file) {
+  /** @type {AuditSymbol[]} */
   const out = [];
   const scriptRe = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+  /** @type {[number, number][]} */
   const scripts = [];
   let m;
   while ((m = scriptRe.exec(text)) !== null) {
@@ -265,6 +287,7 @@ function extractSvelte(text, file) {
 
   // The markup symbol is the largest contiguous region outside the script blocks --
   // in practice everything below the scripts, style block included.
+  /** @type {[number, number][]} */
   const gaps = [];
   let cursor = 0;
   for (const [a, b] of scripts) {
@@ -312,7 +335,9 @@ function extractSvelte(text, file) {
 // Each top-level entry of a definition array is its own auditable object, so a single
 // bad item row re-opens only itself rather than the whole 8000-line file.
 
+/** @param {string} text @param {string} file @returns {AuditSymbol[]} */
 function extractJson(text, file) {
+  /** @type {AuditSymbol[]} */
   const out = [];
   const offs = lineOffsets(text);
   let depth = 0,
@@ -398,7 +423,9 @@ function extractJson(text, file) {
 
 // --- entry point -------------------------------------------------------------
 
+/** @param {string} root @param {{ include?: string[] }} [options] */
 export function extractRepo(root, { include = ['src'] } = {}) {
+  /** @type {AuditSymbol[]} */
   const symbols = [];
   for (const dir of include) {
     for (const abs of walkFiles(join(root, dir))) {
@@ -410,13 +437,14 @@ export function extractRepo(root, { include = ['src'] } = {}) {
         else if (file.endsWith('.json')) symbols.push(...extractJson(text, file));
         else symbols.push(...extractTs(text, file));
       } catch (e) {
-        process.stderr.write(`[extract] ${file}: ${e.message}\n`);
+        process.stderr.write(`[extract] ${file}: ${e instanceof Error ? e.message : String(e)}\n`);
       }
     }
   }
   return symbols;
 }
 
+/** @param {string} root @param {{ file: string, start_byte?: number, startByte?: number, end_byte?: number, endByte?: number }} symbol */
 export function sliceOf(root, symbol) {
   const text = readFileSync(join(root, symbol.file), 'utf8');
   return text.slice(symbol.start_byte ?? symbol.startByte, symbol.end_byte ?? symbol.endByte);

@@ -23,14 +23,21 @@ const event = (() => {
 })();
 const root = process.env.CLAUDE_PROJECT_DIR || event.cwd || process.cwd();
 
+/** @typedef {{ number: number, title: string, branch: string, issue: number | null, files: string[] }} OpenPull */
+/** @typedef {{ number: number, title: string, files: string[] }} OpenIssue */
+/** @typedef {{ at: number, pulls: OpenPull[], issues: OpenIssue[] }} Snapshot */
+
+/** @param {string} cmd @param {string[]} args @param {string} [cwd] */
 const run = (cmd, args, cwd = root) =>
   execFileSync(cmd, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 });
 
+/** @param {object} output @returns {never} */
 const emit = (output) => {
   process.stdout.write(JSON.stringify(output));
   process.exit(0);
 };
 
+/** @returns {Snapshot} */
 function snapshot() {
   mkdirSync(CACHE_DIR, { recursive: true });
   const file = join(CACHE_DIR, 'snapshot.json');
@@ -38,18 +45,22 @@ function snapshot() {
     const cached = JSON.parse(readFileSync(file, 'utf8'));
     if (Date.now() - cached.at < TTL_MS) return cached;
   }
-  const pulls = JSON.parse(
+  /** @type {{ number: number, title: string, headRefName: string, body: string | null, files?: { path: string }[] }[]} */
+  const rawPulls = JSON.parse(
     runGh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,headRefName,body,files'], '', root)
-  ).map((p) => ({
+  );
+  const pulls = rawPulls.map((p) => ({
     number: p.number,
     title: p.title,
     branch: p.headRefName,
     issue: linkOf(p)?.issue ?? null,
     files: (p.files ?? []).map((f) => f.path)
   }));
-  const issues = JSON.parse(
+  /** @type {{ number: number, title: string, body: string | null }[]} */
+  const rawIssues = JSON.parse(
     runGh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title,body'], '', root)
-  ).map((i) => ({
+  );
+  const issues = rawIssues.map((i) => ({
     number: i.number,
     title: i.title,
     files: [...new Set([...(i.body ?? '').matchAll(CITATION)].map((m) => decodeURIComponent(m[1])))]
@@ -59,6 +70,7 @@ function snapshot() {
   return fresh;
 }
 
+/** @param {string} cwd */
 function ownWork(cwd) {
   let branch = '';
   try {
@@ -69,8 +81,10 @@ function ownWork(cwd) {
   return { branch, issue: Number(/-(\d+)$/.exec(branch)?.[1]) || null };
 }
 
+/** @param {string | undefined} session @param {string} path */
 function acknowledged(session, path) {
   const file = join(CACHE_DIR, `ack-${session || 'unknown'}.json`);
+  /** @type {string[]} */
   const seen = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : [];
   if (seen.includes(path)) return true;
   writeFileSync(file, JSON.stringify([...seen, path]));
@@ -85,7 +99,7 @@ function onPrompt() {
     emit({
       hookSpecificOutput: {
         hookEventName: 'UserPromptSubmit',
-        additionalContext: `Open pull requests could not be read (${String(e.message).split('\n')[0]}); check \`gh pr list\` before building.`
+        additionalContext: `Open pull requests could not be read (${(e instanceof Error ? e.message : String(e)).split('\n')[0]}); check \`gh pr list\` before building.`
       }
     });
   }
