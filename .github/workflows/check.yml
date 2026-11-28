@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [dev, 'test/**']
   push:
-    branches: [dev, 'test/**', 'chain/**']
+    branches: ['**']
   schedule:
     - cron: '17 3 * * *'
   workflow_dispatch:
@@ -26,9 +26,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  route:
+    name: Branches CI runs on
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      run: ${{ steps.route.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: tools/ci/lead.json
+          sparse-checkout-cone-mode: false
+
+      - name: Dev, test branches, chains and the lead branch
+        id: route
+        env:
+          REF: ${{ github.ref_name }}
+        run: |
+          lead="$(jq -r .branch tools/ci/lead.json)"
+          run=true
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            case "$REF" in
+              dev|test/*|chain/*|"$lead") ;;
+              *) run=false ;;
+            esac
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
   precheck:
     name: 'Pre-check: pnpm check, related tests, seams, workflow lint'
-    if: github.event_name != 'workflow_dispatch' || inputs.mode == 'chain' || inputs.mode == 'pre'
+    needs: route
+    if: needs.route.outputs.run == 'true' && (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain' || inputs.mode == 'pre')
     runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     permissions:
@@ -64,13 +94,16 @@ jobs:
             m="$(git merge-base --all HEAD "$t" | while read -r c; do git merge-base --is-ancestor "$c" origin/dev || { echo "$c"; break; }; done)"
             [ -z "$m" ] && continue
             [ "$GITHUB_EVENT_NAME" != pull_request ] && [ "$(git rev-list --count --first-parent HEAD ^origin/dev "^$t")" = "$line" ] && { { [ -z "$merged" ] || git merge-base --is-ancestor "$merged" "$m"; } && merged="$m"; continue; }
-            warn=true; base="$m"; break
+            warn=true
+            if git merge-base --is-ancestor HEAD "$t"; then base="$(git merge-base HEAD origin/dev)"; else base="$m"; fi
+            break
           done
           case "$GITHUB_EVENT_NAME" in
             push)
               case "$GITHUB_REF_NAME" in
                 dev) base="$BEFORE" ;;
-                test/*|"$lead") warn=true; git cat-file -e "$BEFORE^{commit}" 2>/dev/null && base="$BEFORE" ;;
+                "$lead") warn=true ;;
+                test/*) warn=true; git cat-file -e "$BEFORE^{commit}" 2>/dev/null && base="$BEFORE" ;;
               esac ;;
             pull_request)
               base="$(git rev-parse HEAD^1)"
