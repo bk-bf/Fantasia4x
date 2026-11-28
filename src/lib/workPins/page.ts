@@ -14,6 +14,7 @@ const totals = {
   drawCalls: 0,
   vertexCount: 0,
   bufferUploadBytes: 0,
+  uniformUploadBytes: 0,
   textureUploadBytes: 0,
   framebufferBinds: 0,
   clears: 0,
@@ -38,6 +39,19 @@ export function addFrameTotals(stats: FrameStats): void {
 
 function dataBytes(data: unknown): number {
   return ArrayBuffer.isView(data) || data instanceof ArrayBuffer ? data.byteLength : 0;
+}
+
+const UNIFORM_CALL = /^uniform(?:(Matrix)[234](?:x[234])?|([1234]))(?:f|i|ui)(v)?$/;
+
+function uniformCallBytes(method: string, a: GlArgs): number {
+  const m = UNIFORM_CALL.exec(method);
+  if (!m) return 0;
+  const [, matrix, count, vector] = m;
+  if (!matrix && !vector) return Number(count) * 4;
+  const values = a[matrix ? 2 : 1] as ArrayLike<number> | undefined;
+  const offset = Number(a[matrix ? 3 : 2] ?? 0);
+  const length = Number(a[matrix ? 4 : 3] ?? 0);
+  return (length > 0 ? length : (values?.length ?? 0) - offset) * 4;
 }
 
 function pixelBytes(pixels: unknown, width?: unknown, height?: unknown): number {
@@ -73,8 +87,15 @@ export function countGl(gl: WebGL2RenderingContext): void {
   let viewportArea = gl.drawingBufferWidth * gl.drawingBufferHeight;
   let program: unknown = null;
   let bound: WebGLTexture | null = null;
-  wrapGl(gl, 'bufferData', (a) => (totals.bufferUploadBytes += typeof a[1] === 'number' ? a[1] : dataBytes(a[1])));
-  wrapGl(gl, 'bufferSubData', (a) => (totals.bufferUploadBytes += dataBytes(a[2])));
+  const upload = (target: unknown, bytes: number) => {
+    if (target === gl.UNIFORM_BUFFER) totals.uniformUploadBytes += bytes;
+    else totals.bufferUploadBytes += bytes;
+  };
+  wrapGl(gl, 'bufferData', (a) => upload(a[0], typeof a[1] === 'number' ? a[1] : dataBytes(a[1])));
+  wrapGl(gl, 'bufferSubData', (a) => upload(a[0], dataBytes(a[2])));
+  for (const method of Object.getOwnPropertyNames(Object.getPrototypeOf(gl)))
+    if (UNIFORM_CALL.test(method))
+      wrapGl(gl, method as keyof WebGL2RenderingContext, (a) => (totals.uniformUploadBytes += uniformCallBytes(method, a)));
   wrapGl(gl, 'texSubImage2D', (a) => {
     totals.textureUploadBytes += a.length >= 9 ? pixelBytes(a[8], a[4], a[5]) : pixelBytes(a[6]);
   });
