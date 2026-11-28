@@ -8,15 +8,18 @@ import { headingsOf, requiredSections } from './template.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
+/** @type {Record<string, string | undefined>} */
 const TEMPLATE_FOR = { feat: 'feat.md', decision: 'decision.md' };
 
-export const templateFor = (workType) => TEMPLATE_FOR[workType] ?? 'defect.md';
+/** @param {string} [workType] */
+export const templateFor = (workType) => TEMPLATE_FOR[String(workType)] ?? 'defect.md';
 
 const TEMPLATES = ['feat.md', 'decision.md', 'defect.md'];
 
 
 /** Every label a writer may use: the fixed vocabulary plus one per rule name. Anything else
  *  is a typo or an invention, and both pollute the tracker the same way. */
+/** @returns {{ required?: string[], groups?: Record<string, string[]> }} */
 function vocabulary() {
   try {
     return JSON.parse(readFileSync(join(HERE, 'labels.json'), 'utf8'));
@@ -25,6 +28,7 @@ function vocabulary() {
   }
 }
 
+/** @param {string} group @returns {string[]} */
 export const labelGroup = (group) => vocabulary().groups?.[group] ?? [];
 
 export function milestonePlan() {
@@ -38,6 +42,7 @@ export function milestonePlan() {
 
 /** Every issue has to say how severe it is, what sort of thing it is, who raised it and how it
  *  gets verified. An issue missing one of those cannot be sorted, filtered or costed. */
+/** @param {string[]} [labels] */
 export function checkRequired(labels = []) {
   const { required = [], groups = {} } = vocabulary();
   const errors = [];
@@ -51,6 +56,7 @@ export function checkRequired(labels = []) {
 
 const FEATURE_TYPES = new Set(['feat', 'decision', 'release']);
 
+/** @param {string[]} [labels] @param {string} [workType] */
 export function checkKind(labels = [], workType) {
   const feature = labels.includes('feature');
   const others = labels.filter((l) => l !== 'feature' && labelGroup('kind').includes(l));
@@ -68,9 +74,10 @@ export function checkKind(labels = [], workType) {
 }
 
 export function allowedLabels() {
+  /** @type {Set<string>} */
   const out = new Set();
   try {
-    for (const group of Object.values(vocabulary().groups)) {
+    for (const group of Object.values(vocabulary().groups ?? {})) {
       for (const l of group) out.add(l);
     }
   } catch {
@@ -79,6 +86,7 @@ export function allowedLabels() {
   return out;
 }
 
+/** @param {string} a @param {string} b */
 const distance = (a, b) => {
   const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
   for (let j = 0; j <= b.length; j++) d[0][j] = j;
@@ -94,11 +102,14 @@ const distance = (a, b) => {
   return d[a.length][b.length];
 };
 
+/** @param {string} s */
 const norm = (s) => s.toLowerCase().replace(/[^a-z]/g, '');
 // a reordering is the common invention -- test-missing for missing-test -- and edit distance
 // scores those as far apart, so compare the word bag as well as the string
+/** @param {string} s */
 const bag = (s) => s.toLowerCase().split(/[^a-z]+/).filter(Boolean).sort().join('');
 
+/** @param {string} name @param {Set<string>} allowed */
 const nearest = (name, allowed) => {
   for (const a of allowed) if (bag(a) === bag(name)) return a;
   let best = null;
@@ -113,6 +124,7 @@ const nearest = (name, allowed) => {
   return score <= Math.max(3, Math.round(name.length / 2)) ? best : null;
 };
 
+/** @param {string[] | undefined} labels @param {{ allowReady?: boolean }} [options] */
 export function checkLabels(labels, { allowReady = false } = {}) {
   const allowed = allowedLabels();
   const errors = [];
@@ -130,6 +142,7 @@ export function checkLabels(labels, { allowReady = false } = {}) {
   return errors;
 }
 
+/** @param {string} sha @param {string} path */
 const atSha = (sha, path) => {
   try {
     execFileSync('git', ['cat-file', '-e', `${sha}:${path}`], { cwd: ROOT, stdio: 'ignore' });
@@ -139,6 +152,7 @@ const atSha = (sha, path) => {
   }
 };
 
+/** @param {string} sha @param {string} path */
 const linesAt = (sha, path) => {
   try {
     return execFileSync('git', ['show', `${sha}:${path}`], {
@@ -151,6 +165,7 @@ const linesAt = (sha, path) => {
   }
 };
 
+/** @param {string | null | undefined} body */
 export function checkBody(body) {
   const errors = [];
   const text = body ?? '';
@@ -193,14 +208,17 @@ export function checkBody(body) {
 const MIN_PROSE = 240;
 const CHECKBOX = /^\s*[-*] \[[ x]\] /m;
 const VERSION = /^v\d+\.\d+(\.\d+)?( - \S.*)?$/;
+/** @param {string | null} [title] */
 export const versionOf = (title = '') => title?.match(/^v\d+\.\d+(\.\d+)?/)?.[0] ?? null;
 
+/** @param {string | null | undefined} body */
 const stripNotes = (body) =>
   (body ?? '')
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/^\s*>.*$/gm, '')
     .trim();
 
+/** @param {string} text */
 const proseOf = (text) =>
   text
     .replace(/^#{1,6} .*$/gm, '')
@@ -211,6 +229,7 @@ const proseOf = (text) =>
 /** An issue nobody can act on is worse than no issue: it inflates the count and names nothing.
  *  The bar is deliberately about substance, not shape — a heading with nothing under it passes
  *  a section check and still tells a reader nothing. */
+/** @param {string | null | undefined} body @param {string[]} [labels] @param {string} [workType] */
 export function checkTemplate(body, labels = [], workType) {
   const errors = [];
   const text = stripNotes(body);
@@ -224,6 +243,7 @@ export function checkTemplate(body, labels = [], workType) {
   }
 
   const headings = headingsOf(text);
+  /** @param {string} f */
   const missingFrom = (f) => requiredSections(join('ISSUE_TEMPLATE', f)).filter((r) => !headings.includes(r));
   const file =
     workType !== undefined
@@ -256,6 +276,7 @@ export function checkTemplate(body, labels = [], workType) {
   return errors;
 }
 
+/** @param {{ title?: string | null, body?: string | null }} [milestone] */
 export function checkMilestone({ title, body } = {}) {
   const errors = [];
   if (title !== undefined) {
@@ -282,6 +303,7 @@ export function checkMilestone({ title, body } = {}) {
   return errors;
 }
 
+/** @param {{ labels?: string[], body?: string | null, allowReady?: boolean, template?: boolean, workType?: string }} [options] */
 export function check({ labels, body, allowReady = false, template = false, workType } = {}) {
   return [
     ...checkLabels(labels, { allowReady }),

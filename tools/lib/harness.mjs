@@ -10,6 +10,10 @@ export const PNPM = process.env.AUDIT_PNPM || 'pnpm';
 export const BASE = process.env.AUDIT_BASE || 'dev';
 export const CLAUDE = process.env.AUDIT_CLAUDE || 'claude';
 
+/** @typedef {{ code: number | null, out: string, err: string, capped: boolean }} RunResult */
+/** @typedef {{ name: string, code: number | null, tail: string }} StepResult */
+
+/** @param {string} cmd @param {string[]} args @param {{ cwd?: string, input?: string, timeoutMs?: number }} [options] @returns {Promise<RunResult>} */
 export function run(cmd, args, { cwd = ROOT, input, timeoutMs = 1_800_000 } = {}) {
   return new Promise((resolve) => {
     const p = spawn(cmd, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
@@ -20,11 +24,12 @@ export function run(cmd, args, { cwd = ROOT, input, timeoutMs = 1_800_000 } = {}
     const t = setTimeout(() => {
       capped = true;
       try {
-        process.kill(-p.pid, 'SIGKILL');
+        process.kill(-Number(p.pid), 'SIGKILL');
       } catch {
         p.kill('SIGKILL');
       }
     }, timeoutMs);
+    /** @param {RunResult} r */
     const done = (r) => {
       if (!settled) {
         settled = true;
@@ -46,6 +51,7 @@ export function run(cmd, args, { cwd = ROOT, input, timeoutMs = 1_800_000 } = {}
   });
 }
 
+/** @param {string[]} args @param {string} [cwd] @param {boolean} [quiet] */
 export const git = (args, cwd = ROOT, quiet = false) =>
   execFileSync('git', args, {
     cwd,
@@ -54,15 +60,18 @@ export const git = (args, cwd = ROOT, quiet = false) =>
     stdio: quiet ? ['ignore', 'pipe', 'ignore'] : ['ignore', 'pipe', 'pipe']
   }).trim();
 
+/** @param {string} s @param {number} [n] */
 export const tail = (s, n = 40) => s.trim().split('\n').slice(-n).join('\n');
 
 /** svelte-check and vitest both bury their errors in a wall of warnings; a reviewer needs
  *  the error lines, not the last forty lines of whatever scrolled past. */
+/** @param {string} s @param {number} [n] */
 export const errorLines = (s, n = 25) => {
   const hits = s.split('\n').filter((l) => /\bERROR\b|✕|FAIL|Error:|failed/i.test(l));
   return (hits.length ? hits : s.trim().split('\n')).slice(0, n).join('\n');
 };
 
+/** @param {string} cwd */
 export function changedFiles(cwd) {
   const s = execFileSync('git', ['status', '--porcelain', '-uall', '--no-renames', '-z'], {
     cwd,
@@ -76,6 +85,7 @@ export function changedFiles(cwd) {
     .filter(Boolean);
 }
 
+/** @param {string} cwd @param {string} [base] */
 export const committedFiles = (cwd, base = `origin/${BASE}`) =>
   git(['diff', '--name-only', `${base}...HEAD`], cwd).split('\n').filter(Boolean);
 
@@ -88,7 +98,9 @@ const CRATES = [
  *  same Rust. A crate that differs, or a dirty crate in the source tree, means the copy would be
  *  compiled from other source than the code under test -- and a headless number measured against
  *  it is wrong with nothing to show for it. */
+/** @param {string} crate @param {string} from @param {string} to @returns {{ ok: true } | { ok: false, why: string }} */
 function crateMatches(crate, from, to) {
+  /** @param {string} dir */
   const treeOf = (dir) => {
     try {
       return git(['rev-parse', `HEAD:${crate}`], dir, true);
@@ -96,6 +108,7 @@ function crateMatches(crate, from, to) {
       return null;
     }
   };
+  /** @param {string} dir */
   const dirty = (dir) => {
     try {
       return git(['status', '--porcelain', '--', crate], dir, true) !== '';
@@ -111,6 +124,7 @@ function crateMatches(crate, from, to) {
   return { ok: true };
 }
 
+/** @param {string} wt @param {(line: string) => void} log */
 async function buildWasm(wt, log) {
   for (const script of ['add:wasm', 'add:wasm:sim']) {
     const r = await run(PNPM, [script], { cwd: wt, timeoutMs: 1_800_000 });
@@ -122,6 +136,7 @@ async function buildWasm(wt, log) {
 /** A fresh worktree has no node_modules, no .svelte-kit/tsconfig.json for tsconfig to extend,
  *  and no wasm packages -- they are gitignored build output of the Rust crates. Without all
  *  three, svelte-check dies before it reads a line of source. */
+/** @param {string} wt @param {(line: string) => void} [log] */
 export async function prepareWorktree(wt, log = () => {}) {
   log('--- pnpm install');
   const inst = await run(PNPM, ['install', '--prefer-offline'], { cwd: wt, timeoutMs: 900_000 });
@@ -134,6 +149,7 @@ export async function prepareWorktree(wt, log = () => {}) {
   });
   if (sync.code !== 0) log(`    [warn] sync exited ${sync.code}; verification may not run`);
 
+  /** @type {string[]} */
   const mismatched = [];
   for (const [crate, pkg] of CRATES) {
     const to = join(wt, 'src', 'lib', pkg);
@@ -155,7 +171,9 @@ export async function prepareWorktree(wt, log = () => {}) {
   }
 }
 
+/** @param {string} cwd @param {string[]} files */
 export async function verifyTests(cwd, files) {
+  /** @type {StepResult[]} */
   const results = [];
   const check = await run(PNPM, ['check'], { cwd, timeoutMs: 900_000 });
   results.push({
@@ -191,12 +209,14 @@ export async function verifyTests(cwd, files) {
   return { ok: results.every((r) => r.code === 0), results };
 }
 
+/** @param {StepResult[]} results */
 export const failureDetail = (results) =>
   results
     .filter((r) => r.code !== 0)
     .map((r) => `**${r.name}** exited ${r.code}\n\n\`\`\`\n${r.tail}\n\`\`\``)
     .join('\n\n');
 
+/** @param {number} port @returns {Promise<boolean>} */
 const canBind = (port) =>
   new Promise((resolve) => {
     const srv = createServer();
@@ -207,6 +227,7 @@ const canBind = (port) =>
 
 /** dev.sh reads `.devport` from its own directory, so a worktree given one runs its own dev
  *  server and never competes with the checkout it was cut from. `.devport` is gitignored. */
+/** @param {string} wt @param {number} [from] */
 export async function assignDevPort(wt, from = 5174) {
   for (let port = from; port < from + 40; port += 1) {
     if (await canBind(port)) {

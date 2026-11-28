@@ -7,15 +7,25 @@ const IDLE_MS = 60 * 60 * 1000;
 const KEEP_BRANCHES = new Set(['dev', 'main']);
 const SSH = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5'];
 
+/** @typedef {{ path: string, head: string, branch?: string }} Worktree */
+/** @typedef {{ path: string, name: string, branch: string, removable: boolean, why: string }} WorktreeLeftover */
+/** @typedef {{ name: string, removable: boolean, why: string }} BranchLeftover */
+/** @typedef {{ main: string, worktrees: WorktreeLeftover[], branches: BranchLeftover[] }} Leftovers */
+
+/** @param {string} cmd @param {string[]} args @param {string} [cwd] */
 const run = (cmd, args, cwd) =>
   execFileSync(cmd, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+/** @param {string} cmd @param {string[]} args @param {string} [cwd] */
 const succeeds = (cmd, args, cwd) => spawnSync(cmd, args, { cwd, stdio: 'ignore' }).status === 0;
+/** @param {string[]} args @param {string} [cwd] */
 const git = (args, cwd) => run('git', args, cwd);
 
+/** @param {string} root */
 export const mainCheckout = (root) =>
   dirname(git(['rev-parse', '--path-format=absolute', '--git-common-dir'], root));
 
 function busyDirs() {
+  /** @type {string[]} */
   const dirs = [];
   for (const pid of readdirSync('/proc')) {
     if (!/^\d+$/.test(pid)) continue;
@@ -28,12 +38,15 @@ function busyDirs() {
   return dirs;
 }
 
+/** @param {string} main */
 function listWorktrees(main) {
+  /** @type {Worktree[]} */
   const found = [];
+  /** @type {Partial<Worktree>} */
   let cur = {};
   for (const line of [...git(['worktree', 'list', '--porcelain'], main).split('\n'), '']) {
     if (!line) {
-      if (cur.path) found.push(cur);
+      if (cur.path) found.push(/** @type {Worktree} */ (cur));
       cur = {};
       continue;
     }
@@ -46,8 +59,10 @@ function listWorktrees(main) {
   return found;
 }
 
+/** @param {string} main @param {string} ref */
 const inDev = (main, ref) => succeeds('git', ['merge-base', '--is-ancestor', ref, 'origin/dev'], main);
 
+/** @param {string} main @param {string} branch */
 function unchangedOnGitHub(main, branch) {
   try {
     return git(['rev-parse', branch], main) === git(['rev-parse', `refs/remotes/origin/${branch}`], main);
@@ -56,6 +71,7 @@ function unchangedOnGitHub(main, branch) {
   }
 }
 
+/** @param {string} path */
 function idleMs(path) {
   try {
     return Date.now() - Number(git(['reflog', '-1', '--format=%ct', 'HEAD'], path)) * 1000;
@@ -64,6 +80,7 @@ function idleMs(path) {
   }
 }
 
+/** @param {string} main @param {string | undefined} branch @param {Set<string> | null} open */
 function settled(main, branch, open) {
   if (!branch || KEEP_BRANCHES.has(branch)) return '';
   if (inDev(main, branch)) return 'merged into dev';
@@ -72,11 +89,13 @@ function settled(main, branch, open) {
   return '';
 }
 
+/** @param {string} root @param {Set<string> | null} [open] @returns {Leftovers} */
 export function localLeftovers(root, open = null) {
   const main = mainCheckout(root);
   const busy = busyDirs();
   const trees = listWorktrees(main);
   const checkedOut = new Set(trees.map((t) => t.branch).filter(Boolean));
+  /** @type {WorktreeLeftover[]} */
   const worktrees = [];
   for (const t of trees) {
     if (t.path === main) continue;
@@ -97,6 +116,7 @@ export function localLeftovers(root, open = null) {
     ].filter(Boolean);
     worktrees.push({ ...entry, removable: !blockers.length, why: blockers.join(', ') || done });
   }
+  /** @type {BranchLeftover[]} */
   const branches = [];
   for (const b of git(['for-each-ref', '--format=%(refname:short)', 'refs/heads/'], main).split('\n')) {
     if (!b || checkedOut.has(b) || KEEP_BRANCHES.has(b)) continue;
@@ -106,6 +126,7 @@ export function localLeftovers(root, open = null) {
   return { main, worktrees, branches };
 }
 
+/** @param {string} host @param {Set<string>} keep */
 function remoteClones(host, keep) {
   const script = [
     `cd ${RUNS_DIR} 2>/dev/null || exit 0;`,
@@ -127,6 +148,7 @@ function remoteClones(host, keep) {
     });
 }
 
+/** @param {string} host @param {string} name */
 const removeRemote = (host, name) =>
   spawnSync('ssh', [
     ...SSH,
@@ -134,11 +156,13 @@ const removeRemote = (host, name) =>
     `cd ${RUNS_DIR} && [ -d '${name}' ] && { [ ! -e '${name}/.git/f4x.lock' ] || flock -n '${name}/.git/f4x.lock' true; } && rm -rf '${name}'`
   ]).status === 0;
 
+/** @param {{ root: string, remove?: boolean, hosts?: string[], open?: Set<string> | null, log?: (line: string) => void }} options */
 export function tidy({ root, remove = false, hosts = [], open = null, log = (s) => process.stdout.write(`${s}\n`) }) {
   const main = mainCheckout(root);
   if (open) succeeds('git', ['fetch', '-q', '--prune', 'origin'], main);
   const found = localLeftovers(main, open);
   const verb = remove ? 'removed' : 'removable';
+  /** @type {Set<string>} */
   const removedTrees = new Set();
 
   log('worktrees:');

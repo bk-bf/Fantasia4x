@@ -50,6 +50,11 @@ import { createPull, editPull, syncPull, linkOf } from './lib/pulls.mjs';
 import { tidy } from './lib/tidy.mjs';
 import { closeArgs } from './lib/close.mjs';
 
+/** @typedef {{ id: number, node_id: string, pull_request?: unknown, labels?: { name: string }[], milestone?: { title: string } | null }} GhIssue */
+/** @typedef {{ number: number, title: string, state: string, open_issues: number, closed_issues: number, due_on: string | null }} Milestone */
+/** @typedef {{ number: number, milestone: { title: string } | null, parent: { number: number, milestone: { title: string } | null } | null }} Nesting */
+/** @typedef {{ kind: 'relative-link' | 'code-span-path' | 'blob', whole: string, label?: string, path: string, anchor?: string, line?: string, sha?: string, real: string | null }} Citation */
+
 process.stdout.on('error', (e) => {
   if (e.code === 'EPIPE') process.exit(0);
   throw e;
@@ -57,16 +62,20 @@ process.stdout.on('error', (e) => {
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];
-const arg = (n, d = null) => {
+/** @template {string | null} [D=null] @param {string} n @param {D} [d] @returns {string | D} */
+const arg = (n, d = /** @type {D} */ (null)) => {
   const i = argv.indexOf(`--${n}`);
   return i === -1 ? d : argv[i + 1];
 };
-const all = (n) => argv.reduce((a, v, i) => (v === `--${n}` ? [...a, argv[i + 1]] : a), []);
+/** @param {string} n */
+const all = (n) => argv.reduce((a, v, i) => (v === `--${n}` ? [...a, argv[i + 1]] : a), /** @type {string[]} */ ([]));
+/** @param {string} m @returns {never} */
 const die = (m) => {
   process.stderr.write(`${m}\n`);
   process.exit(1);
 };
 
+/** @param {string[]} args @param {string} [input] @returns {string} */
 const gh = (args, input) => runGh(args, input, '', true);
 
 const readBody = () => {
@@ -81,7 +90,9 @@ const TYPES = ['feat', 'fix', 'refactor', 'perf', 'test', 'tooling', 'docs', 'ch
 const EXT = /\.(ts|tsx|js|mjs|cjs|svelte|json|md|sh|py|rs|css|html)$/;
 
 /** Every way a citation reaches an issue body, and whether it points at something real. */
+/** @param {string | null | undefined} body @param {string | null} sha @returns {Citation[]} */
 function scanBody(body, sha) {
+  /** @type {Citation[]} */
   const found = [];
   const text = body ?? '';
 
@@ -93,8 +104,10 @@ function scanBody(body, sha) {
   }
 
   // a code span inside a link label is already linked; only a bare one is a missing link
+  /** @type {[number, number][]} */
   const linkSpans = [];
   for (const m of text.matchAll(/\[[^\]]*\]\([^)]*\)/g)) linkSpans.push([m.index, m.index + m[0].length]);
+  /** @param {number} i */
   const linked = (i) => linkSpans.some(([a, b]) => i >= a && i < b);
 
   for (const m of text.matchAll(/`([A-Za-z0-9._/-]+\.[A-Za-z]{1,8})(?::(\d+))?`/g)) {
@@ -112,6 +125,7 @@ function scanBody(body, sha) {
 
 /** `[[`x`](a)](b)` — a label that is itself a link. Keep the inner one; it is the specific
  *  citation, and the outer was added by converting a code span that was already inside a link. */
+/** @param {string | null | undefined} text */
 function unnest(text) {
   let out = text ?? '';
   for (let i = 0; i < 5; i++) {
@@ -122,6 +136,7 @@ function unnest(text) {
   return out;
 }
 
+/** @param {string | null | undefined} body @param {string | null} sha */
 function repair(body, sha) {
   return (body ?? '')
     .split(/(<!--[\s\S]*?-->)/)
@@ -129,6 +144,7 @@ function repair(body, sha) {
     .join('');
 }
 
+/** @param {string} text @param {string | null} sha */
 function repairProse(text, sha) {
   let out = unnest(issueRef(text));
   for (const f of scanBody(out, sha)) {
@@ -148,8 +164,10 @@ function repairProse(text, sha) {
 
 /** Repair what can be repaired, then refuse what cannot. Same treatment as fix-links, so a
  *  body written by hand and a body rewritten in bulk end up in the same shape. */
+/** @param {string | null | undefined} raw */
 const prepare = (raw) => repair(raw ?? '', indexedSha(null));
 
+/** @param {string[]} labels @param {string} body @param {{ allowReady?: boolean, template?: boolean, workType?: string }} [options] */
 const guard = (labels, body, { allowReady = false, template = false, workType } = {}) => {
   const errors = check({ labels, body, allowReady, template, workType });
   if (errors.length) die(`refused:\n  - ${errors.join('\n  - ')}`);
@@ -160,24 +178,30 @@ const allIssues = () =>
 
 const REPO_API = '/repos/bk-bf/Fantasia4x';
 
+/** @param {string} n @returns {GhIssue} */
 const issueRecord = (n) => {
+  /** @type {GhIssue | undefined} */
   let it;
   try {
     it = JSON.parse(gh(['api', `${REPO_API}/issues/${n}`]));
   } catch {
     die(`no issue #${n}`);
   }
-  if (it.pull_request) die(`#${n} is a pull request, not an issue`);
+  if (!it || it.pull_request) die(`#${n} is a pull request, not an issue`);
   return it;
 };
 
+/** @param {string} n */
 const issueId = (n) => issueRecord(n).id;
 
+/** @param {string} n @param {string} parent */
 const linkParent = (n, parent) =>
   gh(['api', '-X', 'POST', `${REPO_API}/issues/${parent}/sub_issues`, '-F', `sub_issue_id=${issueId(n)}`, '-F', 'replace_parent=true']);
 
+/** @returns {Milestone[]} */
 const milestones = () => JSON.parse(gh(['api', `${REPO_API}/milestones?state=all&per_page=100`]));
 
+/** @param {string} title */
 const milestoneNamed = (title) => {
   const every = milestones();
   const hit = every.find((m) => m.title === title);
@@ -194,15 +218,17 @@ const NESTING_QUERY =
   'issues(states:OPEN,first:100,after:$endCursor){nodes{number milestone{title} ' +
   'parent{number milestone{title}}} pageInfo{hasNextPage endCursor}}}}';
 
+/** @returns {Map<string, Nesting>} */
 const openNesting = () =>
   new Map(
     gh(['api', 'graphql', '--paginate', '--jq', '.data.repository.issues.nodes[]', '-f', `query=${NESTING_QUERY}`])
       .split('\n')
       .filter(Boolean)
-      .map((line) => JSON.parse(line))
+      .map((line) => /** @type {Nesting} */ (JSON.parse(line)))
       .map((i) => [String(i.number), i])
   );
 
+/** @param {Nesting | undefined} issue */
 const milestoneGaps = (issue) => {
   const own = issue?.milestone?.title ?? null;
   const parent = issue?.parent;
@@ -221,14 +247,15 @@ const milestoneGaps = (issue) => {
 if (cmd === 'check-labels') {
   let bad = 0;
   const nesting = openNesting();
+  /** @param {number} n @param {string} title @param {string[]} problems */
   const report = (n, title, problems) => {
     if (!problems.length) return;
     bad += 1;
     process.stdout.write(`#${n}  ${title.slice(0, 52)}\n`);
     for (const e of problems) process.stdout.write(`      ${e}\n`);
   };
-  for (const it of JSON.parse(
-    gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title,labels,body'])
+  for (const it of /** @type {{ number: number, title: string, labels: { name: string }[], body: string }[]} */ (
+    JSON.parse(gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title,labels,body']))
   )) {
     const names = it.labels.map((l) => l.name);
     report(it.number, it.title, [
@@ -299,7 +326,9 @@ if (cmd === 'check-labels') {
   process.stdout.write('ok\n');
 } else if (cmd === 'sync-labels') {
   const allowed = allowedLabels();
-  const have = new Set(JSON.parse(gh(['label', 'list', '--limit', '300', '--json', 'name'])).map((l) => l.name));
+  /** @type {{ name: string }[]} */
+  const labelList = JSON.parse(gh(['label', 'list', '--limit', '300', '--json', 'name']));
+  const have = new Set(labelList.map((l) => l.name));
   const DEFAULT = new Set(['bug', 'documentation', 'duplicate', 'enhancement', 'good first issue',
                            'help wanted', 'invalid', 'question', 'wontfix']);
   for (const l of allowed) {
@@ -345,13 +374,13 @@ if (cmd === 'check-labels') {
   if (milestone) args.push('--milestone', milestone);
   const url = gh(args, body).trim();
   process.stdout.write(url + '\n');
-  const n = url.split('/').pop();
+  const n = url.split('/').pop() ?? '';
   if (parent) {
     try {
       linkParent(n, parent);
       process.stdout.write(`#${n} is a sub-issue of #${parent}\n`);
     } catch (e) {
-      process.stderr.write(`note: created #${n} but could not make it a sub-issue of #${parent}: ${e.message}\n`);
+      process.stderr.write(`note: created #${n} but could not make it a sub-issue of #${parent}: ${e instanceof Error ? e.message : String(e)}\n`);
     }
   }
 } else if (cmd === 'edit') {
@@ -365,6 +394,7 @@ if (cmd === 'check-labels') {
   // Refuse what this edit introduces, not what it inherits. A body that already cites a file
   // somebody deleted cannot be ticked, relabelled or corrected while the old citation is held
   // against it, which locks the issue instead of protecting it.
+  /** @type {{ body: string | null, labels: { name: string }[] }} */
   const current = JSON.parse(gh(['issue', 'view', n, '--json', 'body,labels']));
   const removed = new Set(all('remove-label'));
   const resulting = [...new Set([...current.labels.map((l) => l.name), ...add])].filter(
@@ -382,8 +412,10 @@ if (cmd === 'check-labels') {
     ...(add.length || removed.size ? checkKind(resulting) : [])
   ].filter((e) => !inherited.includes(e));
   if (introduced.length) die(`refused:\n  - ${introduced.join('\n  - ')}`);
+  /** @type {string[]} */
   const changes = [];
-  if (arg('title')) changes.push('--title', arg('title'));
+  const newTitle = arg('title');
+  if (newTitle) changes.push('--title', newTitle);
   if (body !== null) changes.push('--body-file', '-');
   for (const l of add) changes.push('--add-label', l);
   for (const l of all('remove-label')) changes.push('--remove-label', l);
@@ -402,7 +434,7 @@ if (cmd === 'check-labels') {
   try {
     gh(['api', 'graphql', '-f', `query=${q}`, '-f', `i=${issueRecord(n).node_id}`, '-f', `b=${issueRecord(blocker).node_id}`]);
   } catch (e) {
-    die(e.message);
+    die(e instanceof Error ? e.message : String(e));
   }
   process.stdout.write(`#${n} is blocked by #${blocker}\n`);
 } else if (cmd === 'pr') {
@@ -413,20 +445,22 @@ if (cmd === 'check-labels') {
     const pull = createPull({ branch: head, title, body });
     process.stdout.write(`${pull?.url ?? ''}\n`);
   } catch (e) {
-    die(e.message);
+    die(e instanceof Error ? e.message : String(e));
   }
 } else if (cmd === 'pr-edit') {
   const n = argv[1] ?? die('which pull request?');
   try {
     editPull(n, readBody());
   } catch (e) {
-    die(e.message);
+    die(e instanceof Error ? e.message : String(e));
   }
   process.stdout.write(`#${n} description rewritten\n`);
 } else if (cmd === 'pr-sync') {
   const numbers = argv.slice(1).length
     ? argv.slice(1)
-    : JSON.parse(gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number'])).map((p) => String(p.number));
+    : /** @type {{ number: number }[]} */ (
+        JSON.parse(gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number']))
+      ).map((p) => String(p.number));
   let failed = 0;
   for (const n of numbers) {
     try {
@@ -434,7 +468,7 @@ if (cmd === 'check-labels') {
       process.stdout.write(`#${n} carries the labels and milestone of its issue\n`);
     } catch (e) {
       failed += 1;
-      process.stdout.write(`#${n}: ${String(e.message).split('\n')[0]}\n`);
+      process.stdout.write(`#${n}: ${(e instanceof Error ? e.message : String(e)).split('\n')[0]}\n`);
     }
   }
   if (failed) process.exit(1);
@@ -478,6 +512,7 @@ if (cmd === 'check-labels') {
   const due = arg('due');
   if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) die(`--due "${due}" is not a date — write YYYY-MM-DD`);
   const dueOn = due ? `${due}T23:59:59Z` : null;
+  /** @param {string[]} errors */
   const refuse = (errors) => {
     if (errors.length) die(`refused:\n  - ${errors.join('\n  - ')}`);
   };
@@ -524,9 +559,9 @@ if (cmd === 'check-labels') {
   }
 } else if (cmd === 'tidy') {
   const open = new Set(
-    JSON.parse(gh(['pr', 'list', '--state', 'open', '--limit', '200', '--json', 'headRefName'])).map(
-      (p) => p.headRefName
-    )
+    /** @type {{ headRefName: string }[]} */ (
+      JSON.parse(gh(['pr', 'list', '--state', 'open', '--limit', '200', '--json', 'headRefName']))
+    ).map((p) => p.headRefName)
   );
   tidy({ root: process.cwd(), remove: argv.includes('--remove'), hosts: ['ubuntu', ...all('host')], open });
 } else if (cmd === 'close') {

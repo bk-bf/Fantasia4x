@@ -4,6 +4,7 @@ const RULE = /^[a-z]+\/(?=[a-z0-9-]*[a-z])[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const LONG_LIVED = new Set(['main', 'dev']);
 
+/** @param {unknown} text */
 function slugOf(text) {
   const words = String(text).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/);
   let slug = '';
@@ -15,12 +16,14 @@ function slugOf(text) {
   return slug;
 }
 
+/** @param {{ number: number, data: { id: string | number, title: string } }} issue */
 export function branchFor(issue) {
   const { id, title } = issue.data;
   const words = /^\d+$/.test(String(id)) ? title : id;
   return `fix/${slugOf(words)}-${issue.number}`;
 }
 
+/** @param {string} name */
 export function branchProblem(name) {
   if (LONG_LIVED.has(name) || RULE.test(name)) return null;
   return (
