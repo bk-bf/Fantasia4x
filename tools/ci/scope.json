@@ -8,6 +8,7 @@
     { "paths": ["build-resources/**", "electron-builder.yml"], "legs": [] },
     { "paths": ["dev.sh", "launch.sh", "build.sh", "install.sh", "audit.sh", "cliff.toml"], "legs": [] },
     { "paths": ["tools/runner/**"], "legs": [] },
+    { "paths": ["render-native/**"], "legs": [] },
     { "paths": ["tools/test-health/**"], "legs": [] },
     { "paths": ["tools/tickprof/**"], "legs": ["check"] },
     { "paths": ["tools/ledger/install.sh", "tools/ledger/*.service", "tools/ledger/*.timer"], "legs": [] },
