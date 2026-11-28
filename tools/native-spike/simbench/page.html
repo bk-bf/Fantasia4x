@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>simbench</title></head>
+<body>
+<pre id="log"></pre>
+<script type="module">
+const q = new URLSearchParams(location.search);
+const el = document.getElementById('log');
+const send = (kind, data) => {
+  const msg = JSON.stringify({ kind, data });
+  if (window.ipc?.postMessage) window.ipc.postMessage(msg);
+  else if (window.webkit?.messageHandlers?.ipc) window.webkit.messageHandlers.ipc.postMessage(msg);
+  window.__events = (window.__events ?? []).concat([{ kind, data }]);
+};
+const log = (l) => { el.textContent += l + '\n'; send('log', l); };
+try {
+  const { runBench } = await import('./simbench.js');
+  const wasm = await (await fetch('./spatial_core_bg.wasm')).arrayBuffer();
+  const r = await runBench({ wasm, ticks: Number(q.get('ticks') ?? 1500), rounds: Number(q.get('rounds') ?? 3), log });
+  r.runtime = navigator.userAgent;
+  window.__result = r;
+  send('result', r);
+} catch (e) {
+  window.__error = String(e?.stack ?? e);
+  send('error', window.__error);
+}
+</script>
+</body>
+</html>

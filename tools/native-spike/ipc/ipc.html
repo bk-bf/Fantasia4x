@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>ipc</title></head>
+<body>
+<pre id="log"></pre>
+<script type="module">
+const el = document.getElementById('log');
+const raw = (s) => (window.ipc ? window.ipc.postMessage(s) : window.webkit.messageHandlers.ipc.postMessage(s));
+const send = (kind, data) => raw(JSON.stringify({ kind, data }));
+const log = (l) => { el.textContent += l + '\n'; send('log', l); };
+const pct = (xs, p) => { const s = [...xs].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
+let pending = null;
+window.__pong = () => { const r = pending; pending = null; r(); };
+window.__ack = (n) => { const r = pending; pending = null; r(n); };
+const call = (msg) => new Promise((res) => { pending = res; raw(msg); });
+const stats = (xs, bytes) => {
+  const total = xs.reduce((a, b) => a + b, 0);
+  return { n: xs.length, p50: pct(xs, 0.5), p95: pct(xs, 0.95), mean: total / xs.length, mbPerS: bytes ? (bytes * xs.length) / 1e6 / (total / 1000) : undefined };
+};
+async function timeLoop(n, fn) {
+  const xs = [];
+  for (let i = 0; i < n; i++) { const t = performance.now(); await fn(i); xs.push(performance.now() - t); }
+  return xs;
+}
+async function batchMs(n, fn) {
+  const t = performance.now();
+  for (let i = 0; i < n; i++) await fn(i);
+  return (performance.now() - t) / n;
+}
+try {
+  const snap = await (await fetch('./typical.json')).text();
+  const obj = JSON.parse(snap);
+  const full = 'x'.repeat(7_300_000);
+  const r = { runtime: navigator.userAgent, snapshotBytes: snap.length, crossOriginIsolated: self.crossOriginIsolated };
+  await timeLoop(200, (i) => call('p:' + i));
+  r.pingMsBatched = await batchMs(2000, (i) => call('p:' + i));
+  r.ping = stats(await timeLoop(2000, (i) => call('p:' + i)));
+  log('ping ' + JSON.stringify(r.ping) + ' batched ' + r.pingMsBatched);
+  r.stringify = stats(await timeLoop(200, () => JSON.stringify(obj)));
+  r.ipcSnapshotBatchedMs = await batchMs(300, () => call('b:' + snap));
+  r.ipcSnapshot = stats(await timeLoop(300, () => call('b:' + snap)), snap.length);
+  r.ipcSnapshotWithStringify = stats(await timeLoop(300, () => call('b:' + JSON.stringify(obj))), snap.length);
+  log('ipc snapshot ' + JSON.stringify(r.ipcSnapshot));
+  const parseUs = [];
+  for (let i = 0; i < 100; i++) parseUs.push(await call('j:' + snap));
+  r.rustSerdeParseUs = { p50: pct(parseUs, 0.5), p95: pct(parseUs, 0.95) };
+  r.rustPushSnapshot = stats(await timeLoop(300, () => call('s')), snap.length);
+  log('push ' + JSON.stringify(r.rustPushSnapshot) + ' serde ' + JSON.stringify(r.rustSerdeParseUs));
+  r.ipcFull = stats(await timeLoop(10, () => call('b:' + full)), full.length);
+  log('ipc full ' + JSON.stringify(r.ipcFull));
+  const post = (body) => fetch('bench://localhost/sink', { method: 'POST', body }).then((x) => x.text());
+  r.protoPostBodyBytesSeen = Number(await post(snap));
+  await timeLoop(50, () => post('x'));
+  r.protoTiny = stats(await timeLoop(1000, () => post('x')));
+  r.protoGetSnapshot = stats(await timeLoop(300, () => fetch('./typical.json').then((x) => x.text())), snap.length);
+  r.protoGetSnapshotParsed = stats(await timeLoop(300, () => fetch('./typical.json').then((x) => x.json())), snap.length);
+  log('proto ' + JSON.stringify({ tiny: r.protoTiny, get: r.protoGetSnapshot }));
+  send('result', r);
+} catch (e) {
+  send('error', String(e?.stack ?? e));
+}
+</script>
+</body>
+</html>

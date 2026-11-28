@@ -61,3 +61,4 @@ static/audit/
 # Packed standalone dev tools (generated; see tools/dev-tools/pack.mjs)
 .devtools-dist/
 
+tools/native-spike/out/
