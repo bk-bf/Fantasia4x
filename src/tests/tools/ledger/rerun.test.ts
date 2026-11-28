@@ -55,7 +55,7 @@ describe('rerun arguments', () => {
       speed: 4,
       seconds: 30,
       rounds: 2,
-      harnessRef: 'origin/test/look-overhaul',
+      harnessRef: 'origin/dev',
       keep: false
     });
   });
@@ -201,7 +201,7 @@ describe('rerun on a machine', () => {
     for (const e of entries) {
       expect(e).toMatchObject({ kind: 'harness', tool: 'tick-harness', machine: 'desktop', parent: saveId, scenario: 'save' });
       expect(e.world).toMatchObject({ save: worldId, pawns: 2, mobs: 3, turn: 120, map: '3x2', name: 'Fen' });
-      expect(e.perf).toMatchObject({ tps: { median: 190 }, speed: '4x', harnessCommit: SHA_LO, enginePatched: true });
+      expect(e.perf).toMatchObject({ tps: { median: 190 }, speed: '4x', harnessCommit: SHA_DEV, enginePatched: true });
       expect(e.host).toMatchObject({ load: [0.2, 0.3, 0.4], loadEnd: [0.2, 0.3, 0.4], cores: 16, others: [] });
       expect(e.invalid).toBeUndefined();
       expect(e.launchedBy).toMatchObject({ who: 'agent', session: 'sess-1', thread: 'thread-1' });
