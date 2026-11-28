@@ -6,7 +6,7 @@ const SHADED = 128;
 const STALK_BIT = 64;
 const CY_BITS = 127;
 const PLANT_CY_BITS = 63;
-const CLUMP = { leaf: [12, 12], wood: [9, 5] };
+const CLUMP = [12, 12];
 const RAGGED = 0.3;
 const SMALL = 16;
 const CORE_WEIGHT = 0.35;
@@ -39,14 +39,16 @@ const seeded = (id = '') => {
   };
 };
 
-const lum = (px = new Uint8ClampedArray(0), i = 0) =>
+/** @param {ArrayLike<number>} px */
+const lum = (px, i = 0) =>
   0.3 * px[i * 4] + 0.59 * px[i * 4 + 1] + 0.11 * px[i * 4 + 2];
 
-const greenish = (px = new Uint8ClampedArray(0), i = 0) =>
+/** @param {ArrayLike<number>} px */
+const greenish = (px, i = 0) =>
   px[i * 4 + 1] > px[i * 4] + 8 && px[i * 4 + 1] >= px[i * 4 + 2];
 
-function voronoi(pixels = [0], cls = 'leaf', w = 0, h = 0, rng = Math.random) {
-  const [cw, ch] = CLUMP[cls];
+function voronoi(pixels = [0], w = 0, h = 0, rng = Math.random) {
+  const [cw, ch] = CLUMP;
   const seeds = [];
   for (let gy = -ch; gy < h + ch; gy += ch)
     for (let gx = -cw; gx < w + cw; gx += cw) seeds.push([gx + rng() * cw, gy + rng() * ch]);
@@ -69,7 +71,8 @@ function voronoi(pixels = [0], cls = 'leaf', w = 0, h = 0, rng = Math.random) {
   return [...groups.values()];
 }
 
-function outlined(pixels = [0], px = new Uint8ClampedArray(0), w = 0, step = 0) {
+/** @param {number[]} pixels @param {ArrayLike<number>} px */
+function outlined(pixels, px, w = 0, step = 0) {
   const solid = new Set(pixels);
   const ink = new Set(pixels.filter((i) => lum(px, i) < INK));
   const label = new Map();
@@ -88,7 +91,7 @@ function outlined(pixels = [0], px = new Uint8ClampedArray(0), w = 0, step = 0) 
     const group = [start],
       queue = [start];
     while (queue.length) {
-      const at = queue.pop();
+      const at = /** @type {number} */ (queue.pop());
       for (const [dx, dy] of SIDES) {
         const n = near(at, dx, dy);
         if (
@@ -169,7 +172,8 @@ const spread = (group = [0], w = 0) => {
   return hi - lo + 1;
 };
 
-function plantPieces(pixels = [0], px = new Uint8ClampedArray(0), w = 0) {
+/** @param {number[]} pixels @param {ArrayLike<number>} px */
+function plantPieces(pixels, px, w = 0) {
   return outlined(pixels, px, w, STALK_STEP).flatMap((group) =>
     spread(group, w) > LOBE_WIDE ? outlined(group, px, w, LOBE_STEP) : [group]
   );
@@ -185,7 +189,7 @@ function painted(pixels = [0], phase = new Map(), w = 0) {
     const group = [start],
       queue = [start];
     while (queue.length) {
-      const at = queue.pop();
+      const at = /** @type {number} */ (queue.pop());
       for (const [dx, dy] of SIDES) {
         const x = (at % w) + dx;
         if (x < 0 || x >= w) continue;
@@ -231,7 +235,7 @@ const centreOf = (group = [0], w = 0) => {
 };
 
 /**
- * @param {{ w: number, h: number, px: Uint8ClampedArray, light: Uint8ClampedArray }} s
+ * @param {{ w: number, h: number, px: ArrayLike<number>, light: Uint8ClampedArray }} s
  * @param {{ id: string, tree: boolean, parts: boolean }} o
  */
 export function windPieces(s, o) {
@@ -249,7 +253,7 @@ export function windPieces(s, o) {
       const needles = solid.every((i) => !LEAVES.has(kindOf(i)));
       const leafy = (i = 0) => LEAVES.has(kindOf(i)) || (needles && greenish(px, i));
       const leaves = solid.filter(leafy);
-      for (const g of voronoi(leaves, 'leaf', w, h, rng)) groups.push([g, false]);
+      for (const g of voronoi(leaves, w, h, rng)) groups.push([g, false]);
     } else groups = plantPieces(solid, px, w).map((g) => [g, spread(g, w) <= LOBE_WIDE - 2]);
     for (const [group, stalk] of groups) {
       const [cx, cy] = centreOf(group, w);
@@ -288,7 +292,7 @@ export function windPieces(s, o) {
     } else light[i * 4 + 3] = WOOD;
   }
   if (!leaves.length) return;
-  const crown = o.id.startsWith('trees/') ? painted(leaves, phase, w) : voronoi(leaves, 'leaf', w, h, rng);
+  const crown = o.id.startsWith('trees/') ? painted(leaves, phase, w) : voronoi(leaves, w, h, rng);
   const [mx, my] = centreOf(leaves, w);
   let far = 0;
   for (const i of leaves) far = Math.max(far, Math.hypot((i % w) - mx, Math.floor(i / w) - my));
