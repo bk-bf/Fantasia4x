@@ -16,7 +16,8 @@ import { carcassConditionByType } from '../core/rules/world/carcassCondition';
 import { buildingsVisualSig } from '../core/state/buildingSig';
 import { gameLogger } from '../debug/gameLogger';
 import type { GameState, WorldTile, DroppedItem } from '../core/types';
-import { LedgerCapturer, postLedgerSave } from './ledgerCapture';
+import { LedgerCapturer } from './ledgerCapture';
+import { postCapture } from './ledgerPackClient';
 import { currentBuild } from '$lib/dev/buildStamp';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -68,7 +69,7 @@ const ledger = new LedgerCapturer({
     simLog.logEvent({ category: 'perf', turn, message });
     flushLog();
   },
-  post: postLedgerSave
+  post: postCapture
 });
 function installForwardingLogSink() {
   const fwd =

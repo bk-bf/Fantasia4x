@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { LedgerCapturer, serializeSave, type LedgerCaptureMeta } from '$lib/game/sim/ledgerCapture';
+import {
+  LedgerCapturer,
+  encodeState,
+  saveBody,
+  saveSize,
+  type LedgerCaptureMeta
+} from '$lib/game/sim/ledgerCapture';
+import { packSave } from '$lib/game/sim/ledgerPack';
 import { fromSnapshot, toSnapshot } from '$lib/game/headless/snapshot';
+import { gunzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
 import { worldId } from '../../../../tools/ledger/spool.mjs';
 import type { GameState, WorldTile } from '$lib/game/core/types';
 
@@ -33,6 +42,9 @@ const state = {
   generatedBy: { commit: 'a96826d3'.padEnd(40, '0'), branch: 'test/look-overhaul', dirty: 0 }
 } as unknown as GameState;
 
+const saveText = (save: Uint8Array) => Buffer.concat(saveBody(save)).toString('utf8');
+const sha = (data: Uint8Array) => createHash('sha256').update(data).digest('hex');
+
 function rig(fail = false) {
   const lines: string[] = [];
   const posts: { text: string; meta: LedgerCaptureMeta }[] = [];
@@ -45,9 +57,9 @@ function rig(fail = false) {
     clock: () => new Date('2026-11-27T01:37:00.000Z'),
     savedBy: 'b'.repeat(40),
     log: (_turn, message) => lines.push(message),
-    post: async (body, meta) => {
+    post: async (save, meta) => {
       if (fail) throw new Error('status 500');
-      posts.push({ text: await body.text(), meta });
+      posts.push({ text: saveText(save), meta });
       await new Promise<void>((done) => answers.push(done));
       return { captureId: meta.captureId, entry: `entry-${posts.length}` };
     }
@@ -64,15 +76,42 @@ function rig(fail = false) {
 const on = { on: true, intervalMs: 120_000, save: 'slot-1', scenario: null, session: '1a2b3c4d' };
 
 describe('the ledger capture in the sim worker', () => {
-  it('writes the same JSON a save holds, with the pathfinding fields left off each tile', async () => {
-    expect(await serializeSave(state).text()).toBe(JSON.stringify(toSnapshot(state)));
+  it('writes the snapshot a save holds with its keys sorted and the pathfinding fields left off each tile', () => {
+    const text = saveText(encodeState(state));
+    expect(JSON.parse(text)).toEqual(toSnapshot(state));
+    expect(text).toMatch(/^\{"v":1,"dynamic":\{"generatedBy":/);
+    expect(text).toContain('[{"resources":{},"subType":"grass","terrainType":"grassland","type":"land","walkable":true,"x":0,"y":0},');
   });
 
-  it('gives a loaded save, captured before it runs, the world id of the save file', async () => {
+  it('hashes to the world id of the state, the id the store gives it', async () => {
+    const save = encodeState(state);
+    expect(sha(save)).toBe(worldId({ ...toSnapshot(state) }));
+    expect((await packSave(save)).worldId).toBe(worldId({ ...toSnapshot(state) }));
+  });
+
+  it('gives a loaded save, captured before it runs, the world id of the save file', () => {
     const file = JSON.parse(JSON.stringify(toSnapshot(state)));
     const loaded = fromSnapshot(file);
-    const captured = JSON.parse(await serializeSave(loaded).text());
-    expect(worldId(captured)).toBe(worldId(file));
+    expect(sha(encodeState(loaded))).toBe(worldId(file));
+  });
+
+  it('packs the save gzipped under the sha256 of the gzipped bytes', async () => {
+    const save = encodeState(state);
+    const packed = await packSave(save);
+    expect(packed.blob).toBe(sha(packed.gz));
+    expect(gunzipSync(packed.gz).toString('utf8')).toBe(saveText(save));
+    expect(packed.bytes).toBe(saveSize(save));
+  });
+
+  it('grows its buffer past a size hint that was too small and keeps text that is not ASCII', () => {
+    const rows = Array.from({ length: 20 }, (_, y) =>
+      Array.from({ length: 40 }, (_, x) => ({ ...tile(x), y, subType: `grass ᚠᚢᚦ 🜂 ${x}` }))
+    );
+    const named = { ...state, worldMap: rows, culture: { name: 'Hjörvarðr' } } as unknown as GameState;
+    const save = encodeState(named, 8);
+    expect(save.length).toBeGreaterThan(1 << 16);
+    expect(JSON.parse(saveText(save))).toEqual(toSnapshot(named));
+    expect(sha(save)).toBe(worldId({ ...toSnapshot(named) }));
   });
 
   it('sends the whole state as a snapshot the headless loader reads back', async () => {
@@ -106,7 +145,7 @@ describe('the ledger capture in the sim worker', () => {
     capturer.configure(on);
     const capture = capturer.capture('session');
     expect(lines).toEqual([
-      `ledger save cap=1a2b3c4d-0 reason=session turn=30058 at=2026-11-27T01:37:00.000Z ms=7 speed=4x bytes=${serializeSave(state).size}`
+      `ledger save cap=1a2b3c4d-0 reason=session turn=30058 at=2026-11-27T01:37:00.000Z ms=7 speed=4x bytes=${saveSize(encodeState(state))}`
     ]);
     await new Promise((r) => setTimeout(r, 0));
     expect(posts).toHaveLength(1);

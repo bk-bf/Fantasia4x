@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { allEntries, entryExists, getEntry, readBlob } from './store.mjs';
+import { allEntries, entryExists, getEntry, hasBlob, readBlob } from './store.mjs';
 
 const ENTRY_ID = /^\d{8}T\d{6}Z-/;
 
@@ -25,5 +25,7 @@ export function resolveSave(root, target) {
 export function assembleSave(root, saveEntry) {
   const file = saveEntry.files.find((f) => f.role === 'save');
   if (!file) throw new Error(`save entry ${saveEntry.id} has no save file`);
+  if (!hasBlob(root, file.sha256))
+    throw new Error(`the save of ${saveEntry.id} is still in the ${saveEntry.machine} spool; pnpm ledger fetch ${saveEntry.id} pulls it`);
   return readBlob(root, file.sha256);
 }

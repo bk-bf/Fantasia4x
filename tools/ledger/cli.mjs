@@ -5,7 +5,7 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileRef, gitInfo, launchedBy, machineName, newId, spoolDir, writeBlob, writeEntry } from './spool.mjs';
-import { allEntries, getEntry, listEntries, reindex, storeDir, supersededBy, withLock } from './store.mjs';
+import { allEntries, getEntry, listEntries, missingBlobs, reindex, storeDir, supersededBy, withLock } from './store.mjs';
 import { ingestPerfLog, ingestResult, ingestSave } from './ingest.mjs';
 import { assembleSave, resolveSave } from './fetch.mjs';
 import { withInvalid } from './invalid.mjs';
@@ -58,6 +58,7 @@ function line(e) {
   const w = e.world ?? {};
   const where = e.branch ?? (e.refs ? e.refs.split(',')[0] : '-');
   const bad = e.invalid?.length ? `INVALID: ${e.invalid.join('; ')}` : '';
+  const away = missingBlobs(root, e).length ? `blob on ${e.machine}` : '';
   const tps = e.perf?.tps && !bad ? `tps ${Math.round(e.perf.tps.median)}@${e.perf.speed ?? '?'}` : '';
   const ck = e.perf?.checkpoints?.length ? `${e.perf.checkpoints.length} checkpoints` : '';
   return [
@@ -73,6 +74,7 @@ function line(e) {
     tps,
     tps && e.host?.load ? `load ${e.host.load[0]}` : '',
     ck,
+    away,
     bad
   ]
     .filter(Boolean)
@@ -115,11 +117,15 @@ function show([id]) {
   if (children.length) console.error(`\nlinked back to this entry:\n${children.map((c) => `  ${line(c)}`).join('\n')}`);
 }
 
-function fetch(args) {
+async function fetch(args) {
   const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { to: { type: 'string' } } });
   const target = positionals[0];
   if (!target) throw new Error('usage: pnpm ledger fetch <entry id|world id> [--to file]');
   const save = resolveSave(root, target);
+  for (const file of missingBlobs(root, save)) {
+    console.error(`pulling blob ${file.sha256.slice(0, 12)} from the ${save.machine} spool`);
+    (await import('./sync.mjs')).fetchBlob(root, save.machine, file.sha256);
+  }
   const gz = assembleSave(root, save);
   if (values.to === '-') return process.stdout.write(gz);
   const out = values.to ?? `${save.world.save.slice(0, 12)}.json.gz`;
@@ -266,7 +272,7 @@ try {
   if (cmd === 'list') host ? overSsh(host, ['list', ...rest]) : list(rest);
   else if (cmd === 'show') host ? overSsh(host, ['show', ...rest]) : show(rest);
   else if (cmd === 'fetch') {
-    if (!host) fetch(rest);
+    if (!host) await fetch(rest);
     else {
       const { values, positionals } = parseArgs({ args: rest, allowPositionals: true, options: { to: { type: 'string' } } });
       const gz = overSsh(host, ['fetch', positionals[0], '--to', '-'], true);

@@ -47,7 +47,7 @@
     "threat:check": "node tools/threat-model.mjs --check",
     "promote": "node tools/promote.mjs",
     "hooks:install": "bash tools/hooks/install.sh",
-    "test:audit": "RUN_AUDITS=1 vitest run src/tests/game/systems/{weaponMetaNone,weaponMetaLight,weaponMetaMedium,weaponMetaHeavy,weaponMetaHeadToHead,styleMatchups,armourStyleAudit,weaponFightSim,combatBalanceAudit,buildFitAudit,t4WeaponAudit,maimTargeting,carryCapacityAudit,weaponPawnFitNone,weaponPawnFitMedium,weaponPawnFitHeavy,creatureMatchup0,creatureMatchup1,creatureMatchup2,creatureMatchup3,creatureMatchup4,creatureMatchup5,creatureMatchup6,creatureMatchup7}.test.ts",
+    "test:audit": "RUN_AUDITS=1 node tools/remote/run.mjs vitest run src/tests/game/systems/{weaponMetaNone,weaponMetaLight,weaponMetaMedium,weaponMetaHeavy,weaponMetaHeadToHead,styleMatchups,armourStyleAudit,weaponFightSim,combatBalanceAudit,buildFitAudit,t4WeaponAudit,maimTargeting,carryCapacityAudit,weaponPawnFitNone,weaponPawnFitMedium,weaponPawnFitHeavy,creatureMatchup0,creatureMatchup1,creatureMatchup2,creatureMatchup3,creatureMatchup4,creatureMatchup5,creatureMatchup6,creatureMatchup7}.test.ts",
     "check:types": "node tools/ci/warnings.mjs svelte-check",
     "knip": "knip --no-progress --include dependencies,unlisted,unresolved",
     "dupes": "jscpd src",

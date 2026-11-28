@@ -13,6 +13,7 @@ import {
 } from 'node:fs';
 import { homedir, hostname } from 'node:os';
 import { dirname, join } from 'node:path';
+import { HASH_HEAD, snapshotBody } from './canonical.mjs';
 
 /** @type {Record<string, string>} */
 const HOSTS = {
@@ -104,66 +105,10 @@ export function sha256Of(data) {
   return createHash('sha256').update(data).digest('hex');
 }
 
-/** @param {unknown} value @param {(chunk: string) => void} out @returns {boolean} */
-function canonical(value, out) {
-  if (value === undefined || typeof value === 'function' || typeof value === 'symbol') return false;
-  if (value === null || typeof value !== 'object') {
-    out(JSON.stringify(value) ?? 'null');
-    return true;
-  }
-  const json = /** @type {{ toJSON?: () => unknown }} */ (value).toJSON;
-  if (typeof json === 'function') return canonical(json.call(value), out);
-  if (Array.isArray(value)) {
-    out('[');
-    value.forEach((v, i) => {
-      if (i) out(',');
-      if (!canonical(v, out)) out('null');
-    });
-    out(']');
-    return true;
-  }
-  const record = /** @type {Record<string, unknown>} */ (value);
-  out('{');
-  let first = true;
-  for (const [key, quoted] of sortedKeys(Object.keys(record))) {
-    const v = record[key];
-    if (v === undefined || typeof v === 'function' || typeof v === 'symbol') continue;
-    out(first ? quoted : `,${quoted}`);
-    first = false;
-    canonical(v, out);
-  }
-  out('}');
-  return true;
-}
-
-/** @type {Map<string, [string, string][]>} */
-const shapes = new Map();
-
-/** @param {string[]} keys */
-function sortedKeys(keys) {
-  const shape = keys.join('\u0000');
-  let sorted = shapes.get(shape);
-  if (!sorted) {
-    sorted = [...keys].sort().map((k) => /** @type {[string, string]} */ ([k, `${JSON.stringify(k)}:`]));
-    if (shapes.size > 10_000) shapes.clear();
-    shapes.set(shape, sorted);
-  }
-  return sorted;
-}
-
 /** @param {{ dynamic?: unknown, world?: unknown, [field: string]: unknown }} snapshot */
 export function worldId(snapshot) {
-  const hash = createHash('sha256');
-  let buf = '';
-  const out = (/** @type {string} */ chunk) => {
-    buf += chunk;
-    if (buf.length > 1 << 16) {
-      hash.update(buf);
-      buf = '';
-    }
-  };
-  canonical({ dynamic: snapshot.dynamic, world: snapshot.world }, out);
-  hash.update(buf);
+  const hash = createHash('sha256').update(HASH_HEAD);
+  snapshotBody(snapshot, (chunk) => hash.update(chunk));
   return hash.digest('hex');
 }
 
@@ -231,4 +176,11 @@ export function writeEntry(entry, dir = spoolDir()) {
   };
   writeOnce(join(dir, 'entries', `${filled.id}.json`), JSON.stringify(filled, null, 2) + '\n');
   return filled.id;
+}
+
+export const RECEIPTS = 'stored';
+
+/** @param {unknown[]} shas @param {string} [dir] */
+export function storedBlobs(shas, dir = spoolDir()) {
+  return shas.filter((sha) => typeof sha === 'string' && SHA256.test(sha) && existsSync(join(dir, RECEIPTS, sha)));
 }

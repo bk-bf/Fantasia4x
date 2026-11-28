@@ -124,13 +124,14 @@ function entryPath(root, id) {
   return join(root, 'entries', `${m[1]}-${m[2]}`, `${id}.json`);
 }
 
-export function checkEntry(entry, root) {
+export function checkEntry(entry, root, { deferred = false } = {}) {
   if (entry.v !== 1) throw new Error(`entry ${entry.id}: v must be 1`);
   if (!ID.test(entry.id ?? '')) throw new Error(`entry id ${entry.id} is not <stamp>-<machine>-<hex>`);
   if (!KINDS.has(entry.kind)) throw new Error(`entry ${entry.id}: kind ${entry.kind} is not one of ${[...KINDS]}`);
   if (entry.invalid !== undefined && (!Array.isArray(entry.invalid) || entry.invalid.some((r) => typeof r !== 'string' || !r)))
     throw new Error(`entry ${entry.id}: invalid must be a list of reasons`);
   for (const f of entry.files ?? []) {
+    if (deferred && /^[0-9a-f]{64}$/.test(f.sha256 ?? '')) continue;
     if (!hasBlob(root, f.sha256)) throw new Error(`entry ${entry.id}: file ${f.name} has no blob ${f.sha256}`);
   }
   if (entry.supersedes !== undefined && (entry.supersedes === entry.id || !ID.test(entry.supersedes ?? '') || !entryExists(root, entry.supersedes)))
@@ -141,9 +142,9 @@ export function entryExists(root, id) {
   return existsSync(entryPath(root, id));
 }
 
-export function putEntry(root, entry) {
+export function putEntry(root, entry, opts = {}) {
   return withLock(root, () => {
-    checkEntry(entry, root);
+    checkEntry(entry, root, opts);
     const text = JSON.stringify(entry, null, 2) + '\n';
     writeOnce(entryPath(root, entry.id), text);
     appendFileSync(join(root, 'index.jsonl'), JSON.stringify(entry) + '\n');
@@ -251,7 +252,7 @@ export function putKeyed(root, key, entry) {
   });
 }
 
-export function ingestSpool(root, spool, { remove = false } = {}) {
+export function ingestSpool(root, spool, { remove = false, deferred = false } = {}) {
   const report = { blobs: 0, entries: 0, known: 0, removed: 0, errors: [] };
   const blobsDir = join(spool, 'blobs');
   const held = [];
@@ -293,7 +294,7 @@ export function ingestSpool(root, spool, { remove = false } = {}) {
           }
           report.known++;
         } else {
-          putEntry(root, entry);
+          putEntry(root, entry, { deferred });
           report.entries++;
         }
         done.push(src);
@@ -310,6 +311,10 @@ export function ingestSpool(root, spool, { remove = false } = {}) {
     }
   }
   return report;
+}
+
+export function missingBlobs(root, entry) {
+  return (entry.files ?? []).filter((f) => !hasBlob(root, f.sha256));
 }
 
 export function blobSize(root, sha) {
