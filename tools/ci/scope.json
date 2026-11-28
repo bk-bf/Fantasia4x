@@ -59,7 +59,6 @@
         "pnpm-workspace.yaml",
         ".npmrc",
         "eslint.config.js",
-        "eslint-config-output.json",
         "knip.json",
         ".jscpd.json",
         ".prettierrc",
