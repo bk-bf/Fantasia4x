@@ -509,6 +509,24 @@ describe('sync from a machine', () => {
   };
   const sha = (b: string | Buffer) => createHash('sha256').update(b).digest('hex');
 
+  it('leaves the machine spool alone when syncing into a store other than the live one', () => {
+    const home = join(dir, 'home');
+    const store = join(dir, 'store');
+    const blob = Buffer.from('spooled blob');
+    const id = newId('test', new Date('2026-11-28T01:00:00Z'));
+    const spooled = { v: 1, id, kind: 'play', machine: 'test', files: [{ role: 'log', name: 'b', sha256: sha(blob), bytes: blob.length }] };
+    const files = {
+      [`${SPOOL}/blobs/${sha(blob).slice(0, 2)}/${sha(blob)}`]: blob,
+      [`${SPOOL}/entries/${id}.json`]: JSON.stringify(spooled)
+    };
+    tree(home, files);
+    const report = { reached: [] as string[], skipped: [] as string[], entries: 0, play: 0, open: 0, removed: 0, errors: [] as string[] };
+    pullMachine(store, 'test', { ssh: null, root: home, checkouts: [] }, report);
+    expect(report).toMatchObject({ entries: 1, removed: 0, errors: [] });
+    expect(getEntry(store, id).id).toBe(id);
+    for (const rel of Object.keys(files)) expect(existsSync(join(home, rel))).toBe(true);
+  });
+
   it('clears from the spool only what the store holds and verifies, and touches nothing else', () => {
     const home = join(dir, 'home');
     const store = join(dir, 'store');
@@ -535,7 +553,7 @@ describe('sync from a machine', () => {
       [`${SPOOL}/entries/${changedId}.json`]: JSON.stringify(changed)
     });
     const report = { reached: [] as string[], skipped: [] as string[], entries: 0, play: 0, open: 0, removed: 0, errors: [] as string[] };
-    pullMachine(store, 'test', { ssh: null, root: home, checkouts: ['proj'] }, report);
+    pullMachine(store, 'test', { ssh: null, root: home, checkouts: ['proj'] }, report, { clear: true });
     expect(report.reached).toEqual(['test']);
     expect(report.entries).toBe(1);
     expect(report.removed).toBe(2);
