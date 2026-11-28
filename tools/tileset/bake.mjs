@@ -45,6 +45,7 @@ import {
   OFFSET_STEP
 } from './ground.mjs';
 import { pixelSprite, treeFoot, treeGround, TREE_GROUND_KINDS } from './treeGround.mjs';
+import { windPieces } from './windPieces.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', '..', 'static', 'tilesets', 'painted');
@@ -503,7 +504,11 @@ function sprites(ground = groundSprites(A, [], [])) {
       }, [])
     );
   const trees = treeSet(A);
-  for (const { id, sprite: s } of trees.drawn) add(id, object(s, 16, 23));
+  for (const { id, sprite: s, flags } of trees.drawn) {
+    const drawn = object(s, 16, 23);
+    windPieces(drawn, { id, tree: true, parts: flags > 0 });
+    add(id, drawn);
+  }
   const under = treeGroundSet(trees.drawn);
   for (const [id, s] of under.sprites) add(id, s);
   for (const k of Object.keys(A.PLANTS))
@@ -528,6 +533,9 @@ function sprites(ground = groundSprites(A, [], [])) {
   const pieces = pieceSprites(add);
   const extra = registrySprites(add, out, roles, DBX);
   const drops = dropSprites(add, DBX);
+  for (const [id, s] of out)
+    if (/^(plant|crop)\//.test(id) && s.light.length === s.w * s.h * 4)
+      windPieces(s, { id, tree: false, parts: false });
   const grass = DBX.list
     .filter((e = DBX.list[0]) => e.cat === 'plant' && e.layer === 'cover')
     .map((e = DBX.list[0]) => e.dbId);
@@ -810,7 +818,7 @@ export function bake() {
       if (s.light.length)
         light.set(s.light.subarray(j * s.w * 4, (j + 1) * s.w * 4), ((y + j) * ATLAS_W + x) * 4);
     }
-  for (let i = 3; i < light.length; i += 4) light[i] = 255;
+  for (let i = 3; i < light.length; i += 4) light[i] ||= 255;
   const rects = placed
     .sort((a, b) => (a.id < b.id ? -1 : 1))
     .map(({ id, s, x, y }) => [
