@@ -29,7 +29,7 @@ describe('pnpm issue close', () => {
 
   it('reaches GitHub as state_reason not_planned over REST', () => {
     const calls: unknown[] = [];
-    const io = { repo: () => 'bk-bf/Fantasia4x', api: (...a: unknown[]) => (calls.push(a), {}) };
+    const io = { repo: () => 'bk-bf/Fantasia4x', api: (...a: unknown[]) => (calls.push(a), {}), pages: () => [], readFile: () => '' };
     const args = closeArgs('22', '', true, 'dropped');
     if (typeof args === 'string') throw new Error(args);
     restPlan(args, undefined, io)!();

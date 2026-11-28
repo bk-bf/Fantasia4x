@@ -1,12 +1,15 @@
-// @ts-nocheck
 const API = process.env.GITHUB_API_URL ?? 'https://api.github.com';
 const POLL_MS = 15_000;
 
 export const CODSPEED = 'CodSpeed Performance Analysis';
 export const WAIT_MS = 10 * 60_000;
 
+/** @typedef {{ status: string, conclusion: string | null, started_at?: string | null, output?: { title?: string | null, summary?: string | null }, details_url?: string | null }} CheckRun */
+
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** @param {string} method @param {string} path @param {unknown} [body] @returns {Promise<unknown>} */
 export async function api(method, path, body) {
   const res = await fetch(`${API}${path}`, {
     method,
@@ -20,6 +23,7 @@ export async function api(method, path, body) {
   return res.status === 204 ? {} : res.json();
 }
 
+/** @param {CheckRun[]} runs @param {string} [since] @returns {CheckRun | null} */
 export const latestRun = (runs, since) =>
   runs
     .filter((r) => r.status === 'completed' && (!since || (r.started_at ?? '') >= since))
@@ -29,9 +33,8 @@ export const latestRun = (runs, since) =>
 export async function waitForCodspeed({ repo, sha, since }) {
   const until = Date.now() + WAIT_MS;
   while (Date.now() < until) {
-    const found = await api(
-      'GET',
-      `/repos/${repo}/commits/${sha}/check-runs?check_name=${encodeURIComponent(CODSPEED)}`
+    const found = /** @type {{ check_runs?: CheckRun[] }} */ (
+      await api('GET', `/repos/${repo}/commits/${sha}/check-runs?check_name=${encodeURIComponent(CODSPEED)}`)
     );
     const run = latestRun(found.check_runs ?? [], since);
     if (run) return run;
@@ -40,6 +43,7 @@ export async function waitForCodspeed({ repo, sha, since }) {
   return null;
 }
 
+/** @param {CheckRun | null} run @param {boolean} accepted */
 export function gateVerdict(run, accepted) {
   if (!run)
     return {

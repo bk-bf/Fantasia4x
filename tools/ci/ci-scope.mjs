@@ -1,12 +1,15 @@
 #!/usr/bin/env node
-// @ts-nocheck
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 
 export const MANIFEST = 'tools/ci/scope.json';
 
+/** @typedef {{ paths: string[], legs: string[] }} Rule */
+
+/** @type {{ legs: string[], rules: Rule[], named?: Record<string, string> }} */
 const manifest = JSON.parse(readFileSync(new URL('./scope.json', import.meta.url), 'utf8'));
 
+/** @param {string} glob */
 const globToRegExp = (glob) =>
   new RegExp(
     '^' +
@@ -27,30 +30,35 @@ const globToRegExp = (glob) =>
 
 const rules = manifest.rules.map((r) => ({ ...r, res: r.paths.map(globToRegExp) }));
 
+/** @param {string} registry @returns {{ file: string, tests: string[] }[]} */
+const readRegistry = (registry) => JSON.parse(readFileSync(new URL(`../../${registry}`, import.meta.url), 'utf8'));
+
+/** @type {[string, Set<string>][]} */
 const namedBy = Object.entries(manifest.named ?? {}).map(([leg, registry]) => [
   leg,
-  new Set(
-    JSON.parse(readFileSync(new URL(`../../${registry}`, import.meta.url), 'utf8')).flatMap((m) => [
-      m.file,
-      ...m.tests
-    ])
-  )
+  new Set(readRegistry(registry).flatMap((m) => [m.file, ...m.tests]))
 ]);
 
+/** @param {string} file */
 export const ruleFor = (file) => rules.find((r) => r.res.some((re) => re.test(file)));
 
+/** @param {string[]} files */
 export const unmappedFiles = (files) => files.filter((f) => !ruleFor(f));
 
+/** @param {string[]} files */
 export const unusedPatterns = (files) =>
   rules.flatMap((r) => r.paths.filter((p, i) => !files.some((f) => r.res[i].test(f))));
 
+/** @param {string[]} files */
 export function scopeOf(files) {
+  /** @type {Record<string, boolean>} */
   const scope = Object.fromEntries(manifest.legs.map((leg) => [leg, false]));
   for (const f of files) for (const leg of ruleFor(f)?.legs ?? []) scope[leg] = true;
   for (const [leg, names] of namedBy) if (files.some((f) => names.has(f))) scope[leg] = true;
   return scope;
 }
 
+/** @param {string[]} files */
 export const unmappedMessage = (files) =>
   [
     `${files.length} file(s) match no rule in ${MANIFEST}:`,
@@ -58,6 +66,7 @@ export const unmappedMessage = (files) =>
     `Add a rule for each in ${MANIFEST}: the CI legs it needs, or [] to exclude it.`
   ].join('\n');
 
+/** @param {string} base @param {string} [head] */
 export const changedFiles = (base, head = 'HEAD') =>
   execFileSync('git', ['diff', '--name-only', base, head], { encoding: 'utf8' })
     .split('\n')

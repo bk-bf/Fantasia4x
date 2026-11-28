@@ -23,7 +23,7 @@ const MARKER = '<!-- f4x-perf-notes -->';
 /** @typedef {{ name: string, ticks: number, base: number[], head: number[], baseMs: number, headMs: number }} TpsNote */
 /** @typedef {{ total: number, seconds: number, files: { file: string, pct: number }[] }} CoverageNote */
 /** @typedef {{ ran: number, seconds: number, survivors: { id: string, file: string, line: number }[] }} MutantNote */
-/** @typedef {{ output?: { title?: string, summary?: string }, details_url?: string }} CheckRun */
+/** @typedef {import('../bench/codspeed-check.mjs').CheckRun} CheckRun */
 /** @typedef {{ mark: string, name: string, file: string, base: string, head: string, change: string }} CodspeedRow */
 
 const ROW =
@@ -176,8 +176,9 @@ function workPinsSection(notes) {
 
 /** @param {string} body @param {boolean} hasNews */
 async function upsert(body, hasNews) {
-  /** @type {{ id: number, body?: string }[]} */
-  const comments = await api('GET', `/repos/${REPO}/issues/${PR}/comments?per_page=100`);
+  const comments = /** @type {{ id: number, body?: string }[]} */ (
+    await api('GET', `/repos/${REPO}/issues/${PR}/comments?per_page=100`)
+  );
   const mine = comments.find((c) => c.body?.startsWith(MARKER));
   if (mine) return api('PATCH', `/repos/${REPO}/issues/comments/${mine.id}`, { body });
   if (hasNews) return api('POST', `/repos/${REPO}/issues/${PR}/comments`, { body });

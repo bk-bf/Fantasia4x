@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @ts-nocheck
 import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, relative } from 'node:path';
@@ -7,14 +6,18 @@ import { pathToFileURL } from 'node:url';
 
 const SUMMARY_FILE = 'coverage/coverage-summary.json';
 
+/** @typedef {Record<string, { lines: { pct: number } }>} Summary */
+/** @typedef {{ file: string, pct: number }} FileCoverage */
+
+/** @param {Summary} summary @param {Set<string>} changed @param {string} [cwd] @returns {FileCoverage[]} */
 export function changedGameFiles(summary, changed, cwd = process.cwd()) {
   return Object.entries(summary)
-    .map(([file, s]) => [isAbsolute(file) ? relative(cwd, file) : file, s])
-    .filter(([file]) => file !== 'total' && changed.has(file))
-    .map(([file, s]) => ({ file, pct: s.lines.pct }))
+    .map(([file, s]) => ({ file: isAbsolute(file) ? relative(cwd, file) : file, pct: s.lines.pct }))
+    .filter(({ file }) => file !== 'total' && changed.has(file))
     .sort((a, b) => a.file.localeCompare(b.file));
 }
 
+/** @param {number} total @param {FileCoverage[]} files @param {number} seconds */
 export function summaryText(total, files, seconds) {
   const lines = [`### Coverage: ${total.toFixed(1)}% of \`src/lib/game\` lines, computed in ${Math.round(seconds)}s`, ''];
   if (files.length)
@@ -29,11 +32,13 @@ export function summaryText(total, files, seconds) {
   return lines.join('\n');
 }
 
+/** @param {string} name @param {string} [fallback] */
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
   return i >= 0 ? process.argv[i + 1] : fallback;
 }
 
+/** @param {string} [base] */
 function changedFiles(base) {
   const from = base && !/^0+$/.test(base) ? base : 'HEAD^1';
   try {
@@ -60,6 +65,7 @@ function main() {
     process.exit(run.status ?? 1);
   }
 
+  /** @type {Summary} */
   const summary = JSON.parse(readFileSync(SUMMARY_FILE, 'utf8'));
   const total = summary.total.lines.pct;
   const files = changedGameFiles(summary, changedFiles(base));

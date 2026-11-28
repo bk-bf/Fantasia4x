@@ -21,7 +21,7 @@ function fakeIo(responses: Record<string, unknown> = {}, failing: Record<string,
   return { calls, io };
 }
 
-const run = (args: string[], io: unknown, input?: string): string => {
+const run = (args: string[], io: Parameters<typeof restPlan>[2], input?: string): string => {
   const plan = restPlan(args, input, io);
   if (!plan) throw new Error(`no REST plan for gh ${args.join(' ')}`);
   return plan();

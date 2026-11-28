@@ -1,13 +1,15 @@
 #!/usr/bin/env node
-// @ts-nocheck
 import { execFileSync, spawnSync } from 'node:child_process';
 import { chainRefOf, pickRun, runBranch, verdict } from './lib/chain-run.mjs';
 
 const WORKFLOW = 'check.yml';
 const pre = process.argv.includes('--pre');
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** @param {string} cmd @param {string[]} args @returns {string} */
 const read = (cmd, args) =>
   execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }).trim();
+/** @param {string} message @returns {never} */
 const fail = (message) => {
   process.stderr.write(`pnpm chain: ${message}\n`);
   process.exit(2);
@@ -36,6 +38,7 @@ if (event === 'push' && spawnSync('git', ['push', '--force', 'origin', `HEAD:ref
 
 async function findRun() {
   for (let i = 0; i < 40; i++) {
+    /** @type {(import('./lib/chain-run.mjs').RunSummary & { databaseId: number, url: string })[]} */
     const runs = JSON.parse(
       read('gh', [
         'run', 'list', '--workflow', WORKFLOW, '--commit', sha, '--event', event, '--branch', headBranch,
@@ -54,12 +57,16 @@ if (!found) fail(`no ${event} run of ${WORKFLOW} started for ${sha.slice(0, 8)} 
 const what = event === 'pull_request' ? `pull request #${pull.number}` : pre ? 'the pre-check' : 'the chain';
 process.stdout.write(`pnpm chain: ${what} on ${branch} at ${sha.slice(0, 8)}: ${found.url}\n`);
 const runId = String(found.databaseId);
-let run = null;
-for (let attempt = 0; attempt < 3; attempt++) {
-  spawnSync('gh', ['run', 'watch', runId, '--interval', '15'], { stdio: 'inherit' });
-  run = JSON.parse(read('gh', ['run', 'view', runId, '--json', 'status,conclusion,jobs']));
-  if (run.status === 'completed') break;
+/** @returns {import('./lib/chain-run.mjs').Run} */
+function watchRun() {
+  for (let attempt = 1; ; attempt++) {
+    spawnSync('gh', ['run', 'watch', runId, '--interval', '15'], { stdio: 'inherit' });
+    /** @type {import('./lib/chain-run.mjs').Run} */
+    const run = JSON.parse(read('gh', ['run', 'view', runId, '--json', 'status,conclusion,jobs']));
+    if (run.status === 'completed' || attempt === 3) return run;
+  }
 }
+const run = watchRun();
 const result = verdict(run);
 if (event === 'push' && run.status === 'completed')
   spawnSync('git', ['push', 'origin', '--delete', chainRef], { stdio: 'inherit' });

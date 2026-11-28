@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createWriteStream, cpSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
@@ -9,6 +8,10 @@ import { createGzip } from 'node:zlib';
 const ORIGIN_DIR = /^(https?)_(.+)_(\d+)\.indexeddb\.leveldb$/;
 const SLICE = 8_000_000;
 
+/** @typedef {{ id: string, meta: unknown, file: string, textSha256: string }} ReadSave */
+/** @typedef {{ origin: string, id: string | null, file: string | null, textSha256?: string, meta?: unknown, databases?: string[] }} Found */
+
+/** @param {string} dir @param {number} spare */
 function originOf(dir, spare) {
   const m = ORIGIN_DIR.exec(dir);
   if (m) return { url: `${m[1]}://${m[2]}${m[3] === '0' ? '' : `:${m[3]}`}/`, as: dir.replace(/\.leveldb$/, '') };
@@ -17,6 +20,11 @@ function originOf(dir, spare) {
 
 const openDb = `new Promise((d, f) => { const r = indexedDB.open('fantasia4x'); r.onsuccess = () => d(r.result); r.onerror = () => f(r.error); })`;
 
+/**
+ * @param {import('playwright').BrowserType} chromium
+ * @param {string} idbDir @param {string} base @param {string} scratch @param {number} spare @param {string} outDir
+ * @returns {Promise<{ url: string, names: string[], saves: ReadSave[], keys?: number }>}
+ */
 async function readOrigin(chromium, idbDir, base, scratch, spare, outDir) {
   const { url, as } = originOf(base, spare);
   const udd = mkdtempSync(join(scratch, 'udd-'));
@@ -31,13 +39,16 @@ async function readOrigin(chromium, idbDir, base, scratch, spare, outDir) {
   }
   rmSync(join(target, `${as}.leveldb`, 'LOCK'), { force: true });
   const ctx = await chromium.launchPersistentContext(udd, { headless: true });
+  /** @type {ReadSave[]} */
   const saves = [];
   try {
     const page = await ctx.newPage();
     await page.route('**/*', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }));
     await page.goto(url);
+    /** @type {string[]} */
     const names = await page.evaluate(`indexedDB.databases ? indexedDB.databases().then((d) => d.map((x) => x.name)) : []`);
     if (!names.includes('fantasia4x')) return { url, names, saves };
+    /** @type {string[]} */
     const keys = await page.evaluate(
       `(async () => { const db = await ${openDb}; if (!db.objectStoreNames.contains('saves')) { db.close(); return []; } const k = await new Promise((d) => { const r = db.transaction('saves').objectStore('saves').getAllKeys(); r.onsuccess = () => d(r.result.map(String)); }); db.close(); return k; })()`
     );
@@ -46,6 +57,7 @@ async function readOrigin(chromium, idbDir, base, scratch, spare, outDir) {
       const meta = await page.evaluate(
         `(async () => { const db = await ${openDb}; const v = await new Promise((d) => { const r = db.transaction('saves').objectStore('saves').get(${JSON.stringify(`meta:${id}`)}); r.onsuccess = () => d(r.result ?? null); }); db.close(); return v; })()`
       );
+      /** @type {number} */
       const length = await page.evaluate(
         `(async () => { const db = await ${openDb}; const get = (k) => new Promise((d) => { const r = db.transaction('saves').objectStore('saves').get(k); r.onsuccess = () => d(r.result); }); const dynamic = await get(${JSON.stringify(`save:${id}`)}); const world = await get(${JSON.stringify(`world:${id}`)}); db.close(); window.__f4xSave = JSON.stringify({ dynamic, world }); return window.__f4xSave.length; })()`
       );
@@ -55,6 +67,7 @@ async function readOrigin(chromium, idbDir, base, scratch, spare, outDir) {
       const done = once(gz.pipe(createWriteStream(file)), 'finish');
       let read = 0;
       for (let i = 0; i < length; i += SLICE) {
+        /** @type {string} */
         const part = await page.evaluate(`window.__f4xSave.slice(${i}, ${i + SLICE})`);
         read += part.length;
         const bytes = Buffer.from(part, 'utf8');
@@ -74,10 +87,17 @@ async function readOrigin(chromium, idbDir, base, scratch, spare, outDir) {
   }
 }
 
+/**
+ * @param {string} idbDir @param {string} outDir
+ * @param {{ playwright: string, scratch: string, only?: string[] | null }} options
+ * @returns {Promise<Found[]>}
+ */
 export async function extractSaves(idbDir, outDir, { playwright, scratch, only = null }) {
   const require = createRequire(playwright);
+  /** @type {typeof import('playwright')} */
   const { chromium } = require('playwright');
   mkdirSync(outDir, { recursive: true });
+  /** @type {Found[]} */
   const found = [];
   let spare = 5390;
   for (const base of readdirSync(idbDir).filter((d) => d.endsWith('.indexeddb.leveldb') && (!only || only.includes(d))).sort()) {

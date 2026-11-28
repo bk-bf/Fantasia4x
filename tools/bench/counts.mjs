@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -12,9 +11,16 @@ const PROFILE_FILE = /^\d+\.out$/;
 const COUNTS_ARTIFACT = 'codspeed-counts-';
 const BASE_RUNS_SEARCHED = 100;
 
+/** @typedef {Record<string, number>} Events */
+/** @typedef {Record<string, Events>} Counts */
+/** @typedef {{ sha: string, url: string, counts: Counts }} BaseCounts */
+
+/** @param {Events} c */
 export const llMisses = (c) => c.ILmr + c.DLmr + c.DLmw;
 
+/** @param {string} text @returns {Counts} */
 export function parseProfile(text) {
+  /** @type {Counts} */
   const counts = {};
   for (const part of text.split(/^part: \d+$/m)) {
     const desc = part.match(/^desc: Trigger: Client Request: (.+)$/m);
@@ -30,7 +36,9 @@ export function parseProfile(text) {
   return counts;
 }
 
+/** @param {string[]} dirs @returns {Counts} */
 export function readCounts(dirs) {
+  /** @type {Counts} */
   const counts = {};
   for (const dir of dirs) {
     const folders = PROFILE_FOLDER.test(basename(dir))
@@ -43,10 +51,13 @@ export function readCounts(dirs) {
   return counts;
 }
 
+/** @param {number | undefined} n */
 const number = (n) => (n === undefined ? '-' : n.toLocaleString('en-US'));
 
+/** @param {number} base @param {number} head */
 const percent = (base, head) => ((head - base) / base) * 100;
 
+/** @param {number | undefined} base @param {number | undefined} head @param {number} digits */
 export function change(base, head, digits) {
   if (base === undefined) return 'new';
   if (head === undefined) return 'gone';
@@ -55,6 +66,7 @@ export function change(base, head, digits) {
   return `${d > 0 ? '+' : ''}${d.toFixed(digits)}%`;
 }
 
+/** @param {Events | undefined} base @param {Events | undefined} head */
 export function verdict(base, head) {
   if (!base) return 'new benchmark';
   if (!head) return 'benchmark gone';
@@ -71,8 +83,10 @@ const LEGEND = [
   '- **verdict**: slower or faster when the instructions changed past their noise band.'
 ].join('\n');
 
+/** @param {string} uri */
 const benchName = (uri) => `\`${uri.replace(/^tools\/bench\//, '')}\``;
 
+/** @param {Counts} head @param {Counts | null} [base] */
 export function countsTable(head, base) {
   const uris = [...new Set([...Object.keys(base ?? {}), ...Object.keys(head)])].sort();
   if (!base)
@@ -94,6 +108,7 @@ export function countsTable(head, base) {
   ].join('\n');
 }
 
+/** @param {Counts} head @param {BaseCounts | null} base */
 export function countsReport(head, base) {
   const intro = base
     ? `Exact counts from CodSpeed's profiles; each change is against \`dev\` at \`${base.sha.slice(0, 8)}\` ([run](${base.url})).`
@@ -101,6 +116,7 @@ export function countsReport(head, base) {
   return [intro, '', countsTable(head, base?.counts), '', LEGEND].join('\n');
 }
 
+/** @param {string} path @param {string} token @returns {Promise<unknown>} */
 async function api(path, token) {
   const res = await fetch(`${process.env.GITHUB_API_URL ?? 'https://api.github.com'}${path}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }
@@ -109,6 +125,9 @@ async function api(path, token) {
   return res.json();
 }
 
+/** @typedef {{ id: number, name: string, expired: boolean, archive_download_url: string }} Artifact */
+
+/** @param {Artifact} artifact @param {string} token @returns {Promise<{ counts: Counts }>} */
 async function artifactJson(artifact, token) {
   const res = await fetch(artifact.archive_download_url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error(`artifact ${artifact.id} answered ${res.status}`);
@@ -117,16 +136,18 @@ async function artifactJson(artifact, token) {
   return JSON.parse(execFileSync('unzip', ['-p', zip, 'codspeed-counts.json'], { encoding: 'utf8' }));
 }
 
+/** @param {{ repo?: string, token?: string, sha?: string }} options @returns {Promise<BaseCounts | null>} */
 export async function baseCounts({ repo, token, sha }) {
   if (!repo || !token || !sha) return null;
-  const { workflow_runs: runs } = await api(
-    `/repos/${repo}/actions/workflows/check.yml/runs?branch=dev&event=push&status=completed&per_page=100`,
-    token
+  const { workflow_runs: runs } = /** @type {{ workflow_runs: { id: number, head_sha: string, html_url: string }[] }} */ (
+    await api(`/repos/${repo}/actions/workflows/check.yml/runs?branch=dev&event=push&status=completed&per_page=100`, token)
   );
   const from = runs.findIndex((r) => r.head_sha === sha);
   if (from < 0) return null;
   for (const run of runs.slice(from, from + BASE_RUNS_SEARCHED)) {
-    const { artifacts } = await api(`/repos/${repo}/actions/runs/${run.id}/artifacts?per_page=100`, token);
+    const { artifacts } = /** @type {{ artifacts: Artifact[] }} */ (
+      await api(`/repos/${repo}/actions/runs/${run.id}/artifacts?per_page=100`, token)
+    );
     const latest = artifacts
       .filter((a) => a.name.startsWith(COUNTS_ARTIFACT) && !a.expired)
       .sort((a, b) => b.id - a.id)[0];
@@ -153,7 +174,7 @@ async function main() {
       sha: process.env.BASE_SHA
     });
   } catch (e) {
-    process.stdout.write(`base counts unavailable: ${e.message}\n`);
+    process.stdout.write(`base counts unavailable: ${e instanceof Error ? e.message : e}\n`);
   }
   const report = countsReport(counts, base);
   process.stdout.write(`${report}\n`);
