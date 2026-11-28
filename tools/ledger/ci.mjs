@@ -610,7 +610,7 @@ export function ciEntry({ run, job, workflow, legs, files, invalid, root }) {
   const pr = run.pull_requests?.[0] ?? null;
   return {
     v: 1,
-    id: newId(machine, job.started_at),
+    id: newId(machine, job.started_at, jobKey(run, job)),
     kind: 'ci',
     at: job.started_at,
     recordedAt: new Date().toISOString(),

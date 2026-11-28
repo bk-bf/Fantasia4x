@@ -231,9 +231,11 @@ export function putKeyed(root, key, entry) {
   return withLock(root, () => {
     const existing = keyedEntry(root, key);
     if (existing) return { id: existing, created: false };
-    putEntry(root, entry);
+    const halfWritten = entryExists(root, entry.id);
+    if (halfWritten) appendFileSync(join(root, 'index.jsonl'), JSON.stringify(getEntry(root, entry.id)) + '\n');
+    else putEntry(root, entry);
     writeOnce(keyPath(root, key), entry.id + '\n');
-    return { id: entry.id, created: true };
+    return { id: entry.id, created: !halfWritten };
   });
 }
 

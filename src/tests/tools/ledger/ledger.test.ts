@@ -20,7 +20,9 @@ import {
   reindex,
   ingestSpool,
   readBlob,
-  verifyBlob
+  verifyBlob,
+  keyedEntry,
+  putKeyed
 } from '../../../../tools/ledger/store.mjs';
 import { splitSessions, sessionPerf } from '../../../../tools/ledger/perflog.mjs';
 import { ingestBench, ingestPerfLog, ingestResult, ingestSave } from '../../../../tools/ledger/ingest.mjs';
@@ -443,6 +445,34 @@ describe('saves', () => {
     expect(save.world).toMatchObject({ turn: 30058, seed: 7, map: '3x2', pawns: 1, mobs: 2 });
     expect(resolveSave(dir, first.id).id).toBe(first.id);
     expect(assembleSave(dir, save).length).toBeGreaterThan(0);
+  });
+
+  it('completes a keyed write that died between its entry and its key', () => {
+    const key = 'ci|bk-bf/Fantasia4x|1|2';
+    const id = newId('github', new Date('2026-11-28T01:00:00Z'), key);
+    const record = { v: 1, id, kind: 'ci', machine: 'github', files: [] };
+    const sha = createHash('sha256').update(key).digest('hex');
+    const keyDir = join(dir, 'keys', sha.slice(0, 2));
+    mkdirSync(join(dir, 'keys'), { recursive: true });
+    writeFileSync(keyDir, '');
+    expect(() => putKeyed(dir, key, record)).toThrow();
+    expect(getEntry(dir, id).id).toBe(id);
+    expect(keyedEntry(dir, key)).toBeNull();
+    rmSync(keyDir);
+    expect(putKeyed(dir, key, record)).toEqual({ id, created: false });
+    expect(keyedEntry(dir, key)).toBe(id);
+    expect(putKeyed(dir, key, record)).toEqual({ id, created: false });
+    expect(listEntries(dir, { kind: 'ci' }).map((e) => e.id)).toEqual([id]);
+  });
+
+  it('ingests a save again after its key was lost', () => {
+    const path = join(dir, 'save.json.gz');
+    writeFileSync(path, gzipSync(JSON.stringify({ dynamic: { turn: 1, seed: 2, pawns: [], mobs: [] }, world: [[{}]] })));
+    utimesSync(path, new Date('2026-11-28T01:00:00Z'), new Date('2026-11-28T01:00:00Z'));
+    const first = ingestSave(dir, { machine: 'laptop', path });
+    rmSync(join(dir, 'keys'), { recursive: true });
+    expect(ingestSave(dir, { machine: 'laptop', path })).toMatchObject({ id: first.id, created: false });
+    expect(ingestSave(dir, { machine: 'laptop', path })).toMatchObject({ id: first.id, created: false });
   });
 
   it('takes the start counts from the save and keeps the result counts as the end', () => {
