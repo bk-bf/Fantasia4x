@@ -1,6 +1,8 @@
 import type { GameState, WorldTile } from '../core/types';
 
-type SavedTile = Omit<WorldTile, 'gCost' | 'hCost' | 'fCost' | 'parent' | 'ascii'>;
+export const TRANSIENT_TILE_KEYS = ['gCost', 'hCost', 'fCost', 'parent', 'ascii'] as const;
+
+type SavedTile = Omit<WorldTile, (typeof TRANSIENT_TILE_KEYS)[number]>;
 
 export interface HeadlessSnapshot {
   v: 1;

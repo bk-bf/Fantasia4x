@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,10 +9,12 @@ import { SPOOL_BUSY, queueSave, type SpooledSave } from '$lib/server/ledgerSave'
 import { worldId } from '../../../tools/ledger/spool.mjs';
 import { ingestSpool } from '../../../tools/ledger/store.mjs';
 import {
-  serializeSave,
+  encodeState,
   LEDGER_META_HEADER,
-  type LedgerCaptureMeta
+  type LedgerCaptureMeta,
+  type LedgerUploadMeta
 } from '$lib/game/sim/ledgerCapture';
+import { packSave, type PackedSave } from '$lib/game/sim/ledgerPack';
 import { fromSnapshot, toSnapshot } from '$lib/game/headless/snapshot';
 import type { GameState, WorldTile } from '$lib/game/core/types';
 
@@ -43,7 +45,16 @@ const state = {
   ]
 } as unknown as GameState;
 
-const meta = (over: Partial<LedgerCaptureMeta> = {}): LedgerCaptureMeta => ({
+let packed: PackedSave;
+beforeAll(async () => {
+  packed = await packSave(encodeState(state));
+});
+
+const meta = (over: Partial<LedgerUploadMeta> = {}): LedgerUploadMeta => ({
+  worldId: packed.worldId,
+  blob: packed.blob,
+  bytes: packed.bytes,
+  packMs: 30,
   captureId: 'feed0001-0',
   session: 'feed0001',
   sessionAt: '2026-11-27T01:37:00.000Z',
@@ -88,7 +99,7 @@ async function send(
   body: BodyInit,
   header: string | null = encodeURIComponent(JSON.stringify(meta()))
 ) {
-  const headers = new Headers({ 'content-type': 'application/json' });
+  const headers = new Headers({ 'content-type': 'application/gzip' });
   if (header) headers.set(LEDGER_META_HEADER, header);
   const request = new Request('http://localhost/api/ledger/save', {
     method: 'POST',
@@ -98,20 +109,18 @@ async function send(
   return POST({ request } as Parameters<typeof POST>[0]);
 }
 
-const bytesOf = async (blob: Blob) => (await blob.arrayBuffer()).slice(0);
+const gzOf = () => packed.gz.slice();
 
 describe('the ledger save route', () => {
   it('accepts the capture at once and spools it under the world id core computes', async () => {
     const spool = scratchSpool();
-    const body = serializeSave(state);
-    const text = await body.text();
-    const res = await send(body);
+    const res = await send(gzOf());
     expect(res.status).toBe(202);
     const receipt = await res.json();
     expect(receipt.captureId).toBe('feed0001-0');
 
     const child = queueSave(
-      await bytesOf(body),
+      gzOf(),
       meta({ captureId: 'feed0001-1', reason: 'manual', at: '2026-11-27T01:39:00.000Z' })
     );
     await child?.spooled;
@@ -139,14 +148,14 @@ describe('the ledger save route', () => {
       },
       perf: {
         speed: '4x',
-        capture: { reason: 'session', session: 'feed0001', ms: 412, bytes: text.length }
+        capture: { reason: 'session', session: 'feed0001', ms: 412, packMs: 30, bytes: packed.bytes }
       },
       parent: null
     });
     expect(entry.commit).toMatch(/^[0-9a-f]{40}$/);
 
     const [file] = entry.files;
-    expect(file).toMatchObject({ role: 'save', name: 'save.json.gz' });
+    expect(file).toMatchObject({ role: 'save', name: 'save.json.gz', sha256: packed.blob });
     const gz = readFileSync(join(spool, 'blobs', file.sha256.slice(0, 2), file.sha256));
     expect(createHash('sha256').update(gz).digest('hex')).toBe(file.sha256);
     expect(file.bytes).toBe(gz.length);
@@ -159,10 +168,41 @@ describe('the ledger save route', () => {
     expect(back.worldMap[1][1].resources).toEqual({ stone: 3 });
   });
 
-  it('refuses a body that is not a save snapshot, or one without its capture meta', async () => {
+  it('refuses a body that is not gzipped, or one without its capture meta and hashes', async () => {
     scratchSpool();
     expect((await send('{"nope":1}')).status).toBe(400);
-    expect((await send(serializeSave(state), null)).status).toBe(400);
+    expect((await send(gzOf(), null)).status).toBe(400);
+    const unhashed = { ...meta(), worldId: 'not a hash' };
+    expect((await send(gzOf(), encodeURIComponent(JSON.stringify(unhashed)))).status).toBe(400);
+  });
+});
+
+describe('verifying an upload before it is spooled', () => {
+  const tryWrite = async (gz: Uint8Array, over: Partial<LedgerUploadMeta>) => {
+    const spool = scratchSpool();
+    const logs = scratch('logs');
+    const queued = queueSave(gz, meta({ captureId: 'feed0002-0', session: 'feed0002', ...over }), { logs });
+    await expect(queued?.spooled).rejects.toThrow();
+    await settle();
+    return { spool, log: readFileSync(join(logs, 'perf.log'), 'utf8') };
+  };
+
+  it('writes nothing when the save inside does not hash to the world id it came with', async () => {
+    const { spool, log } = await tryWrite(gzOf(), { worldId: 'a'.repeat(64) });
+    expect(log).toMatch(/ledger failed cap=feed0002-0 error="save hashes to world [0-9a-f]{12}, not the aaaaaaaaaaaa/);
+    expect(readdirSync(spool)).toEqual([]);
+  });
+
+  it('writes nothing when the gzipped bytes do not hash to the blob they came with', async () => {
+    const { spool, log } = await tryWrite(gzOf(), { blob: 'b'.repeat(64) });
+    expect(log).toContain('not the bbbbbbbbbbbb its sender named');
+    expect(readdirSync(spool)).toEqual([]);
+  });
+
+  it('writes nothing when the gzipped bytes are not a save snapshot', async () => {
+    const other = await packSave(new TextEncoder().encode('{"nope":1}'));
+    const { log } = await tryWrite(other.gz, { blob: other.blob, worldId: other.worldId, bytes: other.bytes });
+    expect(log).toContain('error="not a save snapshot"');
   });
 });
 
@@ -182,7 +222,7 @@ describe('queueing a capture for the spool', () => {
   it('names the entry before any of the slow work has run', async () => {
     scratchSpool();
     const { run, release } = heldRunner();
-    const queued = queueSave(await bytesOf(serializeSave(state)), meta(), { run });
+    const queued = queueSave(gzOf(), meta(), { run });
     expect(queued?.entry).toMatch(/^20261127T013700Z-laptop-[0-9a-f]{6}$/);
     const settled = await Promise.race([
       queued?.spooled.then(() => true),
@@ -197,7 +237,7 @@ describe('queueing a capture for the spool', () => {
     scratchSpool();
     const logs = join(scratch('logs'), 'not-yet');
     const { run, release, waiting } = heldRunner();
-    const body = await bytesOf(serializeSave(state));
+    const body = gzOf();
     const at = (n: number) => meta({ captureId: `feed0001-${n}`, reason: 'periodic' });
     const running = queueSave(body.slice(0), at(1), { run, logs });
     const next = queueSave(body.slice(0), at(2), { run, logs });
@@ -223,7 +263,7 @@ describe('queueing a capture for the spool', () => {
   it('logs a capture the spool could not write, creating the log folder, and keeps spooling', async () => {
     scratchSpool();
     const logs = join(scratch('logs'), 'missing', '.debug');
-    const body = await bytesOf(serializeSave(state));
+    const body = gzOf();
     const broken = queueSave(body.slice(0), meta({ captureId: 'feed0001-5' }), {
       logs,
       run: () => Promise.reject(new Error('disk full'))
@@ -242,7 +282,7 @@ describe('queueing a capture for the spool', () => {
 
   it('ties a later capture to its session capture only when that capture was written', async () => {
     const spool = scratchSpool();
-    const body = await bytesOf(serializeSave(state));
+    const body = gzOf();
     const sessionAt = '2026-11-27T02:00:00.000Z';
     const write = async (over: Partial<LedgerCaptureMeta>) => {
       const queued = queueSave(body.slice(0), meta({ sessionAt, ...over }));
@@ -273,7 +313,7 @@ describe('queueing a capture for the spool', () => {
   it('ties a capture to its session capture after the sync cleared that one from the spool', async () => {
     const spool = scratchSpool();
     const store = scratch('store');
-    const body = await bytesOf(serializeSave(state));
+    const body = gzOf();
     const sessionAt = '2026-11-27T03:00:00.000Z';
     const write = async (over: Partial<LedgerCaptureMeta>) => {
       const queued = queueSave(body.slice(0), meta({ session: 'cccc0000', sessionAt, ...over }));

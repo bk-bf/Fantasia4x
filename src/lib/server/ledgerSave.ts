@@ -1,16 +1,12 @@
-import { Worker } from 'node:worker_threads';
-import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { machineName } from '../../../tools/ledger/spool.mjs';
-import { captureEntryId } from '../../../tools/ledger/save-thread.mjs';
+import { captureEntryId, spoolCapture } from '../../../tools/ledger/capture.mjs';
 import { appendToLog, logDir, logStamp } from './logFiles';
-import { ledgerFailedLine, type LedgerCaptureMeta } from '$lib/game/sim/ledgerCapture';
+import { ledgerFailedLine, type LedgerUploadMeta } from '$lib/game/sim/ledgerCapture';
 
-const SNAPSHOT_HEAD = '{"v":1,"dynamic":';
-const THREAD = fileURLToPath(new URL('../../../tools/ledger/save-thread.mjs', import.meta.url));
-const THREAD_HEAP_MB = 6144;
 const MAX_IN_SPOOL = 2;
+const SHA256 = /^[0-9a-f]{64}$/;
 
 export interface SpooledSave {
   save: string;
@@ -18,7 +14,15 @@ export interface SpooledSave {
   blob: string;
 }
 
-type Runner = (job: object, text: ArrayBuffer) => Promise<SpooledSave>;
+export interface SaveJob {
+  gz: Uint8Array;
+  meta: LedgerUploadMeta;
+  entry: string;
+  env: NodeJS.ProcessEnv;
+  checkout: string;
+}
+
+type Runner = (job: SaveJob) => Promise<SpooledSave>;
 
 export interface SpoolOptions {
   env?: NodeJS.ProcessEnv;
@@ -27,41 +31,28 @@ export interface SpoolOptions {
   run?: Runner;
 }
 
-export function readCaptureMeta(header: string | null): LedgerCaptureMeta | null {
+export function readCaptureMeta(header: string | null): LedgerUploadMeta | null {
   if (!header) return null;
   try {
-    const meta = JSON.parse(decodeURIComponent(header)) as LedgerCaptureMeta;
+    const meta = JSON.parse(decodeURIComponent(header)) as LedgerUploadMeta;
     const named = ['captureId', 'session', 'sessionAt', 'reason', 'at'] as const;
-    return named.every((k) => typeof meta?.[k] === 'string') ? meta : null;
+    if (!named.every((k) => typeof meta?.[k] === 'string')) return null;
+    if (!SHA256.test(String(meta.worldId)) || !SHA256.test(String(meta.blob))) return null;
+    return Number.isInteger(meta.bytes) ? meta : null;
   } catch {
     return null;
   }
 }
 
-export function looksLikeSnapshot(text: Uint8Array): boolean {
-  return Buffer.from(text.subarray(0, SNAPSHOT_HEAD.length)).toString('utf8') === SNAPSHOT_HEAD;
-}
+export const looksLikeGzip = (body: Uint8Array): boolean => body[0] === 0x1f && body[1] === 0x8b;
 
 let queue: Promise<void> = Promise.resolve();
 let inSpool = 0;
 
 export const spoolFull = (): boolean => inSpool >= MAX_IN_SPOOL;
 
-function runThread(job: object, text: ArrayBuffer): Promise<SpooledSave> {
-  return new Promise((done, fail) => {
-    const worker = new Worker(THREAD, {
-      workerData: { ledgerSave: job },
-      transferList: [text],
-      resourceLimits: { maxOldGenerationSizeMb: THREAD_HEAP_MB }
-    });
-    worker.once('message', done);
-    worker.once('error', fail);
-    worker.once('exit', (code) => code !== 0 && fail(new Error(`spool thread exited ${code}`)));
-  });
-}
-
 export function logCaptureFailure(
-  meta: LedgerCaptureMeta,
+  meta: LedgerUploadMeta,
   err: unknown,
   logs: string = logDir()
 ): void {
@@ -79,13 +70,13 @@ export function logCaptureFailure(
 export const SPOOL_BUSY = 'spool busy: one capture running and one waiting';
 
 export function queueSave(
-  text: ArrayBuffer,
-  meta: LedgerCaptureMeta,
+  gz: Uint8Array,
+  meta: LedgerUploadMeta,
   {
     env = process.env,
     checkout = process.cwd(),
     logs = logDir(),
-    run = runThread
+    run = spoolCapture
   }: SpoolOptions = {}
 ): { entry: string; spooled: Promise<SpooledSave> } | null {
   if (spoolFull()) {
@@ -94,8 +85,8 @@ export function queueSave(
   }
   inSpool++;
   const entry = captureEntryId(machineName(env), meta.at, meta.captureId);
-  const job = { text: new Uint8Array(text), meta, entry, env: { ...env }, checkout };
-  const spooled = queue.then(() => run(job, text));
+  const job: SaveJob = { gz, meta, entry, env: { ...env }, checkout };
+  const spooled = queue.then(() => run(job));
   queue = spooled.then(
     () => {},
     (err) => logCaptureFailure(meta, err, logs)

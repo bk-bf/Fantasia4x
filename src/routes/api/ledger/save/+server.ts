@@ -3,7 +3,7 @@ import { LEDGER_DROPPED, LEDGER_META_HEADER } from '$lib/game/sim/ledgerCapture'
 import {
   SPOOL_BUSY,
   logCaptureFailure,
-  looksLikeSnapshot,
+  looksLikeGzip,
   queueSave,
   readCaptureMeta,
   spoolFull
@@ -21,10 +21,9 @@ export const POST: RequestHandler = async ({ request }) => {
     logCaptureFailure(meta, SPOOL_BUSY);
     return dropped(meta.captureId);
   }
-  const text = await request.arrayBuffer();
-  if (!looksLikeSnapshot(new Uint8Array(text)))
-    return new Response('not a save snapshot', { status: 400 });
-  const queued = queueSave(text, meta);
+  const gz = new Uint8Array(await request.arrayBuffer());
+  if (!looksLikeGzip(gz)) return new Response('not a gzipped save', { status: 400 });
+  const queued = queueSave(gz, meta);
   if (!queued) return dropped(meta.captureId);
   return json({ captureId: meta.captureId, entry: queued.entry }, { status: 202 });
 };
