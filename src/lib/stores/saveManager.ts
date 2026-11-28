@@ -1,6 +1,7 @@
 import { browser } from '$app/environment';
 import { get } from 'svelte/store';
-import type { GameState, WorldTile } from '$lib/game/core/types';
+import type { BuildStamp, GameState, WorldTile } from '$lib/game/core/types';
+import { currentBuild } from '$lib/dev/buildStamp';
 import type { ActivityLogEntry } from '$lib/game/core/defs/events';
 import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '$lib/game/core/defs/terrains';
@@ -65,13 +66,18 @@ export interface SaveMeta {
   savedAt: number;
   kind: 'auto' | 'manual';
   seed?: number;
+  savedBy?: BuildStamp;
 }
 export interface SaveEntry {
   id: string;
   meta: SaveMeta;
 }
 const TICKS_PER_DAY = 300 * TICKS_PER_SECOND;
-function buildMeta(state: GameState, kind: 'auto' | 'manual'): SaveMeta {
+function buildMeta(
+  state: GameState,
+  kind: 'auto' | 'manual',
+  savedBy: BuildStamp | undefined
+): SaveMeta {
   return {
     cultureName: state.culture?.name ?? 'Unknown',
     day: Math.floor((state.turn ?? 0) / TICKS_PER_DAY) + 1,
@@ -79,7 +85,8 @@ function buildMeta(state: GameState, kind: 'auto' | 'manual'): SaveMeta {
     population: state.pawns?.length ?? 0,
     savedAt: Date.now(),
     kind,
-    seed: state.seed
+    seed: state.seed,
+    savedBy
   };
 }
 
@@ -245,7 +252,11 @@ async function migrateLegacy(): Promise<void> {
       const id = newSaveId();
       const oldMeta = await idbGet<Partial<SaveMeta>>(legacyMetaKey(i));
       await idbPut(saveKey(id), st);
-      await idbPut(metaKey(id), { ...buildMeta(st, 'manual'), ...oldMeta, kind: 'manual' });
+      await idbPut(metaKey(id), {
+        ...buildMeta(st, 'manual', undefined),
+        ...oldMeta,
+        kind: 'manual'
+      });
       const log = await idbGet<ActivityLogEntry[]>(legacyLogKey(i));
       if (log) await idbPut(logKey(id), log);
       await Promise.all([
@@ -259,7 +270,7 @@ async function migrateLegacy(): Promise<void> {
     if (single) {
       const id = newSaveId();
       await idbPut(saveKey(id), single);
-      await idbPut(metaKey(id), buildMeta(single, 'manual'));
+      await idbPut(metaKey(id), buildMeta(single, 'manual', undefined));
       const log = await idbGet<ActivityLogEntry[]>(LEGACY_IDB_SINGLE_LOG);
       if (log) await idbPut(logKey(id), log);
       await Promise.all([idbDelete(LEGACY_IDB_SINGLE), idbDelete(LEGACY_IDB_SINGLE_LOG)]);
@@ -268,7 +279,7 @@ async function migrateLegacy(): Promise<void> {
     if (ls) {
       const id = newSaveId();
       await idbPut(saveKey(id), stripState(ls));
-      await idbPut(metaKey(id), buildMeta(ls, 'manual'));
+      await idbPut(metaKey(id), buildMeta(ls, 'manual', undefined));
       clearLegacyLocalStorage();
     }
   } catch (err) {
@@ -287,7 +298,7 @@ export async function listSaves(): Promise<SaveEntry[]> {
     if (!meta) {
       const st = await idbGet<GameState>(saveKey(id)).catch(() => null);
       if (st) {
-        meta = buildMeta(st, 'manual');
+        meta = buildMeta(st, 'manual', undefined);
         idbPut(metaKey(id), meta).catch(() => {});
       }
     }
@@ -400,7 +411,7 @@ export function scheduleSave(state: GameState): void {
       idbPut(saveKey(id), stripDynamic(state)).catch((err) => {
         console.warn('[SaveManager] IndexedDB write failed:', err);
       });
-      idbPut(metaKey(id), buildMeta(state, 'auto')).catch(() => {});
+      idbPut(metaKey(id), buildMeta(state, 'auto', currentBuild())).catch(() => {});
     });
   }, DEBOUNCE_MS);
 }
@@ -413,7 +424,7 @@ export function saveGameNow(state: GameState): Promise<void> {
     _saveTimer = null;
   }
   const id = activeSaveId ?? mintActiveSave();
-  idbPut(metaKey(id), buildMeta(state, 'auto')).catch(() => {});
+  idbPut(metaKey(id), buildMeta(state, 'auto', currentBuild())).catch(() => {});
   const writes: Promise<unknown>[] = [
     idbPut(saveKey(id), stripDynamic(state)).catch((err) => {
       console.warn('[SaveManager] IndexedDB write failed:', err);
@@ -436,7 +447,7 @@ async function writeSnapshot(
   state: GameState,
   chronicle?: ActivityLogEntry[]
 ): Promise<void> {
-  idbPut(metaKey(id), buildMeta(state, 'manual')).catch(() => {});
+  idbPut(metaKey(id), buildMeta(state, 'manual', currentBuild())).catch(() => {});
   if (chronicle && chronicle.length) idbPut(logKey(id), chronicle).catch(() => {});
   idbPut(worldKey(id), stripWorld(state.worldMap)).catch((err) => {
     console.warn('[SaveManager] Snapshot worldMap write failed:', err);

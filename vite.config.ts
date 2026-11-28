@@ -85,6 +85,7 @@ function git(...args: string[]): string {
 
 const BUILD_INFO = {
   commit: git('rev-parse', '--short', 'HEAD') || 'unknown',
+  sha: git('rev-parse', 'HEAD'),
   branch: git('symbolic-ref', '--short', '-q', 'HEAD') || 'detached',
   refs: git('for-each-ref', '--points-at', 'HEAD', '--format=%(refname:short)', 'refs/remotes')
     .split('\n')

@@ -9,6 +9,7 @@
     { "paths": ["dev.sh", "launch.sh", "build.sh", "install.sh", "audit.sh", "cliff.toml"], "legs": [] },
     { "paths": ["tools/runner/**"], "legs": [] },
     { "paths": ["tools/test-health/**"], "legs": [] },
+    { "paths": ["tools/ledger/install.sh", "tools/ledger/*.service", "tools/ledger/*.timer"], "legs": [] },
 
     { "paths": ["src/tests/**", "tests/**", "vitest.config.ts"], "legs": ["check", "coverage"] },
     {
@@ -43,6 +44,7 @@
         "tools/gpu/**",
         "tools/dev-tools/**",
         "tools/tileset/**",
+        "tools/ledger/**",
         "tools/*.mjs",
         ".github/workflows/**",
         "electron/**",
