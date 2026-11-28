@@ -76,7 +76,6 @@
     "tools/bench/dev-save.bench.ts": 3,
     "tools/bench/session.ts": 11,
     "tools/bench/tps/large-wilderness.bench.ts": 1,
-    "tools/dev-shell/main.js": 1,
     "tools/work-pins/harness.ts": 3,
     "tools/work-pins/scenarios.ts": 1
   }

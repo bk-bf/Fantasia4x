@@ -37,7 +37,6 @@ function createWindow() {
     frame: false,
     autoHideMenuBar: true,
     center: true,
-    backgroundThrottling: false,
     webPreferences: {
       backgroundThrottling: false,
       preload: path.join(__dirname, 'preload.cjs'),
