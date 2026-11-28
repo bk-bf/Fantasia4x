@@ -38,7 +38,12 @@
     currentWeather,
     worldGenRev
   } from '$lib/stores/gameState.js';
-  import { cameraTileSize, cameraZoomRange, cameraViewport } from '$lib/stores/cameraView.js';
+  import {
+    cameraTileSize,
+    cameraZoomRange,
+    cameraViewport,
+    CAMERA_STORAGE_KEY
+  } from '$lib/stores/cameraView.js';
   import type {
     WorldTile,
     Pawn,
@@ -155,7 +160,6 @@
   const MAX_TILE_W = 64;
   const ENTITY_RENDER_MIN_PX = 5;
   const ZOOM_STEP = 2;
-  const CAMERA_STORAGE_KEY = 'fantasia4x-camera';
   let saveCameraTimer: ReturnType<typeof setTimeout> | null = null;
 
   let fitTileSize = 8;
