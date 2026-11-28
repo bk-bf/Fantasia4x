@@ -9,6 +9,7 @@
     { "paths": ["dev.sh", "launch.sh", "build.sh", "install.sh", "audit.sh", "cliff.toml"], "legs": [] },
     { "paths": ["tools/runner/**"], "legs": [] },
     { "paths": ["render-native/**"], "legs": [] },
+    { "paths": ["native-overlay/**"], "legs": [] },
     { "paths": ["tools/test-health/**"], "legs": [] },
     { "paths": ["tools/tickprof/**"], "legs": ["check"] },
     { "paths": ["tools/native-spike/**"], "legs": ["check"] },
