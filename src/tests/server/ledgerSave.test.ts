@@ -7,6 +7,7 @@ import { gunzipSync } from 'node:zlib';
 import { POST } from '../../routes/api/ledger/save/+server';
 import { SPOOL_BUSY, queueSave, type SpooledSave } from '$lib/server/ledgerSave';
 import { worldId } from '../../../tools/ledger/spool.mjs';
+import { ingestSpool } from '../../../tools/ledger/store.mjs';
 import {
   serializeSave,
   LEDGER_META_HEADER,
@@ -267,5 +268,28 @@ describe('queueing a capture for the spool', () => {
     expect(parentOf(root)).toBeNull();
     expect(parentOf(child)).toBe(root);
     expect(parentOf(orphan)).toBeNull();
+  });
+
+  it('ties a capture to its session capture after the sync cleared that one from the spool', async () => {
+    const spool = scratchSpool();
+    const store = scratch('store');
+    const body = await bytesOf(serializeSave(state));
+    const sessionAt = '2026-11-27T03:00:00.000Z';
+    const write = async (over: Partial<LedgerCaptureMeta>) => {
+      const queued = queueSave(body.slice(0), meta({ session: 'cccc0000', sessionAt, ...over }));
+      await queued?.spooled;
+      return queued?.entry;
+    };
+
+    const root = await write({ captureId: 'cccc0000-0', at: sessionAt });
+    const cleared = ingestSpool(store, spool, { remove: true });
+    expect(cleared.errors).toEqual([]);
+    expect(readdirSync(join(spool, 'entries'))).toEqual([]);
+    const child = await write({ captureId: 'cccc0000-1', reason: 'periodic', at: '2026-11-27T03:02:00.000Z' });
+    const later = await write({ captureId: 'cccc0000-2', reason: 'periodic', at: '2026-11-27T03:04:00.000Z' });
+    const parentOf = (id?: string) =>
+      JSON.parse(readFileSync(join(spool, 'entries', `${id}.json`), 'utf8')).parent;
+    expect(parentOf(child)).toBe(root);
+    expect(parentOf(later)).toBe(root);
   });
 });
