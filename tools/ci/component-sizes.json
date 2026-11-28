@@ -4,7 +4,7 @@
   "src/lib/components/pawn/TraitCards.svelte": 560,
   "src/lib/components/screens/ResearchScreen.svelte": 388,
   "src/lib/components/UI/audio/AudioController.svelte": 319,
-  "src/lib/components/UI/canvas/GameCanvas.svelte": 4120,
+  "src/lib/components/UI/canvas/GameCanvas.svelte": 4110,
   "src/lib/components/UI/canvas/ItemFilterChecklist.svelte": 203,
   "src/lib/components/UI/hud/ActivityLogOverlay.svelte": 548,
   "src/lib/components/UI/hud/BuildCard.svelte": 295,
