@@ -5,7 +5,7 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileRef, gitInfo, launchedBy, machineName, newId, spoolDir, writeBlob, writeEntry } from './spool.mjs';
-import { getEntry, listEntries, reindex, storeDir, withLock } from './store.mjs';
+import { allEntries, getEntry, listEntries, reindex, storeDir, supersededBy, withLock } from './store.mjs';
 import { ingestPerfLog, ingestResult, ingestSave } from './ingest.mjs';
 import { assembleSave, resolveSave } from './fetch.mjs';
 import { withInvalid } from './invalid.mjs';
@@ -92,7 +92,8 @@ function list(args) {
       world: { type: 'string' },
       since: { type: 'string' },
       json: { type: 'boolean' },
-      stretches: { type: 'boolean' }
+      stretches: { type: 'boolean' },
+      all: { type: 'boolean' }
     }
   });
   const entries = listEntries(root, values);
@@ -108,6 +109,8 @@ function show([id]) {
   console.log(JSON.stringify(e, null, 2));
   const lines = stretchLines(e);
   if (lines.length) console.error(`\nstretches between checkpoints:\n${lines.join('\n')}`);
+  const by = supersededBy(allEntries(root)).get(e.id);
+  if (by) console.error(`\nsuperseded by ${by}`);
   const children = listEntries(root, {}).filter((c) => c.parent === e.id);
   if (children.length) console.error(`\nlinked back to this entry:\n${children.map((c) => `  ${line(c)}`).join('\n')}`);
 }
@@ -273,6 +276,13 @@ try {
     }
   } else if (cmd === 'record') record(rest);
   else if (cmd === 'import') withLock(root, () => importDir(rest));
+  else if (cmd === 'supersede') {
+    const { values, positionals } = parseArgs({ args: rest, allowPositionals: true, options: { base: { type: 'string' } } });
+    if (!positionals[0]) throw new Error('usage: pnpm ledger supersede <spec.json> [--base dir]');
+    const { attribute } = await import('./supersede.mjs');
+    const items = JSON.parse(readFileSync(positionals[0], 'utf8'));
+    for (const r of attribute(root, items, resolve(values.base ?? '.'))) console.log(`${r.id}${r.supersedes ? ` supersedes ${r.supersedes}` : ''}${r.created ? '' : ' (known)'}`);
+  }
   else if (cmd === 'reindex') withLock(root, () => console.log(`${reindex(root)} entries indexed`));
   else if (cmd === 'ingest-raw') await withLock(root, async () => console.log(JSON.stringify((await import('./sync.mjs')).ingestRaw(root))));
   else if (cmd === 'sync') await withLock(root, async () => (await import('./sync.mjs')).sync());
@@ -287,7 +297,7 @@ try {
   }
   else if (cmd === 'rerun') await (await import('./rerun.mjs')).rerunCli(root, rest);
   else {
-    console.error('usage: pnpm ledger list|show|fetch|record|import|reindex|sync|ingest-raw|ci|rerun');
+    console.error('usage: pnpm ledger list|show|fetch|record|import|supersede|reindex|sync|ingest-raw|ci|rerun');
     process.exit(2);
   }
 } catch (err) {

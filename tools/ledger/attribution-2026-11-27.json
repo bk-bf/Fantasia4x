@@ -1,0 +1,3951 @@
+[
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "storm-hunt",
+   "scenario": "large-wilderness",
+   "launchedBy": {
+    "who": "agent",
+    "session": "274b79fb-d388-47c6-b056-4e908fff1b04"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gc-after",
+   "commit": "af423b66fec52c0f5926b938b95fb2a9866acc35",
+   "branch": null,
+   "refs": null,
+   "dirty": 0,
+   "perf": {
+    "label": "smoke"
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-gc/smoke-server.log"
+   }
+  ],
+  "note": "desktop /tmp/f4x-gc/smoke; agent session 274b79fb-d388-47c6-b056-4e908fff1b04 ran its storm-hunt.mjs, copied untracked into tools/gpu of the detached worktree bench-gc-after, which its f4x-gc-setup unit had made at af423b66 and reported as \"after ready af423b66\"; the harness modules came from bench-gc-after (F4X_HARNESS); at is the oldest file modification time"
+ },
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "storm-hunt",
+   "scenario": "large-wilderness",
+   "launchedBy": {
+    "who": "agent",
+    "session": "274b79fb-d388-47c6-b056-4e908fff1b04"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gc-before",
+   "commit": "6847ade44f88ba7ba55a2d513a4203843138f68f",
+   "branch": null,
+   "refs": null,
+   "dirty": 0,
+   "perf": {
+    "label": "before-1"
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-gc/before-1-server.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-gc/before-1.cpuprofile"
+   }
+  ],
+  "note": "desktop /tmp/f4x-gc/before-1; agent session 274b79fb-d388-47c6-b056-4e908fff1b04 ran its storm-hunt.mjs, copied untracked into tools/gpu of the detached worktree bench-gc-before, which its f4x-gc-setup unit had made at 6847ade4 and reported as \"before ready 6847ade4\"; the harness modules came from bench-gc-after (F4X_HARNESS); at is the oldest file modification time"
+ },
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "storm-hunt",
+   "scenario": "large-wilderness",
+   "launchedBy": {
+    "who": "agent",
+    "session": "274b79fb-d388-47c6-b056-4e908fff1b04"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gc-before",
+   "commit": "6847ade44f88ba7ba55a2d513a4203843138f68f",
+   "branch": null,
+   "refs": null,
+   "dirty": 0,
+   "perf": {
+    "label": "before-2"
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-gc/before-2-server.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-gc/before-2.cpuprofile"
+   }
+  ],
+  "note": "desktop /tmp/f4x-gc/before-2; agent session 274b79fb-d388-47c6-b056-4e908fff1b04 ran its storm-hunt.mjs, copied untracked into tools/gpu of the detached worktree bench-gc-before, which its f4x-gc-setup unit had made at 6847ade4 and reported as \"before ready 6847ade4\"; the harness modules came from bench-gc-after (F4X_HARNESS); at is the oldest file modification time"
+ },
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "storm-hunt",
+   "scenario": "large-wilderness",
+   "launchedBy": {
+    "who": "agent",
+    "session": "274b79fb-d388-47c6-b056-4e908fff1b04"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gc-after",
+   "commit": "af423b66fec52c0f5926b938b95fb2a9866acc35",
+   "branch": null,
+   "refs": null,
+   "dirty": 0,
+   "perf": {
+    "label": "after-1"
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-gc/after-1-server.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-gc/after-1.cpuprofile"
+   }
+  ],
+  "note": "desktop /tmp/f4x-gc/after-1; agent session 274b79fb-d388-47c6-b056-4e908fff1b04 ran its storm-hunt.mjs, copied untracked into tools/gpu of the detached worktree bench-gc-after, which its f4x-gc-setup unit had made at af423b66 and reported as \"after ready af423b66\"; the harness modules came from bench-gc-after (F4X_HARNESS); at is the oldest file modification time"
+ },
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "storm-hunt",
+   "scenario": "large-wilderness",
+   "launchedBy": {
+    "who": "agent",
+    "session": "274b79fb-d388-47c6-b056-4e908fff1b04"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gc-after",
+   "commit": "af423b66fec52c0f5926b938b95fb2a9866acc35",
+   "branch": null,
+   "refs": null,
+   "dirty": 0,
+   "perf": {
+    "label": "after-2"
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-gc/after-2-server.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-gc/after-2.cpuprofile"
+   }
+  ],
+  "note": "desktop /tmp/f4x-gc/after-2; agent session 274b79fb-d388-47c6-b056-4e908fff1b04 ran its storm-hunt.mjs, copied untracked into tools/gpu of the detached worktree bench-gc-after, which its f4x-gc-setup unit had made at af423b66 and reported as \"after ready af423b66\"; the harness modules came from bench-gc-after (F4X_HARNESS); at is the oldest file modification time"
+ },
+ {
+  "supersedes": "20261126T120007Z-desktop-2f76d8",
+  "set": {
+   "tool": "pan3",
+   "scenario": "large-wilderness",
+   "launchedBy": {
+    "who": "agent",
+    "session": "ebd58ab2-889d-498a-a636-775b7734f7bf"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-step3-base",
+   "commit": "9316c24369a30b73231999745d9fb36f070f2ee0",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-step3/step3-base-r1.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-step3/step3-base-r1-server.log"
+   }
+  ],
+  "note": "attributed: agent session ebd58ab2-889d-498a-a636-775b7734f7bf ran scratch/pan3.mjs, its own pan bench copied untracked into the detached worktree bench-step3-base, which its f4x-setup3 unit made at 9316c243 and reported as \"ready step3-base 9316c243\"; the log names that tree"
+ },
+ {
+  "supersedes": "20261126T120419Z-desktop-3d9aef",
+  "set": {
+   "tool": "pan3",
+   "scenario": "large-wilderness",
+   "launchedBy": {
+    "who": "agent",
+    "session": "ebd58ab2-889d-498a-a636-775b7734f7bf"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-step3-base",
+   "commit": "9316c24369a30b73231999745d9fb36f070f2ee0",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-step3/step3-base-r2.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-step3/step3-base-r2-server.log"
+   }
+  ],
+  "note": "attributed: agent session ebd58ab2-889d-498a-a636-775b7734f7bf ran scratch/pan3.mjs, its own pan bench copied untracked into the detached worktree bench-step3-base, which its f4x-setup3 unit made at 9316c243 and reported as \"ready step3-base 9316c243\"; the log names that tree"
+ },
+ {
+  "supersedes": "20261126T115351Z-desktop-bdc5f5",
+  "set": {
+   "tool": "pan3",
+   "scenario": "large-wilderness",
+   "launchedBy": {
+    "who": "agent",
+    "session": "ebd58ab2-889d-498a-a636-775b7734f7bf"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-step3-head",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-step3/step3-head-r1-server.log"
+   }
+  ],
+  "note": "attributed: agent session ebd58ab2-889d-498a-a636-775b7734f7bf ran scratch/pan3.mjs, its own pan bench copied untracked into the detached worktree bench-step3-head, which its f4x-setup3 unit made at 9659211b and reported as \"ready step3-head 9659211b\"; the log names that tree"
+ },
+ {
+  "supersedes": "20261126T120219Z-desktop-354a30",
+  "set": {
+   "tool": "pan3",
+   "scenario": "large-wilderness",
+   "launchedBy": {
+    "who": "agent",
+    "session": "ebd58ab2-889d-498a-a636-775b7734f7bf"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-step3-head",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-step3/step3-head-r2.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-step3/step3-head-r2-server.log"
+   }
+  ],
+  "note": "attributed: agent session ebd58ab2-889d-498a-a636-775b7734f7bf ran scratch/pan3.mjs, its own pan bench copied untracked into the detached worktree bench-step3-head, which its f4x-setup3 unit made at 9659211b and reported as \"ready step3-head 9659211b\"; the log names that tree"
+ },
+ {
+  "supersedes": "20261127T053112Z-desktop-6acf3b",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "628c551c-fcfe-4d2b-9dca-20c0b6987ebb"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-skipfix",
+   "commit": "1c851dacf7353ee56e4dcc60b25d4b9d96d01812",
+   "branch": null,
+   "refs": "origin/dev",
+   "dirty": 0
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-race-old/a.log"
+   }
+  ],
+  "note": "attributed: agent session 628c551c-fcfe-4d2b-9dca-20c0b6987ebb ran tools/gpu/frame-cost.mjs twice at once (race-a, race-b) from its f4x-race-old unit in bench-skipfix, detached at origin/dev by its f4x-skipfix-setup unit at 05:06 UTC, when origin/dev was 1c851dac (the next dev commits are dated 05:22 and 05:33); the tree as set up"
+ },
+ {
+  "supersedes": "20261127T053112Z-desktop-98ac96",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "628c551c-fcfe-4d2b-9dca-20c0b6987ebb"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-skipfix",
+   "commit": "1c851dacf7353ee56e4dcc60b25d4b9d96d01812",
+   "branch": null,
+   "refs": "origin/dev",
+   "dirty": 0
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-race-old/b.log"
+   }
+  ],
+  "note": "attributed: agent session 628c551c-fcfe-4d2b-9dca-20c0b6987ebb ran tools/gpu/frame-cost.mjs twice at once (race-a, race-b) from its f4x-race-old unit in bench-skipfix, detached at origin/dev by its f4x-skipfix-setup unit at 05:06 UTC, when origin/dev was 1c851dac (the next dev commits are dated 05:22 and 05:33); the tree as set up"
+ },
+ {
+  "supersedes": "20261127T053304Z-desktop-aafce2",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "628c551c-fcfe-4d2b-9dca-20c0b6987ebb"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-skipfix",
+   "commit": "1c851dacf7353ee56e4dcc60b25d4b9d96d01812",
+   "branch": null,
+   "refs": "origin/dev",
+   "dirty": 1
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-race-new/a.log"
+   }
+  ],
+  "note": "attributed: agent session 628c551c-fcfe-4d2b-9dca-20c0b6987ebb ran tools/gpu/frame-cost.mjs twice at once (race-a, race-b) from its f4x-race-new unit in bench-skipfix, detached at origin/dev by its f4x-skipfix-setup unit at 05:06 UTC, when origin/dev was 1c851dac (the next dev commits are dated 05:22 and 05:33); tools/gpu/session.mjs replaced, 8 lines, by the working copy of fix/bench-skip-and-browser-totals in session 628c551c-fcfe-4d2b-9dca-20c0b6987ebb just before the run"
+ },
+ {
+  "supersedes": "20261127T053253Z-desktop-afa747",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "628c551c-fcfe-4d2b-9dca-20c0b6987ebb"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-skipfix",
+   "commit": "1c851dacf7353ee56e4dcc60b25d4b9d96d01812",
+   "branch": null,
+   "refs": "origin/dev",
+   "dirty": 1
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-race-new/b.log"
+   }
+  ],
+  "note": "attributed: agent session 628c551c-fcfe-4d2b-9dca-20c0b6987ebb ran tools/gpu/frame-cost.mjs twice at once (race-a, race-b) from its f4x-race-new unit in bench-skipfix, detached at origin/dev by its f4x-skipfix-setup unit at 05:06 UTC, when origin/dev was 1c851dac (the next dev commits are dated 05:22 and 05:33); tools/gpu/session.mjs replaced, 8 lines, by the working copy of fix/bench-skip-and-browser-totals in session 628c551c-fcfe-4d2b-9dca-20c0b6987ebb just before the run"
+ },
+ {
+  "supersedes": "20261127T051157Z-desktop-53a3af",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "628c551c-fcfe-4d2b-9dca-20c0b6987ebb"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-skipfix",
+   "commit": "1c851dacf7353ee56e4dcc60b25d4b9d96d01812",
+   "branch": null,
+   "refs": "origin/dev",
+   "dirty": 0
+  },
+  "note": "attributed: agent session 628c551c-fcfe-4d2b-9dca-20c0b6987ebb ran tools/gpu/frame-cost.mjs with F4X_SKIP=\"resources;buildings\" in bench-skipfix, detached at origin/dev at 05:06 UTC, when origin/dev was 1c851dac"
+ },
+ {
+  "supersedes": "20261127T051953Z-desktop-a40fdc",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "628c551c-fcfe-4d2b-9dca-20c0b6987ebb"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-skipfix-lo",
+   "commit": "c838a365eedb4df1d5f597af6bc42b844ad4881d",
+   "branch": null,
+   "refs": "origin/test/look-overhaul",
+   "dirty": 0
+  },
+  "note": "attributed: agent session 628c551c-fcfe-4d2b-9dca-20c0b6987ebb ran tools/gpu/frame-cost.mjs with F4X_SKIP=\"resources;buildings\" in bench-skipfix-lo, detached at origin/test/look-overhaul; the session read c838a365 from it before the run"
+ },
+ {
+  "supersedes": "20261127T052733Z-desktop-20a0a0",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "628c551c-fcfe-4d2b-9dca-20c0b6987ebb"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-skipfix-a96",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: agent session 628c551c-fcfe-4d2b-9dca-20c0b6987ebb ran tools/gpu/frame-cost.mjs with F4X_SKIP=\"resources;buildings\" in bench-skipfix-a96, detached at a96826d3; the session read a96826d3 from it before the run"
+ },
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "compare",
+   "launchedBy": {
+    "who": "agent",
+    "session": "4b74a4c5-a306-4f0b-b681-4457f30a87f9"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-review-c2e0748e",
+   "commit": "c2e0748e8dc8665eaa8d1009b6cd708ea00f3140",
+   "branch": null,
+   "refs": null,
+   "dirty": 0,
+   "perf": {
+    "before": {
+     "commit": "dce8161d69d5b5d2ab398f0cb6cca1ee1b3cf03a",
+     "backend": "webgl2",
+     "capture": "~/gpu-layer-verify/partC2/frag-webgl2"
+    },
+    "after": {
+     "commit": "dce8161d69d5b5d2ab398f0cb6cca1ee1b3cf03a",
+     "backend": "webgpu",
+     "capture": "~/gpu-layer-verify/partC2/frag-webgpu"
+    },
+    "differ": {
+     "painted-spring-fit": {
+      "px": 16668,
+      "maxDelta": 136
+     },
+     "painted-spring-t24": {
+      "px": 22772,
+      "maxDelta": 15
+     },
+     "painted-spring-t48": {
+      "px": 15841,
+      "maxDelta": 2
+     },
+     "painted-winter-fit": {
+      "px": 19611,
+      "maxDelta": 134
+     },
+     "painted-winter-t24": {
+      "px": 14632,
+      "maxDelta": 14
+     },
+     "painted-winter-t48": {
+      "px": 14127,
+      "maxDelta": 2
+     }
+    }
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-rv-frag/painted-spring-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-frag/painted-spring-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-frag/painted-spring-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-frag/painted-winter-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-frag/painted-winter-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-frag/painted-winter-t48.png"
+   }
+  ],
+  "note": "desktop /tmp/f4x-rv-frag: the pixel differences tools/gpu/compare.mjs of bench-review-c2e0748e (detached at c2e0748e by session 4b74a4c5-a306-4f0b-b681-4457f30a87f9) wrote between the captures frag-webgl2 and frag-webgpu, which session f3b06ac1-223a-4a9a-9821-da9de91a6999 made in bench-webgpu and whose capture logs name the commits in perf; aca9679d, dce8161d and 79bd950b were throwaway commits on the desktop and never pushed"
+ },
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "compare",
+   "launchedBy": {
+    "who": "agent",
+    "session": "4b74a4c5-a306-4f0b-b681-4457f30a87f9"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-review-c2e0748e",
+   "commit": "c2e0748e8dc8665eaa8d1009b6cd708ea00f3140",
+   "branch": null,
+   "refs": null,
+   "dirty": 0,
+   "perf": {
+    "before": {
+     "commit": "aca9679d53447348b6fcd4ec50d3f6f1c2357d99",
+     "backend": "webgl2",
+     "capture": "~/gpu-layer-verify/partC2/offset-webgl2"
+    },
+    "after": {
+     "commit": "aca9679d53447348b6fcd4ec50d3f6f1c2357d99",
+     "backend": "webgpu",
+     "capture": "~/gpu-layer-verify/partC2/offset-webgpu"
+    },
+    "differ": {
+     "painted-spring-fit": {
+      "px": 8654,
+      "maxDelta": 136
+     },
+     "painted-spring-t24": {
+      "px": 8125,
+      "maxDelta": 15
+     },
+     "painted-spring-t48": {
+      "px": 7676,
+      "maxDelta": 2
+     },
+     "painted-winter-fit": {
+      "px": 6899,
+      "maxDelta": 134
+     },
+     "painted-winter-t24": {
+      "px": 15450,
+      "maxDelta": 14
+     },
+     "painted-winter-t48": {
+      "px": 8934,
+      "maxDelta": 2
+     }
+    }
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-rv-off/painted-spring-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-off/painted-spring-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-off/painted-spring-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-off/painted-winter-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-off/painted-winter-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-off/painted-winter-t48.png"
+   }
+  ],
+  "note": "desktop /tmp/f4x-rv-off: the pixel differences tools/gpu/compare.mjs of bench-review-c2e0748e (detached at c2e0748e by session 4b74a4c5-a306-4f0b-b681-4457f30a87f9) wrote between the captures offset-webgl2 and offset-webgpu, which session f3b06ac1-223a-4a9a-9821-da9de91a6999 made in bench-webgpu and whose capture logs name the commits in perf; aca9679d, dce8161d and 79bd950b were throwaway commits on the desktop and never pushed"
+ },
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "compare",
+   "launchedBy": {
+    "who": "agent",
+    "session": "4b74a4c5-a306-4f0b-b681-4457f30a87f9"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-review-c2e0748e",
+   "commit": "c2e0748e8dc8665eaa8d1009b6cd708ea00f3140",
+   "branch": null,
+   "refs": null,
+   "dirty": 0,
+   "perf": {
+    "before": {
+     "commit": "c2e0748e8dc8665eaa8d1009b6cd708ea00f3140",
+     "backend": "webgl2",
+     "capture": "~/gpu-layer-verify/partC2/webgl2-1"
+    },
+    "after": {
+     "commit": "aca9679d53447348b6fcd4ec50d3f6f1c2357d99",
+     "backend": "webgl2",
+     "capture": "~/gpu-layer-verify/partC2/offset-webgl2"
+    },
+    "differ": {
+     "painted-spring-fit": {
+      "px": 1398,
+      "maxDelta": 1
+     },
+     "painted-spring-t24": {
+      "px": 60210,
+      "maxDelta": 204
+     },
+     "painted-spring-t48": {
+      "px": 121812,
+      "maxDelta": 204
+     },
+     "painted-winter-fit": {
+      "px": 1298,
+      "maxDelta": 1
+     },
+     "painted-winter-t24": {
+      "px": 60104,
+      "maxDelta": 189
+     },
+     "painted-winter-t48": {
+      "px": 121755,
+      "maxDelta": 189
+     }
+    }
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-rv-offgl/painted-spring-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-offgl/painted-spring-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-offgl/painted-spring-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-offgl/painted-winter-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-offgl/painted-winter-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-offgl/painted-winter-t48.png"
+   }
+  ],
+  "note": "desktop /tmp/f4x-rv-offgl: the pixel differences tools/gpu/compare.mjs of bench-review-c2e0748e (detached at c2e0748e by session 4b74a4c5-a306-4f0b-b681-4457f30a87f9) wrote between the captures webgl2-1 and offset-webgl2, which session f3b06ac1-223a-4a9a-9821-da9de91a6999 made in bench-webgpu and whose capture logs name the commits in perf; aca9679d, dce8161d and 79bd950b were throwaway commits on the desktop and never pushed"
+ },
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "compare",
+   "launchedBy": {
+    "who": "agent",
+    "session": "4b74a4c5-a306-4f0b-b681-4457f30a87f9"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-review-c2e0748e",
+   "commit": "c2e0748e8dc8665eaa8d1009b6cd708ea00f3140",
+   "branch": null,
+   "refs": null,
+   "dirty": 0,
+   "perf": {
+    "before": {
+     "commit": "c2e0748e8dc8665eaa8d1009b6cd708ea00f3140",
+     "backend": "webgl2",
+     "capture": "~/gpu-layer-verify/partC2/webgl2-1"
+    },
+    "after": {
+     "commit": "dce8161d69d5b5d2ab398f0cb6cca1ee1b3cf03a",
+     "backend": "webgl2",
+     "capture": "~/gpu-layer-verify/partC2/frag-webgl2"
+    },
+    "differ": {
+     "painted-spring-fit": {
+      "px": 88036,
+      "maxDelta": 1
+     },
+     "painted-spring-t24": {
+      "px": 105643,
+      "maxDelta": 204
+     },
+     "painted-spring-t48": {
+      "px": 177822,
+      "maxDelta": 204
+     },
+     "painted-winter-fit": {
+      "px": 26809,
+      "maxDelta": 1
+     },
+     "painted-winter-t24": {
+      "px": 87070,
+      "maxDelta": 189
+     },
+     "painted-winter-t48": {
+      "px": 148865,
+      "maxDelta": 189
+     }
+    }
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-rv-fraggl/painted-spring-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-fraggl/painted-spring-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-fraggl/painted-spring-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-fraggl/painted-winter-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-fraggl/painted-winter-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-fraggl/painted-winter-t48.png"
+   }
+  ],
+  "note": "desktop /tmp/f4x-rv-fraggl: the pixel differences tools/gpu/compare.mjs of bench-review-c2e0748e (detached at c2e0748e by session 4b74a4c5-a306-4f0b-b681-4457f30a87f9) wrote between the captures webgl2-1 and frag-webgl2, which session f3b06ac1-223a-4a9a-9821-da9de91a6999 made in bench-webgpu and whose capture logs name the commits in perf; aca9679d, dce8161d and 79bd950b were throwaway commits on the desktop and never pushed"
+ },
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "compare",
+   "launchedBy": {
+    "who": "agent",
+    "session": "4b74a4c5-a306-4f0b-b681-4457f30a87f9"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-review-c2e0748e",
+   "commit": "c2e0748e8dc8665eaa8d1009b6cd708ea00f3140",
+   "branch": null,
+   "refs": null,
+   "dirty": 0,
+   "perf": {
+    "before": {
+     "commit": "c2e0748e8dc8665eaa8d1009b6cd708ea00f3140",
+     "backend": "webgl2",
+     "capture": "~/gpu-layer-verify/partC2/webgl2-1"
+    },
+    "after": {
+     "commit": "79bd950b3d1e407cc009b79d723c5e470fd6032e",
+     "backend": "webgl2",
+     "capture": "~/gpu-layer-verify/partC2/ulp-webgl2"
+    },
+    "differ": {
+     "painted-spring-t24": {
+      "px": 2624,
+      "maxDelta": 189
+     },
+     "painted-winter-t24": {
+      "px": 2622,
+      "maxDelta": 182
+     }
+    }
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-rv-u1/painted-spring-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-u1/painted-winter-t24.png"
+   }
+  ],
+  "note": "desktop /tmp/f4x-rv-u1: the pixel differences tools/gpu/compare.mjs of bench-review-c2e0748e (detached at c2e0748e by session 4b74a4c5-a306-4f0b-b681-4457f30a87f9) wrote between the captures webgl2-1 and ulp-webgl2, which session f3b06ac1-223a-4a9a-9821-da9de91a6999 made in bench-webgpu and whose capture logs name the commits in perf; aca9679d, dce8161d and 79bd950b were throwaway commits on the desktop and never pushed"
+ },
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "compare",
+   "launchedBy": {
+    "who": "agent",
+    "session": "4b74a4c5-a306-4f0b-b681-4457f30a87f9"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-review-c2e0748e",
+   "commit": "c2e0748e8dc8665eaa8d1009b6cd708ea00f3140",
+   "branch": null,
+   "refs": null,
+   "dirty": 0,
+   "perf": {
+    "before": {
+     "commit": "79bd950b3d1e407cc009b79d723c5e470fd6032e",
+     "backend": "webgl2",
+     "capture": "~/gpu-layer-verify/partC2/ulp-webgl2"
+    },
+    "after": {
+     "commit": "c2e0748e8dc8665eaa8d1009b6cd708ea00f3140",
+     "backend": "webgpu",
+     "capture": "~/gpu-layer-verify/partC2/webgpu-1"
+    },
+    "differ": {
+     "painted-spring-fit": {
+      "px": 7985,
+      "maxDelta": 136
+     },
+     "painted-spring-t24": {
+      "px": 10566,
+      "maxDelta": 189
+     },
+     "painted-spring-t48": {
+      "px": 61995,
+      "maxDelta": 204
+     },
+     "painted-winter-fit": {
+      "px": 6268,
+      "maxDelta": 134
+     },
+     "painted-winter-t24": {
+      "px": 18022,
+      "maxDelta": 182
+     },
+     "painted-winter-t48": {
+      "px": 63446,
+      "maxDelta": 189
+     }
+    }
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-rv-u2/painted-spring-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-u2/painted-spring-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-u2/painted-spring-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-u2/painted-winter-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-u2/painted-winter-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-rv-u2/painted-winter-t48.png"
+   }
+  ],
+  "note": "desktop /tmp/f4x-rv-u2: the pixel differences tools/gpu/compare.mjs of bench-review-c2e0748e (detached at c2e0748e by session 4b74a4c5-a306-4f0b-b681-4457f30a87f9) wrote between the captures ulp-webgl2 and webgpu-1, which session f3b06ac1-223a-4a9a-9821-da9de91a6999 made in bench-webgpu and whose capture logs name the commits in perf; aca9679d, dce8161d and 79bd950b were throwaway commits on the desktop and never pushed"
+ },
+ {
+  "supersedes": "20261127T004021Z-desktop-f910f8",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-base",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/steady.mjs of bench-tg-base, made by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 at 00:36 UTC with `git worktree add --detach` at a96826d3 and not moved after"
+ },
+ {
+  "supersedes": "20261127T004609Z-desktop-7cd81b",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-base",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/steady.mjs of bench-tg-base, made by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 at 00:36 UTC with `git worktree add --detach` at a96826d3 and not moved after"
+ },
+ {
+  "supersedes": "20261127T004331Z-desktop-66954d",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-tree",
+   "commit": "c4cf6551c4b0bba428704eab5e7bce7fe8c2978a",
+   "branch": null,
+   "refs": "origin/feat/tree-ground-patches",
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/steady.mjs of bench-tg-tree, made by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 at 00:36 UTC from origin/feat/tree-ground-patches, which it had just pushed from c4cf6551 and did not move before 00:53"
+ },
+ {
+  "supersedes": "20261127T004925Z-desktop-bdcd71",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-tree",
+   "commit": "c4cf6551c4b0bba428704eab5e7bce7fe8c2978a",
+   "branch": null,
+   "refs": "origin/feat/tree-ground-patches",
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/steady.mjs of bench-tg-tree, made by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 at 00:36 UTC from origin/feat/tree-ground-patches, which it had just pushed from c4cf6551 and did not move before 00:53"
+ },
+ {
+  "supersedes": "20261127T011140Z-desktop-a07646",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-base",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/steady.mjs of bench-tg-base, made by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 at 00:36 UTC with `git worktree add --detach` at a96826d3 and not moved after"
+ },
+ {
+  "supersedes": "20261127T011655Z-desktop-72f3ba",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-base",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/steady.mjs of bench-tg-base, made by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 at 00:36 UTC with `git worktree add --detach` at a96826d3 and not moved after"
+ },
+ {
+  "supersedes": "20261127T011418Z-desktop-04351a",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-tree",
+   "commit": "a00f6b86ee8b636f969fbafcb4c472d78178b0c7",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/steady.mjs of bench-tg-tree, moved by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 to a00f6b86 with `git checkout --detach` at 01:09 UTC, and read back as a00f6b86 at 01:21"
+ },
+ {
+  "supersedes": "20261127T011931Z-desktop-61bbc4",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-tree",
+   "commit": "a00f6b86ee8b636f969fbafcb4c472d78178b0c7",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/steady.mjs of bench-tg-tree, moved by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 to a00f6b86 with `git checkout --detach` at 01:09 UTC, and read back as a00f6b86 at 01:21"
+ },
+ {
+  "supersedes": "20261127T005056Z-desktop-dd15fc",
+  "set": {
+   "tool": "capture",
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-base",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-base/.server-painted-spring.log",
+    "name": "capture-base/.server-painted-spring.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-base/.server-painted-winter.log",
+    "name": "capture-base/.server-painted-winter.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-base/SHA256SUMS",
+    "name": "capture-base/SHA256SUMS"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-base/painted-spring-fit.png",
+    "name": "capture-base/painted-spring-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-base/painted-spring-t24.png",
+    "name": "capture-base/painted-spring-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-base/painted-spring-t48.png",
+    "name": "capture-base/painted-spring-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-base/painted-winter-fit.png",
+    "name": "capture-base/painted-winter-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-base/painted-winter-t24.png",
+    "name": "capture-base/painted-winter-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-base/painted-winter-t48.png",
+    "name": "capture-base/painted-winter-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-base.log"
+   }
+  ],
+  "note": "attributed: tools/gpu/capture.mjs of bench-tg-base, made by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 at 00:36 UTC with `git worktree add --detach` at a96826d3 and not moved after"
+ },
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "capture",
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-tree",
+   "commit": "c4cf6551c4b0bba428704eab5e7bce7fe8c2978a",
+   "branch": null,
+   "refs": "origin/feat/tree-ground-patches",
+   "dirty": 0
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/manifest.json",
+    "name": "capture-tree/manifest.json",
+    "role": "result"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/.server-painted-spring.log",
+    "name": "capture-tree/.server-painted-spring.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/.server-painted-winter.log",
+    "name": "capture-tree/.server-painted-winter.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/SHA256SUMS",
+    "name": "capture-tree/SHA256SUMS"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/painted-spring-fit.png",
+    "name": "capture-tree/painted-spring-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/painted-spring-t24.png",
+    "name": "capture-tree/painted-spring-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/painted-spring-t48.png",
+    "name": "capture-tree/painted-spring-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/painted-winter-fit.png",
+    "name": "capture-tree/painted-winter-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/painted-winter-t24.png",
+    "name": "capture-tree/painted-winter-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/painted-winter-t48.png",
+    "name": "capture-tree/painted-winter-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree.log"
+   }
+  ],
+  "note": "desktop /tmp/f4x-tree-ground/capture-tree: tools/gpu/capture.mjs of bench-tg-tree, made by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 at 00:36 UTC from origin/feat/tree-ground-patches, which it had just pushed from c4cf6551 and did not move before 00:53; its manifest is byte for byte the one of the f4x-tg2 capture at a00f6b86, which is why the first import kept it only as 20261127T012059Z-desktop-9a18ef"
+ },
+ {
+  "set": {
+   "machine": "desktop",
+   "kind": "bench",
+   "tool": "compare",
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-tree",
+   "commit": "c4cf6551c4b0bba428704eab5e7bce7fe8c2978a",
+   "branch": null,
+   "refs": "origin/feat/tree-ground-patches",
+   "dirty": 0,
+   "perf": {
+    "before": {
+     "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+     "capture": "capture-base"
+    },
+    "after": {
+     "commit": "c4cf6551c4b0bba428704eab5e7bce7fe8c2978a",
+     "capture": "capture-tree"
+    }
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/diff/painted-spring-fit.png",
+    "name": "diff/painted-spring-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/diff/painted-spring-t24.png",
+    "name": "diff/painted-spring-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/diff/painted-spring-t48.png",
+    "name": "diff/painted-spring-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/diff/painted-winter-fit.png",
+    "name": "diff/painted-winter-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/diff/painted-winter-t24.png",
+    "name": "diff/painted-winter-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/capture-tree/diff/painted-winter-t48.png",
+    "name": "diff/painted-winter-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/compare.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tree-ground/DONE"
+   }
+  ],
+  "note": "desktop /tmp/f4x-tree-ground: tools/gpu/compare.mjs of bench-tg-tree between the base and tree captures of the same bench script of agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791; DONE is the script's end marker"
+ },
+ {
+  "supersedes": "20261127T012059Z-desktop-9a18ef",
+  "set": {
+   "tool": "capture",
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-tree",
+   "commit": "a00f6b86ee8b636f969fbafcb4c472d78178b0c7",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-tg2/capture-tree/.server-painted-spring.log",
+    "name": "capture-tree/.server-painted-spring.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tg2/capture-tree/.server-painted-winter.log",
+    "name": "capture-tree/.server-painted-winter.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tg2/capture-tree/SHA256SUMS",
+    "name": "capture-tree/SHA256SUMS"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tg2/capture-tree/painted-spring-fit.png",
+    "name": "capture-tree/painted-spring-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tg2/capture-tree/painted-spring-t24.png",
+    "name": "capture-tree/painted-spring-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tg2/capture-tree/painted-spring-t48.png",
+    "name": "capture-tree/painted-spring-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tg2/capture-tree/painted-winter-fit.png",
+    "name": "capture-tree/painted-winter-fit.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tg2/capture-tree/painted-winter-t24.png",
+    "name": "capture-tree/painted-winter-t24.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tg2/capture-tree/painted-winter-t48.png",
+    "name": "capture-tree/painted-winter-t48.png"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tg2/capture.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-tg2/DONE"
+   }
+  ],
+  "note": "attributed: tools/gpu/capture.mjs of bench-tg-tree, moved by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 to a00f6b86 with `git checkout --detach` at 01:09 UTC, and read back as a00f6b86 at 01:21; DONE is the script's end marker"
+ },
+ {
+  "supersedes": "20261126T222343Z-desktop-fff94b",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222344Z-desktop-61e3ee",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222345Z-desktop-fedbc3",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222346Z-desktop-ebd070",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222347Z-desktop-0c6ec0",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222349Z-desktop-d6b4e0",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222349Z-desktop-1887b6",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222350Z-desktop-44494b",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222351Z-desktop-144f92",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222353Z-desktop-3fdcbc",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222353Z-desktop-f87c1d",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222354Z-desktop-90838e",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222356Z-desktop-000cfc",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222452Z-desktop-05ace5",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222453Z-desktop-bb4c57",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222454Z-desktop-59d3c5",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222455Z-desktop-59368d",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222456Z-desktop-8024de",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222457Z-desktop-99dc67",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222458Z-desktop-f00610",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222459Z-desktop-22d597",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222500Z-desktop-53a819",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222501Z-desktop-b7408e",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "supersedes": "20261126T222548Z-desktop-db786c",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "name": "ud-r01-vulkan-x11/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Cache/Cache_Data/83d1ba984cd75033_0",
+    "name": "ud-r01-vulkan-x11/Cache/Cache_Data/83d1ba984cd75033_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Cache/Cache_Data/index",
+    "name": "ud-r01-vulkan-x11/Cache/Cache_Data/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Cache/Cache_Data/index-dir/the-real-index",
+    "name": "ud-r01-vulkan-x11/Cache/Cache_Data/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Cache/No_Vary_Search/journal.baj",
+    "name": "ud-r01-vulkan-x11/Cache/No_Vary_Search/journal.baj",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Cache/No_Vary_Search/snapshot.baf",
+    "name": "ud-r01-vulkan-x11/Cache/No_Vary_Search/snapshot.baf",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "name": "ud-r01-vulkan-x11/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Code Cache/js/index",
+    "name": "ud-r01-vulkan-x11/Code Cache/js/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Code Cache/js/index-dir/the-real-index",
+    "name": "ud-r01-vulkan-x11/Code Cache/js/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Code Cache/wasm/index",
+    "name": "ud-r01-vulkan-x11/Code Cache/wasm/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Code Cache/wasm/index-dir/the-real-index",
+    "name": "ud-r01-vulkan-x11/Code Cache/wasm/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Crashpad/client_id",
+    "name": "ud-r01-vulkan-x11/Crashpad/client_id",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/DIPS",
+    "name": "ud-r01-vulkan-x11/DIPS",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/DawnGraphiteCache/data_0",
+    "name": "ud-r01-vulkan-x11/DawnGraphiteCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/DawnGraphiteCache/data_1",
+    "name": "ud-r01-vulkan-x11/DawnGraphiteCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/DawnGraphiteCache/data_2",
+    "name": "ud-r01-vulkan-x11/DawnGraphiteCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/DawnGraphiteCache/data_3",
+    "name": "ud-r01-vulkan-x11/DawnGraphiteCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/DawnGraphiteCache/index",
+    "name": "ud-r01-vulkan-x11/DawnGraphiteCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/DawnWebGPUCache/data_0",
+    "name": "ud-r01-vulkan-x11/DawnWebGPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/DawnWebGPUCache/data_1",
+    "name": "ud-r01-vulkan-x11/DawnWebGPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/DawnWebGPUCache/data_2",
+    "name": "ud-r01-vulkan-x11/DawnWebGPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/DawnWebGPUCache/data_3",
+    "name": "ud-r01-vulkan-x11/DawnWebGPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/DawnWebGPUCache/index",
+    "name": "ud-r01-vulkan-x11/DawnWebGPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Dictionaries/en-US-10-1.bdic",
+    "name": "ud-r01-vulkan-x11/Dictionaries/en-US-10-1.bdic",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/GPUCache/data_0",
+    "name": "ud-r01-vulkan-x11/GPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/GPUCache/data_1",
+    "name": "ud-r01-vulkan-x11/GPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/GPUCache/data_2",
+    "name": "ud-r01-vulkan-x11/GPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/GPUCache/data_3",
+    "name": "ud-r01-vulkan-x11/GPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/GPUCache/index",
+    "name": "ud-r01-vulkan-x11/GPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Local State",
+    "name": "ud-r01-vulkan-x11/Local State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Local Storage/leveldb/000003.log",
+    "name": "ud-r01-vulkan-x11/Local Storage/leveldb/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Local Storage/leveldb/CURRENT",
+    "name": "ud-r01-vulkan-x11/Local Storage/leveldb/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Local Storage/leveldb/LOCK",
+    "name": "ud-r01-vulkan-x11/Local Storage/leveldb/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Local Storage/leveldb/LOG",
+    "name": "ud-r01-vulkan-x11/Local Storage/leveldb/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Local Storage/leveldb/MANIFEST-000001",
+    "name": "ud-r01-vulkan-x11/Local Storage/leveldb/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Network Persistent State",
+    "name": "ud-r01-vulkan-x11/Network Persistent State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Preferences",
+    "name": "ud-r01-vulkan-x11/Preferences",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Session Storage/000003.log",
+    "name": "ud-r01-vulkan-x11/Session Storage/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Session Storage/CURRENT",
+    "name": "ud-r01-vulkan-x11/Session Storage/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Session Storage/LOCK",
+    "name": "ud-r01-vulkan-x11/Session Storage/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Session Storage/LOG",
+    "name": "ud-r01-vulkan-x11/Session Storage/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Session Storage/MANIFEST-000001",
+    "name": "ud-r01-vulkan-x11/Session Storage/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Shared Dictionary/cache/index",
+    "name": "ud-r01-vulkan-x11/Shared Dictionary/cache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Shared Dictionary/cache/index-dir/the-real-index",
+    "name": "ud-r01-vulkan-x11/Shared Dictionary/cache/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Shared Dictionary/db",
+    "name": "ud-r01-vulkan-x11/Shared Dictionary/db",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Shared Dictionary/db-journal",
+    "name": "ud-r01-vulkan-x11/Shared Dictionary/db-journal",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Trust Tokens",
+    "name": "ud-r01-vulkan-x11/Trust Tokens",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r01-vulkan-x11/Trust Tokens-journal",
+    "name": "ud-r01-vulkan-x11/Trust Tokens-journal",
+    "role": "log"
+   }
+  ],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit; ud-r01-vulkan-x11 is the browser profile that run used"
+ },
+ {
+  "supersedes": "20261126T222548Z-desktop-0151fe",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Cache/Cache_Data/05dbaa98826ac251_0",
+    "name": "ud-r02-interop-x11/Cache/Cache_Data/05dbaa98826ac251_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "name": "ud-r02-interop-x11/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Cache/Cache_Data/index",
+    "name": "ud-r02-interop-x11/Cache/Cache_Data/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Cache/Cache_Data/index-dir/the-real-index",
+    "name": "ud-r02-interop-x11/Cache/Cache_Data/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Cache/No_Vary_Search/journal.baj",
+    "name": "ud-r02-interop-x11/Cache/No_Vary_Search/journal.baj",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Cache/No_Vary_Search/snapshot.baf",
+    "name": "ud-r02-interop-x11/Cache/No_Vary_Search/snapshot.baf",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "name": "ud-r02-interop-x11/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Code Cache/js/index",
+    "name": "ud-r02-interop-x11/Code Cache/js/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Code Cache/js/index-dir/the-real-index",
+    "name": "ud-r02-interop-x11/Code Cache/js/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Code Cache/wasm/index",
+    "name": "ud-r02-interop-x11/Code Cache/wasm/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Code Cache/wasm/index-dir/the-real-index",
+    "name": "ud-r02-interop-x11/Code Cache/wasm/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Crashpad/client_id",
+    "name": "ud-r02-interop-x11/Crashpad/client_id",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/DIPS",
+    "name": "ud-r02-interop-x11/DIPS",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/DawnGraphiteCache/data_0",
+    "name": "ud-r02-interop-x11/DawnGraphiteCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/DawnGraphiteCache/data_1",
+    "name": "ud-r02-interop-x11/DawnGraphiteCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/DawnGraphiteCache/data_2",
+    "name": "ud-r02-interop-x11/DawnGraphiteCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/DawnGraphiteCache/data_3",
+    "name": "ud-r02-interop-x11/DawnGraphiteCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/DawnGraphiteCache/index",
+    "name": "ud-r02-interop-x11/DawnGraphiteCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/DawnWebGPUCache/data_0",
+    "name": "ud-r02-interop-x11/DawnWebGPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/DawnWebGPUCache/data_1",
+    "name": "ud-r02-interop-x11/DawnWebGPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/DawnWebGPUCache/data_2",
+    "name": "ud-r02-interop-x11/DawnWebGPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/DawnWebGPUCache/data_3",
+    "name": "ud-r02-interop-x11/DawnWebGPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/DawnWebGPUCache/index",
+    "name": "ud-r02-interop-x11/DawnWebGPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Dictionaries/en-US-10-1.bdic",
+    "name": "ud-r02-interop-x11/Dictionaries/en-US-10-1.bdic",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/GPUCache/data_0",
+    "name": "ud-r02-interop-x11/GPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/GPUCache/data_1",
+    "name": "ud-r02-interop-x11/GPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/GPUCache/data_2",
+    "name": "ud-r02-interop-x11/GPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/GPUCache/data_3",
+    "name": "ud-r02-interop-x11/GPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/GPUCache/index",
+    "name": "ud-r02-interop-x11/GPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Local State",
+    "name": "ud-r02-interop-x11/Local State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Local Storage/leveldb/000003.log",
+    "name": "ud-r02-interop-x11/Local Storage/leveldb/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Local Storage/leveldb/CURRENT",
+    "name": "ud-r02-interop-x11/Local Storage/leveldb/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Local Storage/leveldb/LOCK",
+    "name": "ud-r02-interop-x11/Local Storage/leveldb/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Local Storage/leveldb/LOG",
+    "name": "ud-r02-interop-x11/Local Storage/leveldb/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Local Storage/leveldb/MANIFEST-000001",
+    "name": "ud-r02-interop-x11/Local Storage/leveldb/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Network Persistent State",
+    "name": "ud-r02-interop-x11/Network Persistent State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Preferences",
+    "name": "ud-r02-interop-x11/Preferences",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Session Storage/000003.log",
+    "name": "ud-r02-interop-x11/Session Storage/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Session Storage/CURRENT",
+    "name": "ud-r02-interop-x11/Session Storage/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Session Storage/LOCK",
+    "name": "ud-r02-interop-x11/Session Storage/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Session Storage/LOG",
+    "name": "ud-r02-interop-x11/Session Storage/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Session Storage/MANIFEST-000001",
+    "name": "ud-r02-interop-x11/Session Storage/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Shared Dictionary/cache/index",
+    "name": "ud-r02-interop-x11/Shared Dictionary/cache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Shared Dictionary/cache/index-dir/the-real-index",
+    "name": "ud-r02-interop-x11/Shared Dictionary/cache/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Shared Dictionary/db",
+    "name": "ud-r02-interop-x11/Shared Dictionary/db",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Shared Dictionary/db-journal",
+    "name": "ud-r02-interop-x11/Shared Dictionary/db-journal",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Trust Tokens",
+    "name": "ud-r02-interop-x11/Trust Tokens",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r02-interop-x11/Trust Tokens-journal",
+    "name": "ud-r02-interop-x11/Trust Tokens-journal",
+    "role": "log"
+   }
+  ],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit; ud-r02-interop-x11 is the browser profile that run used"
+ },
+ {
+  "supersedes": "20261126T222549Z-desktop-ddac45",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Cache/Cache_Data/3104b9e2a174efc5_0",
+    "name": "ud-r03-interop-unsafe-x11/Cache/Cache_Data/3104b9e2a174efc5_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "name": "ud-r03-interop-unsafe-x11/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Cache/Cache_Data/index",
+    "name": "ud-r03-interop-unsafe-x11/Cache/Cache_Data/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Cache/Cache_Data/index-dir/the-real-index",
+    "name": "ud-r03-interop-unsafe-x11/Cache/Cache_Data/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Cache/No_Vary_Search/journal.baj",
+    "name": "ud-r03-interop-unsafe-x11/Cache/No_Vary_Search/journal.baj",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Cache/No_Vary_Search/snapshot.baf",
+    "name": "ud-r03-interop-unsafe-x11/Cache/No_Vary_Search/snapshot.baf",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "name": "ud-r03-interop-unsafe-x11/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Code Cache/js/index",
+    "name": "ud-r03-interop-unsafe-x11/Code Cache/js/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Code Cache/js/index-dir/the-real-index",
+    "name": "ud-r03-interop-unsafe-x11/Code Cache/js/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Code Cache/wasm/index",
+    "name": "ud-r03-interop-unsafe-x11/Code Cache/wasm/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Code Cache/wasm/index-dir/the-real-index",
+    "name": "ud-r03-interop-unsafe-x11/Code Cache/wasm/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Crashpad/client_id",
+    "name": "ud-r03-interop-unsafe-x11/Crashpad/client_id",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/DIPS",
+    "name": "ud-r03-interop-unsafe-x11/DIPS",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/DawnGraphiteCache/data_0",
+    "name": "ud-r03-interop-unsafe-x11/DawnGraphiteCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/DawnGraphiteCache/data_1",
+    "name": "ud-r03-interop-unsafe-x11/DawnGraphiteCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/DawnGraphiteCache/data_2",
+    "name": "ud-r03-interop-unsafe-x11/DawnGraphiteCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/DawnGraphiteCache/data_3",
+    "name": "ud-r03-interop-unsafe-x11/DawnGraphiteCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/DawnGraphiteCache/index",
+    "name": "ud-r03-interop-unsafe-x11/DawnGraphiteCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/DawnWebGPUCache/data_0",
+    "name": "ud-r03-interop-unsafe-x11/DawnWebGPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/DawnWebGPUCache/data_1",
+    "name": "ud-r03-interop-unsafe-x11/DawnWebGPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/DawnWebGPUCache/data_2",
+    "name": "ud-r03-interop-unsafe-x11/DawnWebGPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/DawnWebGPUCache/data_3",
+    "name": "ud-r03-interop-unsafe-x11/DawnWebGPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/DawnWebGPUCache/index",
+    "name": "ud-r03-interop-unsafe-x11/DawnWebGPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Dictionaries/en-US-10-1.bdic",
+    "name": "ud-r03-interop-unsafe-x11/Dictionaries/en-US-10-1.bdic",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/GPUCache/data_0",
+    "name": "ud-r03-interop-unsafe-x11/GPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/GPUCache/data_1",
+    "name": "ud-r03-interop-unsafe-x11/GPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/GPUCache/data_2",
+    "name": "ud-r03-interop-unsafe-x11/GPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/GPUCache/data_3",
+    "name": "ud-r03-interop-unsafe-x11/GPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/GPUCache/index",
+    "name": "ud-r03-interop-unsafe-x11/GPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Local State",
+    "name": "ud-r03-interop-unsafe-x11/Local State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Local Storage/leveldb/000003.log",
+    "name": "ud-r03-interop-unsafe-x11/Local Storage/leveldb/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Local Storage/leveldb/CURRENT",
+    "name": "ud-r03-interop-unsafe-x11/Local Storage/leveldb/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Local Storage/leveldb/LOCK",
+    "name": "ud-r03-interop-unsafe-x11/Local Storage/leveldb/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Local Storage/leveldb/LOG",
+    "name": "ud-r03-interop-unsafe-x11/Local Storage/leveldb/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Local Storage/leveldb/MANIFEST-000001",
+    "name": "ud-r03-interop-unsafe-x11/Local Storage/leveldb/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Network Persistent State",
+    "name": "ud-r03-interop-unsafe-x11/Network Persistent State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Preferences",
+    "name": "ud-r03-interop-unsafe-x11/Preferences",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Session Storage/000003.log",
+    "name": "ud-r03-interop-unsafe-x11/Session Storage/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Session Storage/CURRENT",
+    "name": "ud-r03-interop-unsafe-x11/Session Storage/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Session Storage/LOCK",
+    "name": "ud-r03-interop-unsafe-x11/Session Storage/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Session Storage/LOG",
+    "name": "ud-r03-interop-unsafe-x11/Session Storage/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Session Storage/MANIFEST-000001",
+    "name": "ud-r03-interop-unsafe-x11/Session Storage/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Shared Dictionary/cache/index",
+    "name": "ud-r03-interop-unsafe-x11/Shared Dictionary/cache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Shared Dictionary/cache/index-dir/the-real-index",
+    "name": "ud-r03-interop-unsafe-x11/Shared Dictionary/cache/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Shared Dictionary/db",
+    "name": "ud-r03-interop-unsafe-x11/Shared Dictionary/db",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Shared Dictionary/db-journal",
+    "name": "ud-r03-interop-unsafe-x11/Shared Dictionary/db-journal",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Trust Tokens",
+    "name": "ud-r03-interop-unsafe-x11/Trust Tokens",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r03-interop-unsafe-x11/Trust Tokens-journal",
+    "name": "ud-r03-interop-unsafe-x11/Trust Tokens-journal",
+    "role": "log"
+   }
+  ],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit; ud-r03-interop-unsafe-x11 is the browser profile that run used"
+ },
+ {
+  "supersedes": "20261126T222550Z-desktop-e1ae98",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "name": "ud-r08a-ozone-appendswitch-x11/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Cache/Cache_Data/d05f24aedfdab540_0",
+    "name": "ud-r08a-ozone-appendswitch-x11/Cache/Cache_Data/d05f24aedfdab540_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Cache/Cache_Data/index",
+    "name": "ud-r08a-ozone-appendswitch-x11/Cache/Cache_Data/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Cache/Cache_Data/index-dir/the-real-index",
+    "name": "ud-r08a-ozone-appendswitch-x11/Cache/Cache_Data/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Cache/No_Vary_Search/journal.baj",
+    "name": "ud-r08a-ozone-appendswitch-x11/Cache/No_Vary_Search/journal.baj",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Cache/No_Vary_Search/snapshot.baf",
+    "name": "ud-r08a-ozone-appendswitch-x11/Cache/No_Vary_Search/snapshot.baf",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "name": "ud-r08a-ozone-appendswitch-x11/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Code Cache/js/index",
+    "name": "ud-r08a-ozone-appendswitch-x11/Code Cache/js/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Code Cache/js/index-dir/the-real-index",
+    "name": "ud-r08a-ozone-appendswitch-x11/Code Cache/js/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Code Cache/wasm/index",
+    "name": "ud-r08a-ozone-appendswitch-x11/Code Cache/wasm/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Code Cache/wasm/index-dir/the-real-index",
+    "name": "ud-r08a-ozone-appendswitch-x11/Code Cache/wasm/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Crashpad/client_id",
+    "name": "ud-r08a-ozone-appendswitch-x11/Crashpad/client_id",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/DIPS",
+    "name": "ud-r08a-ozone-appendswitch-x11/DIPS",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/DawnGraphiteCache/data_0",
+    "name": "ud-r08a-ozone-appendswitch-x11/DawnGraphiteCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/DawnGraphiteCache/data_1",
+    "name": "ud-r08a-ozone-appendswitch-x11/DawnGraphiteCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/DawnGraphiteCache/data_2",
+    "name": "ud-r08a-ozone-appendswitch-x11/DawnGraphiteCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/DawnGraphiteCache/data_3",
+    "name": "ud-r08a-ozone-appendswitch-x11/DawnGraphiteCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/DawnGraphiteCache/index",
+    "name": "ud-r08a-ozone-appendswitch-x11/DawnGraphiteCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/DawnWebGPUCache/data_0",
+    "name": "ud-r08a-ozone-appendswitch-x11/DawnWebGPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/DawnWebGPUCache/data_1",
+    "name": "ud-r08a-ozone-appendswitch-x11/DawnWebGPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/DawnWebGPUCache/data_2",
+    "name": "ud-r08a-ozone-appendswitch-x11/DawnWebGPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/DawnWebGPUCache/data_3",
+    "name": "ud-r08a-ozone-appendswitch-x11/DawnWebGPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/DawnWebGPUCache/index",
+    "name": "ud-r08a-ozone-appendswitch-x11/DawnWebGPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Dictionaries/en-US-10-1.bdic",
+    "name": "ud-r08a-ozone-appendswitch-x11/Dictionaries/en-US-10-1.bdic",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/GPUCache/data_0",
+    "name": "ud-r08a-ozone-appendswitch-x11/GPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/GPUCache/data_1",
+    "name": "ud-r08a-ozone-appendswitch-x11/GPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/GPUCache/data_2",
+    "name": "ud-r08a-ozone-appendswitch-x11/GPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/GPUCache/data_3",
+    "name": "ud-r08a-ozone-appendswitch-x11/GPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/GPUCache/index",
+    "name": "ud-r08a-ozone-appendswitch-x11/GPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Local State",
+    "name": "ud-r08a-ozone-appendswitch-x11/Local State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Local Storage/leveldb/000003.log",
+    "name": "ud-r08a-ozone-appendswitch-x11/Local Storage/leveldb/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Local Storage/leveldb/CURRENT",
+    "name": "ud-r08a-ozone-appendswitch-x11/Local Storage/leveldb/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Local Storage/leveldb/LOCK",
+    "name": "ud-r08a-ozone-appendswitch-x11/Local Storage/leveldb/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Local Storage/leveldb/LOG",
+    "name": "ud-r08a-ozone-appendswitch-x11/Local Storage/leveldb/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Local Storage/leveldb/MANIFEST-000001",
+    "name": "ud-r08a-ozone-appendswitch-x11/Local Storage/leveldb/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Network Persistent State",
+    "name": "ud-r08a-ozone-appendswitch-x11/Network Persistent State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Preferences",
+    "name": "ud-r08a-ozone-appendswitch-x11/Preferences",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Session Storage/000003.log",
+    "name": "ud-r08a-ozone-appendswitch-x11/Session Storage/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Session Storage/CURRENT",
+    "name": "ud-r08a-ozone-appendswitch-x11/Session Storage/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Session Storage/LOCK",
+    "name": "ud-r08a-ozone-appendswitch-x11/Session Storage/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Session Storage/LOG",
+    "name": "ud-r08a-ozone-appendswitch-x11/Session Storage/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Session Storage/MANIFEST-000001",
+    "name": "ud-r08a-ozone-appendswitch-x11/Session Storage/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Shared Dictionary/cache/index",
+    "name": "ud-r08a-ozone-appendswitch-x11/Shared Dictionary/cache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Shared Dictionary/cache/index-dir/the-real-index",
+    "name": "ud-r08a-ozone-appendswitch-x11/Shared Dictionary/cache/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Shared Dictionary/db",
+    "name": "ud-r08a-ozone-appendswitch-x11/Shared Dictionary/db",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Shared Dictionary/db-journal",
+    "name": "ud-r08a-ozone-appendswitch-x11/Shared Dictionary/db-journal",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Trust Tokens",
+    "name": "ud-r08a-ozone-appendswitch-x11/Trust Tokens",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08a-ozone-appendswitch-x11/Trust Tokens-journal",
+    "name": "ud-r08a-ozone-appendswitch-x11/Trust Tokens-journal",
+    "role": "log"
+   }
+  ],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit; ud-r08a-ozone-appendswitch-x11 is the browser profile that run used"
+ },
+ {
+  "supersedes": "20261126T222551Z-desktop-dd3880",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "name": "ud-r08b-ozone-appendswitch-x11/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Cache/Cache_Data/c82189c29448f27b_0",
+    "name": "ud-r08b-ozone-appendswitch-x11/Cache/Cache_Data/c82189c29448f27b_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Cache/Cache_Data/index",
+    "name": "ud-r08b-ozone-appendswitch-x11/Cache/Cache_Data/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Cache/Cache_Data/index-dir/the-real-index",
+    "name": "ud-r08b-ozone-appendswitch-x11/Cache/Cache_Data/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Cache/No_Vary_Search/journal.baj",
+    "name": "ud-r08b-ozone-appendswitch-x11/Cache/No_Vary_Search/journal.baj",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Cache/No_Vary_Search/snapshot.baf",
+    "name": "ud-r08b-ozone-appendswitch-x11/Cache/No_Vary_Search/snapshot.baf",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "name": "ud-r08b-ozone-appendswitch-x11/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Code Cache/js/index",
+    "name": "ud-r08b-ozone-appendswitch-x11/Code Cache/js/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Code Cache/js/index-dir/the-real-index",
+    "name": "ud-r08b-ozone-appendswitch-x11/Code Cache/js/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Code Cache/wasm/index",
+    "name": "ud-r08b-ozone-appendswitch-x11/Code Cache/wasm/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Code Cache/wasm/index-dir/the-real-index",
+    "name": "ud-r08b-ozone-appendswitch-x11/Code Cache/wasm/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Crashpad/client_id",
+    "name": "ud-r08b-ozone-appendswitch-x11/Crashpad/client_id",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/DIPS",
+    "name": "ud-r08b-ozone-appendswitch-x11/DIPS",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/DawnGraphiteCache/data_0",
+    "name": "ud-r08b-ozone-appendswitch-x11/DawnGraphiteCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/DawnGraphiteCache/data_1",
+    "name": "ud-r08b-ozone-appendswitch-x11/DawnGraphiteCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/DawnGraphiteCache/data_2",
+    "name": "ud-r08b-ozone-appendswitch-x11/DawnGraphiteCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/DawnGraphiteCache/data_3",
+    "name": "ud-r08b-ozone-appendswitch-x11/DawnGraphiteCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/DawnGraphiteCache/index",
+    "name": "ud-r08b-ozone-appendswitch-x11/DawnGraphiteCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/DawnWebGPUCache/data_0",
+    "name": "ud-r08b-ozone-appendswitch-x11/DawnWebGPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/DawnWebGPUCache/data_1",
+    "name": "ud-r08b-ozone-appendswitch-x11/DawnWebGPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/DawnWebGPUCache/data_2",
+    "name": "ud-r08b-ozone-appendswitch-x11/DawnWebGPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/DawnWebGPUCache/data_3",
+    "name": "ud-r08b-ozone-appendswitch-x11/DawnWebGPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/DawnWebGPUCache/index",
+    "name": "ud-r08b-ozone-appendswitch-x11/DawnWebGPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Dictionaries/en-US-10-1.bdic",
+    "name": "ud-r08b-ozone-appendswitch-x11/Dictionaries/en-US-10-1.bdic",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/GPUCache/data_0",
+    "name": "ud-r08b-ozone-appendswitch-x11/GPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/GPUCache/data_1",
+    "name": "ud-r08b-ozone-appendswitch-x11/GPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/GPUCache/data_2",
+    "name": "ud-r08b-ozone-appendswitch-x11/GPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/GPUCache/data_3",
+    "name": "ud-r08b-ozone-appendswitch-x11/GPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/GPUCache/index",
+    "name": "ud-r08b-ozone-appendswitch-x11/GPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Local State",
+    "name": "ud-r08b-ozone-appendswitch-x11/Local State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Local Storage/leveldb/000003.log",
+    "name": "ud-r08b-ozone-appendswitch-x11/Local Storage/leveldb/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Local Storage/leveldb/CURRENT",
+    "name": "ud-r08b-ozone-appendswitch-x11/Local Storage/leveldb/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Local Storage/leveldb/LOCK",
+    "name": "ud-r08b-ozone-appendswitch-x11/Local Storage/leveldb/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Local Storage/leveldb/LOG",
+    "name": "ud-r08b-ozone-appendswitch-x11/Local Storage/leveldb/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Local Storage/leveldb/MANIFEST-000001",
+    "name": "ud-r08b-ozone-appendswitch-x11/Local Storage/leveldb/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Network Persistent State",
+    "name": "ud-r08b-ozone-appendswitch-x11/Network Persistent State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Preferences",
+    "name": "ud-r08b-ozone-appendswitch-x11/Preferences",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Session Storage/000003.log",
+    "name": "ud-r08b-ozone-appendswitch-x11/Session Storage/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Session Storage/CURRENT",
+    "name": "ud-r08b-ozone-appendswitch-x11/Session Storage/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Session Storage/LOCK",
+    "name": "ud-r08b-ozone-appendswitch-x11/Session Storage/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Session Storage/LOG",
+    "name": "ud-r08b-ozone-appendswitch-x11/Session Storage/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Session Storage/MANIFEST-000001",
+    "name": "ud-r08b-ozone-appendswitch-x11/Session Storage/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Shared Dictionary/cache/index",
+    "name": "ud-r08b-ozone-appendswitch-x11/Shared Dictionary/cache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Shared Dictionary/cache/index-dir/the-real-index",
+    "name": "ud-r08b-ozone-appendswitch-x11/Shared Dictionary/cache/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Shared Dictionary/db",
+    "name": "ud-r08b-ozone-appendswitch-x11/Shared Dictionary/db",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Shared Dictionary/db-journal",
+    "name": "ud-r08b-ozone-appendswitch-x11/Shared Dictionary/db-journal",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Trust Tokens",
+    "name": "ud-r08b-ozone-appendswitch-x11/Trust Tokens",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r08b-ozone-appendswitch-x11/Trust Tokens-journal",
+    "name": "ud-r08b-ozone-appendswitch-x11/Trust Tokens-journal",
+    "role": "log"
+   }
+  ],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit; ud-r08b-ozone-appendswitch-x11 is the browser profile that run used"
+ },
+ {
+  "supersedes": "20261126T222554Z-desktop-830048",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Cache/Cache_Data/c82189c29448f27b_0",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Cache/Cache_Data/c82189c29448f27b_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Cache/Cache_Data/index",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Cache/Cache_Data/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Cache/Cache_Data/index-dir/the-real-index",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Cache/Cache_Data/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Cache/No_Vary_Search/journal.baj",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Cache/No_Vary_Search/journal.baj",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Cache/No_Vary_Search/snapshot.baf",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Cache/No_Vary_Search/snapshot.baf",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Code Cache/js/index",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Code Cache/js/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Code Cache/js/index-dir/the-real-index",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Code Cache/js/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Code Cache/wasm/index",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Code Cache/wasm/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Code Cache/wasm/index-dir/the-real-index",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Code Cache/wasm/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Crashpad/client_id",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Crashpad/client_id",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/DIPS",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/DIPS",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/DawnGraphiteCache/data_0",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/DawnGraphiteCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/DawnGraphiteCache/data_1",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/DawnGraphiteCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/DawnGraphiteCache/data_2",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/DawnGraphiteCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/DawnGraphiteCache/data_3",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/DawnGraphiteCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/DawnGraphiteCache/index",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/DawnGraphiteCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/DawnWebGPUCache/data_0",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/DawnWebGPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/DawnWebGPUCache/data_1",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/DawnWebGPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/DawnWebGPUCache/data_2",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/DawnWebGPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/DawnWebGPUCache/data_3",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/DawnWebGPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/DawnWebGPUCache/index",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/DawnWebGPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Dictionaries/en-US-10-1.bdic",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Dictionaries/en-US-10-1.bdic",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/GPUCache/data_0",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/GPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/GPUCache/data_1",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/GPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/GPUCache/data_2",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/GPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/GPUCache/data_3",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/GPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/GPUCache/index",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/GPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Local State",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Local State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Local Storage/leveldb/000003.log",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Local Storage/leveldb/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Local Storage/leveldb/CURRENT",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Local Storage/leveldb/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Local Storage/leveldb/LOCK",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Local Storage/leveldb/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Local Storage/leveldb/LOG",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Local Storage/leveldb/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Local Storage/leveldb/MANIFEST-000001",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Local Storage/leveldb/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Network Persistent State",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Network Persistent State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Preferences",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Preferences",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Session Storage/000003.log",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Session Storage/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Session Storage/CURRENT",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Session Storage/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Session Storage/LOCK",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Session Storage/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Session Storage/LOG",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Session Storage/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Session Storage/MANIFEST-000001",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Session Storage/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Shared Dictionary/cache/index",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Shared Dictionary/cache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Shared Dictionary/cache/index-dir/the-real-index",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Shared Dictionary/cache/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Shared Dictionary/db",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Shared Dictionary/db",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Shared Dictionary/db-journal",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Shared Dictionary/db-journal",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Trust Tokens",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Trust Tokens",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r09-ozone-appendswitch-x11-novk/Trust Tokens-journal",
+    "name": "ud-r09-ozone-appendswitch-x11-novk/Trust Tokens-journal",
+    "role": "log"
+   }
+  ],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit; ud-r09-ozone-appendswitch-x11-novk is the browser profile that run used"
+ },
+ {
+  "supersedes": "20261126T222555Z-desktop-75462d",
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Cache/Cache_Data/3420f092697e515d_0",
+    "name": "ud-r10-interop-wl/Cache/Cache_Data/3420f092697e515d_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "name": "ud-r10-interop-wl/Cache/Cache_Data/5283edf90cf4ab50_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Cache/Cache_Data/index",
+    "name": "ud-r10-interop-wl/Cache/Cache_Data/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Cache/Cache_Data/index-dir/the-real-index",
+    "name": "ud-r10-interop-wl/Cache/Cache_Data/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Cache/No_Vary_Search/journal.baj",
+    "name": "ud-r10-interop-wl/Cache/No_Vary_Search/journal.baj",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Cache/No_Vary_Search/snapshot.baf",
+    "name": "ud-r10-interop-wl/Cache/No_Vary_Search/snapshot.baf",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "name": "ud-r10-interop-wl/Code Cache/electron-preload/A6BF53033B65C8602DCBF72B587FA662F84DF6A2FF861EBA1407935397EA739A.cache",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Code Cache/js/index",
+    "name": "ud-r10-interop-wl/Code Cache/js/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Code Cache/js/index-dir/the-real-index",
+    "name": "ud-r10-interop-wl/Code Cache/js/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Code Cache/wasm/index",
+    "name": "ud-r10-interop-wl/Code Cache/wasm/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Code Cache/wasm/index-dir/the-real-index",
+    "name": "ud-r10-interop-wl/Code Cache/wasm/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Crashpad/client_id",
+    "name": "ud-r10-interop-wl/Crashpad/client_id",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/DIPS",
+    "name": "ud-r10-interop-wl/DIPS",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/DawnGraphiteCache/data_0",
+    "name": "ud-r10-interop-wl/DawnGraphiteCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/DawnGraphiteCache/data_1",
+    "name": "ud-r10-interop-wl/DawnGraphiteCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/DawnGraphiteCache/data_2",
+    "name": "ud-r10-interop-wl/DawnGraphiteCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/DawnGraphiteCache/data_3",
+    "name": "ud-r10-interop-wl/DawnGraphiteCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/DawnGraphiteCache/index",
+    "name": "ud-r10-interop-wl/DawnGraphiteCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/DawnWebGPUCache/data_0",
+    "name": "ud-r10-interop-wl/DawnWebGPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/DawnWebGPUCache/data_1",
+    "name": "ud-r10-interop-wl/DawnWebGPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/DawnWebGPUCache/data_2",
+    "name": "ud-r10-interop-wl/DawnWebGPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/DawnWebGPUCache/data_3",
+    "name": "ud-r10-interop-wl/DawnWebGPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/DawnWebGPUCache/index",
+    "name": "ud-r10-interop-wl/DawnWebGPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Dictionaries/en-US-10-1.bdic",
+    "name": "ud-r10-interop-wl/Dictionaries/en-US-10-1.bdic",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/GPUCache/data_0",
+    "name": "ud-r10-interop-wl/GPUCache/data_0",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/GPUCache/data_1",
+    "name": "ud-r10-interop-wl/GPUCache/data_1",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/GPUCache/data_2",
+    "name": "ud-r10-interop-wl/GPUCache/data_2",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/GPUCache/data_3",
+    "name": "ud-r10-interop-wl/GPUCache/data_3",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/GPUCache/index",
+    "name": "ud-r10-interop-wl/GPUCache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Local State",
+    "name": "ud-r10-interop-wl/Local State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Local Storage/leveldb/000003.log",
+    "name": "ud-r10-interop-wl/Local Storage/leveldb/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Local Storage/leveldb/CURRENT",
+    "name": "ud-r10-interop-wl/Local Storage/leveldb/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Local Storage/leveldb/LOCK",
+    "name": "ud-r10-interop-wl/Local Storage/leveldb/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Local Storage/leveldb/LOG",
+    "name": "ud-r10-interop-wl/Local Storage/leveldb/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Local Storage/leveldb/MANIFEST-000001",
+    "name": "ud-r10-interop-wl/Local Storage/leveldb/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Network Persistent State",
+    "name": "ud-r10-interop-wl/Network Persistent State",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Preferences",
+    "name": "ud-r10-interop-wl/Preferences",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Session Storage/000003.log",
+    "name": "ud-r10-interop-wl/Session Storage/000003.log",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Session Storage/CURRENT",
+    "name": "ud-r10-interop-wl/Session Storage/CURRENT",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Session Storage/LOCK",
+    "name": "ud-r10-interop-wl/Session Storage/LOCK",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Session Storage/LOG",
+    "name": "ud-r10-interop-wl/Session Storage/LOG",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Session Storage/MANIFEST-000001",
+    "name": "ud-r10-interop-wl/Session Storage/MANIFEST-000001",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Shared Dictionary/cache/index",
+    "name": "ud-r10-interop-wl/Shared Dictionary/cache/index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Shared Dictionary/cache/index-dir/the-real-index",
+    "name": "ud-r10-interop-wl/Shared Dictionary/cache/index-dir/the-real-index",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Shared Dictionary/db",
+    "name": "ud-r10-interop-wl/Shared Dictionary/db",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Shared Dictionary/db-journal",
+    "name": "ud-r10-interop-wl/Shared Dictionary/db-journal",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Trust Tokens",
+    "name": "ud-r10-interop-wl/Trust Tokens",
+    "role": "log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/ud-r10-interop-wl/Trust Tokens-journal",
+    "name": "ud-r10-interop-wl/Trust Tokens-journal",
+    "role": "log"
+   }
+  ],
+  "note": "attributed: a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit; ud-r10-interop-wl is the browser profile that run used"
+ },
+ {
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null,
+   "machine": "desktop",
+   "kind": "bench",
+   "at": "2026-11-26T22:23:40.157Z",
+   "perf": {
+    "matrix": "out-wl"
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/out-wl/summary.txt",
+    "name": "out-wl/summary.txt"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/out-wl/session.txt",
+    "name": "out-wl/session.txt"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/out-wl/hyprland.log",
+    "name": "out-wl/hyprland.log"
+   }
+  ],
+  "note": "desktop /tmp/f4x-webgpu-probe/out-wl: the summary of one probe matrix; a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null,
+   "machine": "desktop",
+   "kind": "bench",
+   "at": "2026-11-26T22:24:52.157Z",
+   "perf": {
+    "matrix": "out-x11"
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/out-x11/summary.txt",
+    "name": "out-x11/summary.txt"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/out-x11/session.txt",
+    "name": "out-x11/session.txt"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/out-x11/hyprland.log",
+    "name": "out-x11/hyprland.log"
+   }
+  ],
+  "note": "desktop /tmp/f4x-webgpu-probe/out-x11: the summary of one probe matrix; a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit"
+ },
+ {
+  "set": {
+   "tool": "webgpu-probe",
+   "launchedBy": {
+    "who": "agent",
+    "session": "03659589-a340-46f6-8b4f-2b49463a1402"
+   },
+   "checkout": "/tmp/f4x-webgpu-probe",
+   "branch": null,
+   "commit": null,
+   "refs": null,
+   "dirty": null,
+   "machine": "desktop",
+   "kind": "bench",
+   "at": "2026-11-26T22:25:46.940Z",
+   "perf": {
+    "matrix": "out"
+   }
+  },
+  "files": [
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/out/summary.txt",
+    "name": "out/summary.txt"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/out/session.txt",
+    "name": "out/session.txt"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/out/hyprland.log",
+    "name": "out/hyprland.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/cases1.txt",
+    "name": "probe/cases1.txt"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/cases2.txt",
+    "name": "probe/cases2.txt"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/cases3.txt",
+    "name": "probe/cases3.txt"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/cases4.txt",
+    "name": "probe/cases4.txt"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/main.js",
+    "name": "probe/main.js"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/matrix.sh",
+    "name": "probe/matrix.sh"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/nested.conf",
+    "name": "probe/nested.conf"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/package.json",
+    "name": "probe/package.json"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/pnpm-lock.yaml",
+    "name": "probe/pnpm-lock.yaml"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/preload.js",
+    "name": "probe/preload.js"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/probe.html",
+    "name": "probe/probe.html"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/run.log",
+    "name": "probe/run.log"
+   },
+   {
+    "path": "desktop-raw/tmp/f4x-webgpu-probe/tab.sh",
+    "name": "probe/tab.sh"
+   }
+  ],
+  "note": "desktop /tmp/f4x-webgpu-probe/out: the summary of one probe matrix; a standalone Electron 42.4.0 WebGPU probe page that agent session 03659589-a340-46f6-8b4f-2b49463a1402 wrote to /tmp/f4x-webgpu-probe on the desktop and ran from its f4x-webgpu-probe unit; it runs no Fantasia4x code and sits in no checkout, so it has no branch or commit; probe/ is the probe as it stood after this last matrix, the only copy kept"
+ },
+ {
+  "supersedes": "20261127T003713Z-desktop-527e39",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T004019Z-desktop-614ef0",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T004326Z-desktop-230d63",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T004633Z-desktop-3c0bfd",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T004939Z-desktop-6089fa",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T005245Z-desktop-d9be63",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T005550Z-desktop-a3d298",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T005855Z-desktop-94390a",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-ablate",
+   "commit": "cd56f932",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-ablate run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:07 UTC at d66d7d3e, then `git am` of the patch of 29dfdabd (chore(dev): ablation switches for entity motion, parent d66d7d3e); its f4x-428-setup-ab unit reported \"ok ablate cd56f932\", the only form of that unpublished desktop commit ever printed"
+ },
+ {
+  "supersedes": "20261127T001408Z-desktop-7cc7e3",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-anim",
+   "commit": "d66d7d3e6560e914c5c860e853fe8396a25354f5",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-anim run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at d66d7d3e; its f4x-428-setup unit reported \"ok anim d66d7d3e\""
+ },
+ {
+  "supersedes": "20261127T001711Z-desktop-1bca1d",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-anim",
+   "commit": "d66d7d3e6560e914c5c860e853fe8396a25354f5",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-anim run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at d66d7d3e; its f4x-428-setup unit reported \"ok anim d66d7d3e\""
+ },
+ {
+  "supersedes": "20261127T002622Z-desktop-e3c39f",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-anim",
+   "commit": "d66d7d3e6560e914c5c860e853fe8396a25354f5",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-anim run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at d66d7d3e; its f4x-428-setup unit reported \"ok anim d66d7d3e\""
+ },
+ {
+  "supersedes": "20261127T001104Z-desktop-425393",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-look",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-look run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at a96826d3, the sha it read from origin/test/look-overhaul on ubuntuserver; its f4x-428-setup unit reported \"ok look a96826d3\""
+ },
+ {
+  "supersedes": "20261127T002015Z-desktop-2df192",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-look",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-look run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at a96826d3, the sha it read from origin/test/look-overhaul on ubuntuserver; its f4x-428-setup unit reported \"ok look a96826d3\""
+ },
+ {
+  "supersedes": "20261127T002317Z-desktop-87a5b7",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-look",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-428-look run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at a96826d3, the sha it read from origin/test/look-overhaul on ubuntuserver; its f4x-428-setup unit reported \"ok look a96826d3\""
+ },
+ {
+  "supersedes": "20261127T002856Z-desktop-f36225",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-anim",
+   "commit": "d66d7d3e6560e914c5c860e853fe8396a25354f5",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/zoom-out.mjs of bench-428-anim run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at d66d7d3e; its f4x-428-setup unit reported \"ok anim d66d7d3e\""
+ },
+ {
+  "supersedes": "20261127T003013Z-desktop-639682",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-anim",
+   "commit": "d66d7d3e6560e914c5c860e853fe8396a25354f5",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/zoom-out.mjs of bench-428-anim run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at d66d7d3e; its f4x-428-setup unit reported \"ok anim d66d7d3e\""
+ },
+ {
+  "supersedes": "20261127T003403Z-desktop-9743f9",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-anim",
+   "commit": "d66d7d3e6560e914c5c860e853fe8396a25354f5",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/zoom-out.mjs of bench-428-anim run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at d66d7d3e; its f4x-428-setup unit reported \"ok anim d66d7d3e\""
+ },
+ {
+  "supersedes": "20261127T002739Z-desktop-66c173",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-look",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/zoom-out.mjs of bench-428-look run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at a96826d3, the sha it read from origin/test/look-overhaul on ubuntuserver; its f4x-428-setup unit reported \"ok look a96826d3\""
+ },
+ {
+  "supersedes": "20261127T003130Z-desktop-f06cd6",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-look",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/zoom-out.mjs of bench-428-look run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at a96826d3, the sha it read from origin/test/look-overhaul on ubuntuserver; its f4x-428-setup unit reported \"ok look a96826d3\""
+ },
+ {
+  "supersedes": "20261127T003247Z-desktop-04eea8",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "6f935084-433b-420e-b5c3-cc3c2cf8218e"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-428-look",
+   "commit": "a96826d3db0fb1a5a20f8eab85fc5bc3e3495562",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/zoom-out.mjs of bench-428-look run by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e, made by agent session 6f935084-433b-420e-b5c3-cc3c2cf8218e at 00:05 UTC at a96826d3, the sha it read from origin/test/look-overhaul on ubuntuserver; its f4x-428-setup unit reported \"ok look a96826d3\""
+ },
+ {
+  "supersedes": "20261126T194438Z-desktop-a6e70b",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "aa806e22-107f-44e8-8716-d7d44f765b6a"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-after",
+   "commit": "3bdb421debbdf8f7d852142db6f79ae5b96901ad",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-after run by agent session aa806e22-107f-44e8-8716-d7d44f765b6a, made by agent session aa806e22-107f-44e8-8716-d7d44f765b6a at 19:32 UTC with `git worktree add --detach` at 3bdb421d, which it read back before the run; session 631eae8e read 3bdb421d from it at 20:38 UTC"
+ },
+ {
+  "supersedes": "20261126T200834Z-desktop-0eca45",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "aa806e22-107f-44e8-8716-d7d44f765b6a"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-after",
+   "commit": "3bdb421debbdf8f7d852142db6f79ae5b96901ad",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-after run by agent session aa806e22-107f-44e8-8716-d7d44f765b6a, made by agent session aa806e22-107f-44e8-8716-d7d44f765b6a at 19:32 UTC with `git worktree add --detach` at 3bdb421d, which it read back before the run; session 631eae8e read 3bdb421d from it at 20:38 UTC"
+ },
+ {
+  "supersedes": "20261126T203231Z-desktop-0e607e",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "aa806e22-107f-44e8-8716-d7d44f765b6a"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-after",
+   "commit": "3bdb421debbdf8f7d852142db6f79ae5b96901ad",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-after run by agent session aa806e22-107f-44e8-8716-d7d44f765b6a, made by agent session aa806e22-107f-44e8-8716-d7d44f765b6a at 19:32 UTC with `git worktree add --detach` at 3bdb421d, which it read back before the run; session 631eae8e read 3bdb421d from it at 20:38 UTC"
+ },
+ {
+  "supersedes": "20261126T195635Z-desktop-300d5d",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "aa806e22-107f-44e8-8716-d7d44f765b6a"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-before",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-before run by agent session aa806e22-107f-44e8-8716-d7d44f765b6a, the worktree session 63c8955e-e2a5-455b-9f73-6126d98b3bf9 made at 9659211b; agent session aa806e22-107f-44e8-8716-d7d44f765b6a found it at 9659211b with no changes at 19:32 UTC, and session 631eae8e read 9659211b from it at 20:38 UTC"
+ },
+ {
+  "supersedes": "20261126T202032Z-desktop-54cd67",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "aa806e22-107f-44e8-8716-d7d44f765b6a"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-before",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-before run by agent session aa806e22-107f-44e8-8716-d7d44f765b6a, the worktree session 63c8955e-e2a5-455b-9f73-6126d98b3bf9 made at 9659211b; agent session aa806e22-107f-44e8-8716-d7d44f765b6a found it at 9659211b with no changes at 19:32 UTC, and session 631eae8e read 9659211b from it at 20:38 UTC"
+ },
+ {
+  "supersedes": "20261126T204430Z-desktop-b680b8",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "aa806e22-107f-44e8-8716-d7d44f765b6a"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-before",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-before run by agent session aa806e22-107f-44e8-8716-d7d44f765b6a, the worktree session 63c8955e-e2a5-455b-9f73-6126d98b3bf9 made at 9659211b; agent session aa806e22-107f-44e8-8716-d7d44f765b6a found it at 9659211b with no changes at 19:32 UTC, and session 631eae8e read 9659211b from it at 20:38 UTC"
+ },
+ {
+  "supersedes": "20261126T135901Z-desktop-e5fd9b",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "63c8955e-e2a5-455b-9f73-6126d98b3bf9"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-before",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-before run by agent session 63c8955e-e2a5-455b-9f73-6126d98b3bf9, made by agent session 63c8955e-e2a5-455b-9f73-6126d98b3bf9 at 13:46 UTC with `git worktree add --detach` at 9659211b, which it read back before the run"
+ },
+ {
+  "supersedes": "20261126T141057Z-desktop-81217f",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "63c8955e-e2a5-455b-9f73-6126d98b3bf9"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-before",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-before run by agent session 63c8955e-e2a5-455b-9f73-6126d98b3bf9, made by agent session 63c8955e-e2a5-455b-9f73-6126d98b3bf9 at 13:46 UTC with `git worktree add --detach` at 9659211b, which it read back before the run"
+ },
+ {
+  "supersedes": "20261126T142254Z-desktop-3b34d4",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "63c8955e-e2a5-455b-9f73-6126d98b3bf9"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-gpu-before",
+   "commit": "9659211b0c8189dac10fd6ced6973e87782a9259",
+   "branch": null,
+   "refs": null,
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/frame-cost.mjs of bench-gpu-before run by agent session 63c8955e-e2a5-455b-9f73-6126d98b3bf9, made by agent session 63c8955e-e2a5-455b-9f73-6126d98b3bf9 at 13:46 UTC with `git worktree add --detach` at 9659211b, which it read back before the run"
+ },
+ {
+  "supersedes": "20261127T010550Z-desktop-3a3335",
+  "set": {
+   "launchedBy": {
+    "who": "agent",
+    "session": "fb61ae98-a7a6-4c3d-a2d7-aa514861e791"
+   },
+   "checkout": "Documents/Projects/Fantasia4x/.claude/worktrees/bench-tg-tree",
+   "commit": "c4cf6551c4b0bba428704eab5e7bce7fe8c2978a",
+   "branch": null,
+   "refs": "origin/feat/tree-ground-patches",
+   "dirty": 0
+  },
+  "note": "attributed: tools/gpu/steady.mjs with F4X_PROFILE=1 of bench-tg-tree run by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791, made by agent session fb61ae98-a7a6-4c3d-a2d7-aa514861e791 at 00:36 UTC from origin/feat/tree-ground-patches at c4cf6551; this profile ran at 01:03 UTC, before the same session moved it to a00f6b86 at 01:09"
+ }
+]

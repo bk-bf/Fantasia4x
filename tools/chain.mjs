@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // @ts-nocheck
 import { execFileSync, spawnSync } from 'node:child_process';
+import { chainRefOf, pickRun, runBranch, verdict } from './lib/chain-run.mjs';
 
 const WORKFLOW = 'check.yml';
 const pre = process.argv.includes('--pre');
@@ -25,7 +26,8 @@ if (spawnSync('git', ['push', 'origin', `HEAD:refs/heads/${branch}`], { stdio: '
 
 const pull = JSON.parse(read('gh', ['pr', 'list', '--head', branch, '--state', 'open', '--json', 'number']))[0];
 const event = pull && !pre ? 'pull_request' : pre ? 'workflow_dispatch' : 'push';
-const chainRef = `chain/${branch.replaceAll('/', '-')}`;
+const chainRef = chainRefOf(branch);
+const headBranch = runBranch(event, branch);
 const since = Date.now() - 5_000;
 if (event === 'workflow_dispatch')
   read('gh', ['workflow', 'run', WORKFLOW, '--ref', branch, '-f', 'mode=pre']);
@@ -36,11 +38,11 @@ async function findRun() {
   for (let i = 0; i < 40; i++) {
     const runs = JSON.parse(
       read('gh', [
-        'run', 'list', '--workflow', WORKFLOW, '--commit', sha, '--event', event,
-        '--limit', '5', '--json', 'databaseId,createdAt,url'
+        'run', 'list', '--workflow', WORKFLOW, '--commit', sha, '--event', event, '--branch', headBranch,
+        '--limit', '5', '--json', 'databaseId,createdAt,url,event,headBranch,headSha'
       ])
     );
-    const found = runs.find((r) => event === 'pull_request' || Date.parse(r.createdAt) >= since);
+    const found = pickRun(runs, { event, headBranch, sha, since });
     if (found) return found;
     await sleep(3_000);
   }
@@ -51,9 +53,16 @@ const found = await findRun();
 if (!found) fail(`no ${event} run of ${WORKFLOW} started for ${sha.slice(0, 8)} within two minutes`);
 const what = event === 'pull_request' ? `pull request #${pull.number}` : pre ? 'the pre-check' : 'the chain';
 process.stdout.write(`pnpm chain: ${what} on ${branch} at ${sha.slice(0, 8)}: ${found.url}\n`);
-const watched = spawnSync('gh', ['run', 'watch', String(found.databaseId), '--exit-status', '--interval', '15'], {
-  stdio: 'inherit'
-});
-if (event === 'push') spawnSync('git', ['push', 'origin', '--delete', chainRef], { stdio: 'inherit' });
-process.stdout.write(`pnpm chain: ${watched.status === 0 ? 'green' : 'red'}, ${found.url}\n`);
-process.exit(watched.status ?? 1);
+const runId = String(found.databaseId);
+let run = null;
+for (let attempt = 0; attempt < 3; attempt++) {
+  spawnSync('gh', ['run', 'watch', runId, '--interval', '15'], { stdio: 'inherit' });
+  run = JSON.parse(read('gh', ['run', 'view', runId, '--json', 'status,conclusion,jobs']));
+  if (run.status === 'completed') break;
+}
+const result = verdict(run);
+if (event === 'push' && run.status === 'completed')
+  spawnSync('git', ['push', 'origin', '--delete', chainRef], { stdio: 'inherit' });
+if (result.reason) process.stderr.write(`pnpm chain: ${result.reason}\n`);
+process.stdout.write(`pnpm chain: ${result.green ? 'green' : 'red'}, ${found.url}\n`);
+process.exit(result.green ? 0 : 1);
