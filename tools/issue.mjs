@@ -13,6 +13,7 @@
 //   node tools/issue.mjs blocked-by <n> <blocker>    # mark <n> as blocked by <blocker>
 //   node tools/issue.mjs comment <n> --body-file -
 //   node tools/issue.mjs close <n> --commit <sha>
+//   node tools/issue.mjs close <n> --not-planned --reason "<one line>"
 //   node tools/issue.mjs labels            # what the schema allows
 //   node tools/issue.mjs sync-labels [--prune]  # create what is missing, name or delete the strays
 //   node tools/issue.mjs lint --body-file - [--label L]...
@@ -47,6 +48,7 @@ import {
 import { checkSignOff } from './lib/template.mjs';
 import { createPull, editPull, syncPull, linkOf } from './lib/pulls.mjs';
 import { tidy } from './lib/tidy.mjs';
+import { closeArgs } from './lib/close.mjs';
 
 process.stdout.on('error', (e) => {
   if (e.code === 'EPIPE') process.exit(0);
@@ -529,11 +531,9 @@ if (cmd === 'check-labels') {
   tidy({ root: process.cwd(), remove: argv.includes('--remove'), hosts: ['ubuntu', ...all('host')], open });
 } else if (cmd === 'close') {
   const n = argv[1] ?? die('which issue?');
-  const sha = arg('commit');
-  if (!sha) die('--commit <sha> is required: a closed issue names what closed it');
-  process.stdout.write(
-    gh(['issue', 'close', n, '--reason', 'completed', '--comment', `Fixed in ${sha}.`])
-  );
+  const closing = closeArgs(n, arg('commit') ?? '', argv.includes('--not-planned'), arg('reason') ?? '');
+  if (typeof closing === 'string') die(closing);
+  else process.stdout.write(gh(closing));
 } else {
   const head = readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1);
   die(head.slice(0, head.findIndex((l) => !l.startsWith('//'))).join('\n').replace(/^\/\/ ?/gm, ''));

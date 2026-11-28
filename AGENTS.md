@@ -272,6 +272,7 @@ pnpm issue lint --body-file draft.md                     # would this body be ac
 pnpm issue create --title T --type fix --body-file - ... # a new issue; it names what is missing
 pnpm issue edit <n> ...                                  # labels, body, milestone, parent
 pnpm issue close <n> --commit <sha>
+pnpm issue close <n> --not-planned --reason "<one line>"
 pnpm -s issue pr --head <branch> --title T --body-file - # open a pull request into dev
 pnpm issue pr-edit <n> --body-file -                     # rewrite its description
 pnpm issue pr-sync [<n>...]                              # copy each issue's labels and milestone to its pull request
