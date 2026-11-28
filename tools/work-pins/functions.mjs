@@ -2,15 +2,22 @@ import { SourceMap } from 'node:module';
 
 const MODULE_WRAPPER = 'async (__vite_ssr_import__';
 const EXPORTS_OBJECT = '__vite_ssr_exports__';
+/** @typedef {{ functionName: string, ranges: { startOffset: number, endOffset: number, count: number }[] }} FunctionCoverage */
+/** @typedef {{ scriptId: string, url: string, functions: FunctionCoverage[] }} ScriptCoverage */
+/** @typedef {{ name: string, start: number, end: number, count: number }} Span */
+/** @typedef {{ file: string, line: number, name: string, count: number }} Pin */
+
 const INLINE_MAP =
   /\/\/# sourceMappingURL=data:application\/json;(?:charset=utf-8;)?base64,([A-Za-z0-9+/=]+)/g;
 
+/** @param {string} source */
 function lineStarts(source) {
   const starts = [0];
   for (let i = 0; i < source.length; i++) if (source.charCodeAt(i) === 10) starts.push(i + 1);
   return starts;
 }
 
+/** @param {number[]} starts @param {number} offset */
 function position(starts, offset) {
   let lo = 0;
   let hi = starts.length - 1;
@@ -22,12 +29,14 @@ function position(starts, offset) {
   return { line: lo, column: offset - starts[lo] };
 }
 
+/** @param {string} source */
 function inlineSourceMap(source) {
   const found = [...source.matchAll(INLINE_MAP)].pop();
   if (!found) return null;
   return new SourceMap(JSON.parse(Buffer.from(found[1], 'base64').toString('utf8')));
 }
 
+/** @param {string} source @returns {(offset: number) => number} */
 function sourceLineResolver(source) {
   const starts = lineStarts(source);
   const map = inlineSourceMap(source);
@@ -38,6 +47,7 @@ function sourceLineResolver(source) {
   };
 }
 
+/** @param {FunctionCoverage[]} fns @returns {Span[]} */
 function spansOf(fns) {
   return fns
     .map((f) => ({
@@ -49,6 +59,7 @@ function spansOf(fns) {
     .sort((a, b) => a.start - b.start || b.end - a.end);
 }
 
+/** @param {string} source @param {Span} s */
 function isTransformArtifact(source, s) {
   if (s.start === 0 || source.startsWith(MODULE_WRAPPER, s.start)) return true;
   if (s.name !== 'get') return false;
@@ -57,9 +68,13 @@ function isTransformArtifact(source, s) {
   return statement.includes(EXPORTS_OBJECT);
 }
 
+/** @param {Span[]} spans @returns {(Span & { key: string })[]} */
 function nestedKeys(spans) {
+  /** @type {{ end: number, key: string, seen: Map<string, number> }[]} */
   const stack = [];
+  /** @type {Map<string, number>} */
   const top = new Map();
+  /** @type {(Span & { key: string })[]} */
   const out = [];
   for (const s of spans) {
     while (stack.length && s.start >= stack[stack.length - 1].end) stack.pop();
@@ -75,7 +90,9 @@ function nestedKeys(spans) {
   return out;
 }
 
+/** @param {ScriptCoverage[]} coverage @param {(scriptId: string) => Promise<string>} sourceOf @param {(url: string) => string | null} fileOf @returns {Promise<Record<string, Pin>>} */
 export async function functionPins(coverage, sourceOf, fileOf) {
+  /** @type {Record<string, Pin>} */
   const pins = {};
   for (const script of coverage) {
     const file = fileOf(script.url);

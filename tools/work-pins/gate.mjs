@@ -21,16 +21,22 @@ const FLOOR_BENCH = 'tps/large-wilderness.bench';
 const FLOOR_ROUNDS = Number(process.env.TPS_FLOOR_ROUNDS ?? 5);
 const IDLE_RUNS = { page: 'browser idle page', worker: 'browser idle worker' };
 
+/** @typedef {(ref: string, name: string) => string} TreeOf */
+/** @typedef {'base' | 'head'} Side */
+
+/** @template {string | undefined} F @param {string} name @param {F} [fallback] @returns {string | F} */
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
-  return i >= 0 ? process.argv[i + 1] : fallback;
+  return i >= 0 ? process.argv[i + 1] : /** @type {F} */ (fallback);
 }
 
+/** @param {string} cmd @param {string[]} args @param {import('node:child_process').ExecFileSyncOptions} [opts] */
 function sh(cmd, args, opts = {}) {
   process.stdout.write(`$ ${cmd} ${args.join(' ')}\n`);
   return execFileSync(cmd, args, { stdio: 'inherit', ...opts });
 }
 
+/** @param {string} ref */
 function wasmUnchanged(ref) {
   try {
     execFileSync('git', ['diff', '--quiet', ref, '--', ...WASM_CRATES]);
@@ -40,6 +46,7 @@ function wasmUnchanged(ref) {
   }
 }
 
+/** @param {string} ref @param {string} dir @param {string[]} harnessDirs */
 function prepareTree(ref, dir, harnessDirs) {
   sh('git', ['worktree', 'add', '--detach', dir, ref]);
   for (const harness of harnessDirs) {
@@ -59,6 +66,7 @@ function prepareTree(ref, dir, harnessDirs) {
   sh('pnpm', ['exec', 'svelte-kit', 'sync'], { cwd: dir });
 }
 
+/** @param {string} dir @param {string | undefined} hookFrom */
 function hasHook(dir, hookFrom) {
   if (existsSync(join(dir, HOOK_DIR))) return true;
   if (!hookFrom || resolve(dir) === process.cwd()) return false;
@@ -71,6 +79,7 @@ function hasHook(dir, hookFrom) {
   return existsSync(join(dir, HOOK_DIR));
 }
 
+/** @param {string} cwd @param {string} out */
 function runHarness(cwd, out) {
   mkdirSync(out, { recursive: true });
   sh('pnpm', ['exec', 'vitest', 'run', '--config', `${HARNESS_DIR}/vitest.config.ts`], {
@@ -79,15 +88,18 @@ function runHarness(cwd, out) {
   });
 }
 
+/** @param {string} script @param {string} tree @param {string} out */
 function runBrowser(script, tree, out) {
   sh('node', [join(HARNESS_DIR, script), '--tree', tree, '--out', out]);
 }
 
+/** @param {string} text */
 function summary(text) {
   process.stdout.write(text);
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, text);
 }
 
+/** @param {string} ref */
 function refHasHook(ref) {
   try {
     execFileSync('git', ['cat-file', '-e', `${ref}:${HOOK_DIR}`], { stdio: 'ignore' });
@@ -97,7 +109,9 @@ function refHasHook(ref) {
   }
 }
 
+/** @param {string} dir */
 function idleCalls(dir) {
+  /** @param {string} scenario */
   const perFrame = (scenario) => {
     const run = JSON.parse(readFileSync(join(dir, `${scenario.replaceAll(' ', '-')}.json`), 'utf8'));
     const calls = Object.values(run.functions).reduce((s, f) => s + f.count, 0) / run.ticks;
@@ -109,6 +123,7 @@ function idleCalls(dir) {
   });
 }
 
+/** @param {string} script @param {TreeOf} tree @param {string} base @param {string | undefined} head @param {string} results @param {string | undefined} hookFrom */
 function browserLeg(script, tree, base, head, results, hookFrom) {
   const headTree = head ? tree(head, 'head-tree') : process.cwd();
   if (!hasHook(headTree, hookFrom)) throw new Error(`head has no ${HOOK_DIR}, nothing to run`);
@@ -126,6 +141,7 @@ function browserLeg(script, tree, base, head, results, hookFrom) {
   return absolute() && compared;
 }
 
+/** @param {string} cwd @param {string} out @param {string} [file] */
 function tpsRun(cwd, out, file = TPS_BENCH) {
   sh('taskset', ['-c', TPS_CORE, 'pnpm', 'exec', 'vitest', 'bench', '--run', '--config', TPS_CONFIG, '--outputJson', out, file], {
     cwd
@@ -134,9 +150,12 @@ function tpsRun(cwd, out, file = TPS_BENCH) {
   return { name: bench.name, ms: bench.median ?? bench.mean };
 }
 
+/** @param {string} name */
 const ticksIn = (name) => Number(name.match(/(\d+) ticks/)?.[1] ?? 0);
 
+/** @param {string} cwd @param {string} results */
 function tpsFloor(cwd, results) {
+  /** @type {number[]} */
   const runs = [];
   for (let round = 0; round < FLOOR_ROUNDS; round++) {
     const r = tpsRun(cwd, join(results, `tps-floor-${round}.json`), FLOOR_BENCH);
@@ -147,13 +166,15 @@ function tpsFloor(cwd, results) {
   });
 }
 
+/** @param {TreeOf} tree @param {string} base @param {string | undefined} head @param {string} results */
 function tpsLeg(tree, base, head, results) {
   const trees = { base: tree(base, 'tree'), head: head ? tree(head, 'head-tree') : process.cwd() };
+  /** @type {Record<Side, number[]>} */
   const runs = { base: [], head: [] };
   let name = '';
   mkdirSync(results, { recursive: true });
   for (let round = 0; round < TPS_ROUNDS; round++) {
-    for (const side of round % 2 === 0 ? ['base', 'head'] : ['head', 'base']) {
+    for (const side of /** @type {Side[]} */ (round % 2 === 0 ? ['base', 'head'] : ['head', 'base'])) {
       const r = tpsRun(trees[side], join(results, `tps-${side}-${round}.json`));
       name = r.name;
       runs[side].push(r.ms);
@@ -165,6 +186,7 @@ function tpsLeg(tree, base, head, results) {
   const change = (headMs - baseMs) / baseMs;
   const overBudget = change > TPS_THRESHOLD;
   const slower = overBudget && !PERF_CHANGE_ACCEPTED;
+  /** @param {Side} side @param {number} ms */
   const row = (side, ms) =>
     `| ${side} | ${runs[side].map((x) => x.toFixed(1)).join(', ')} | ${ms.toFixed(1)} | ${ticks ? Math.round((ticks * 1000) / ms) : '-'} |`;
   summary(
@@ -196,7 +218,9 @@ const hookFrom = arg('--hook-from');
 const scratch = mkdtempSync(join(tmpdir(), 'work-pins-'));
 const results = resolve(arg('--out', scratch));
 const harnessDirs = leg === 'tps' ? [HARNESS_DIR, BENCH_DIR] : [HARNESS_DIR];
+/** @type {string[]} */
 const trees = [];
+/** @type {TreeOf} */
 const tree = (ref, name) => {
   const dir = join(scratch, name);
   trees.push(dir);
@@ -206,7 +230,7 @@ const tree = (ref, name) => {
 };
 let ok = false;
 try {
-  const script = { browser: 'browser.mjs', day: 'day.mjs' }[leg];
+  const script = /** @type {Record<string, string | undefined>} */ ({ browser: 'browser.mjs', day: 'day.mjs' })[leg];
   if (script) ok = browserLeg(script, tree, base, head, results, hookFrom);
   else if (leg === 'tps') ok = tpsLeg(tree, base, head, results);
   else {

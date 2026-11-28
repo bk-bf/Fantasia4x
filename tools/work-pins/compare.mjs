@@ -6,6 +6,7 @@ const SUMMARY_ROW_LIMIT = 300;
 const THRESHOLD = Number(process.env.WORK_PINS_THRESHOLD ?? 0.05);
 const ACCEPTED = process.env.PERF_CHANGE_ACCEPTED === 'true';
 
+/** @param {string} dir @returns {Map<string, Run>} */
 function readRuns(dir) {
   const runs = new Map();
   for (const f of readdirSync(dir)
@@ -17,7 +18,9 @@ function readRuns(dir) {
   return runs;
 }
 
+/** @param {string} scenario @param {string} section @param {Record<string, number>} base @param {Record<string, number>} head @returns {Total[]} */
 function counterRows(scenario, section, base, head) {
+  /** @type {Total[]} */
   const rows = [];
   for (const key of new Set([...Object.keys(base), ...Object.keys(head)])) {
     const b = base[key] ?? 0;
@@ -27,7 +30,9 @@ function counterRows(scenario, section, base, head) {
   return rows;
 }
 
+/** @param {string} scenario @param {Record<string, Message>} base @param {Record<string, Message>} head */
 function messageRows(scenario, base, head) {
+  /** @param {Record<string, Message>} m @param {keyof Message} field @returns {Record<string, number>} */
   const pick = (m, field) =>
     Object.fromEntries(Object.entries(m).map(([kind, v]) => [kind, v[field]]));
   return [
@@ -36,8 +41,10 @@ function messageRows(scenario, base, head) {
   ];
 }
 
+/** @param {string} name */
 const leafOf = (name) => name.split(' > ').at(-1);
 
+/** @param {Map<string, Pin>} pins @param {(name: string) => string | undefined} nameOf @returns {Map<string | undefined, string | null>} */
 function uniqueBy(pins, nameOf) {
   const out = new Map();
   for (const [key, pin] of pins) {
@@ -47,23 +54,32 @@ function uniqueBy(pins, nameOf) {
   return out;
 }
 
+/** @param {Map<string, Pin>} onlyBase @param {Map<string, Pin>} onlyHead @param {(name: string) => string | undefined} nameOf @returns {[Pin, Pin][]} */
 function pairMoves(onlyBase, onlyHead, nameOf) {
+  /** @type {[Pin, Pin][]} */
   const pairs = [];
   const heads = uniqueBy(onlyHead, nameOf);
   for (const [name, baseKey] of uniqueBy(onlyBase, nameOf)) {
     const headKey = heads.get(name);
     if (!baseKey || !headKey) continue;
-    pairs.push([onlyBase.get(baseKey), onlyHead.get(headKey)]);
+    const b = onlyBase.get(baseKey);
+    const h = onlyHead.get(headKey);
+    if (b && h) pairs.push([b, h]);
     onlyBase.delete(baseKey);
     onlyHead.delete(headKey);
   }
   return pairs;
 }
 
+/** @param {string} scenario @param {Record<string, Pin>} base @param {Record<string, Pin>} head */
 function functionRows(scenario, base, head) {
+  /** @type {Total[]} */
   const rows = [];
+  /** @type {Moved[]} */
   const moved = [];
+  /** @type {Map<string, Pin>} */
   const onlyBase = new Map();
+  /** @type {Map<string, Pin>} */
   const onlyHead = new Map();
   for (const key of new Set([...Object.keys(base), ...Object.keys(head)])) {
     const b = base[key];
@@ -90,11 +106,18 @@ function functionRows(scenario, base, head) {
   return { rows, moved };
 }
 
+/** @param {Run} run */
 const totalCalls = (run) => Object.values(run.functions ?? {}).reduce((s, f) => s + f.count, 0);
 /** @typedef {{ name: string, file: string, line: number, count: number }} Pin */
 /** @typedef {{ family?: string, placed: number, added: number, alive: number }} Creatures */
 /** @typedef {{ scenario: string, functions?: Record<string, Pin>, counters?: Record<string, number>, creatures: Creatures }} CreatureRun */
 /** @typedef {{ scenario: string, fn: string, where: string, base: number, head: number, largerGrew?: boolean }} Total */
+/** @typedef {{ count: number, bytes: number }} Message */
+/** @typedef {{ scenario: string, turn: number, functions: Record<string, Pin>, phases?: Record<string, number>, messages: Record<string, Message>, counters?: Record<string, number>, creatures?: Creatures }} Run */
+/** @typedef {{ scenario: string, fn: string, where: string, count: number }} Moved */
+/** @typedef {{ rows: Total[], moved: Moved[], notes: string[], totals: Total[], creatures: { counts: { scenario: string, base: Creatures, head: Creatures }[], rows: Total[] }, over: Total[] }} Comparison */
+/** @param {Run} run @returns {run is Run & CreatureRun} */
+const hasCreatures = (run) => Boolean(run.creatures);
 
 const CREATURE_CODE = 'src/lib/game/services/entity/';
 /** @param {number} n @param {number} places */
@@ -168,9 +191,13 @@ function familyRatios(pairs) {
 const overBudget = (t) =>
   t.largerGrew !== false && (t.base === 0 ? t.head > 0 : t.head > t.base * (1 + THRESHOLD));
 
+/** @param {Map<string, Run>} baseRuns @param {Map<string, Run>} headRuns @returns {Comparison} */
 export function compareRuns(baseRuns, headRuns) {
+  /** @type {Total[]} */
   const rows = [];
+  /** @type {Moved[]} */
   const moved = [];
+  /** @type {string[]} */
   const notes = [];
   /** @type {Total[]} */
   const totals = [];
@@ -200,8 +227,8 @@ export function compareRuns(baseRuns, headRuns) {
     totals.push({ scenario, fn: 'all calls', where: '', base: totalCalls(b), head: totalCalls(h) });
     for (const [key, head] of Object.entries(h.counters ?? {}))
       totals.push({ scenario, fn: `counter ${key}`, where: '', base: b.counters?.[key] ?? 0, head });
-    if (b.creatures && h.creatures) {
-      for (const key of ['placed', 'added', 'alive'])
+    if (hasCreatures(b) && hasCreatures(h)) {
+      for (const key of /** @type {const} */ (['placed', 'added', 'alive']))
         if (b.creatures[key] !== h.creatures[key])
           rows.push({ scenario, fn: `creatures ${key}`, where: '', base: b.creatures[key], head: h.creatures[key] });
       creatures.counts.push({ scenario, base: b.creatures, head: h.creatures });
@@ -218,12 +245,14 @@ export function compareRuns(baseRuns, headRuns) {
   return { rows, moved, notes, totals, creatures, over: totals.filter(overBudget) };
 }
 
+/** @param {Total} r */
 function change(r) {
   const d = roundTo(r.head - r.base, 3);
   const pct = r.base === 0 ? 'new' : `${d > 0 ? '+' : ''}${((d / r.base) * 100).toFixed(1)}%`;
   return `${d > 0 ? '+' : ''}${d} (${pct})`;
 }
 
+/** @param {Total[]} rows */
 export function renderTable(rows) {
   const head =
     '| scenario | function | file:line | base | head | change |\n|---|---|---|---:|---:|---:|';
@@ -234,10 +263,12 @@ export function renderTable(rows) {
   return [head, ...body].join('\n');
 }
 
+/** @param {string} summary @param {string} body */
 function details(summary, body) {
   return ['', `<details><summary>${summary}</summary>`, '', body, '', '</details>', ''].join('\n');
 }
 
+/** @param {Moved[]} moved */
 function renderMoved(moved) {
   if (!moved.length) return '';
   const body = moved.map((m) => `| ${m.scenario} | \`${m.fn}\` | \`${m.where}\` | ${m.count} |`);
@@ -256,6 +287,7 @@ function renderCreatures({ counts, rows }) {
   return ['', '### Creature cost, total and per creature', '', ...placed, '', renderTable(rows), ''].join('\n');
 }
 
+/** @param {Comparison} comparison @param {number} rowLimit */
 function render({ rows, moved, notes, totals, creatures, over }, rowLimit) {
   const budget = `${Math.round(THRESHOLD * 100)}%`;
   const heading = over.length
@@ -283,6 +315,7 @@ function render({ rows, moved, notes, totals, creatures, over }, rowLimit) {
   return `${parts.join('\n')}\n`;
 }
 
+/** @param {Comparison} comparison */
 function writeNotes({ totals, rows }) {
   const file = process.env.WORK_PINS_NOTES;
   if (!file) return;
@@ -302,6 +335,7 @@ function writeNotes({ totals, rows }) {
   appendFileSync(file, `${JSON.stringify({ totals: changed, changed: rows.length, top })}\n`);
 }
 
+/** @param {string} baseDir @param {string} headDir */
 export function report(baseDir, headDir) {
   const result = compareRuns(readRuns(baseDir), readRuns(headDir));
   writeNotes(result);

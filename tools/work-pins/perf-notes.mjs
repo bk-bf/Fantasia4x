@@ -17,9 +17,19 @@ const MUTANTS_RAN = process.env.MUTANTS_RAN === 'true';
 const CODSPEED_RAN = process.env.CODSPEED_RAN === 'true';
 const RUN_URL = `${process.env.GITHUB_SERVER_URL}/${REPO}/actions/runs/${process.env.GITHUB_RUN_ID}`;
 const MARKER = '<!-- f4x-perf-notes -->';
+/** @typedef {import('./compare.mjs').Total} Total */
+/** @typedef {{ totals: Total[], changed: number, top?: Total[] }} WorkPinNote */
+/** @typedef {{ tool: string, errors: number, warnings: number, budget: number, rules: { rule: string, count: number }[], annotate: { tool: string, file: string, line: number, rule: string, severity: string, message: string }[] }} WarningNote */
+/** @typedef {{ name: string, ticks: number, base: number[], head: number[], baseMs: number, headMs: number }} TpsNote */
+/** @typedef {{ total: number, seconds: number, files: { file: string, pct: number }[] }} CoverageNote */
+/** @typedef {{ ran: number, seconds: number, survivors: { id: string, file: string, line: number }[] }} MutantNote */
+/** @typedef {{ output?: { title?: string, summary?: string }, details_url?: string }} CheckRun */
+/** @typedef {{ mark: string, name: string, file: string, base: string, head: string, change: string }} CodspeedRow */
+
 const ROW =
   /^\|\s*(\S+)\s*\|\s*\[``\s*(.+?)\s*``\]\(([^)]+)\)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([+-][\d.]+%)\s*\|/;
 
+/** @param {string} url */
 function benchFile(url) {
   try {
     return (new URL(url).searchParams.get('uri') ?? '').split('::')[0];
@@ -28,14 +38,16 @@ function benchFile(url) {
   }
 }
 
+/** @param {CheckRun | null} run @returns {CodspeedRow[]} */
 function codspeedRows(run) {
   return (run?.output?.summary ?? '')
     .split('\n')
     .map((line) => line.match(ROW))
-    .filter(Boolean)
+    .filter((m) => m !== null)
     .map(([, mark, name, url, base, head, change]) => ({ mark, name, file: benchFile(url), base, head, change }));
 }
 
+/** @param {string | undefined} path */
 function readJsonl(path) {
   if (!path || !existsSync(path)) return [];
   return readFileSync(path, 'utf8')
@@ -46,16 +58,21 @@ function readJsonl(path) {
 
 const headCounts = () => (COUNTS && existsSync(COUNTS) ? JSON.parse(readFileSync(COUNTS, 'utf8')).counts : null);
 
+/** @param {string} s */
 const escapeData = (s) => s.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+/** @param {string} title @param {string} text */
 const warn = (title, text) => process.stdout.write(`::warning title=${title}::${escapeData(text)}\n`);
+/** @param {unknown} s */
 const html = (s) => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
+/** @param {{ base: number, head: number }} t */
 function pct(t) {
   if (t.base === 0) return 'new';
   const d = ((t.head - t.base) / t.base) * 100;
   return `${d > 0 ? '+' : ''}${d.toFixed(1)}%`;
 }
 
+/** @param {WarningNote[]} notes */
 function warningsSection(notes) {
   if (!notes.length) return 'Warnings: no report from the check job.';
   const lines = [
@@ -82,8 +99,10 @@ function warningsSection(notes) {
   return lines.join('\n');
 }
 
+/** @param {CheckRun | null} run @param {CodspeedRow[]} rows */
 function codspeedSection(run, rows) {
   if (!CODSPEED_RAN) return 'CodSpeed: not run, because no game or bench file changed.';
+  if (SHA === undefined) throw new Error('HEAD_SHA is not set');
   if (!run) return `CodSpeed had not reported on \`${SHA.slice(0, 8)}\` after ${WAIT_MS / 60_000} minutes.`;
   if (!rows.length) return `CodSpeed: no benchmark changed on \`${SHA.slice(0, 8)}\`.`;
   return [
@@ -95,6 +114,7 @@ function codspeedSection(run, rows) {
   ].join('\n');
 }
 
+/** @param {Parameters<typeof countsReport>[0] | null} head @param {Parameters<typeof countsReport>[1]} base */
 const countsSection = (head, base) =>
   head ? countsReport(head, base) : 'Exact counts: this run left no CodSpeed profile.';
 
@@ -127,11 +147,13 @@ function mutantsSection() {
   return lines.join('\n');
 }
 
+/** @param {WorkPinNote[]} notes */
 function workPinsSection(notes) {
   const totals = notes.flatMap((n) => n.totals);
   const changed = notes.reduce((s, n) => s + n.changed, 0);
   if (!notes.length) return 'Work pins: no report from the check job.';
   if (!totals.length && !changed) return 'Work pins: no call count changed.';
+  /** @type {string[]} */
   const lines = [];
   if (totals.length)
     lines.push(
@@ -152,7 +174,9 @@ function workPinsSection(notes) {
   return lines.join('\n');
 }
 
+/** @param {string} body @param {boolean} hasNews */
 async function upsert(body, hasNews) {
+  /** @type {{ id: number, body?: string }[]} */
   const comments = await api('GET', `/repos/${REPO}/issues/${PR}/comments?per_page=100`);
   const mine = comments.find((c) => c.body?.startsWith(MARKER));
   if (mine) return api('PATCH', `/repos/${REPO}/issues/comments/${mine.id}`, { body });
@@ -162,18 +186,23 @@ async function upsert(body, hasNews) {
 
 const run = CODSPEED_RAN ? await waitForCodspeed({ repo: REPO, sha: SHA }) : null;
 const rows = codspeedRows(run);
+/** @type {WorkPinNote[]} */
 const notes = readJsonl(NOTES);
+/** @type {WarningNote[]} */
 const warnings = readJsonl(WARNINGS);
 const head = headCounts();
 let base = null;
 try {
   base = head ? await baseCounts({ repo: REPO, token: process.env.GITHUB_TOKEN, sha: BASE_SHA }) : null;
 } catch (e) {
-  process.stdout.write(`base counts unavailable: ${e.message}\n`);
+  process.stdout.write(`base counts unavailable: ${e instanceof Error ? e.message : String(e)}\n`);
 }
 
+/** @type {TpsNote | undefined} */
 const tps = readJsonl(TPS).at(-1);
+/** @type {CoverageNote | undefined} */
 const coverage = readJsonl(COVERAGE).at(-1);
+/** @type {MutantNote | undefined} */
 const mutants = readJsonl(MUTANTS).at(-1);
 const tickWork =
   head && base

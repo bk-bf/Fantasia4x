@@ -25,6 +25,7 @@ export const latestRun = (runs, since) =>
     .filter((r) => r.status === 'completed' && (!since || (r.started_at ?? '') >= since))
     .sort((a, b) => (b.started_at ?? '').localeCompare(a.started_at ?? ''))[0] ?? null;
 
+/** @param {{ repo: string | undefined, sha: string | undefined, since?: string }} options */
 export async function waitForCodspeed({ repo, sha, since }) {
   const until = Date.now() + WAIT_MS;
   while (Date.now() < until) {

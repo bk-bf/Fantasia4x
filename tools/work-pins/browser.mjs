@@ -22,10 +22,22 @@ import {
 } from './browser-session.mjs';
 import { functionPins } from './functions.mjs';
 
+/** @typedef {import('playwright').Page} Page */
+/** @typedef {import('playwright').CDPSession} CDPSession */
+/** @typedef {import('./functions.mjs').ScriptCoverage} ScriptCoverage */
+/** @typedef {import('./functions.mjs').Pin} Pin */
+/** @typedef {{ name: string, paused: boolean, pan: boolean }} Phase */
+/** @typedef {{ width: number, height: number }} Layer */
+/** @typedef {{ layers: Layer[], changes: number, painted: number }} LayerState */
+/** @typedef {{ (sessionId: string, method: 'Profiler.takePreciseCoverage'): Promise<{ result: ScriptCoverage[] }>, (sessionId: string, method: 'Debugger.getScriptSource', params: { scriptId: string }): Promise<{ scriptSource: string }>, (sessionId: string, method: string, params?: object): Promise<unknown> }} WorkerSend */
+/** @typedef {{ send: WorkerSend, find: (pattern: RegExp) => Promise<string> }} WorkerChannel */
+/** @typedef {Awaited<ReturnType<typeof sample>>} Sample */
+
 const ZOOM_STEPS = 7;
 const FRAMES_PER_ZOOM = 10;
 const SETTLE_FRAMES = 300;
 const PAUSE_CHECK_FRAMES = 25;
+/** @type {Phase[]} */
 const PHASES = [
   { name: 'idle', paused: true, pan: false },
   { name: 'run', paused: false, pan: false },
@@ -57,8 +69,11 @@ const { values: opts } = parseArgs({
 
 const log = logger('browser-pins');
 
+/** @param {CDPSession} cdp @returns {WorkerChannel} */
 function workerChannel(cdp) {
+  /** @type {Map<string, string>} */
   const sessions = new Map();
+  /** @type {Map<number, { done: (result: unknown) => void, fail: (error: Error) => void, method: string }>} */
   const pending = new Map();
   let nextId = 0;
   cdp.on('Target.attachedToTarget', (p) => sessions.set(p.sessionId, p.targetInfo.url));
@@ -71,17 +86,21 @@ function workerChannel(cdp) {
     if (m.error) waiter.fail(new Error(`${waiter.method}: ${m.error.message}`));
     else waiter.done(m.result);
   });
-  const send = (sessionId, method, params = {}) =>
-    new Promise((done, fail) => {
-      const id = ++nextId;
-      pending.set(id, { done, fail, method });
-      cdp
-        .send('Target.sendMessageToTarget', {
-          sessionId,
-          message: JSON.stringify({ id, method, params })
-        })
-        .catch(fail);
-    });
+  const send = /** @type {WorkerSend} */ (
+    /** @param {string} sessionId @param {string} method @param {object} [params] */
+    (sessionId, method, params = {}) =>
+      new Promise((done, fail) => {
+        const id = ++nextId;
+        pending.set(id, { done, fail, method });
+        cdp
+          .send('Target.sendMessageToTarget', {
+            sessionId,
+            message: JSON.stringify({ id, method, params })
+          })
+          .catch(fail);
+      })
+  );
+  /** @param {RegExp} pattern */
   const find = async (pattern) => {
     for (let i = 0; i < 100; i++) {
       for (const [id, url] of sessions) if (pattern.test(url)) return id;
@@ -92,12 +111,16 @@ function workerChannel(cdp) {
   return { send, find };
 }
 
+/** @param {Page} page @param {string} selector */
 async function centreOf(page, selector) {
   const box = await page.locator(selector).first().boundingBox();
+  if (!box) throw new Error(`${selector} is not visible`);
   return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
 }
 
+/** @param {CDPSession} cdp @returns {LayerState} */
 function watchLayers(cdp) {
+  /** @type {LayerState} */
   const state = { layers: [], changes: 0, painted: 0 };
   cdp.on('LayerTree.layerTreeDidChange', (p) => {
     state.changes++;
@@ -107,6 +130,7 @@ function watchLayers(cdp) {
   return state;
 }
 
+/** @param {LayerState} state */
 async function takeLayers(state) {
   await sleep(LAYER_SETTLE_MS);
   const taken = {
@@ -120,6 +144,7 @@ async function takeLayers(state) {
   return taken;
 }
 
+/** @param {string} selector */
 function watchWorldEffects(selector) {
   const w = (window.__f4xWorldEffects = { mutations: 0, styleWrites: 0, childListChanges: 0 });
   const layer = document.querySelector(selector);
@@ -134,6 +159,7 @@ function watchWorldEffects(selector) {
   return true;
 }
 
+/** @param {string} selector */
 function takeWorldEffects(selector) {
   const w = window.__f4xWorldEffects;
   const layer = document.querySelector(selector);
@@ -144,6 +170,7 @@ function takeWorldEffects(selector) {
   return taken;
 }
 
+/** @param {Page} page @param {CDPSession} cdp @param {WorkerChannel} workers @param {string} sim @param {LayerState} layerState */
 async function sample(page, cdp, workers, sim, layerState) {
   const page_ = (await cdp.send('Profiler.takePreciseCoverage')).result;
   const worker_ = (await workers.send(sim, 'Profiler.takePreciseCoverage')).result;
@@ -162,6 +189,7 @@ async function sample(page, cdp, workers, sim, layerState) {
   };
 }
 
+/** @param {Page} page @param {Phase} phase @param {number} n */
 async function runPhase(page, phase, n) {
   await setPaused(page, phase.paused);
   const what = `phase ${phase.name}`;
@@ -178,6 +206,7 @@ async function runPhase(page, phase, n) {
   if (!phase.paused) await assertRunning(page, what);
 }
 
+/** @param {string} url */
 function fileOf(url) {
   if (!url.startsWith('http')) return null;
   const path = new URL(url).pathname;
@@ -187,14 +216,18 @@ function fileOf(url) {
   return null;
 }
 
+/** @param {Record<string, Pin>} pins */
 function splitObserved(pins) {
+  /** @type {Record<string, Pin>} */
   const compared = {};
+  /** @type {Record<string, Pin>} */
   const observed = {};
   for (const [key, pin] of Object.entries(pins))
     (OBSERVED_FILES.some((re) => re.test(pin.file)) ? observed : compared)[key] = pin;
   return { compared, observed };
 }
 
+/** @param {(scriptId: string) => Promise<string>} fetchSource @returns {(scriptId: string) => Promise<string>} */
 function sourceReader(fetchSource) {
   const cache = new Map();
   return async (scriptId) => {
@@ -203,7 +236,9 @@ function sourceReader(fetchSource) {
   };
 }
 
+/** @param {Sample} before @param {Sample} after */
 function counters(before, after) {
+  /** @type {Record<string, number>} */
   const out = {};
   for (const [k, v] of Object.entries(after.stats.render)) out[`render ${k}`] = v;
   for (const k of COUNTED_METRICS) out[k] = (after.metrics[k] ?? 0) - (before.metrics[k] ?? 0);
@@ -220,6 +255,7 @@ function counters(before, after) {
   return out;
 }
 
+/** @param {Sample} before @param {Sample} after */
 function observed(before, after) {
   return {
     ...Object.fromEntries(
@@ -229,6 +265,7 @@ function observed(before, after) {
   };
 }
 
+/** @param {Page} page @param {CDPSession} cdp @param {WorkerChannel} workers @param {string} sim @param {number} n @param {LayerState} layerState */
 async function measure(page, cdp, workers, sim, n, layerState) {
   const mapCentre = await centreOf(page, MAP);
   await page.mouse.move(mapCentre.x, mapCentre.y);
@@ -248,11 +285,12 @@ async function measure(page, cdp, workers, sim, n, layerState) {
   for (const phase of PHASES) {
     await runPhase(page, phase, n);
     samples.push(await sample(page, cdp, workers, sim, layerState));
-    log(`phase ${phase.name}: ${JSON.stringify(samples.at(-1).stats.render)}`);
+    log(`phase ${phase.name}: ${JSON.stringify(samples.at(-1)?.stats.render)}`);
   }
   return samples;
 }
 
+/** @param {string} out @param {Sample[]} samples @param {number} n @param {CDPSession} cdp @param {WorkerChannel} workers @param {string} sim */
 async function writeResults(out, samples, n, cdp, workers, sim) {
   await cdp.send('Debugger.enable');
   await workers.send(sim, 'Debugger.enable');
