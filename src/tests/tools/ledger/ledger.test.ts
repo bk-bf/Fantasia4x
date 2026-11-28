@@ -11,7 +11,8 @@ import {
   machineName,
   launchedBy,
   blobPath,
-  worldId
+  worldId,
+  storedBlobs
 } from '../../../../tools/ledger/spool.mjs';
 import {
   putEntry,
@@ -22,11 +23,13 @@ import {
   readBlob,
   verifyBlob,
   keyedEntry,
-  putKeyed
+  putKeyed,
+  hasBlob,
+  missingBlobs
 } from '../../../../tools/ledger/store.mjs';
 import { splitSessions, sessionPerf } from '../../../../tools/ledger/perflog.mjs';
 import { ingestBench, ingestPerfLog, ingestResult, ingestSave } from '../../../../tools/ledger/ingest.mjs';
-import { LIVE, SPOOL, mirror, pullMachine } from '../../../../tools/ledger/sync.mjs';
+import { LIVE, SPOOL, blobMoves, fetchBlob, lastMoveTime, mirror, pullMachine } from '../../../../tools/ledger/sync.mjs';
 import { invalidReasons, withInvalid } from '../../../../tools/ledger/invalid.mjs';
 import { resolveSave, assembleSave } from '../../../../tools/ledger/fetch.mjs';
 
@@ -569,6 +572,96 @@ describe('sync from a machine', () => {
     expect(plays.map((e) => e.perf.checkout).sort()).toEqual(['proj', 'wt/side']);
     expect(existsSync(join(store, 'raw', 'test', 'proj', 'perf.log'))).toBe(true);
     expect(existsSync(join(store, 'raw', 'test', 'proj', 'other.log'))).toBe(false);
+  });
+
+  const NIGHTLY = { hour: 3, zone: 'Europe/Berlin' };
+  const spoolSave = (home: string, at: string, body: string, reason: string) => {
+    const blob = Buffer.from(body);
+    const id = newId('test', new Date(at));
+    const entry = {
+      v: 1,
+      id,
+      kind: 'save',
+      machine: 'test',
+      perf: { capture: { reason } },
+      files: [{ role: 'save', name: 'save.json.gz', sha256: sha(blob), bytes: blob.length }]
+    };
+    tree(home, {
+      [`${SPOOL}/blobs/${sha(blob).slice(0, 2)}/${sha(blob)}`]: blob,
+      [`${SPOOL}/entries/${id}.json`]: JSON.stringify(entry)
+    });
+    return { id, sha: sha(blob), path: join(home, SPOOL, 'blobs', sha(blob).slice(0, 2), sha(blob)) };
+  };
+  const passAt = (store: string, home: string, at: string) => {
+    const report = { reached: [] as string[], skipped: [] as string[], entries: 0, play: 0, open: 0, removed: 0, moved: [] as string[], errors: [] as string[] };
+    pullMachine(store, 'test', { ssh: null, root: home, checkouts: [], blobs: NIGHTLY }, report, { clear: true, now: new Date(at) });
+    return report;
+  };
+
+  it('finds the last 03:00 in Berlin on either side of a clock change', () => {
+    const at = (t: string) => new Date(lastMoveTime(new Date(t), NIGHTLY)).toISOString();
+    expect(at('2026-11-28T01:59:00Z')).toBe('2026-11-27T02:00:00.000Z');
+    expect(at('2026-11-28T02:00:00Z')).toBe('2026-11-28T02:00:00.000Z');
+    expect(at('2026-07-01T00:59:00Z')).toBe('2026-06-30T01:00:00.000Z');
+    expect(at('2026-03-29T01:30:00Z')).toBe('2026-03-29T01:00:00.000Z');
+    expect(at('2026-10-25T01:30:00Z')).toBe('2026-10-24T01:00:00.000Z');
+    expect(at('2026-10-25T02:30:00Z')).toBe('2026-10-25T02:00:00.000Z');
+  });
+
+  it('takes a nightly machine\'s entries at once and holds its blobs until the first pass after 03:00 in Berlin', () => {
+    const home = join(dir, 'home');
+    const store = join(dir, 'store');
+    expect(passAt(store, home, '2026-11-28T02:30:00Z')).toMatchObject({ moved: [], errors: [] });
+    expect(blobMoves(store)).toEqual({ test: '2026-11-28T02:30:00.000Z' });
+    const capture = spoolSave(home, '2026-11-28T09:00:00Z', 'periodic capture', 'periodic');
+
+    expect(passAt(store, home, '2026-11-28T10:00:00Z')).toMatchObject({ entries: 1, removed: 1, moved: [], errors: [] });
+    expect(getEntry(store, capture.id).files[0].sha256).toBe(capture.sha);
+    expect(missingBlobs(store, getEntry(store, capture.id))).toHaveLength(1);
+    expect(existsSync(capture.path)).toBe(true);
+    expect(readdirSync(join(home, SPOOL, 'entries'))).toEqual([]);
+    expect(passAt(store, home, '2026-11-29T01:59:00Z')).toMatchObject({ removed: 0, moved: [] });
+    expect(existsSync(capture.path)).toBe(true);
+
+    expect(passAt(store, home, '2026-11-29T02:01:00Z')).toMatchObject({ removed: 1, moved: ['test'], errors: [] });
+    expect(readBlob(store, capture.sha).toString()).toBe('periodic capture');
+    expect(existsSync(capture.path)).toBe(false);
+    expect(storedBlobs([capture.sha], join(home, SPOOL))).toEqual([]);
+
+    const late = spoolSave(home, '2026-11-29T20:00:00Z', 'a capture from a night the machine slept through', 'periodic');
+    expect(passAt(store, home, '2026-11-29T21:00:00Z')).toMatchObject({ moved: [] });
+    expect(passAt(store, home, '2026-11-30T15:00:00Z')).toMatchObject({ moved: ['test'], errors: [] });
+    expect(hasBlob(store, late.sha)).toBe(true);
+    expect(existsSync(late.path)).toBe(false);
+  });
+
+  it('leaves a receipt in the spool for a deleted save once the store holds and verifies it', () => {
+    const home = join(dir, 'home');
+    const store = join(dir, 'store');
+    passAt(store, home, '2026-11-28T02:30:00Z');
+    const deleted = spoolSave(home, '2026-11-28T09:00:00Z', 'a hidden save', 'deleted');
+    passAt(store, home, '2026-11-28T10:00:00Z');
+    expect(storedBlobs([deleted.sha], join(home, SPOOL))).toEqual([]);
+    passAt(store, home, '2026-11-29T02:10:00Z');
+    expect(storedBlobs([deleted.sha, 'c'.repeat(64), 'not a hash'], join(home, SPOOL))).toEqual([deleted.sha]);
+    expect(existsSync(deleted.path)).toBe(false);
+  });
+
+  it('fetches one held blob on demand, verified, and clears it from the spool', () => {
+    const home = join(dir, 'home');
+    const store = join(dir, 'store');
+    passAt(store, home, '2026-11-28T02:30:00Z');
+    const held = spoolSave(home, '2026-11-28T09:00:00Z', 'wanted before the night', 'deleted');
+    const other = spoolSave(home, '2026-11-28T09:01:00Z', 'not wanted yet', 'periodic');
+    passAt(store, home, '2026-11-28T10:00:00Z');
+    const cfg = { ssh: null, root: home, checkouts: [], blobs: NIGHTLY };
+    expect(fetchBlob(store, 'test', held.sha, { cfg, clear: true })).toEqual({ cleared: true });
+    expect(readBlob(store, held.sha).toString()).toBe('wanted before the night');
+    expect(existsSync(held.path)).toBe(false);
+    expect(storedBlobs([held.sha], join(home, SPOOL))).toEqual([held.sha]);
+    expect(existsSync(other.path)).toBe(true);
+    expect(hasBlob(store, other.sha)).toBe(false);
+    expect(() => fetchBlob(store, 'test', 'd'.repeat(64), { cfg, clear: true })).toThrow(/gave no blob dddddddddddd/);
   });
 
   it('mirrors a log that grew in place and keeps a log that was replaced beside it', () => {

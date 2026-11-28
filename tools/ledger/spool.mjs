@@ -177,3 +177,10 @@ export function writeEntry(entry, dir = spoolDir()) {
   writeOnce(join(dir, 'entries', `${filled.id}.json`), JSON.stringify(filled, null, 2) + '\n');
   return filled.id;
 }
+
+export const RECEIPTS = 'stored';
+
+/** @param {unknown[]} shas @param {string} [dir] */
+export function storedBlobs(shas, dir = spoolDir()) {
+  return shas.filter((sha) => typeof sha === 'string' && SHA256.test(sha) && existsSync(join(dir, RECEIPTS, sha)));
+}
