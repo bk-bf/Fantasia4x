@@ -397,8 +397,7 @@ function setGameSpeed(speed: number) {
 }
 export const worldGenRev = writable(0);
 
-function loadStateIntoWorker(state0: GameState) {
-  const state: GameState = { ...state0, debugMode: get(debugMode) || undefined };
+function loadStateIntoWorker(state: GameState) {
   gameStore.setSilent(state);
   gameStore.notify();
   worldGenRev.update((n) => n + 1);
@@ -869,8 +868,6 @@ export const savedStateReady: Promise<void> = (async () => {
 
   baseState = entityService.seedInitialEntities(baseState);
 
-  baseState = { ...baseState, debugMode: get(debugMode) || undefined };
-
   set(baseState);
   gameEngine.setGameStateManager(new GameStateManager(baseState));
   loadingStatus.set('Starting renderer…');
@@ -886,10 +883,7 @@ const gameSpeed = writable(1);
 if (USE_SIM_WORKER) {
   isPaused.subscribe((p) => simWorkerBridge.setPaused(p));
 }
-debugMode.subscribe((on) => {
-  simWorkerBridge.setVerbose(on);
-  dispatchCommand({ type: 'setDebugMode', payload: { on } });
-});
+debugMode.subscribe((on) => simWorkerBridge.setVerbose(on));
 gameSpeed.subscribe((value) => {
   gameSpeedValue = value;
 });

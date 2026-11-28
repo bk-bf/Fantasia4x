@@ -1368,8 +1368,6 @@ export const COMMANDS: Record<string, Cmd> = {
     _devResearchGateOff: p.off || undefined
   }),
 
-  setDebugMode: (s, p: { on: boolean }) => ({ ...s, debugMode: p.on || undefined }),
-
   devToggleDecay: (s, p: { kind: 'deterioration' | 'spoilage'; off: boolean }) => {
     const key = p.kind === 'spoilage' ? '_devFreezeSpoilage' : '_devFreezeDeterioration';
     return { ...s, [key]: p.off || undefined };

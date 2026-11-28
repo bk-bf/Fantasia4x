@@ -42,7 +42,6 @@ const BRIDGE_STATIONS = new Set([
   'casting_hearth',
   'bloomery',
   'finery_forge',
-  'heartwood_joiner',
   'stone_forge',
   'anvil',
   'charcoal_pit'

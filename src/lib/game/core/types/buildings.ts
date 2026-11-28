@@ -124,8 +124,6 @@ export interface Building {
 
   notBuildable?: boolean;
 
-  debugOnly?: boolean;
-
   buildingCost: Record<string, number>;
   buildingCostAlternatives?: Record<string, number>[];
   workAmount: number;

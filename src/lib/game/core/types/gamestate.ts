@@ -56,7 +56,6 @@ export interface GameState {
   season?: Season;
   seasonDay?: number;
   weather?: WeatherState;
-  debugMode?: boolean;
   _debugSeason?: Season;
   _debugTimeOfDay?: number;
   _devResearchGateOff?: boolean;

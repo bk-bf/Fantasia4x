@@ -88,7 +88,6 @@ export function craftableItems(
     )
       return false;
     if (Object.keys(recipe.outputs ?? {})[0] !== item.id) return false;
-    if (!gs.debugMode && buildingService.isRecipeStationDebugOnly(recipe.station)) return false;
     if (
       !gs._devResearchGateOff &&
       recipe.researchRequired &&

@@ -65,7 +65,6 @@ export function unlockedBuildings(gs: GameState | null): Building[] {
   return ALL_BUILDING_DEFS.filter(
     (b) =>
       !b.notBuildable &&
-      (!b.debugOnly || gs?.debugMode) &&
       (gs?._devResearchGateOff ||
         !b.researchRequired ||
         done.includes(b.researchRequired as string))
