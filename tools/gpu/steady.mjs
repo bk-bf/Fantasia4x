@@ -16,11 +16,16 @@ if (PROFILE) {
 }
 await cdp.send('Performance.enable');
 const mainThread = async () => Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map((m) => [m.name, m.value]));
+/** @param {Record<string, number>} a @param {Record<string, number>} b @param {string} key */
 const perSecond = (a, b, key) => Math.round(((b[key] - a[key]) * 1000) / Number(SECONDS));
+/** @type {[string, number, number][]} */
 const ZOOMS = [['close', -120, 60], ['default', 120, 20], ['far', 120, 60]];
+/** @type {[string, number][]} */
 const MODES = [['paused', 0], ['1x', 1], ['4x', 4]];
 const turn = () => page.evaluate(() => window.__f4xTurn);
+/** @param {number[]} sorted @param {number} p */
 const pct = (sorted, p) => Math.round(sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] * 10) / 10;
+/** @type {Record<string, unknown>[]} */
 const results = [];
 try {
   for (const [zoom, deltaY, steps] of ZOOMS) {
@@ -36,7 +41,9 @@ try {
       if (PROFILE) await cdp.send('Profiler.start');
       const m0 = await mainThread();
       const gaps = await page.evaluate(async (ms) => {
-        const g = []; let last = performance.now(); let id;
+        /** @type {number[]} */
+        const g = []; let last = performance.now(); let id = 0;
+        /** @param {number} t */
         const f = (t) => { g.push(t - last); last = t; id = requestAnimationFrame(f); };
         id = requestAnimationFrame(f);
         await new Promise((r) => setTimeout(r, ms));
@@ -56,7 +63,7 @@ try {
     }
   }
 } catch (e) {
-  log(`FAIL ${e.stack}`);
+  log(`FAIL ${e instanceof Error ? e.stack : String(e)}`);
   process.exitCode = 1;
 }
 writeFileSync(join(OUT_DIR, `${LABEL}-steady.json`), JSON.stringify(results, null, 1));

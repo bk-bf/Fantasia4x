@@ -8,7 +8,11 @@ if (!ENDPOINT || !OUT_DIR) {
   console.error('usage: node tools/gpu/attach-trace.mjs <cdp http endpoint, e.g. http://127.0.0.1:9333> <out dir> [rounds]');
   process.exit(2);
 }
+/** @typedef {{ (method: 'Runtime.evaluate', params: object): Promise<{ result: { value: unknown } }>, (method: 'Profiler.stop'): Promise<{ profile: unknown }>, (method: 'IO.read', params: object): Promise<{ data: string, eof: boolean, base64Encoded?: boolean }>, (method: string, params?: object): Promise<unknown> }} CdpSend */
+
+/** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** @param {string} l */
 const log = (l) => process.stdout.write(`[trace] ${l}\n`);
 mkdirSync(OUT_DIR, { recursive: true });
 
@@ -17,15 +21,18 @@ const CATEGORIES = [
   'cc', 'gpu', 'viz', 'v8.execute', 'disabled-by-default-gpu.service'
 ];
 
+/** @param {string} url */
 function connect(url) {
   const ws = new WebSocket(url);
   let id = 0;
+  /** @type {Map<number, { resolve: (value: unknown) => void, reject: (error: Error) => void }>} */
   const waiting = new Map();
+  /** @type {Map<string, ((params: unknown) => void)[]>} */
   const listeners = new Map();
   ws.addEventListener('message', (e) => {
     const msg = JSON.parse(e.data);
     if (msg.id && waiting.has(msg.id)) {
-      const { resolve, reject } = waiting.get(msg.id);
+      const { resolve, reject } = /** @type {{ resolve: (value: unknown) => void, reject: (error: Error) => void }} */ (waiting.get(msg.id));
       waiting.delete(msg.id);
       msg.error ? reject(new Error(`${msg.error.message} ${msg.error.data ?? ''}`)) : resolve(msg.result);
     } else if (msg.method) for (const f of listeners.get(msg.method) ?? []) f(msg.params);
@@ -33,21 +40,28 @@ function connect(url) {
   const opened = new Promise((r, j) => { ws.addEventListener('open', r); ws.addEventListener('error', j); });
   return {
     opened,
-    send: (method, params = {}) => new Promise((resolve, reject) => { const n = ++id; waiting.set(n, { resolve, reject }); ws.send(JSON.stringify({ id: n, method, params })); }),
-    on: (method, f) => listeners.set(method, [...(listeners.get(method) ?? []), f]),
+    send: /** @type {CdpSend} */ (
+      /** @param {string} method @param {object} [params] */
+      (method, params = {}) => new Promise((resolve, reject) => { const n = ++id; waiting.set(n, { resolve, reject }); ws.send(JSON.stringify({ id: n, method, params })); })
+    ),
+    /** @template P @param {string} method @param {(params: P) => void} f */
+    on: (method, f) => listeners.set(method, [...(listeners.get(method) ?? []), /** @type {(params: unknown) => void} */ (f)]),
     close: () => ws.close()
   };
 }
 
 const version = await (await fetch(`${ENDPOINT}/json/version`)).json();
-const pages = (await (await fetch(`${ENDPOINT}/json/list`)).json()).filter((t) => t.type === 'page' && !t.url.startsWith('devtools://'));
+/** @type {{ type: string, url: string, webSocketDebuggerUrl: string }[]} */
+const targets = await (await fetch(`${ENDPOINT}/json/list`)).json();
+const pages = targets.filter((t) => t.type === 'page' && !t.url.startsWith('devtools://'));
 if (pages.length === 0) throw new Error('no page target on that endpoint');
 const target = pages[0];
 log(`browser ${version.Browser} page ${target.url}`);
 const browser = connect(version.webSocketDebuggerUrl);
 const page = connect(target.webSocketDebuggerUrl);
 await Promise.all([browser.opened, page.opened]);
-const evaluate = async (fn, ...args) => (await page.send('Runtime.evaluate', { expression: `(${fn})(...${JSON.stringify(args)})`, awaitPromise: true, returnByValue: true })).result.value;
+/** @template R @param {(...args: never[]) => R} fn @param {...unknown} args @returns {Promise<Awaited<R>>} */
+const evaluate = async (fn, ...args) => /** @type {Awaited<R>} */ ((await page.send('Runtime.evaluate', { expression: `(${fn})(...${JSON.stringify(args)})`, awaitPromise: true, returnByValue: true })).result.value);
 
 const env = await evaluate(() => {
   const gl = document.createElement('canvas').getContext('webgl2');
@@ -59,17 +73,20 @@ const env = await evaluate(() => {
 });
 log(`ENV ${JSON.stringify(env)}`);
 
-const tile = () => evaluate(() => { try { return JSON.parse(sessionStorage.getItem('fantasia4x-camera'))?.tileWidth ?? null; } catch { return null; } });
-const wheel = (deltaY, steps) => evaluate(async (deltaY, steps) => {
-  const map = document.querySelector('[aria-label="World map"]'); const b = map.getBoundingClientRect();
+const tile = () => evaluate(() => { try { return JSON.parse(sessionStorage.getItem('fantasia4x-camera') ?? 'null')?.tileWidth ?? null; } catch { return null; } });
+/** @param {number} deltaY @param {number} steps */
+const wheel = (deltaY, steps) => evaluate(async (/** @type {number} */ deltaY, /** @type {number} */ steps) => {
+  const map = /** @type {HTMLElement} */ (document.querySelector('[aria-label="World map"]')); const b = map.getBoundingClientRect();
   for (let i = 0; i < steps; i++) { map.dispatchEvent(new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true, clientX: b.x + b.width / 2, clientY: b.y + b.height / 2 })); await new Promise((r) => setTimeout(r, 60)); }
 }, deltaY, steps);
 
 const tracePath = join(OUT_DIR, 'trace.json');
+/** @type {Promise<{ stream: string }>} */
 const done = new Promise((r) => browser.on('Tracing.tracingComplete', r));
 await browser.send('Tracing.start', { traceConfig: { includedCategories: CATEGORIES, recordMode: 'recordContinuously' }, transferMode: 'ReturnAsStream' });
 await page.send('Profiler.enable');
 await page.send('Profiler.setSamplingInterval', { interval: 500 });
+/** @type {Record<string, unknown>[]} */
 const rows = [];
 try {
   for (let r = 0; r < Number(ROUNDS); r++) {
@@ -78,10 +95,10 @@ try {
     await page.send('Profiler.start');
     await sleep(500);
     await evaluate(startFrameGaps);
-    await evaluate((r) => performance.mark(`f4x-zoom-${r}-start`), r);
+    await evaluate((/** @type {number} */ r) => performance.mark(`f4x-zoom-${r}-start`), r);
     await wheel(120, 45);
     await sleep(3000);
-    await evaluate((r) => performance.mark(`f4x-zoom-${r}-end`), r);
+    await evaluate((/** @type {number} */ r) => performance.mark(`f4x-zoom-${r}-end`), r);
     const recorded = await evaluate(stopFrameGaps);
     const { profile } = await page.send('Profiler.stop');
     writeFileSync(join(OUT_DIR, `round-${r}.cpuprofile`), JSON.stringify(profile));

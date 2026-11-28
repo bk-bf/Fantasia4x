@@ -5,6 +5,11 @@ interface Window {
   __f4xWorkerTps: number[];
   __f4xScenarioLoaded?: boolean;
   __reseedRandom: (seed: number) => void;
+  __f4xFrameTimes: number[];
+  __f4xFrameLoop: number;
+  __f4xTicks?: number[];
+  __f4xMessageKinds?: Record<string, number>;
+  __f4xWorkers?: number;
   __f4xWorldEffects: { mutations: number; styleWrites: number; childListChanges: number };
   __f4xPanelWrites: { panelStyleWrites: number; tintMatrixWrites: number };
   __f4xWorkPins: {

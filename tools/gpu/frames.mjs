@@ -19,7 +19,12 @@ const UNCAPPED = ['--disable-gpu-vsync', '--disable-frame-rate-limit'];
 const ZOOM_STEPS = 7;
 const ZOOM_PAUSE_MS = 150;
 const WARM_MS = 5000;
+/** @typedef {import('playwright').Page} Page */
+/** @typedef {{ name: string, paused: boolean, pan: boolean }} Phase */
+/** @typedef {Awaited<ReturnType<typeof runPhase>>} PhaseResult */
+
 const PAN_KEYS = ['ArrowRight', 'ArrowLeft'];
+/** @type {Phase[]} */
 const PHASES = [
   { name: 'run', paused: false, pan: false },
   { name: 'pan', paused: false, pan: true },
@@ -41,7 +46,10 @@ const { values: opts } = parseArgs({
 const log = logger('gpu-frames');
 
 function recordFrames() {
-  const times = (window.__f4xFrameTimes = []);
+  /** @type {number[]} */
+  const times = [];
+  window.__f4xFrameTimes = times;
+  /** @param {number} t */
   const tick = (t) => {
     times.push(t);
     window.__f4xFrameLoop = requestAnimationFrame(tick);
@@ -55,14 +63,19 @@ function takeFrames() {
 }
 
 function recordTicks() {
-  const ticks = (window.__f4xTicks = []);
-  const kinds = (window.__f4xMessageKinds = {});
+  /** @type {number[]} */
+  const ticks = [];
+  window.__f4xTicks = ticks;
+  /** @type {Record<string, number>} */
+  const kinds = {};
+  window.__f4xMessageKinds = kinds;
   window.__f4xWorkers = 0;
   const Original = window.Worker;
   window.Worker = class extends Original {
+    /** @param {ConstructorParameters<typeof Worker>} args */
     constructor(...args) {
       super(...args);
-      window.__f4xWorkers++;
+      window.__f4xWorkers = (window.__f4xWorkers ?? 0) + 1;
       this.addEventListener('message', (e) => {
         const kind = e.data?.kind ?? typeof e.data;
         kinds[kind] = (kinds[kind] ?? 0) + 1;
@@ -72,16 +85,20 @@ function recordTicks() {
   };
 }
 
+/** @param {Page} page */
 const wiring = (page) =>
   page.evaluate(() => ({
     workersWrapped: window.__f4xWorkers ?? 'wrapper missing',
     messageKinds: window.__f4xMessageKinds ?? null
   }));
 
+/** @param {number} part @param {number} whole */
 const share = (part, whole) => (whole ? Number(((100 * part) / whole).toFixed(1)) : 0);
 
+/** @param {number[]} times @param {number[]} ticks @param {number} slowerThan */
 function tickShare(times, ticks, slowerThan) {
-  const inside = ticks.filter((t) => t > times[0] && t <= times.at(-1));
+  const last = times[times.length - 1];
+  const inside = ticks.filter((t) => t > times[0] && t <= last);
   let slow = 0;
   let slowTicked = 0;
   let fast = 0;
@@ -104,9 +121,12 @@ function tickShare(times, ticks, slowerThan) {
   return { ticks: inside.length, slowWithTickPct: share(slowTicked, slow), otherWithTickPct: share(fastTicked, fast) };
 }
 
+/** @param {number[]} xs @param {number} q */
 const quantile = (xs, q) => [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(q * xs.length))];
+/** @param {number[]} xs */
 const median = (xs) => quantile(xs, 0.5);
 
+/** @param {number[]} times @param {number} seconds @param {number[]} ticks */
 function summarise(times, seconds, ticks) {
   const deltas = times.slice(1).map((t, i) => t - times[i]);
   const mid = median(deltas);
@@ -121,9 +141,11 @@ function summarise(times, seconds, ticks) {
   };
 }
 
+/** @param {Page} page @returns {Promise<Record<string, number>>} */
 const takeRender = async (page) =>
   (await page.evaluate(() => window.__f4xWorkPins?.stats() ?? null))?.render ?? {};
 
+/** @param {Page} page @param {number} ms */
 async function panPath(page, ms) {
   await page.keyboard.down(PAN_KEYS[0]);
   await sleep(ms / 2);
@@ -133,6 +155,7 @@ async function panPath(page, ms) {
   await page.keyboard.up(PAN_KEYS[1]);
 }
 
+/** @param {Page} page @param {Phase} phase @param {number} ms */
 async function runPhase(page, phase, ms) {
   await setPaused(page, phase.paused);
   await takeRender(page);
@@ -175,6 +198,7 @@ async function main() {
     const { page } = game;
     log(`wiring after load: ${JSON.stringify(await wiring(page))}`);
     const box = await page.locator(MAP).first().boundingBox();
+    if (!box) throw new Error(`${MAP} is not visible`);
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await focusMap(page);
     for (let i = 0; i < ZOOM_STEPS; i++) {
@@ -184,6 +208,7 @@ async function main() {
     await setPaused(page, false);
     await sleep(WARM_MS);
     await panPath(page, seconds * 1000);
+    /** @type {{ args: string[], seconds: number, rounds: number, phases: Record<string, { runs: PhaseResult[], fps?: number, medianMs?: number }> }} */
     const result = { args, seconds, rounds, phases: {} };
     for (let round = 1; round <= rounds; round++) {
       for (const phase of PHASES) {

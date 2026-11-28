@@ -4,11 +4,17 @@ import { gunzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
+/** @typedef {(line: string) => void} Log */
+/** @typedef {{ chrome: string, socket: string, cleanEnv: NodeJS.ProcessEnv, query: string, servedSave: string | null, args: string[] }} ChromiumPatch */
+
+/** @param {number} ms */
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const UNIT = `f4x-gpu-compositor-${process.pid}`;
+/** @returns {{ pid: number, instance: string, wl_socket: string }[]} */
 const instances = () => JSON.parse(execFileSync('hyprctl', ['instances', '-j'], { encoding: 'utf8' }));
 
+/** @param {Log} log */
 export async function startCompositor(log) {
   const sessionEnv = Object.fromEntries(
     execFileSync('systemctl', ['--user', 'show-environment'], { encoding: 'utf8' }).trim().split('\n').map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)])
@@ -23,8 +29,11 @@ export async function startCompositor(log) {
   let inst;
   for (let i = 0; i < 60 && !(inst = instances().find((n) => n.pid === hyprland.pid)); i++) await sleep(500);
   if (!inst) throw new Error('nested compositor did not start');
+  /** @param {...string} a */
   const hypr = (...a) => execFileSync('hyprctl', a, { encoding: 'utf8', env: { ...process.env, HYPRLAND_INSTANCE_SIGNATURE: inst.instance } }).trim();
-  const nested = JSON.parse(hypr('-j', 'monitors')).map((m) => m.name);
+  /** @type {{ name: string }[]} */
+  const monitors = JSON.parse(hypr('-j', 'monitors'));
+  const nested = monitors.map((m) => m.name);
   hypr('output', 'create', 'headless');
   for (const n of nested) hypr('output', 'remove', n);
   const out = JSON.parse(hypr('-j', 'monitors'))[0].name;
@@ -40,6 +49,7 @@ export async function startCompositor(log) {
 
 const SERVED_SAVE = 'f4x-bench-save.json';
 
+/** @param {import('playwright').BrowserType} chromium @param {ChromiumPatch} patch */
 export function patchChromium(chromium, { chrome, socket, cleanEnv, query, servedSave, args }) {
   const origLaunch = chromium.launch.bind(chromium);
   chromium.launch = async (o) => {
@@ -55,10 +65,13 @@ export function patchChromium(chromium, { chrome, socket, cleanEnv, query, serve
       ctx.newPage = async () => {
         const pg = await newPage();
         const route = pg.route.bind(pg);
-        pg.route = (pattern, handler) => route(pattern, (r) =>
-          servedSave && r.request().url().endsWith('/save.json')
-            ? r.fulfill({ status: 302, headers: { location: `/${servedSave}` } })
-            : handler(r)
+        pg.route = /** @type {import('playwright').Page['route']} */ (
+          /** @param {Parameters<import('playwright').Page['route']>[0]} pattern @param {(route: import('playwright').Route) => unknown} handler */
+          (pattern, handler) => route(pattern, (r) =>
+            servedSave && r.request().url().endsWith('/save.json')
+              ? r.fulfill({ status: 302, headers: { location: `/${servedSave}` } })
+              : handler(r)
+          )
         );
         const goto = pg.goto.bind(pg);
         pg.goto = (url, opts) => goto(query && url.endsWith('/') ? url + query : url, opts);
@@ -78,16 +91,19 @@ export async function openGpuGame({ tree, label, outDir, usage, init = [], args 
     process.exit(2);
   }
   mkdirSync(outDir, { recursive: true });
+  /** @param {string} l */
   const log = (l) => process.stdout.write(`[${label}] ${l}\n`);
   const comp = await startCompositor(log);
   const harness = process.env.F4X_HARNESS ?? tree;
-  const { chromium } = await import(harness + '/node_modules/playwright/index.mjs');
+  const { chromium } = /** @type {typeof import('playwright')} */ (await import(harness + '/node_modules/playwright/index.mjs'));
   const fixture = process.env.F4X_FIXTURE;
   const servedPath = join(tree, 'static', SERVED_SAVE);
   if (fixture) writeFileSync(servedPath, fixture.endsWith('.gz') ? gunzipSync(readFileSync(fixture)) : readFileSync(fixture));
   const dropServed = () => fixture && rmSync(servedPath, { force: true });
   patchChromium(chromium, { chrome, socket: comp.socket, cleanEnv: comp.cleanEnv, query: process.env.F4X_QUERY ?? '', servedSave: fixture ? SERVED_SAVE : null, args });
-  const { openGame } = await import(harness + '/tools/work-pins/browser-session.mjs');
+  const { openGame } = /** @type {typeof import('../work-pins/browser-session.mjs')} */ (
+    await import(harness + '/tools/work-pins/browser-session.mjs')
+  );
   const game = await openGame({
     tree, fixture: process.env.F4X_FIXTURE ?? tree + '/tools/work-pins/fixtures/dev-save.json.gz',
     serverLog: join(outDir, `${label}-server.log`), log, clock: false, workPins: false, init, query
@@ -99,14 +115,16 @@ export async function openGpuGame({ tree, label, outDir, usage, init = [], args 
   const { page } = game;
   const renderer = await page.evaluate(() => { const gl = document.createElement('canvas').getContext('webgl2'); const e = gl?.getExtension('WEBGL_debug_renderer_info'); return gl ? gl.getParameter(e ? e.UNMASKED_RENDERER_WEBGL : gl.RENDERER) : 'none'; });
   log(`url ${page.url()} renderer ${renderer} viewport ${await page.evaluate(() => `${innerWidth}x${innerHeight}`)}`);
-  const tile = () => page.evaluate(() => { try { return JSON.parse(sessionStorage.getItem('fantasia4x-camera'))?.tileWidth ?? null; } catch { return null; } });
+  const tile = () => page.evaluate(() => { try { return JSON.parse(sessionStorage.getItem('fantasia4x-camera') ?? 'null')?.tileWidth ?? null; } catch { return null; } });
+  /** @param {number} deltaY @param {number} steps @param {number} [gapMs] */
   const wheel = (deltaY, steps, gapMs = 60) => page.evaluate(async ([deltaY, steps, gapMs]) => {
-    const map = document.querySelector('[aria-label="World map"]'); const b = map.getBoundingClientRect();
+    const map = /** @type {HTMLElement} */ (document.querySelector('[aria-label="World map"]')); const b = map.getBoundingClientRect();
     for (let i = 0; i < steps; i++) { map.dispatchEvent(new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true, clientX: b.x + b.width / 2, clientY: b.y + b.height / 2 })); await new Promise((r) => setTimeout(r, gapMs)); }
   }, [deltaY, steps, gapMs]);
+  /** @param {boolean} want */
   const setPaused = async (want) => {
     const isP = () => page.evaluate(() => (document.querySelector('button.ctrl-btn')?.className ?? '').includes('is-paused'));
-    if ((await isP()) !== want) await page.evaluate(() => document.querySelector('button.ctrl-btn').click());
+    if ((await isP()) !== want) await page.evaluate(() => /** @type {HTMLElement} */ (document.querySelector('button.ctrl-btn')).click());
     await sleep(300);
     return isP();
   };
