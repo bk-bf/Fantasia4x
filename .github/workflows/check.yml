@@ -61,8 +61,8 @@ jobs:
           line="$(git rev-list --count --first-parent HEAD ^origin/dev)"
           lead="$(jq -r .branch tools/ci/lead.json)"
           for t in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/test/ "refs/remotes/origin/$lead"); do
-            m="$(git merge-base HEAD "$t")"
-            git merge-base --is-ancestor "$m" origin/dev && continue
+            m="$(git merge-base --all HEAD "$t" | while read -r c; do git merge-base --is-ancestor "$c" origin/dev || { echo "$c"; break; }; done)"
+            [ -z "$m" ] && continue
             [ "$GITHUB_EVENT_NAME" != pull_request ] && [ "$(git rev-list --count --first-parent HEAD ^origin/dev "^$t")" = "$line" ] && { { [ -z "$merged" ] || git merge-base --is-ancestor "$merged" "$m"; } && merged="$m"; continue; }
             warn=true; base="$m"; break
           done
