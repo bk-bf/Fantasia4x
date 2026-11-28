@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { spawnSync } from 'node:child_process';
 import {
   closeSync,
@@ -28,6 +27,41 @@ import {
   withLock
 } from './store.mjs';
 
+/** @typedef {import('./store.mjs').Entry} Entry */
+/** @typedef {import('./store.mjs').FileRef} FileRef */
+/** @typedef {{ title: string | null, caption: string | null, columns: string[], rows: string[][] }} Table */
+/** @typedef {{ title: string | null, caption: string | null, columns: string[], rows?: string[][], rowCount?: number }} KeptTable */
+/** @typedef {{ cmd: string | null, env: Record<string, string>, lines: string[] }} Step */
+/** @typedef {{ name: string, bytes: number | null, id: number | null }} Artifact */
+/** @typedef {{ name?: string, totals?: { scenario: string }[] }} Note */
+/**
+ * @typedef {{
+ *   step: string | null, env?: Record<string, string>, tables: KeptTable[], notes?: Note[],
+ *   compare?: { name: string | null } | null, floor?: { scenario: string | null, runs: number[] } | null,
+ *   scenarios?: string[], benchmarks?: Record<string, unknown>, counts?: Record<string, unknown> | null,
+ *   crates?: { crate: string }[], [field: string]: unknown
+ * }} Leg
+ */
+/** @typedef {{ leg: string, notes?: Note[], [field: string]: unknown }} ArtifactParse */
+/** @typedef {{ number: number, base: string | null }} PullRef */
+/** @typedef {{ id: number, run_attempt: number, run_number: number, event: string, conclusion: string | null, head_branch: string | null, head_sha: string | null, created_at: string, html_url: string, pull_requests: PullRef[] }} Run */
+/** @typedef {{ id: number, name: string, run_attempt: number, started_at: string, completed_at?: string | null, runner_name?: string | null, runner_group_name?: string | null, html_url?: string | null, conclusion: string | null, steps?: { name: string, conclusion: string }[] }} Job */
+/**
+ * @template T
+ * @typedef {{ error: number | string, message?: string, data?: undefined } | { data: T, error?: undefined, message?: undefined }} ApiResult
+ */
+/** @typedef {{ counter?: { calls: number }, remaining(): number, json(path: string): ApiResult<unknown>, text(path: string): ApiResult<string>, download(path: string, file: string): ApiResult<string> }} Api */
+/** @typedef {{ v: number, workflows: Record<string, { complete: boolean, newest: string | null }>, runs: Record<string, { attempt: number, workflow: string, at: string }> }} Cursor */
+/** @typedef {{ workflow?: string, scratch?: string, previous: string | null, localDir?: string }} Context */
+/**
+ * @typedef {{
+ *   runs: number, entries: number, known: number, expired: number, restored: number, carried: number,
+ *   skipped: Record<string, number>, calls: number, stopped: string | null, errors: string[], oldest: string | null, newest: string | null
+ * }} Report
+ */
+/** @typedef {{ retry?: string, skip?: string, created?: boolean, expired?: boolean }} Outcome */
+/** @typedef {{ name: string, data: Buffer }} Got */
+
 export const REPO_SLUG = 'bk-bf/Fantasia4x';
 export const WORKFLOWS = ['check.yml', 'promote.yml'];
 export const PERF_ARTIFACT =
@@ -41,33 +75,45 @@ const TABLE_ROWS = 100;
 const STAMP = /^(\u{FEFF})?\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z ?/u;
 const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;?]*[A-Za-z]`, 'g');
 
+/** @param {string} text */
 export function logLines(text) {
   return text.split('\n').map((l) => l.replace(/\r$/, '').replace(STAMP, '').replace(ANSI, ''));
 }
 
+/** @param {string} c */
 const unwrap = (c) =>
   c
     .trim()
     .replace(/\*\*/g, '')
     .replace(/^`(.*)`$/, '$1');
+/** @param {string} line */
 const cells = (line) => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(unwrap);
 
+/** @param {unknown} text */
 export function num(text) {
   if (text == null) return null;
   const m = /^[+-]?[\d,]*\.?\d+/.exec(String(text).trim());
   return m ? Number(m[0].replace(/,/g, '')) : null;
 }
 
+/** @param {unknown} text @returns {number[]} */
 const numList = (text) =>
   String(text ?? '')
     .split(',')
-    .map(num)
-    .filter((n) => n != null);
+    .flatMap((part) => {
+      const n = num(part);
+      return n == null ? [] : [n];
+    });
 
+/** @param {string[]} lines @returns {Table[]} */
 export function tablesIn(lines) {
+  /** @type {Table[]} */
   const out = [];
+  /** @type {string | null} */
   let title = null;
+  /** @type {string | null} */
   let caption = null;
+  /** @type {string | null} */
   let prose = null;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -88,6 +134,7 @@ export function tablesIn(lines) {
     }
     if (line.startsWith('|') && /^\|[-:| ]+\|$/.test((lines[i + 1] ?? '').trim())) {
       const columns = cells(line);
+      /** @type {string[][]} */
       const rows = [];
       for (i += 2; i < lines.length && lines[i].startsWith('|'); i++) rows.push(cells(lines[i]));
       i--;
@@ -101,11 +148,15 @@ export function tablesIn(lines) {
   return out;
 }
 
+/** @param {Table} t @returns {Record<string, string>[]} */
 const rowObjects = (t) =>
   t.rows.map((r) => Object.fromEntries(t.columns.map((c, i) => [c, r[i] ?? ''])));
 
+/** @param {string[]} lines @returns {Step[]} */
 export function stepsIn(lines) {
+  /** @type {Step[]} */
   const steps = [];
+  /** @type {Step} */
   let step = { cmd: null, env: {}, lines: [] };
   let inGroup = false;
   let inEnv = false;
@@ -140,8 +191,10 @@ export function stepsIn(lines) {
   return steps;
 }
 
+/** @type {Record<string, string>} */
 const GATE_LEGS = { sim: 'work-pins', browser: 'browser-work-pins', day: 'day', tps: 'tps' };
 
+/** @param {Step} step */
 export function stepLeg(step) {
   const cmd = step.cmd ?? '';
   if (/tools\/work-pins\/frame-budget\.mjs/.test(cmd)) return 'frame-budget';
@@ -155,6 +208,7 @@ export function stepLeg(step) {
   return null;
 }
 
+/** @type {[RegExp, string][]} */
 const HEADING_LEGS = [
   [/^Ticks per second/, 'tps'],
   [/^Absolute budgets, ticks per second/, 'tps'],
@@ -163,9 +217,12 @@ const HEADING_LEGS = [
   [/^Work pins/, 'work-pins']
 ];
 
+/** @param {string | null | undefined} title */
 const headingLeg = (title) => HEADING_LEGS.find(([re]) => re.test(title ?? ''))?.[1] ?? null;
 
+/** @param {string[]} lines @returns {Artifact[]} */
 export function uploadedArtifacts(lines) {
+  /** @type {Map<string, Artifact>} */
   const seen = new Map();
   for (const line of lines) {
     const m =
@@ -179,6 +236,7 @@ export function uploadedArtifacts(lines) {
   return [...seen.values()];
 }
 
+/** @param {Table[]} tables */
 function budgets(tables) {
   return tables
     .filter((t) => t.columns.includes('measure') && t.columns.includes('median'))
@@ -194,6 +252,7 @@ function budgets(tables) {
     }));
 }
 
+/** @param {Table} t */
 function pinRows(t) {
   return rowObjects(t).map((r) => ({
     scenario: r.scenario,
@@ -204,6 +263,7 @@ function pinRows(t) {
   }));
 }
 
+/** @param {Table[]} tables */
 function workPinsDigest(tables) {
   const pins = tables.filter((t) => t.columns[0] === 'scenario' && t.columns.includes('function'));
   const totals = pins.find((t) => /^Totals/i.test(t.caption ?? ''));
@@ -224,8 +284,10 @@ function workPinsDigest(tables) {
   };
 }
 
+/** @param {Table[]} tables */
 function tpsDigest(tables) {
   const cmp = tables.find((t) => t.columns[0] === 'side');
+  /** @param {string} name */
   const side = (name) => {
     const r = cmp?.rows.find((row) => row[0] === name);
     return r ? { runsMs: numList(r[1]), medianMs: num(r[2]), tps: num(r[3]) } : null;
@@ -244,9 +306,11 @@ function tpsDigest(tables) {
   };
 }
 
+/** @param {Table[]} tables */
 function codspeedDigest(tables) {
   const t = tables.find((x) => x.columns[0] === 'benchmark');
   if (!t) return { benchmarks: {} };
+  /** @type {Record<string, { instructions: number | null, instructionsChange: string | null, llMisses: number | null, llMissesChange: string | null, verdict: string | null }>} */
   const benchmarks = {};
   for (const r of t.rows) {
     benchmarks[r[0]] = {
@@ -260,6 +324,7 @@ function codspeedDigest(tables) {
   return { against: t.caption ?? null, benchmarks };
 }
 
+/** @type {Record<string, string>} */
 const GUNGRAUN_METRICS = {
   Instructions: 'instructions',
   'L1 Hits': 'l1Hits',
@@ -269,10 +334,18 @@ const GUNGRAUN_METRICS = {
   'Estimated Cycles': 'estimatedCycles'
 };
 
+/** @typedef {Record<string, number | null>} Counts */
+/** @typedef {{ base?: Counts, head?: Counts }} Bench */
+
+/** @param {string[]} lines */
 export function gungraunDigest(lines) {
+  /** @type {Record<string, Bench>} */
   const benches = {};
+  /** @type {{ crate: string, compared: boolean, verdict: string }[]} */
   const crates = [];
+  /** @type {string | null} */
   let mode = null;
+  /** @type {Bench | null} */
   let bench = null;
   for (const line of lines) {
     if (line.startsWith('$ ')) {
@@ -311,11 +384,13 @@ export function gungraunDigest(lines) {
   return { crates, benches };
 }
 
+/** @param {Table} t @returns {KeptTable} */
 const keepTable = (t) =>
   t.rows.length > TABLE_ROWS
     ? { title: t.title, caption: t.caption, columns: t.columns, rowCount: t.rows.length }
     : { title: t.title, caption: t.caption, columns: t.columns, rows: t.rows };
 
+/** @type {Record<string, (tables: Table[]) => Record<string, unknown>>} */
 const DIGESTS = {
   'work-pins': workPinsDigest,
   'browser-work-pins': workPinsDigest,
@@ -325,17 +400,25 @@ const DIGESTS = {
   codspeed: codspeedDigest
 };
 
+/** @param {string} text @returns {{ legs: Record<string, Leg>, artifacts: Artifact[] }} */
 export function parseJobLog(text) {
   const lines = logLines(text);
+  /** @type {Record<string, Leg>} */
   const legs = {};
   for (const step of stepsIn(lines)) {
     const tables = tablesIn(step.lines);
     const leg = stepLeg(step) ?? headingLeg(tables[0]?.title);
     if (!leg) continue;
-    const digest = leg === 'gungraun' ? gungraunDigest(step.lines) : DIGESTS[leg](tables);
-    if (leg === 'gungraun' && !Object.keys(digest.benches).length && !digest.crates.length)
-      continue;
-    if (leg !== 'gungraun' && !tables.length) continue;
+    /** @type {Record<string, unknown>} */
+    let digest;
+    if (leg === 'gungraun') {
+      const g = gungraunDigest(step.lines);
+      if (!Object.keys(g.benches).length && !g.crates.length) continue;
+      digest = g;
+    } else {
+      if (!tables.length) continue;
+      digest = DIGESTS[leg](tables);
+    }
     const env = Object.fromEntries(
       Object.entries(step.env).filter(([k]) =>
         ['BASE', 'BASE_BRANCH', 'HEAD_BRANCH', 'LEG', 'BASE_SHA'].includes(k)
@@ -351,17 +434,21 @@ export function parseJobLog(text) {
   return { legs, artifacts: uploadedArtifacts(lines) };
 }
 
+/** @param {string} text @returns {Note[]} */
 const jsonLines = (text) =>
   text
     .split('\n')
     .filter((l) => l.trim())
     .map((l) => JSON.parse(l));
 
+/** @param {{ scenario?: string, results?: Record<string, unknown>[] }} json */
 export function frameBudgetRounds(json) {
+  /** @type {Record<string, Record<string, unknown[]>>} */
   const phases = {};
   for (const round of json.results ?? []) {
-    for (const [phase, v] of Object.entries(round)) {
-      if (phase === 'round' || !v || typeof v !== 'object') continue;
+    for (const [phase, value] of Object.entries(round)) {
+      if (phase === 'round' || !value || typeof value !== 'object') continue;
+      const v = /** @type {Record<string, unknown>} */ (value);
       const p = (phases[phase] ??= {
         frames: [],
         medianMs: [],
@@ -375,6 +462,7 @@ export function frameBudgetRounds(json) {
   return { scenario: json.scenario ?? null, rounds: (json.results ?? []).length, phases };
 }
 
+/** @param {string} artifact @param {string} name @param {Buffer} data @returns {ArtifactParse | null} */
 export function parseArtifactFile(artifact, name, data) {
   const text = () => data.toString('utf8');
   if (artifact === 'tps-notes' && name.endsWith('.jsonl'))
@@ -390,12 +478,15 @@ export function parseArtifactFile(artifact, name, data) {
   return null;
 }
 
+/** @type {[RegExp, string][]} */
 const ROLES = [
   [/\.svg$/, 'profile'],
   [/\.log$/, 'log']
 ];
+/** @param {string} name */
 export const roleOf = (name) => ROLES.find(([re]) => re.test(name))?.[1] ?? 'result';
 
+/** @param {Pick<Job, 'runner_name' | 'runner_group_name'>} job */
 export function machineOf(job) {
   const runner = job.runner_name ?? '';
   if (!runner) return null;
@@ -405,7 +496,9 @@ export function machineOf(job) {
   return host.toLowerCase().replace(/[^a-z0-9-]+/g, '-');
 }
 
+/** @param {Job[]} jobs */
 export function executions(jobs) {
+  /** @type {Map<string, Job>} */
   const seen = new Map();
   for (const job of [...jobs].sort((a, b) => a.run_attempt - b.run_attempt || a.id - b.id)) {
     const key = `${job.name}|${job.started_at}|${job.completed_at}|${job.runner_name ?? ''}`;
@@ -414,11 +507,13 @@ export function executions(jobs) {
   return [...seen.values()];
 }
 
+/** @param {Pick<Job, 'steps'>} job */
 export const measuredSteps = (job) =>
   (job.steps ?? []).filter(
     (s) => PERF_STEP.test(s.name) && !/^install/i.test(s.name) && RAN.has(s.conclusion)
   );
 
+/** @type {Record<string, (leg: Leg) => (string | null | undefined)[]>} */
 const SCENARIO_OF = {
   'frame-budget': () => ['large-wilderness'],
   'browser-work-pins': () => ['dev-save'],
@@ -435,16 +530,18 @@ const SCENARIO_OF = {
     Object.keys({ ...leg.benchmarks, ...leg.counts }).map(
       (b) => /([\w-]+)\.bench\.ts/.exec(b)?.[1]
     ),
-  gungraun: (leg) => leg.crates.map((c) => c.crate)
+  gungraun: (leg) => (leg.crates ?? []).map((c) => c.crate)
 };
 
+/** @param {Record<string, Leg>} legs @returns {string[]} */
 export function scenariosOf(legs) {
   const all = Object.entries(legs).flatMap(([leg, v]) =>
-    (SCENARIO_OF[leg]?.(v) ?? []).filter(Boolean)
+    (SCENARIO_OF[leg]?.(v) ?? []).flatMap((s) => (s ? [s] : []))
   );
   return [...new Set(all)].sort();
 }
 
+/** @param {Record<string, Leg>} legs @param {ArtifactParse | null} parsed */
 function mergeArtifact(legs, parsed) {
   if (!parsed) return;
   const { leg: name, ...rest } = parsed;
@@ -457,19 +554,23 @@ function mergeArtifact(legs, parsed) {
   else Object.assign(into, rest);
 }
 
+/** @param {{ calls: number }} [counter] */
 export function ghApi(counter = { calls: 0 }) {
+  /** @param {string[]} args @param {{ stdout?: number }} [opts] */
   const gh = (args, opts = {}) => {
     const r = spawnSync('timeout', ['5m', 'gh', 'api', ...args], {
-      encoding: opts.binary ? 'buffer' : 'utf8',
+      encoding: 'utf8',
       maxBuffer: 2 ** 30,
       ...(opts.stdout ? { stdio: ['ignore', opts.stdout, 'pipe'] } : {})
     });
     return { status: r.status, stdout: r.stdout, stderr: String(r.stderr ?? '') };
   };
+  /** @param {string[]} args @param {{ stdout?: number }} [opts] */
   const counted = (args, opts) => {
     counter.calls++;
     return gh(args, opts);
   };
+  /** @param {string} stderr */
   const statusOf = (stderr) => Number(/HTTP (\d{3})/.exec(stderr)?.[1] ?? 0) || null;
   return {
     counter,
@@ -477,18 +578,21 @@ export function ghApi(counter = { calls: 0 }) {
       const r = gh(['rate_limit', '--jq', '.resources.core.remaining']);
       return r.status === 0 ? Number(r.stdout.trim()) : 0;
     },
+    /** @param {string} path @returns {ApiResult<unknown>} */
     json(path) {
       const r = counted([path]);
       if (r.status !== 0)
         return { error: statusOf(r.stderr) ?? 'failed', message: r.stderr.trim().slice(0, 200) };
-      return { data: JSON.parse(r.stdout) };
+      return { data: /** @type {unknown} */ (JSON.parse(r.stdout)) };
     },
+    /** @param {string} path @returns {ApiResult<string>} */
     text(path) {
       const r = counted(['--allow-escape-sequences', path]);
       if (r.status !== 0)
         return { error: statusOf(r.stderr) ?? 'failed', message: r.stderr.trim().slice(0, 200) };
       return { data: r.stdout };
     },
+    /** @param {string} path @param {string} file @returns {ApiResult<string>} */
     download(path, file) {
       const fd = openSync(file, 'w');
       try {
@@ -503,17 +607,21 @@ export function ghApi(counter = { calls: 0 }) {
   };
 }
 
+/** @param {string} root */
 function cursorPath(root) {
   return join(root, 'ci', 'cursor.json');
 }
 
+/** @param {string} root @returns {Cursor} */
 export function readCursor(root) {
   const p = cursorPath(root);
+  /** @type {Cursor} */
   const empty = { v: 1, workflows: {}, runs: {} };
   if (!existsSync(p)) return empty;
   return { ...empty, ...JSON.parse(readFileSync(p, 'utf8')) };
 }
 
+/** @param {string} root @param {Cursor} cursor */
 export function writeCursor(root, cursor) {
   const p = cursorPath(root);
   mkdirSync(join(root, 'ci'), { recursive: true });
@@ -521,14 +629,19 @@ export function writeCursor(root, cursor) {
   renameSync(`${p}.tmp-${process.pid}`, p);
 }
 
+/** @typedef {Omit<Run, 'pull_requests'> & { status: string, pull_requests?: { number: number, base?: { ref: string } }[] }} GhRun */
+
+/** @param {Api} api @param {string} workflow @param {string | null} since @returns {{ error?: string, runs: Run[] }} */
 function listRuns(api, workflow, since) {
+  /** @type {Run[]} */
   const runs = [];
   for (let page = 1; ; page++) {
     const q = `repos/${REPO_SLUG}/actions/workflows/${workflow}/runs?per_page=100&page=${page}${since ? `&created=%3E%3D${since}` : ''}`;
     const r = api.json(q);
     if (r.error)
       return { error: `${workflow} runs page ${page}: ${r.error} ${r.message ?? ''}`.trim(), runs };
-    const items = r.data.workflow_runs ?? [];
+    const data = /** @type {{ workflow_runs?: GhRun[], total_count?: number }} */ (r.data);
+    const items = data.workflow_runs ?? [];
     const batch = items
       .filter((w) => w.status === 'completed')
       .map((w) => ({
@@ -547,23 +660,27 @@ function listRuns(api, workflow, since) {
         }))
       }));
     runs.push(...batch);
-    if (items.length < 100 || page * 100 >= (r.data.total_count ?? 0)) return { runs };
+    if (items.length < 100 || page * 100 >= (data.total_count ?? 0)) return { runs };
   }
 }
 
+/** @param {Api} api @param {number} runId @returns {{ error?: string, jobs: Job[] }} */
 function listJobs(api, runId) {
+  /** @type {Job[]} */
   const jobs = [];
   for (let page = 1; ; page++) {
     const r = api.json(
       `repos/${REPO_SLUG}/actions/runs/${runId}/jobs?filter=all&per_page=100&page=${page}`
     );
     if (r.error) return { error: `${r.error}`, jobs };
-    jobs.push(...(r.data.jobs ?? []));
-    if ((r.data.jobs ?? []).length < 100 || jobs.length >= (r.data.total_count ?? 0))
+    const data = /** @type {{ jobs?: Job[], total_count?: number }} */ (r.data);
+    jobs.push(...(data.jobs ?? []));
+    if ((data.jobs ?? []).length < 100 || jobs.length >= (data.total_count ?? 0))
       return { jobs };
   }
 }
 
+/** @param {string} dir @returns {Generator<string>} */
 function* walk(dir) {
   for (const name of readdirSync(dir).sort()) {
     const p = join(dir, name);
@@ -572,6 +689,7 @@ function* walk(dir) {
   }
 }
 
+/** @param {NodeJS.ProcessEnv} [env] */
 export function localArtifactsDir(env = process.env) {
   return (
     env.F4X_CI_ARTIFACTS ||
@@ -579,6 +697,10 @@ export function localArtifactsDir(env = process.env) {
   );
 }
 
+/**
+ * @param {Api} api @param {string} root @param {number} runId @param {Artifact} artifact @param {string} scratch @param {string} localDir
+ * @returns {{ files?: Got[], gone?: boolean, error?: string }}
+ */
 function artifactFiles(api, root, runId, artifact, scratch, localDir) {
   const local = join(localDir, String(runId), artifact.name);
   if (existsSync(local))
@@ -599,12 +721,18 @@ function artifactFiles(api, root, runId, artifact, scratch, localDir) {
   return { files: [...walk(out)].map((p) => ({ name: relative(out, p), data: readFileSync(p) })) };
 }
 
+/** @param {Pick<Run, 'id'>} run @param {Pick<Job, 'id'>} job */
 export function jobKey(run, job) {
   return `ci|${REPO_SLUG}|${run.id}|${job.id}`;
 }
 
+/**
+ * @param {{ run: Run, job: Job, workflow: string, legs: Record<string, Leg>, files: { role: string, name: string, sha: string }[], invalid: string[], root: string }} options
+ * @returns {Entry}
+ */
 export function ciEntry({ run, job, workflow, legs, files, invalid, root }) {
   const machine = machineOf(job);
+  if (!machine) throw new Error(`job ${job.id} ran on no runner`);
   const tools = Object.keys(legs).sort();
   const floor = legs.tps?.floor;
   const pr = run.pull_requests?.[0] ?? null;
@@ -654,17 +782,22 @@ export function ciEntry({ run, job, workflow, legs, files, invalid, root }) {
   };
 }
 
+/** @param {Context} ctx @param {Run} run @param {Job} job */
 function previousEntry(ctx, run, job) {
-  if (!ctx.previous) return null;
-  const id = keyedEntry(ctx.previous, jobKey(run, job));
-  return id ? getEntry(ctx.previous, id) : null;
+  const previous = ctx.previous;
+  if (!previous) return null;
+  const id = keyedEntry(previous, jobKey(run, job));
+  return id ? getEntry(previous, id) : null;
 }
 
-const previousFiles = (ctx, prev, test) =>
-  (prev?.files ?? [])
-    .filter((f) => test(f))
-    .map((f) => ({ ...f, data: readBlob(ctx.previous, f.sha256) }));
+/** @param {Context} ctx @param {Entry | null} prev @param {(f: FileRef) => boolean} test */
+const previousFiles = (ctx, prev, test) => {
+  const previous = ctx.previous;
+  if (!previous) return [];
+  return (prev?.files ?? []).filter((f) => test(f)).map((f) => ({ ...f, data: readBlob(previous, f.sha256) }));
+};
 
+/** @param {Api} api @param {Context} ctx @param {Job} job @param {Entry | null} prev @param {Report} report @returns {{ text?: string, retry?: string, gone?: boolean }} */
 function jobLog(api, ctx, job, prev, report) {
   const log = api.text(`repos/${REPO_SLUG}/actions/jobs/${job.id}/logs`);
   if (!log.error) return { text: log.data };
@@ -675,14 +808,18 @@ function jobLog(api, ctx, job, prev, report) {
   return { text: gunzipSync(kept.data).toString('utf8') };
 }
 
+/** @param {Api} api @param {string} root @param {Required<Context>} ctx @param {Run} run @param {Job} job @param {Report} report @returns {Outcome} */
 function ingestJob(api, root, ctx, run, job, report) {
   const prev = previousEntry(ctx, run, job);
   const log = jobLog(api, ctx, job, prev, report);
   if (log.retry) return log;
+  /** @type {{ role: string, name: string, sha: string }[]} */
   const files = [];
+  /** @type {ReturnType<typeof parseJobLog>} */
   let parsed = { legs: {}, artifacts: [] };
+  /** @type {string[]} */
   const invalid = [];
-  if (log.gone) invalid.push('job log expired');
+  if (log.gone || log.text === undefined) invalid.push('job log expired');
   else {
     parsed = parseJobLog(log.text);
     files.push({
@@ -706,18 +843,18 @@ function ingestJob(api, root, ctx, run, job, report) {
       report.restored++;
       got = { files: kept.map((f) => ({ name: f.name.slice(prefix.length), data: f.data })) };
     }
-    for (const f of got.files) {
+    for (const f of got.files ?? []) {
       const name = `${artifact.name}/${f.name}`;
       files.push({ role: roleOf(f.name), name, sha: putBlob(root, f.data) });
       try {
         mergeArtifact(parsed.legs, parseArtifactFile(artifact.name, f.name, f.data));
       } catch (err) {
-        report.errors.push(`run ${run.id} ${name}: ${err.message}`);
+        report.errors.push(`run ${run.id} ${name}: ${/** @type {Error} */ (err).message}`);
       }
     }
   }
   if (expired) invalid.push('artifacts expired');
-  if (!Object.keys(parsed.legs).length && prev) return carry(root, ctx, prev, report);
+  if (!Object.keys(parsed.legs).length && prev && ctx.previous) return carry(root, { previous: ctx.previous }, prev, report);
   if (!Object.keys(parsed.legs).length)
     return { skip: log.gone ? 'log and artifacts expired' : 'no perf numbers in the log' };
   const entry = ciEntry({
@@ -733,9 +870,11 @@ function ingestJob(api, root, ctx, run, job, report) {
   return { created: r.created, expired };
 }
 
+/** @param {Pick<Entry, 'ci' | 'launchedBy'>} e */
 export const keyOfEntry = (e) =>
   `ci|${e.ci?.repo ?? REPO_SLUG}|${e.launchedBy.ciRunId}|${e.ci?.jobId}`;
 
+/** @param {string} root @param {{ previous: string }} ctx @param {Entry} prev @param {Report} report @returns {Outcome} */
 function carry(root, ctx, prev, report) {
   for (const f of prev.files ?? []) putBlob(root, readBlob(ctx.previous, f.sha256));
   const r = putKeyed(root, keyOfEntry(prev), prev);
@@ -743,6 +882,7 @@ function carry(root, ctx, prev, report) {
   return {};
 }
 
+/** @param {string} root @param {{ previous: string }} ctx @param {Report} report */
 function carryRest(root, ctx, report) {
   for (const prev of listEntries(ctx.previous, { kind: 'ci' })) {
     if (prev.launchedBy?.ciRunId == null || prev.ci?.jobId == null) continue;
@@ -750,6 +890,7 @@ function carryRest(root, ctx, report) {
   }
 }
 
+/** @param {Api} api @param {string} root @param {Required<Context>} ctx @param {Run} run @param {number} done @param {Report} report @returns {Outcome} */
 function ingestRun(api, root, ctx, run, done, report) {
   const listed = listJobs(api, run.id);
   if (listed.error) return { retry: `run ${run.id} jobs: ${listed.error}` };
@@ -768,21 +909,29 @@ function ingestRun(api, root, ctx, run, done, report) {
   return {};
 }
 
+/** @param {{ complete: boolean, newest: string | null } | undefined} state */
 const sinceOf = (state) =>
   state?.complete && state.newest
     ? new Date(Date.parse(state.newest) - RERUN_WINDOW_MS).toISOString().slice(0, 19) + 'Z'
     : null;
 
+/**
+ * @typedef {{ env?: NodeJS.ProcessEnv, api?: Api, floor?: number | string, maxCalls?: number | string, previous?: string | null, workflows?: string[], localDir?: string }} IngestOptions
+ */
+
+/** @param {string} root @param {IngestOptions} [opts] */
 export function ingestCI(root, opts = {}) {
   return withLock(root, () => ingest(root, opts));
 }
 
+/** @param {string} root @param {IngestOptions} [opts] @returns {Promise<Report>} */
 async function ingest(root, opts = {}) {
   const env = opts.env ?? process.env;
   const api = opts.api ?? ghApi();
   const floor = Number(opts.floor ?? env.F4X_LEDGER_CI_FLOOR ?? 1500);
   const maxCalls = Number(opts.maxCalls ?? env.F4X_LEDGER_CI_MAX_CALLS ?? 600);
   const perRun = 12;
+  /** @type {Report} */
   const report = {
     runs: 0,
     entries: 0,

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { basename } from 'node:path';
@@ -8,9 +7,31 @@ import { isOpen, ledgerSession, sessionPerf, sessionTimes, splitSessions } from 
 import { allEntries, getEntry, keyedEntry, putBlob, putKeyed, rememberKey } from './store.mjs';
 import { withInvalid } from './invalid.mjs';
 
+/** @typedef {import('./store.mjs').Entry} Entry */
+/** @typedef {import('./store.mjs').World} World */
+/** @typedef {import('./store.mjs').Perf} Perf */
+/** @typedef {import('./store.mjs').LaunchedBy} LaunchedBy */
+/** @typedef {import('./perflog.mjs').Session} Session */
+/** @typedef {import('./perflog.mjs').LogCheckpoint} LogCheckpoint */
+/** @typedef {ReturnType<typeof describeSave>} SaveInfo */
+/** @typedef {{ branch?: string | null, commit?: string | null, dirty?: number | boolean | null, refs?: string | null }} Tree */
+/** @typedef {{ seed?: number | string, turn?: number, culture?: { name?: string }, pawns?: unknown, mobs?: unknown, worldMap?: unknown, generatedBy?: Stamp, savedBy?: Stamp }} Dynamic */
+/** @typedef {string | { commit?: string | null } | null} Stamp */
+/** @typedef {{ dynamic?: Dynamic, world?: unknown, generatedBy?: Stamp, savedBy?: Stamp }} Snapshot */
+/**
+ * @typedef {{
+ *   speed?: number | null, tps?: number | null, ticks?: number, targetTps?: number, tickMsMean?: number, busyShare?: number,
+ *   seconds?: number, uncappedTps?: number | null, measured?: number, tick?: unknown, warm?: unknown, buildMs?: number,
+ *   gc?: unknown, heapMB?: unknown, map?: number[] | string | null, endMobs?: number, endPawns?: number, scenario?: string,
+ *   turn?: number, seed?: number | string, pawns?: number, mobs?: number, host?: import('./store.mjs').Host
+ * }} HarnessResult
+ */
+
 const REPO = new URL('../..', import.meta.url).pathname;
+/** @type {Map<string, string>} */
 const expanded = new Map();
 
+/** @param {string | null | undefined} short @param {string} [repo] @returns {string | null} */
 export function fullCommit(short, repo = REPO) {
   if (!short || !/^[0-9a-f]{7,40}$/.test(short)) return short ?? null;
   if (short.length === 40) return short;
@@ -26,13 +47,15 @@ export function fullCommit(short, repo = REPO) {
     }
     expanded.set(short, full || short);
   }
-  return expanded.get(short);
+  return expanded.get(short) ?? short;
 }
 
+/** @param {string | null} [who] @returns {LaunchedBy} */
 export function nobody(who = null) {
   return { who, session: null, thread: null, ciRunId: null, ciJob: null, ciAttempt: null };
 }
 
+/** @param {string} machine @param {string} checkout @param {Session} session */
 function sessionKey(machine, checkout, session) {
   const start = session.start.stamp
     ? `${session.start.type}@${session.start.stamp}|T${session.start.turn ?? '-'}`
@@ -40,8 +63,10 @@ function sessionKey(machine, checkout, session) {
   return `perf.log|${machine}|${checkout}|${start}`;
 }
 
+/** @param {Pick<Entry, 'captureId' | 'world'>} e */
 export const captureOf = (e) => e.captureId ?? e.world?.captureId ?? null;
 
+/** @param {string} root @param {string} machine @param {string} token @returns {LogCheckpoint[]} */
 export function capturesOf(root, machine, token) {
   return allEntries(root)
     .filter((e) => e.kind === 'save' && e.machine === machine && (captureOf(e) ?? '').startsWith(`${token}-`))
@@ -56,23 +81,33 @@ export function capturesOf(root, machine, token) {
     }));
 }
 
+/** @param {string} root */
 export function captureIndex(root) {
+  /** @type {Map<string, { save: string | null, entry: string }>} */
   const out = new Map();
-  for (const e of allEntries(root)) if (e.kind === 'save' && captureOf(e)) out.set(captureOf(e), { save: e.world?.save ?? null, entry: e.id });
+  for (const e of allEntries(root)) {
+    const capture = e.kind === 'save' ? captureOf(e) : null;
+    if (capture) out.set(capture, { save: e.world?.save ?? null, entry: e.id });
+  }
   return out;
 }
 
+/** @param {string} root @param {string} key @param {string} firstId @returns {number | null} */
 function coveredLines(root, key, firstId) {
   let to = getEntry(root, firstId).perf?.lines?.to;
   if (to == null) return null;
   for (let next = keyedEntry(root, `${key}|from:${to}`); next; next = keyedEntry(root, `${key}|from:${to}`)) {
-    to = getEntry(root, next).perf.lines.to;
+    const lines = getEntry(root, next).perf?.lines;
+    if (!lines) throw new Error(`entry ${next} records no line range`);
+    to = lines.to;
   }
   return to;
 }
 
+/** @param {string[]} paths */
 export function concatLogs(paths) {
   const ordered = [...paths].sort((a, b) => {
+    /** @param {string} p */
     const rank = (p) => (basename(p) === 'perf.log' ? 1 : 0);
     return rank(a) - rank(b) || statSync(a).mtimeMs - statSync(b).mtimeMs || b.localeCompare(a);
   });
@@ -82,12 +117,19 @@ export function concatLogs(paths) {
   };
 }
 
+/**
+ * @param {string} root
+ * @param {{ machine: string, checkout: string, paths: string[], timeZone?: string | null, who?: string | null, now?: number, note?: string }} opts
+ */
 export function ingestPerfLog(root, opts) {
   const { machine, checkout, paths, timeZone, who = null, now = Date.now(), note = '' } = opts;
   const { text, mtime } = concatLogs(paths);
   const sessions = splitSessions(text, timeZone);
+  /** @type {{ created: number, known: number, open: number, ids: string[] }} */
   const report = { created: 0, known: 0, open: 0, ids: [] };
+  /** @type {ReturnType<typeof captureIndex> | null} */
   let captures = null;
+  /** @param {string} cap */
   const resolve = (cap) => {
     captures ??= captureIndex(root);
     return captures.get(cap) ?? null;
@@ -95,6 +137,7 @@ export function ingestPerfLog(root, opts) {
   for (const session of sessions) {
     const key = sessionKey(machine, checkout, session);
     const first = keyedEntry(root, key);
+    /** @type {number | null} */
     let from = 0;
     let entryKey = key;
     if (first) {
@@ -132,6 +175,7 @@ export function ingestPerfLog(root, opts) {
       );
     }
     if (start == null) notes.push('the log lines carry no timestamps');
+    /** @type {Entry} */
     const entry = {
       v: 1,
       id: newId(machine, start ?? mtime, entryKey),
@@ -172,12 +216,16 @@ export function ingestPerfLog(root, opts) {
   return report;
 }
 
+/** @param {Stamp | undefined} stamp */
 const commitOf = (stamp) => (stamp == null ? null : typeof stamp === 'string' ? stamp : stamp.commit ?? null);
 
 export const noHost = () => ({ load: null, loadEnd: null, cores: null, others: null });
 
+/** @param {string | Buffer | Snapshot} textOrSave */
 export function describeSave(textOrSave) {
-  const save = typeof textOrSave === 'string' || Buffer.isBuffer(textOrSave) ? JSON.parse(textOrSave) : textOrSave;
+  /** @type {Snapshot} */
+  const save = typeof textOrSave === 'string' || Buffer.isBuffer(textOrSave) ? JSON.parse(String(textOrSave)) : textOrSave;
+  /** @type {Dynamic} */
   const dynamic = save.dynamic ?? {};
   const world = save.world ?? save.dynamic?.worldMap ?? null;
   return {
@@ -192,21 +240,28 @@ export function describeSave(textOrSave) {
   };
 }
 
+/** @param {Buffer | string} gzOrText */
 export function worldIdOf(gzOrText) {
   const text = Buffer.isBuffer(gzOrText) && gzOrText[0] === 0x1f && gzOrText[1] === 0x8b ? gunzipSync(gzOrText) : gzOrText;
-  return worldIdOfSnapshot(JSON.parse(text));
+  return worldIdOfSnapshot(JSON.parse(String(text)));
 }
 
+/**
+ * @param {string} root
+ * @param {Tree & { machine: string, who?: string | null, at?: number | null, name?: string | null, note?: string, fileName?: string, data?: Buffer, path?: string, parent?: string | null, tool?: string | null, amend?: (worldId: string, info: SaveInfo) => { branch?: string | null, commit?: string | null, notes?: string[] } | null | undefined }} opts
+ */
 export function ingestSave(root, opts) {
   const { machine, who = null, at = null, name = null, note = '', fileName } = opts;
-  let gz = opts.data ?? readFileSync(opts.path);
+  if (!opts.data && !opts.path) throw new Error('ingestSave needs data or a path');
+  let gz = opts.data ?? readFileSync(/** @type {string} */ (opts.path));
   const isGz = gz[0] === 0x1f && gz[1] === 0x8b;
   const text = isGz ? gunzipSync(gz) : gz;
   if (!isGz) gz = gzipSync(text);
   const bytesKey = `save-bytes|${sha256Of(text)}`;
   const seen = keyedEntry(root, bytesKey);
-  if (seen) return { id: seen, worldId: getEntry(root, seen).world.save, created: false };
-  const snapshot = JSON.parse(text);
+  if (seen) return { id: seen, worldId: getEntry(root, seen).world.save ?? null, created: false };
+  /** @type {Snapshot} */
+  const snapshot = JSON.parse(String(text));
   const worldId = worldIdOfSnapshot(snapshot);
   const key = `save|${worldId}`;
   const known = keyedEntry(root, key);
@@ -219,6 +274,7 @@ export function ingestSave(root, opts) {
   const sha = putBlob(root, gz);
   const when = at ?? (opts.path ? statSync(opts.path).mtimeMs : Date.now());
   const parent = opts.parent !== undefined ? opts.parent : sessionFor(root, machine, info, at);
+  /** @type {Entry} */
   const entry = {
     v: 1,
     id: newId(machine, when, key),
@@ -245,24 +301,29 @@ export function ingestSave(root, opts) {
   return { id: r.id, worldId, created: r.created };
 }
 
+/** @param {string} root @param {string} machine @param {Pick<SaveInfo, 'turn' | 'map'>} info @param {number | null | undefined} savedAt @returns {string | null} */
 export function sessionFor(root, machine, info, savedAt) {
-  if (info.turn == null) return null;
+  const turn = info.turn;
+  if (turn == null) return null;
   const hits = allEntries(root).filter((e) => {
     if (e.kind !== 'play' || e.machine !== machine || !e.perf?.turns || !e.world?.map) return false;
     if (info.map && e.world.map !== info.map) return false;
-    if (info.turn < e.perf.turns.first || info.turn > e.perf.turns.last) return false;
+    if (turn < e.perf.turns.first || turn > e.perf.turns.last) return false;
     if (savedAt == null) return true;
     if (!e.at || !e.perf.end) return false;
     return Date.parse(e.at) <= savedAt && savedAt <= Date.parse(e.perf.end) + 10 * 60_000;
   });
-  return hits.length === 1 || (savedAt != null && hits.length) ? hits.sort((a, b) => b.at.localeCompare(a.at))[0].id : null;
+  return hits.length === 1 || (savedAt != null && hits.length) ? hits.sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))[0].id : null;
 }
 
+/** @param {string} root @param {string} worldId */
 export function saveEntryFor(root, worldId) {
   return allEntries(root).find((e) => e.kind === 'save' && e.world?.save === worldId) ?? null;
 }
 
+/** @param {HarnessResult} result @returns {Perf} */
 export function harnessPerf(result) {
+  /** @type {Perf} */
   const perf = { tool: result.speed != null ? 'loop' : 'tick' };
   if (result.tps != null) {
     perf.tps = { median: result.tps, p10: null, p90: null, n: result.ticks ?? null };
@@ -284,11 +345,16 @@ export function harnessPerf(result) {
   return perf;
 }
 
+/**
+ * @param {string} root
+ * @param {Tree & { machine: string, path: string, kind?: string, tool?: string, who?: string | null, key?: string, note?: string, files?: { role: string, name?: string, path: string }[], at?: number, saveWorld?: Partial<Pick<World, 'turn' | 'pawns' | 'mobs'>> | null, launchedBy?: LaunchedBy, scenario?: string | null, worldId?: string | null, generatedBy?: string | null, perf?: Perf, parent?: string | null }} opts
+ */
 export function ingestResult(root, opts) {
   const { machine, path, kind = 'harness', tool = 'tick-harness', who = null, key, note = '' } = opts;
   const k = key ?? `result|${machine}|${sha256Of(readFileSync(path))}`;
   const known = keyedEntry(root, k);
   if (known) return { id: known, created: false };
+  /** @type {HarnessResult} */
   const result = JSON.parse(readFileSync(path, 'utf8'));
   const sha = putBlob(root, path);
   const extra = (opts.files ?? []).map((f) => fileRef(f.role, f.name ?? basename(f.path), putBlob(root, f.path), root));
@@ -296,6 +362,7 @@ export function ingestResult(root, opts) {
   const at = opts.at ?? statSync(path).mtimeMs;
   const startCounts = result.endMobs !== undefined || result.endPawns !== undefined;
   const from = opts.saveWorld ?? null;
+  /** @type {Entry} */
   const entry = {
     v: 1,
     id: newId(machine, at, k),
@@ -336,15 +403,23 @@ export function ingestResult(root, opts) {
   return { id: r.id, created: r.created };
 }
 
+/**
+ * @param {string} root
+ * @param {Tree & { machine: string, path: string, tool?: string | null, who?: string | null, note?: string, siblings?: string[], key?: string, at?: number, launchedBy?: LaunchedBy, worldId?: string | null, parent?: string | null, invalid?: string[] }} opts
+ */
 export function ingestBench(root, opts) {
   const { machine, path, tool = null, who = null, note = '', siblings = [] } = opts;
   const k = opts.key ?? `bench|${machine}|${sha256Of(readFileSync(path))}`;
   const known = keyedEntry(root, k);
   if (known) return { id: known, created: false };
+  /** @type {unknown[] | (Perf & { map?: number[] | string, scenario?: string, host?: import('./store.mjs').Host })} */
   const data = JSON.parse(readFileSync(path, 'utf8'));
   const at = opts.at ?? statSync(path).mtimeMs;
-  const map = data.map ? (Array.isArray(data.map) ? data.map.join('x') : data.map) : null;
+  const shown = Array.isArray(data) ? null : data;
+  const map = shown?.map ? (Array.isArray(shown.map) ? shown.map.join('x') : shown.map) : null;
+  /** @param {string} n */
   const role = (n) => (n.endsWith('.cpuprofile') ? 'profile' : n.endsWith('.png') || n.endsWith('.json') ? 'result' : 'log');
+  /** @type {Entry} */
   const entry = {
     v: 1,
     id: newId(machine, at, k),
@@ -358,10 +433,10 @@ export function ingestBench(root, opts) {
     dirty: opts.dirty ?? null,
     refs: opts.refs ?? null,
     tool,
-    scenario: Array.isArray(data) ? null : data.scenario ?? null,
+    scenario: shown?.scenario ?? null,
     world: { save: opts.worldId ?? null, name: null, turn: null, seed: null, map, pawns: null, mobs: null, generatedBy: null, savedBy: null },
-    host: data.host ?? noHost(),
-    perf: Array.isArray(data) ? { rows: data } : data,
+    host: shown?.host ?? noHost(),
+    perf: shown ?? { rows: data },
     files: [
       fileRef('result', basename(path), putBlob(root, path), root),
       ...siblings.map((p) => fileRef(role(basename(p)), basename(p), putBlob(root, p), root))

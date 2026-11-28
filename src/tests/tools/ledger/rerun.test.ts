@@ -121,7 +121,7 @@ describe('finding the save to rerun', () => {
       log: () => {}
     });
     ingestSpool(root, spool, { remove: true });
-    const found = findSave(root, id);
+    const found = findSave(root, id!);
     expect(found.parent).toBe(id);
     expect(found.file.role).toBe('save');
     expect(findSave(root, worldId.slice(0, 12)).parent).toBe(id);
@@ -197,7 +197,7 @@ describe('rerun on a machine', () => {
     expect(ids).toHaveLength(4);
     const entries = ids.map((id: string) => getEntry(root, id));
     expect(entries.map((e) => e.commit)).toEqual([SHA_DEV, SHA_LO, SHA_DEV, SHA_LO]);
-    expect(entries.map((e) => e.perf.round)).toEqual([1, 1, 2, 2]);
+    expect(entries.map((e) => e.perf!.round)).toEqual([1, 1, 2, 2]);
     for (const e of entries) {
       expect(e).toMatchObject({ kind: 'harness', tool: 'tick-harness', machine: 'desktop', parent: saveId, scenario: 'save' });
       expect(e.world).toMatchObject({ save: worldId, pawns: 2, mobs: 3, turn: 120, map: '3x2', name: 'Fen' });
@@ -219,7 +219,7 @@ describe('rerun on a machine', () => {
     const deps = fakeDesktop({ busyChecks: 2 });
     const [id] = await rerun(root, parseRerunArgs([worldId.slice(0, 12), '--ref', 'origin/dev']), deps as unknown as Deps, env);
     expect(deps.slept).toEqual([30_000, 30_000]);
-    expect(getEntry(root, id).host.load).toEqual([0.2, 0.3, 0.4]);
+    expect(getEntry(root, id).host!.load).toEqual([0.2, 0.3, 0.4]);
   });
 
   it('keeps the worktrees with --keep and still clears the run directory', async () => {
@@ -245,7 +245,7 @@ describe('syncing a rerun into the store', () => {
     ownerSave();
     const id = await recordRun({ env, tool: 'steady', host: null, log: () => {} });
     expect(syncSpool(root, spool)).toBe(true);
-    expect(getEntry(root, id).tool).toBe('steady');
+    expect(getEntry(root, id!).tool).toBe('steady');
   });
 
   it('leaves the entry in the spool when the store stays held', () => {
@@ -294,15 +294,15 @@ describe('recording from the bench tools', () => {
   it('marks a frame-cost run from before the speed fix invalid, alongside the load at its start', async () => {
     const busy = snapshot(parseKv('cores=16\nload=3.1 2 1\n'), 'a');
     const quiet = snapshot(parseKv('cores=16\nload=0.5 0.4 0.3\n'), 'b');
-    const git = (commit: string) => ({ branch: 'dev', commit, dirty: 0, refs: [] });
+    const git = (commit: string) => ({ branch: 'dev', commit, dirty: 0, refs: '' });
     const has = (commit: string, fix: string) => commit === 'after' && fix === FIXES['frame-cost'].commit;
-    const record = (commit: string, start: unknown) =>
+    const record = (commit: string, start: Parameters<typeof hostRecord>[0]) =>
       recordRun({ env, tool: 'frame-cost', git: git(commit), host: hostRecord(start, quiet), has, log: () => {} });
     const before = await record('before', busy);
     const after = await record('after', quiet);
     ingestSpool(root, spool, { remove: true });
-    expect(getEntry(root, before).invalid).toEqual(['load 3.1 at start, above 1.5', FIXES['frame-cost'].reason]);
-    expect(getEntry(root, after).invalid).toBeUndefined();
+    expect(getEntry(root, before!).invalid).toEqual(['load 3.1 at start, above 1.5', FIXES['frame-cost'].reason]);
+    expect(getEntry(root, after!).invalid).toBeUndefined();
   });
 
   it('records nothing when F4X_LEDGER_OFF is set', async () => {
@@ -329,7 +329,7 @@ describe('recording from the bench tools', () => {
       env: { ...env, F4X_FIXTURE: fixture, F4X_QUERY: '?painted=1' }
     });
     ingestSpool(root, spool, { remove: true });
-    const e = getEntry(root, id);
+    const e = getEntry(root, id!);
     expect(e).toMatchObject({ kind: 'bench', tool: 'frame-cost', scenario: 'save', world: { save: worldId, turn: 120 }, note: 'x' });
     expect(e.perf).toMatchObject({ tps: { median: 220, n: 2 }, maxSpeedTps: { median: 400 }, query: '?painted=1' });
     expect(e.files.map((f: { role: string }) => f.role).sort()).toEqual(['result', 'save']);

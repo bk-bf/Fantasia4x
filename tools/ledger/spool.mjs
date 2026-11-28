@@ -166,7 +166,7 @@ export function writeBlob(bufferOrPath, dir = spoolDir()) {
   return writeBlobAt(dir, bufferOrPath);
 }
 
-/** @param {Record<string, unknown> & { id?: string, machine?: string, at?: string, recordedAt?: string }} entry @param {string} [dir] */
+/** @param {Record<string, unknown> & { id?: string, machine?: string, at?: string | null, recordedAt?: string }} entry @param {string} [dir] */
 export function writeEntry(entry, dir = spoolDir()) {
   const filled = {
     v: 1,

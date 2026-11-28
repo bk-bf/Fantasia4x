@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @ts-nocheck
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, relative } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -8,8 +7,23 @@ import { fileRef, newId, sha256Of } from './spool.mjs';
 import { allEntries, keyedEntry, putBlob, putKeyed, storeDir, withLock } from './store.mjs';
 import { fullCommit, ingestBench, ingestPerfLog, ingestResult, ingestSave, noHost, nobody, worldIdOf } from './ingest.mjs';
 
+/** @typedef {{ commit: string | null, branch: string }} TreeRef */
+/** @typedef {{ id: string, worldId: string | null, created: boolean }} Saved */
+/** @typedef {{ role: string, name: string, path: string }} Source */
+/** @typedef {(rel: string) => TreeRef | null} TreeOf */
+/**
+ * @typedef {{
+ *   zone: string, trees: Record<string, TreeRef>, sessions: { tickHarness: string, tickProfile: string, saveCompat: string },
+ *   laptopCheckout: string, desktopCheckouts: Record<string, string>, harnessInputs: Record<string, string>,
+ *   writers: Record<string, { commit: string, by: string }>, oldFormat: string[], benchTools: [string, string][],
+ *   notResults: string[], skipTmp: string[]
+ * }} ImportData
+ */
+
+/** @type {ImportData} */
 export const DATA = JSON.parse(readFileSync(new URL('./import-2026-11-27.json', import.meta.url), 'utf8'));
 
+/** @param {string} dir @returns {Generator<string>} */
 function* walk(dir) {
   for (const name of readdirSync(dir).sort()) {
     const p = join(dir, name);
@@ -20,22 +34,36 @@ function* walk(dir) {
   }
 }
 
+/** @param {string} session */
 const agent = (session) => ({ ...nobody('agent'), session });
 
+/** @param {string} root @param {string} from @param {(message: string) => void} [log] */
 export function importFirst(root, from, log = () => {}) {
+  /** @type {Set<string>} */
   const used = new Set();
+  /** @type {Record<string, number>} */
   const counts = {};
+  /** @param {string} machine @param {string} kind @param {number} [n] */
   const bump = (machine, kind, n = 1) => {
     if (n) counts[`${machine} ${kind}`] = (counts[`${machine} ${kind}`] ?? 0) + n;
   };
   const S = DATA.sessions;
+  /** @type {Record<string, TreeRef>} */
   const trees = Object.fromEntries(Object.entries(DATA.trees).map(([k, t]) => [k, { commit: fullCommit(t.commit), branch: t.branch }]));
   const compat = join(from, 'compat-extracted');
   const extracted = join(from, 'ledger-extracted');
   const SN = join(from, 'laptop-snapshots');
-  const snapDate = (n) => /<date>(.*?)<\/date>/.exec(readFileSync(join(SN, String(n), 'info.xml'), 'utf8'))[1];
+  /** @param {number} n */
+  const snapDate = (n) => {
+    const m = /<date>(.*?)<\/date>/.exec(readFileSync(join(SN, String(n), 'info.xml'), 'utf8'));
+    if (!m) throw new Error(`laptop snapper snapshot ${n} has no date`);
+    return m[1];
+  };
 
+  /** @typedef {{ commit?: string, notes: string[] }} WorldNote */
+  /** @type {Map<string, WorldNote>} */
   const worldNotes = new Map();
+  /** @param {string} path @param {(was: WorldNote) => WorldNote} fn */
   const addWorld = (path, fn) => {
     if (!existsSync(path)) throw new Error(`${relative(from, path)} named in import-2026-11-27.json is missing`);
     const id = worldIdOf(readFileSync(path));
@@ -51,8 +79,10 @@ export function importFirst(root, from, log = () => {}) {
       notes: [...was.notes, 'an old save format: it throws on its first tick on 8623ae45 and 83ca8f15 and runs on bfa96d5d (#454)']
     }));
   }
+  /** @param {string} worldId */
   const amend = (worldId) => worldNotes.get(worldId) ?? null;
 
+  /** @param {string} machine @param {string} dir @param {string} checkout @param {string | null} who @param {string} note */
   function perfLogs(machine, dir, checkout, who, note) {
     const paths = readdirSync(dir).filter((n) => /^perf\.log/.test(n)).map((n) => join(dir, n));
     if (!paths.length) return;
@@ -62,6 +92,7 @@ export function importFirst(root, from, log = () => {}) {
     paths.forEach((p) => used.add(p));
   }
 
+  /** @param {string} machine @param {string} dir @param {string} checkout @param {string | null} who @param {string} note */
   function debugBundle(machine, dir, checkout, who, note) {
     const others = readdirSync(dir)
       .map((n) => join(dir, n))
@@ -96,7 +127,14 @@ export function importFirst(root, from, log = () => {}) {
     if (r.created) bump(machine, 'play (debug logs)');
   }
 
+  /** @typedef {{ savedAt?: number, cultureName?: string, raceName?: string, kind?: string }} SaveMeta */
+  /**
+   * @param {string} machine @param {string} path @param {string} who @param {string} note
+   * @param {{ meta?: SaveMeta, commit?: string | null, branch?: string | null }} [extra]
+   * @returns {Saved}
+   */
   function saveFile(machine, path, who, note, extra = {}) {
+    /** @type {SaveMeta} */
     let m = extra.meta ?? {};
     if (existsSync(`${path}.meta`)) {
       m = JSON.parse(readFileSync(`${path}.meta`, 'utf8')).meta ?? {};
@@ -135,8 +173,10 @@ export function importFirst(root, from, log = () => {}) {
   used.add(join(from, 'desktop-raw/listing.txt'));
 
   const ownerSave = saveFile('laptop', join(from, S.tickHarness, 'laptop/owner-save.json.gz'), 'owner', `copied from the laptop's dev-shell IndexedDB (127.0.0.1:5174) by agent session ${S.tickHarness} with a {v:1} wrapper, then run by its harness`);
+  /** @type {Record<string, Saved>} */
   const inputs = {};
   for (const name of ['owner-save.json.gz', 'colony40-dev.json.gz', 'colony40-lo.json.gz']) {
+    /** @type {Partial<TreeRef>} */
     const tree = name.includes('-dev') ? trees.dev : name.includes('-lo') ? trees.lo : {};
     inputs[name] = saveFile('desktop', join(from, 'desktop-raw/tmp/f4xprof-save', name), 'agent', `/tmp/f4xprof-save on the desktop, the save input of agent session ${S.tickHarness}'s harness`, {
       commit: name.startsWith('colony40') ? tree.commit : null,
@@ -150,6 +190,7 @@ export function importFirst(root, from, log = () => {}) {
     const rel = relative(compat, p);
     const dir = rel.split('/')[0];
     const index = join(compat, dir, 'index.json');
+    /** @type {Record<string, SaveMeta>} */
     const metas = existsSync(index) ? JSON.parse(readFileSync(index, 'utf8')).metas ?? {} : {};
     const key = basename(p, '.json.gz');
     const machine = dir.startsWith('colony40') ? 'desktop' : 'laptop';
@@ -159,10 +200,12 @@ export function importFirst(root, from, log = () => {}) {
     });
     if (existsSync(index)) used.add(index);
   }
-  for (const [sub, label] of [
+  /** @type {[string, (profile: string) => string][]} */
+  const extractedDirs = [
     ['current', (profile) => `read from a copy of the laptop's ${profile} IndexedDB (laptop-raw/config/${profile})`],
     ['630e9adf-idb', (profile) => `read from agent session ${S.tickHarness}'s copy of the laptop's ${profile} IndexedDB`]
-  ]) {
+  ];
+  for (const [sub, label] of extractedDirs) {
     for (const profile of readdirSync(join(extracted, sub)).sort()) {
       for (const f of readdirSync(join(extracted, sub, profile)).filter((n) => n.endsWith('.json.gz')).sort()) {
         saveFile('laptop', join(extracted, sub, profile, f), 'owner', label(profile));
@@ -181,10 +224,15 @@ export function importFirst(root, from, log = () => {}) {
   for (const p of walk(join(from, S.tickHarness, 'laptop/idb'))) used.add(p);
   for (const p of walk(SN)) if (p.includes('-IndexedDB/')) used.add(p);
 
+  /**
+   * @param {string} dir @param {string} session @param {TreeOf} treeOf @param {string} notePrefix
+   * @param {Record<string, string[]>} [profiles] @param {Source[]} [source]
+   */
   function harness(dir, session, treeOf, notePrefix, profiles = {}, source = []) {
     for (const p of walk(dir)) {
       if (!p.endsWith('.json')) continue;
       const rel = relative(dir, p);
+      /** @type {(import('./ingest.mjs').HarnessResult & { scenario?: string }) | unknown[] | null} */
       let result;
       try {
         result = JSON.parse(readFileSync(p, 'utf8'));
@@ -206,7 +254,7 @@ export function importFirst(root, from, log = () => {}) {
         dirty: null,
         worldId: input?.worldId ?? null,
         parent: input?.id ?? null,
-        saveWorld: input ? allEntries(root).find((e) => e.id === input.id).world : null,
+        saveWorld: input ? (allEntries(root).find((e) => e.id === input.id)?.world ?? null) : null,
         files: [
           ...(profiles[rel] ?? []).map((f) => ({ role: f.endsWith('.txt') ? 'log' : 'profile', path: f, name: f.endsWith('.txt') ? basename(f) : `profile/${basename(f)}` })),
           ...source
@@ -219,9 +267,12 @@ export function importFirst(root, from, log = () => {}) {
       source.forEach((f) => used.add(f.path));
     }
   }
+  /** @param {[string, string][]} dirs @returns {Source[]} */
   const sources = (dirs) => dirs.flatMap(([base, d]) => [...walk(d)].map((p) => ({ role: 'log', name: `${base}/${relative(d, p)}`, path: p })));
+  /** @type {TreeOf} */
   const treeFromTop = (rel) => trees[rel.split('/')[0]] ?? null;
   const cpuDir = join(from, 'desktop-raw/tmp/f4xprof-cpu');
+  /** @param {string} n */
   const cpu = (n) => readdirSync(join(cpuDir, n)).map((f) => join(cpuDir, n, f));
   const h = join(from, S.tickHarness);
   const prof630 = {
@@ -238,6 +289,7 @@ export function importFirst(root, from, log = () => {}) {
   harness(join(h, 'results'), S.tickHarness, treeFromTop, `results of agent session ${S.tickHarness}'s tick harness on the desktop`, prof630, src630);
   harness(join(from, 'desktop-raw/tickprof'), S.tickHarness, treeFromTop, `/tmp/f4xprof tick-harness output on the desktop, agent session ${S.tickHarness}`, prof630, src630);
   const h0 = join(from, S.tickProfile);
+  /** @type {Record<string, string[]>} */
   const prof0 = {};
   for (const s of ['dev-save', 'colony-750-40p', 'colony-1060-80p']) {
     const d = join(h0, 'prof', s);
@@ -246,7 +298,8 @@ export function importFirst(root, from, log = () => {}) {
   const src0 = [...sources([['harness', join(h0, 'harness')]]), { role: 'log', name: 'run.sh', path: join(h0, 'run.sh') }];
   harness(join(h0, 'out'), S.tickProfile, () => trees.dev, `results of agent session ${S.tickProfile}'s tick harness in /tmp/f4x-tickprof on the desktop, a copy of debug/tick-profile cut from origin/dev`, prof0, src0);
 
-  const toolOf = DATA.benchTools.map(([re, tool]) => [new RegExp(re), tool]);
+  const toolOf = DATA.benchTools.map(([re, tool]) => /** @type {[RegExp, string]} */ ([new RegExp(re), tool]));
+  /** @param {string} dir */
   function benchDir(dir) {
     const names = readdirSync(dir).filter((n) => statSync(join(dir, n)).isFile());
     for (const name of names.filter((n) => n.endsWith('.json') && !DATA.notResults.includes(n))) {

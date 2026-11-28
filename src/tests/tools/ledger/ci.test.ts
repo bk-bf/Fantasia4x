@@ -27,6 +27,7 @@ const parsed = (name: string) => {
 };
 const artifactOf = (artifact: string, name: string, data: Buffer) =>
   parseArtifactFile(artifact, name, data) as unknown as Loose;
+const legsOf = (entry: { perf: unknown } | undefined) => (entry!.perf as Loose).legs;
 
 function storedZip(files: Record<string, Buffer>) {
   const locals: Buffer[] = [];
@@ -206,7 +207,8 @@ describe('CI jobs', () => {
       name: 'Ticks per second',
       started_at: 'a',
       completed_at: 'b',
-      runner_name: 'r1'
+      runner_name: 'r1',
+      conclusion: 'success'
     };
     const copy = { ...one, id: 5, run_attempt: 2 };
     const rerun = {
@@ -375,7 +377,7 @@ describe('CI ingest', () => {
     expect(report).toMatchObject({ runs: 2, entries: 2, expired: 1, errors: [], stopped: null });
     const entries = listEntries(root, { kind: 'ci' });
     expect(entries).toHaveLength(2);
-    const tps = entries.find((e: { tool: string }) => e.tool === 'tps');
+    const tps = entries.find((e) => e.tool === 'tps')!;
     expect(tps).toMatchObject({
       kind: 'ci',
       machine: 'github',
@@ -386,14 +388,14 @@ describe('CI ingest', () => {
       perf: { tps: { median: 264, n: 5 } }
     });
     expect(tps.invalid).toBeUndefined();
-    expect(tps.perf.legs.tps.notes[0].headMs).toBe(153.41965749999963);
-    const logFile = tps.files.find((f: { role: string }) => f.role === 'log');
+    expect(legsOf(tps).tps.notes[0].headMs).toBe(153.41965749999963);
+    const logFile = tps.files.find((f) => f.role === 'log')!;
     expect(gunzipSync(readBlob(root, logFile.sha256)).toString('utf8')).toBe(log('tps.log'));
     expect(tps.files.map((f: { name: string }) => f.name)).toContain('tps-notes/tps-notes.jsonl');
-    const measure = entries.find((e: { tool: string }) => e.tool === 'frame-budget,work-pins');
+    const measure = entries.find((e) => e.tool === 'frame-budget,work-pins')!;
     expect(measure.invalid).toEqual(['artifacts expired']);
     expect(measure.scenario).toBe('colony,dev-save,large-wilderness,mobs');
-    expect(measure.perf.legs['frame-budget'].phases.idle.medianMs).toHaveLength(2);
+    expect(legsOf(measure)['frame-budget'].phases.idle.medianMs).toHaveLength(2);
     expect(measure.files.map((f: { name: string }) => f.name)).toContain(
       'frame-budget/frame-budget.json'
     );
@@ -429,7 +431,7 @@ describe('CI ingest', () => {
     expect(codspeed).toHaveLength(1);
     expect(codspeed[0].launchedBy.ciAttempt).toBe(2);
     expect(
-      codspeed[0].perf.legs.codspeed.counts['tools/bench/jobs.bench.ts::jobs::haul:crowded'].Ir
+      legsOf(codspeed[0]).codspeed.counts['tools/bench/jobs.bench.ts::jobs::haul:crowded'].Ir
     ).toBe(2215158);
     expect(codspeed[0].scenario).toBe('body,jobs');
   });
@@ -442,7 +444,7 @@ describe('CI ingest', () => {
     expect(stopped.calls).toBe(0);
     expect(listEntries(root, { kind: 'ci' })).toHaveLength(0);
     const capped = await ingestCI(root, {
-      api: { ...gh.api, budget: 5000 },
+      api: Object.assign({ ...gh.api }, { budget: 5000 }),
       floor: 0,
       maxCalls: 14,
       localDir
@@ -450,7 +452,7 @@ describe('CI ingest', () => {
     expect(capped.stopped).toMatch(/14-call cap/);
     expect(capped.runs).toBe(1);
     expect(readCursor(root).workflows['check.yml'].complete).toBe(false);
-    const rest = await ingestCI(root, { api: { ...gh.api, budget: 5000 }, floor: 0, localDir });
+    const rest = await ingestCI(root, { api: Object.assign({ ...gh.api }, { budget: 5000 }), floor: 0, localDir });
     expect(rest).toMatchObject({ runs: 1, stopped: null });
     expect(listEntries(root, { kind: 'ci' })).toHaveLength(2);
     expect(readCursor(root).workflows['check.yml'].complete).toBe(true);
@@ -466,9 +468,9 @@ describe('CI ingest', () => {
     expect(report).toMatchObject({ runs: 2, entries: 2, restored: 2, carried: 0 });
     const tps = listEntries(fresh, { tool: 'tps' })[0];
     expect(tps.invalid).toBeUndefined();
-    expect(tps.perf.legs.tps.notes[0].name).toBe('dev-save 60 ticks');
+    expect(legsOf(tps).tps.notes[0].name).toBe('dev-save 60 ticks');
     const measure = listEntries(fresh, { tool: 'work-pins' })[0];
-    expect(measure.perf.legs['work-pins'].changed).toBe(863);
+    expect(legsOf(measure)['work-pins'].changed).toBe(863);
     expect(measure.invalid).toEqual(['artifacts expired']);
   });
 

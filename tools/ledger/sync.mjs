@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -8,6 +7,13 @@ import { allEntries, ingestSpool, isLiveStore, putBlob, storeDir, verifyBlob } f
 import { ingestPerfLog } from './ingest.mjs';
 import { ingestCI } from './ci.mjs';
 
+/** @typedef {{ hour: number, zone: string }} Schedule */
+/** @typedef {{ ssh: string | null, checkouts: string[], blobs?: Schedule, root?: string }} Machine */
+/** @typedef {{ play: number, open: number }} PlayReport */
+/** @typedef {{ reached: string[], skipped: string[], entries: number, play: number, open: number, removed: number, moved?: string[], errors: string[], ci?: unknown }} SyncReport */
+/** @typedef {{ input?: string, limit?: string, cwd?: string }} RunOptions */
+
+/** @type {Record<string, Machine>} */
 export const MACHINES = {
   ubuntuserver: { ssh: null, checkouts: ['Documents/Projects/Fantasia4x'] },
   laptop: { ssh: 'laptop', checkouts: ['Documents/local/Projects/Fantasia4x'], blobs: { hour: 3, zone: 'Europe/Berlin' } },
@@ -19,32 +25,40 @@ const SSH_OPTS = ['-o', 'ConnectTimeout=10', '-o', 'BatchMode=yes', '-o', 'Serve
 export const SPOOL = '.local/share/fantasia4x/ledger-spool';
 const HOME = /^(\/home\/[^/]+|\/root|\/Users\/[^/]+)\//;
 
+/** @param {string} cmd @param {string[]} args @param {RunOptions} [options] */
 function run(cmd, args, { input, limit = '10m', cwd } = {}) {
   return spawnSync('timeout', [limit, cmd, ...args], { encoding: 'utf8', input, cwd, maxBuffer: 2 ** 28 });
 }
 
+/** @param {Machine} cfg */
 const homeOf = (cfg) => cfg.root ?? homedir();
 
+/** @param {Machine} cfg @param {string} script @param {RunOptions} [opts] */
 function shell(cfg, script, opts) {
   return cfg.ssh ? run('ssh', [...SSH_OPTS, cfg.ssh, script], opts) : run('sh', ['-c', script], { ...opts, cwd: homeOf(cfg) });
 }
 
+/** @param {string} path */
 const slug = (path) => path.replace(/^\/+/, '').replace(/[^\w.-]+/g, '-');
 
+/** @param {Machine} cfg @param {string} path */
 function source(cfg, path) {
   if (cfg.ssh) return `${cfg.ssh}:${path}`;
   return isAbsolute(path) ? path : join(homeOf(cfg), path);
 }
 
+/** @param {Machine} cfg @param {string[]} args @param {string} [limit] */
 function rsync(cfg, args, limit = '20m') {
   return run('rsync', ['--timeout=60', '-e', `ssh ${SSH_OPTS.join(' ')}`, ...args], { limit });
 }
 
+/** @param {Machine} cfg @param {string} from @param {string} to @param {string[]} [extra] */
 function pull(cfg, from, to, extra = []) {
   mkdirSync(to, { recursive: true });
   return rsync(cfg, ['-a', ...extra, source(cfg, from), to]);
 }
 
+/** @param {Machine} cfg */
 export function timeZoneOf(cfg) {
   const r = rsync(cfg, ['--list-only', '-l', source(cfg, '/etc/localtime')], '60s');
   if (r.status !== 0) return { reached: false, tz: null };
@@ -52,6 +66,7 @@ export function timeZoneOf(cfg) {
   return { reached: true, tz: m ? m[1] : null };
 }
 
+/** @param {Machine} cfg @param {string} path */
 function homeRelative(cfg, path) {
   const home = cfg.ssh ? null : homeOf(cfg);
   if (home && path.startsWith(`${home}/`)) return path.slice(home.length + 1);
@@ -59,7 +74,9 @@ function homeRelative(cfg, path) {
   return m ? path.slice(m[0].length) : path;
 }
 
+/** @param {string} root @param {string} machine @param {Machine} cfg */
 export function worktreesOf(root, machine, cfg) {
+  /** @type {Set<string>} */
   const out = new Set();
   for (const c of cfg.checkouts) {
     out.add(c);
@@ -76,6 +93,7 @@ export function worktreesOf(root, machine, cfg) {
   return out;
 }
 
+/** @param {string} older @param {string} newer */
 function sameStart(older, newer) {
   const a = statSync(older).size;
   if (statSync(newer).size < a) return false;
@@ -84,8 +102,10 @@ function sameStart(older, newer) {
   return sha256Of(head) === sha256Of(readFileSync(older));
 }
 
+/** @param {string} stage @param {string} raw */
 export function mirror(stage, raw) {
   mkdirSync(raw, { recursive: true });
+  /** @type {string[]} */
   const archived = [];
   for (const name of readdirSync(stage)) {
     const from = join(stage, name);
@@ -107,6 +127,7 @@ export function mirror(stage, raw) {
 
 export const LIVE = /^perf\.log(\.\d+|\.\d{8}T\d{6}Z(-\d+)?)?$/;
 
+/** @param {string} root @param {string} machine @param {string} checkout @param {string} dir @param {string | null} timeZone @param {PlayReport} report */
 function ingestCheckout(root, machine, checkout, dir, timeZone, report) {
   const files = readdirSync(dir).filter((n) => n.startsWith('perf.log') && !n.endsWith('.tmp'));
   const kept = files.filter((n) => !LIVE.test(n)).sort();
@@ -136,16 +157,19 @@ function zoneParts(t, zone) {
   return Object.fromEntries(format.formatToParts(new Date(t)).filter((p) => p.type !== 'literal').map((p) => [p.type, Number(p.value)]));
 }
 
+/** @param {number} t @param {string} zone */
 const offsetAt = (t, zone) => {
   const p = zoneParts(t, zone);
   return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - (t - (t % 1000));
 };
 
+/** @param {number} year @param {number} month @param {number} day @param {number} hour @param {string} zone */
 function zonedHour(year, month, day, hour, zone) {
   const wall = Date.UTC(year, month - 1, day, hour);
   return wall - offsetAt(wall - offsetAt(wall, zone), zone);
 }
 
+/** @param {Date} now @param {Schedule} schedule */
 export function lastMoveTime(now, { hour, zone }) {
   const t = now.getTime();
   const p = zoneParts(t, zone);
@@ -155,8 +179,10 @@ export function lastMoveTime(now, { hour, zone }) {
   return zonedHour(y.getUTCFullYear(), y.getUTCMonth() + 1, y.getUTCDate(), hour, zone);
 }
 
+/** @param {string} root */
 const movesFile = (root) => join(root, 'state', 'blob-moves.json');
 
+/** @param {string} root @returns {Record<string, string>} */
 export function blobMoves(root) {
   try {
     return JSON.parse(readFileSync(movesFile(root), 'utf8'));
@@ -165,6 +191,7 @@ export function blobMoves(root) {
   }
 }
 
+/** @param {string} root @param {string} machine @param {Date} now */
 function recordMove(root, machine, now) {
   const path = movesFile(root);
   mkdirSync(dirname(path), { recursive: true });
@@ -172,12 +199,15 @@ function recordMove(root, machine, now) {
   renameSync(`${path}.tmp`, path);
 }
 
+/** @param {string} root @param {string} machine @param {Schedule} schedule @param {Date} [now] */
 export function blobsDue(root, machine, schedule, now = new Date()) {
   const last = Date.parse(blobMoves(root)[machine] ?? '');
   return Number.isNaN(last) || last < lastMoveTime(now, schedule);
 }
 
+/** @param {string} root */
 function deletedBlobs(root) {
+  /** @type {Set<string>} */
   const out = new Set();
   for (const e of allEntries(root)) {
     if (e.kind !== 'save' || e.perf?.capture?.reason !== 'deleted') continue;
@@ -186,17 +216,24 @@ function deletedBlobs(root) {
   return out;
 }
 
+/** @param {Machine} cfg @param {string} spool @param {string[]} rel @param {string[]} receipts */
 function clearSpool(cfg, spool, rel, receipts) {
   const touch = receipts.length ? `mkdir -p ${RECEIPTS} && touch ${receipts.map((sha) => `${RECEIPTS}/${sha}`).join(' ')} && ` : '';
   return shell(cfg, `cd "${spool}" && ${touch}xargs -0 rm -f --`, { input: rel.join('\0'), limit: '60s' });
 }
 
+/** @param {string} rel */
 const blobOf = (rel) => /^blobs\/[0-9a-f]{2}\/([0-9a-f]{64})$/.exec(rel)?.[1] ?? null;
 
+/**
+ * @param {string} root @param {string} machine @param {Machine} cfg @param {SyncReport} report
+ * @param {{ spool?: string, clear?: boolean, now?: Date }} [options]
+ */
 export function pullSpool(root, machine, cfg, report, { spool = SPOOL, clear = isLiveStore(root), now = new Date() } = {}) {
   const stage = join(root, 'incoming', machine, 'spool');
-  const deferred = Boolean(cfg.blobs);
-  const moving = !deferred || blobsDue(root, machine, cfg.blobs, now);
+  const schedule = cfg.blobs;
+  const deferred = Boolean(schedule);
+  const moving = !schedule || blobsDue(root, machine, schedule, now);
   const blobs = moving ? ['--include=/blobs/***'] : [];
   const r = pull(cfg, `${spool}/`, `${stage}/`, [...blobs, '--include=/entries/***', '--exclude=*.tmp-*', '--exclude=*']);
   if (r.status !== 0 && /No such file|change_dir/.test(r.stderr)) {
@@ -216,7 +253,10 @@ export function pullSpool(root, machine, cfg, report, { spool = SPOOL, clear = i
   let cleared = !clear || !rel.length;
   if (clear && rel.length) {
     const deleted = deletedBlobs(root);
-    const receipts = rel.map(blobOf).filter((sha) => sha && deleted.has(sha));
+    const receipts = rel.flatMap((p) => {
+      const sha = blobOf(p);
+      return sha !== null && deleted.has(sha) ? [sha] : [];
+    });
     const del = clearSpool(cfg, spool, rel, receipts);
     cleared = del.status === 0;
     if (cleared) {
@@ -230,6 +270,10 @@ export function pullSpool(root, machine, cfg, report, { spool = SPOOL, clear = i
   }
 }
 
+/**
+ * @param {string} root @param {string} machine @param {string} sha
+ * @param {{ cfg?: Machine, spool?: string, clear?: boolean }} [options]
+ */
 export function fetchBlob(root, machine, sha, { cfg = MACHINES[machine], spool = SPOOL, clear = isLiveStore(root) } = {}) {
   if (!cfg) throw new Error(`no machine ${machine} to fetch a blob from`);
   const rel = `blobs/${sha.slice(0, 2)}/${sha}`;
@@ -246,6 +290,10 @@ export function fetchBlob(root, machine, sha, { cfg = MACHINES[machine], spool =
   return { cleared: del.status === 0 };
 }
 
+/**
+ * @param {string} root @param {string} machine @param {Machine} cfg @param {SyncReport} report
+ * @param {{ clear?: boolean, now?: Date }} [options]
+ */
 export function pullMachine(root, machine, cfg, report, { clear, now } = {}) {
   const { reached, tz } = timeZoneOf(cfg);
   if (!reached) {
@@ -270,6 +318,7 @@ export function pullMachine(root, machine, cfg, report, { clear, now } = {}) {
   }
 }
 
+/** @param {string} raw @param {{ machine: string, checkout: string, timeZone: string | null }} source */
 export function writeSource(raw, source) {
   const path = join(raw, '.source.json');
   const text = JSON.stringify(source) + '\n';
@@ -278,6 +327,7 @@ export function writeSource(raw, source) {
   renameSync(`${path}.tmp`, path);
 }
 
+/** @param {string} root @param {PlayReport & { missing: string[] }} [report] */
 export function ingestRaw(root, report = { play: 0, open: 0, missing: [] }) {
   const base = join(root, 'raw');
   if (!existsSync(base)) return report;
@@ -289,6 +339,7 @@ export function ingestRaw(root, report = { play: 0, open: 0, missing: [] }) {
         report.missing.push(`${machine}/${name}`);
         continue;
       }
+      /** @type {{ machine: string, checkout: string, timeZone: string | null }} */
       const source = JSON.parse(readFileSync(path, 'utf8'));
       ingestCheckout(root, source.machine, source.checkout, raw, source.timeZone, report);
     }
@@ -296,6 +347,7 @@ export function ingestRaw(root, report = { play: 0, open: 0, missing: [] }) {
   return report;
 }
 
+/** @type {((root: string, report: SyncReport) => unknown)[]} */
 export const steps = [
   (root, report) => {
     for (const [machine, cfg] of Object.entries(MACHINES)) pullMachine(root, machine, cfg, report);
@@ -305,8 +357,10 @@ export const steps = [
   }
 ];
 
+/** @param {string} [root] */
 export async function sync(root = storeDir()) {
   mkdirSync(root, { recursive: true });
+  /** @type {SyncReport} */
   const report = { reached: [], skipped: [], entries: 0, play: 0, open: 0, removed: 0, moved: [], errors: [] };
   for (const step of steps) await step(root, report);
   console.log(JSON.stringify(report));

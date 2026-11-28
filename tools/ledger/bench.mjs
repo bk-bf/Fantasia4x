@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @ts-nocheck
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
@@ -8,10 +7,30 @@ import { fileURLToPath } from 'node:url';
 
 import { withInvalid } from './invalid.mjs';
 
+/** @typedef {import('./store.mjs').Entry} Entry */
+/** @typedef {import('./store.mjs').World} World */
+/** @typedef {import('./store.mjs').Perf} Perf */
+/** @typedef {import('./store.mjs').FileRef} FileRef */
+/** @typedef {{ busy: string[], load?: string, cores?: string, home?: string, dirty?: string, patched?: string, [key: string]: string | string[] | undefined }} Kv */
+/** @typedef {{ pid: number, cmd: string }} Process */
+/** @typedef {{ at: string, load: number[], cores: number | null, others: Process[] }} HostSnapshot */
+/** @typedef {NonNullable<ReturnType<typeof hostRecord>>} HostRecord */
+/** @typedef {Record<string, unknown>} Row */
+/**
+ * @typedef {{
+ *   env?: NodeJS.ProcessEnv, machine?: string, at?: string, git?: { branch: string | null, commit: string | null, dirty: number | null, refs: string | null }, tree?: string,
+ *   save?: string | null, world?: Partial<World>, files?: { role: string, name?: string, path?: string | null }[],
+ *   host?: HostRecord | null, hostStart?: HostSnapshot | null, kind?: string, branch?: string | null, tool: string | null,
+ *   scenario?: string | null, perf?: Perf | null, parent?: string | null, note?: string, has?: import('./invalid.mjs').Has
+ * }} RunOptions
+ */
+
 const RUNNER = fileURLToPath(new URL('./rerun-remote.sh', import.meta.url));
 export const LOAD_LIMIT = 1.5;
 
+/** @param {unknown} text @returns {Kv} */
 export function parseKv(text) {
+  /** @type {Kv} */
   const out = { busy: [] };
   for (const l of String(text ?? '').split('\n')) {
     const eq = l.indexOf('=');
@@ -24,6 +43,7 @@ export function parseKv(text) {
   return out;
 }
 
+/** @param {Kv | null | undefined} kv @param {string} [at] @returns {HostSnapshot | null} */
 export function snapshot(kv, at = new Date().toISOString()) {
   if (!kv?.load) return null;
   const others = kv.busy.map((b) => {
@@ -33,6 +53,7 @@ export function snapshot(kv, at = new Date().toISOString()) {
   return { at, load: kv.load.split(' ').map(Number), cores: kv.cores ? Number(kv.cores) : null, others };
 }
 
+/** @param {number} [self] */
 export function hostNow(self = process.pid) {
   try {
     return snapshot(parseKv(execFileSync('bash', [RUNNER, 'quiet', String(self)], { encoding: 'utf8', timeout: 15_000, stdio: ['ignore', 'pipe', 'ignore'] })));
@@ -43,8 +64,10 @@ export function hostNow(self = process.pid) {
 
 const AT_IMPORT = process.env.F4X_LEDGER_OFF === '1' ? null : hostNow();
 
+/** @param {HostSnapshot | null} start @param {HostSnapshot | null} end */
 export function hostRecord(start, end) {
   if (!start && !end) return null;
+  /** @type {Map<string, Process>} */
   const seen = new Map();
   for (const o of [...(start?.others ?? []), ...(end?.others ?? [])]) seen.set(`${o.pid} ${o.cmd}`, o);
   return {
@@ -57,8 +80,10 @@ export function hostRecord(start, end) {
   };
 }
 
+/** @param {HostRecord | null} host @param {number} [limit] @returns {string[]} */
 export function hostInvalid(host, limit = LOAD_LIMIT) {
   if (!host) return [];
+  /** @type {string[]} */
   const reasons = [];
   if (host.others.length) reasons.push(`another f4x bench was running: ${host.others.map((o) => `${o.pid} ${o.cmd.slice(0, 120)}`).join('; ')}`);
   const l1 = host.load?.[0];
@@ -66,6 +91,7 @@ export function hostInvalid(host, limit = LOAD_LIMIT) {
   return reasons;
 }
 
+/** @param {NodeJS.ProcessEnv} [env] */
 export function agentEnv(env = process.env) {
   return {
     ...env,
@@ -74,15 +100,21 @@ export function agentEnv(env = process.env) {
   };
 }
 
+/** @param {unknown} v @returns {v is number} */
+const finite = (v) => typeof v === 'number' && Number.isFinite(v);
+
+/** @param {unknown[]} values */
 export function stats(values) {
-  const xs = values.filter((v) => typeof v === 'number' && Number.isFinite(v)).sort((a, b) => a - b);
+  const xs = values.filter(finite).sort((a, b) => a - b);
   if (!xs.length) return null;
+  /** @param {number} p */
   const at = (p) => xs[Math.min(xs.length - 1, Math.floor(p * xs.length))];
   const mid = xs.length >> 1;
   const median = xs.length % 2 ? xs[mid] : (xs[mid - 1] + xs[mid]) / 2;
   return { median, p10: at(0.1), p90: at(0.9), n: xs.length };
 }
 
+/** @param {string} path */
 export function readSave(path) {
   let gz = readFileSync(path);
   const isGz = gz[0] === 0x1f && gz[1] === 0x8b;
@@ -91,6 +123,7 @@ export function readSave(path) {
   return { gz, text };
 }
 
+/** @param {string} tree */
 function measuredDirty(tree) {
   try {
     const out = execFileSync(
@@ -104,6 +137,7 @@ function measuredDirty(tree) {
   }
 }
 
+/** @param {RunOptions} opts @param {string} dir @returns {Promise<Entry>} */
 export async function buildEntry(opts, dir) {
   const spool = await import('./spool.mjs');
   const { describeSave, worldIdOf } = await import('./ingest.mjs');
@@ -112,7 +146,9 @@ export async function buildEntry(opts, dir) {
   const at = opts.at ?? new Date().toISOString();
   const git = opts.git ?? spool.gitInfo(opts.tree ?? process.cwd());
   const dirty = opts.git ? git.dirty : (measuredDirty(opts.tree ?? process.cwd()) ?? git.dirty);
+  /** @type {FileRef[]} */
   const files = [];
+  /** @type {World} */
   let world = { save: null, name: null, turn: null, seed: null, map: null, pawns: null, mobs: null, generatedBy: null, savedBy: null };
   if (opts.save) {
     const { gz, text } = readSave(opts.save);
@@ -120,10 +156,11 @@ export async function buildEntry(opts, dir) {
     files.push(spool.fileRef('save', basename(opts.save).replace(/(\.json)?(\.gz)?$/, '.json.gz'), sha, dir));
     world = { ...world, ...describeSave(text.toString('utf8')), save: worldIdOf(gz) };
   }
-  for (const [k, v] of Object.entries(opts.world ?? {})) if (v != null) world[k] = v;
+  world = { ...world, ...Object.fromEntries(Object.entries(opts.world ?? {}).filter(([, v]) => v != null)) };
   for (const f of opts.files ?? []) {
     if (!f.path || !existsSync(f.path)) continue;
-    files.push(spool.fileRef(f.role, f.name ?? basename(f.path), spool.writeBlob(f.path, dir), dir));
+    const path = f.path;
+    files.push(spool.fileRef(f.role, f.name ?? basename(path), spool.writeBlob(path, dir), dir));
   }
   const host = opts.host !== undefined ? opts.host : hostRecord(opts.hostStart ?? null, hostNow());
   const invalid = hostInvalid(host);
@@ -150,6 +187,7 @@ export async function buildEntry(opts, dir) {
   }, opts.has);
 }
 
+/** @param {RunOptions & { dir?: string, warn?: (m: string) => void, log?: (m: string) => void }} opts */
 export async function recordRun(opts) {
   const env = opts.env ?? process.env;
   if (env.F4X_LEDGER_OFF === '1') return null;
@@ -162,15 +200,18 @@ export async function recordRun(opts) {
     (opts.log ?? ((m) => console.log(m)))(`ledger: recorded ${id}`);
     return id;
   } catch (err) {
-    warn(`ledger: this run was not recorded (${err?.message ?? err})`);
+    warn(`ledger: this run was not recorded (${err instanceof Error ? err.message : err})`);
     return null;
   }
 }
 
+/** @param {Row[]} rows @param {(r: Row) => boolean} pred @param {string} key */
 const pick = (rows, pred, key) => stats(rows.filter(pred).map((r) => r[key]));
+/** @param {Row[]} rows @param {string} group @param {string} key */
 const byValue = (rows, group, key) =>
-  Object.fromEntries([...new Set(rows.map((r) => r[group]))].map((g) => [g, pick(rows, (r) => r[group] === g, key)]));
+  Object.fromEntries([...new Set(rows.map((r) => String(r[group])))].map((g) => [g, pick(rows, (r) => String(r[group]) === g, key)]));
 
+/** @type {Record<string, (rows: Row[]) => Perf>} */
 export const BENCH_PERF = {
   'zoom-out': (rows) => ({
     speed: '1x',
@@ -199,10 +240,11 @@ export const BENCH_PERF = {
   }
 };
 
-/** @param {string} tool @param {{ tree: string, label: string, rows: any[], result: string, profiles?: string[], env?: NodeJS.ProcessEnv }} opts */
+/** @param {string} tool @param {{ tree: string, label: string, rows: Row[], result: string, profiles?: string[], env?: NodeJS.ProcessEnv }} opts */
 export function recordBench(tool, { tree, label, rows, result, profiles = [], env = process.env }) {
   const fixture = env.F4X_FIXTURE || null;
   const scenario = tool === 'frame-cost' ? env.F4X_SCENARIO || (fixture ? 'save' : 'large-wilderness') : fixture ? 'save' : 'dev-save';
+  /** @type {Perf | null} */
   let perf = null;
   try {
     perf = { ...BENCH_PERF[tool](rows), query: env.F4X_QUERY ?? '' };
@@ -222,9 +264,10 @@ export function recordBench(tool, { tree, label, rows, result, profiles = [], en
   });
 }
 
+/** @param {string | undefined} execArgv @param {number} since */
 function cpuProfiles(execArgv, since) {
   const m = /--cpu-prof-dir[= ](\S+)/.exec(execArgv ?? '');
-  if (!m || !/--cpu-prof\b/.test(execArgv)) return [];
+  if (!m || !/--cpu-prof\b/.test(execArgv ?? '')) return [];
   const d = resolve(m[1]);
   if (!existsSync(d)) return [];
   return readdirSync(d)
@@ -232,12 +275,14 @@ function cpuProfiles(execArgv, since) {
     .map((n) => ({ role: 'profile', path: join(d, n) }));
 }
 
+/** @param {string} resultPath @param {string | undefined} logPath @param {NodeJS.ProcessEnv} [env] */
 export async function recordHarness(resultPath, logPath, env = process.env) {
+  /** @type {import('./ingest.mjs').HarnessResult & { branch?: string }} */
   let result = {};
   try {
     result = JSON.parse(readFileSync(resultPath, 'utf8'));
   } catch (err) {
-    console.warn(`ledger: this run was not recorded (${err.message})`);
+    console.warn(`ledger: this run was not recorded (${/** @type {Error} */ (err).message})`);
     return null;
   }
   const { harnessPerf } = await import('./ingest.mjs').catch(() => ({ harnessPerf: () => null }));

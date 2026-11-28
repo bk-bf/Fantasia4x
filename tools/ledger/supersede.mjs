@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { readFileSync, statSync } from 'node:fs';
 import { basename, isAbsolute, join } from 'node:path';
 import { fileRef, newId, sha256Of } from './spool.mjs';
@@ -6,11 +5,20 @@ import { getEntry, keyedEntry, putBlob, putKeyed, withLock } from './store.mjs';
 import { fullCommit, noHost, nobody } from './ingest.mjs';
 import { recheckInvalid } from './invalid.mjs';
 
+/** @typedef {import('./store.mjs').Entry} Entry */
+/** @typedef {{ role?: string, name?: string, path: string }} AddedFile */
+/** @typedef {import('./store.mjs').LaunchedBy} LaunchedBy */
+/** @typedef {import('./store.mjs').World} World */
+/** @typedef {Partial<Omit<Entry, 'launchedBy' | 'world'>> & { launchedBy?: Partial<LaunchedBy>, world?: Partial<World> }} Patch */
+/** @typedef {{ supersedes?: string, set?: Patch, files?: AddedFile[], note?: string }} Item */
+
 const FIXED = ['v', 'id', 'files', 'supersedes', 'recordedAt'];
 
+/** @param {string} name */
 const roleOf = (name) =>
   name.endsWith('.cpuprofile') ? 'profile' : /\.(png|json)$/.test(name) ? 'result' : 'log';
 
+/** @param {string} machine @returns {Omit<Entry, 'id'>} */
 const blank = (machine) => ({
   v: 1,
   kind: 'bench',
@@ -41,6 +49,7 @@ const blank = (machine) => ({
   note: ''
 });
 
+/** @param {string} root @param {Item} item @param {string} [base] */
 function attributeOne(root, item, base = process.cwd()) {
   const set = item.set ?? {};
   const fixed = FIXED.filter((k) => k in set);
@@ -63,6 +72,7 @@ function attributeOne(root, item, base = process.cwd()) {
     set.at ??
     was.at ??
     new Date(Math.min(...added.map((f) => statSync(f.path).mtimeMs))).toISOString();
+  /** @type {Entry} */
   const entry = recheckInvalid({
     ...was,
     ...set,
@@ -83,6 +93,7 @@ function attributeOne(root, item, base = process.cwd()) {
   return putKeyed(root, key, entry);
 }
 
+/** @param {string} root @param {Item[]} items @param {string} [base] */
 export function attribute(root, items, base = process.cwd()) {
   return withLock(root, () =>
     items.map((item) => ({

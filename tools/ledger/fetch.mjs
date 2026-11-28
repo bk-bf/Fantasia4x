@@ -1,10 +1,13 @@
-// @ts-nocheck
 import { allEntries, entryExists, getEntry, hasBlob, readBlob } from './store.mjs';
+
+/** @typedef {import('./store.mjs').Entry} Entry */
 
 const ENTRY_ID = /^\d{8}T\d{6}Z-/;
 
+/** @param {string} root @param {string} target @returns {Entry} */
 export function resolveSave(root, target) {
   const entries = allEntries(root);
+  /** @param {string} worldId */
   const saveOf = (worldId) => {
     const hits = entries.filter((e) => e.kind === 'save' && (e.world?.save ?? '').startsWith(worldId));
     const worlds = new Set(hits.map((e) => e.world.save));
@@ -22,6 +25,7 @@ export function resolveSave(root, target) {
   return saveOf(target);
 }
 
+/** @param {string} root @param {Pick<Entry, 'id' | 'files' | 'machine'>} saveEntry */
 export function assembleSave(root, saveEntry) {
   const file = saveEntry.files.find((f) => f.role === 'save');
   if (!file) throw new Error(`save entry ${saveEntry.id} has no save file`);

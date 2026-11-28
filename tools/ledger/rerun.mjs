@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -11,6 +10,20 @@ import { harnessPerf } from './ingest.mjs';
 import { spoolDir, writeEntry } from './spool.mjs';
 import { allEntries, entryExists, getEntry, ingestSpool, isLiveStore, readBlob, withLock } from './store.mjs';
 
+/** @typedef {import('./store.mjs').Entry} Entry */
+/** @typedef {import('./store.mjs').FileRef} FileRef */
+/** @typedef {import('./store.mjs').World} World */
+/** @typedef {import('./bench.mjs').Kv} Kv */
+/** @typedef {import('./bench.mjs').HostSnapshot} HostSnapshot */
+/** @typedef {import('./ingest.mjs').HarnessResult & { commit?: string, endTurn?: number }} RoundResult */
+/** @typedef {ReturnType<typeof parseRerunArgs>} RerunOptions */
+/** @typedef {{ status: number | null, stdout: string, stderr: string }} RunResult */
+/** @typedef {{ input?: string | Buffer, limit?: string }} RunOptions */
+/** @typedef {{ ssh: (host: string, script: string, opts?: RunOptions) => RunResult, git: (args: string[]) => RunResult, sleep: (ms: number) => unknown, now: () => number, log: (m: string) => void }} Deps */
+/** @typedef {{ ref: string, sha: string, branch: string | null, refs: string, prep?: Kv }} Target */
+/** @typedef {{ parent: string, world: Partial<World> & { save: string }, file: FileRef }} Found */
+/** @typedef {{ batch: string, run: string, script: string }} Context */
+
 const REPO = new URL('../..', import.meta.url).pathname;
 const ENTRY_ID = /^\d{8}T\d{6}Z-/;
 const MODES = new Set(['loop', 'tick']);
@@ -21,12 +34,14 @@ const QUIET_WAIT_MS = 20 * 60 * 1000;
 export const USAGE =
   'usage: pnpm ledger rerun <entry id|world id> --ref <commit|branch> [--ref ...] [--machine desktop] [--mode loop|tick] [--speed 4] [--seconds 30] [--warm 600] [--ticks 1800] [--rounds N] [--harness-ref origin/dev] [--keep] [--note N]';
 
+/** @param {string} name @param {string | undefined} raw @param {boolean} [int] */
 const positive = (name, raw, int = true) => {
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0 || (int && !Number.isInteger(n))) throw new Error(`--${name} wants a positive ${int ? 'whole ' : ''}number, got ${raw}`);
   return n;
 };
 
+/** @param {string[]} args */
 export function parseRerunArgs(args) {
   const { values, positionals } = parseArgs({
     args,
@@ -46,12 +61,13 @@ export function parseRerunArgs(args) {
     }
   });
   if (positionals.length !== 1) throw new Error(USAGE);
-  if (!values.ref?.length) throw new Error(`rerun needs --ref\n${USAGE}`);
+  const refs = values.ref;
+  if (!refs?.length) throw new Error(`rerun needs --ref\n${USAGE}`);
   if (!MODES.has(values.mode)) throw new Error(`--mode is loop or tick, got ${values.mode}`);
   if (values.machine === 'laptop') throw new Error('rerun never runs on the laptop');
   return {
     target: positionals[0],
-    refs: values.ref,
+    refs,
     machine: values.machine,
     mode: values.mode,
     speed: positive('speed', values.speed, false),
@@ -65,40 +81,53 @@ export function parseRerunArgs(args) {
   };
 }
 
+/** @param {Pick<Entry, 'files'>} e */
 const saveFileOf = (e) => (e.files ?? []).find((f) => f.role === 'save') ?? null;
 
+/** @param {Partial<World>} world @param {FileRef | null} file @param {string} parent @returns {Found} */
+function found(world, file, parent) {
+  const save = world.save;
+  if (!file || save == null) throw new Error(`${parent} holds no save file`);
+  return { parent, world: { ...world, save }, file };
+}
+
+/** @param {string} root @param {string} target @returns {Found} */
 export function findSave(root, target) {
   if (ENTRY_ID.test(target)) {
     if (!entryExists(root, target)) throw new Error(`no entry ${target}`);
     const e = getEntry(root, target);
     const own = saveFileOf(e);
-    if (own && e.world?.save) return { parent: e.id, world: e.world, file: own };
+    if (own && e.world?.save) return found(e.world, own, e.id);
     if (!e.world?.save) throw new Error(`entry ${target} names no world, so there is nothing to rerun`);
     const s = resolveSave(root, e.world.save);
-    return { parent: e.id, world: s.world, file: saveFileOf(s) };
+    return found(s.world, saveFileOf(s), e.id);
   }
   try {
     const s = resolveSave(root, target);
-    return { parent: s.id, world: s.world, file: saveFileOf(s) };
+    return found(s.world, saveFileOf(s), s.id);
   } catch (err) {
     const carriers = allEntries(root).filter((e) => (e.world?.save ?? '').startsWith(target) && saveFileOf(e));
     const worlds = new Set(carriers.map((e) => e.world.save));
     if (worlds.size > 1) throw new Error(`${target} names ${worlds.size} worlds; give more of the id`);
     if (!carriers.length) throw err;
-    return { parent: carriers[0].id, world: carriers[0].world, file: saveFileOf(carriers[0]) };
+    return found(carriers[0].world, saveFileOf(carriers[0]), carriers[0].id);
   }
 }
 
+/** @param {string[]} refs @param {number} rounds */
 export function plan(refs, rounds) {
+  /** @type {{ ref: string, round: number }[]} */
   const out = [];
   for (let r = 1; r <= rounds; r++) for (const ref of refs) out.push({ ref, round: r });
   return out;
 }
 
+/** @param {string} mode @param {string} tag @param {number} speed */
 export function resultName(mode, tag, speed) {
   return mode === 'loop' ? `${tag}.loop${speed}x.json` : `${tag}.json`;
 }
 
+/** @param {Pick<RerunOptions, 'mode' | 'speed' | 'seconds' | 'warm' | 'ticks'>} o @param {string} saveOnRemote @param {string} out @param {string} tag @param {string | null} [branch] */
 export function harnessVars(o, saveOnRemote, out, tag, branch) {
   const v = [`PROF_SCENARIO=save`, `PROF_SAVE=${saveOnRemote}`, `PROF_OUT=${out}`, `PROF_TAG=${tag}`];
   if (o.mode === 'loop') v.push(`PROF_SPEED=${o.speed}`, `PROF_SECONDS=${o.seconds}`);
@@ -110,11 +139,14 @@ export function harnessVars(o, saveOnRemote, out, tag, branch) {
   return v;
 }
 
+/** @param {unknown} s */
 const q = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
 
+/** @returns {Deps} */
 export function defaultDeps() {
-  const run = (cmd, args, { input, limit = '25m', binary = false } = {}) => {
-    const r = spawnSync('timeout', [limit, cmd, ...args], { input, encoding: binary ? null : 'utf8', maxBuffer: 2 ** 30 });
+  /** @param {string} cmd @param {string[]} args @param {RunOptions} [options] @returns {RunResult} */
+  const run = (cmd, args, { input, limit = '25m' } = {}) => {
+    const r = spawnSync('timeout', [limit, cmd, ...args], { input, encoding: 'utf8', maxBuffer: 2 ** 30 });
     return { status: r.status, stdout: r.stdout ?? '', stderr: String(r.stderr ?? '') };
   };
   return {
@@ -126,6 +158,7 @@ export function defaultDeps() {
   };
 }
 
+/** @param {Deps} deps @param {string} ref @returns {Target} */
 function resolveRef(deps, ref) {
   const remote = ref.replace(/^origin\//, '');
   const isBranch = deps.git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${remote}`]).status === 0;
@@ -140,10 +173,12 @@ function resolveRef(deps, ref) {
   return { ref, sha, branch: isBranch ? remote : null, refs };
 }
 
+/** @param {Deps} deps @param {string} host @param {Context} ctx @param {string[]} args @param {string} [limit] */
 function remote(deps, host, ctx, args, limit = '25m') {
   return deps.ssh(host, `bash ${q(ctx.script)} ${args.map(q).join(' ')}`, { limit });
 }
 
+/** @param {Deps} deps @param {string} host @param {Context} ctx @param {string} name @param {string[]} args */
 function unit(deps, host, ctx, name, args) {
   const log = `${ctx.run}/${name}.log`;
   const script = [
@@ -156,6 +191,7 @@ function unit(deps, host, ctx, name, args) {
   return deps.ssh(host, script, { limit: '22m' });
 }
 
+/** @param {Deps} deps @param {string} host @param {Context} ctx @returns {HostSnapshot} */
 function waitQuiet(deps, host, ctx) {
   const until = deps.now() + QUIET_WAIT_MS;
   for (;;) {
@@ -163,13 +199,18 @@ function waitQuiet(deps, host, ctx) {
     if (r.status !== 0) throw new Error(`the quiet check on ${host} exited ${r.status}: ${(r.stderr || r.stdout).trim().slice(0, 300)}`);
     const kv = parseKv(r.stdout);
     const load = Number(String(kv.load ?? '').split(' ')[0]);
-    if (!kv.busy.length && !(load > LOAD_LIMIT)) return snapshot(kv, new Date(deps.now()).toISOString());
+    if (!kv.busy.length && !(load > LOAD_LIMIT)) {
+      const quiet = snapshot(kv, new Date(deps.now()).toISOString());
+      if (!quiet) throw new Error(`the quiet check on ${host} reported no load`);
+      return quiet;
+    }
     if (deps.now() >= until) throw new Error(`${host} stayed busy for 20 minutes (load ${kv.load}):\n  ${kv.busy.join('\n  ')}`);
     deps.log(`${host} is busy, waiting: load ${kv.load}${kv.busy.length ? `, ${kv.busy[0].slice(0, 160)}` : ''}`);
     deps.sleep(30_000);
   }
 }
 
+/** @param {string} root @param {RerunOptions} o @param {Deps} [deps] @param {NodeJS.ProcessEnv} [env] @returns {Promise<string[]>} */
 export async function rerun(root, o, deps = defaultDeps(), env = process.env) {
   const host = o.machine;
   const found = findSave(root, o.target);
@@ -183,6 +224,7 @@ export async function rerun(root, o, deps = defaultDeps(), env = process.env) {
   const batch = `${new Date(deps.now()).toISOString().replace(/[-:]/g, '').slice(0, 15)}-${randomBytes(2).toString('hex')}`;
   const ctx = { batch, run: `${home}/.cache/f4x-ledger-rerun/${batch}`, script: `${home}/.cache/f4x-ledger-rerun/${batch}/rerun-remote.sh` };
   const repo = `${home}/${REMOTE_REPO}`;
+  /** @param {Target} t */
   const wtOf = (t) => `${repo}/.claude/worktrees/ledger-rerun-${t.sha.slice(0, 12)}`;
   const save = `${ctx.run}/save-${found.world.save.slice(0, 12)}.json.gz`;
   const fetched = deps.ssh(host, `git -C ${q(repo)} fetch -q origin`, { limit: '5m' });
@@ -195,6 +237,7 @@ export async function rerun(root, o, deps = defaultDeps(), env = process.env) {
   const local = mkdtempSync(join(tmpdir(), 'f4x-rerun-'));
   const localSave = join(local, `save-${found.world.save.slice(0, 12)}.json.gz`);
   writeFileSync(localSave, gz);
+  /** @type {string[]} */
   const ids = [];
   try {
     for (const t of targets.values()) {
@@ -207,6 +250,7 @@ export async function rerun(root, o, deps = defaultDeps(), env = process.env) {
     const order = plan(o.refs, o.rounds);
     for (const [i, step] of order.entries()) {
       const t = targets.get(step.ref);
+      if (!t) throw new Error(`no target for ${step.ref}`);
       const hostBefore = waitQuiet(deps, host, ctx);
       const tag = `r${step.round}-${t.sha.slice(0, 12)}`;
       const out = `${ctx.run}/out`;
@@ -218,6 +262,7 @@ export async function rerun(root, o, deps = defaultDeps(), env = process.env) {
       const name = resultName(o.mode, tag, o.speed);
       const got = deps.ssh(host, `cat ${q(`${out}/${name}`)}`, { limit: '60s' });
       if (r.status !== 0 || got.status !== 0) throw new Error(`round ${step.round} at ${t.ref} failed on ${host}:\n${r.stdout.slice(-3000)}`);
+      /** @type {RoundResult} */
       const result = JSON.parse(got.stdout);
       const resultPath = join(local, name);
       const logPath = join(local, `${tag}.log`);
@@ -236,11 +281,16 @@ export async function rerun(root, o, deps = defaultDeps(), env = process.env) {
   return ids;
 }
 
+/** @param {RoundResult} r */
 export function summary(r) {
   const tps = r.tps ?? r.uncappedTps;
   return `${String(r.commit ?? '').slice(0, 8)} pawns ${r.pawns} mobs ${r.mobs} turn ${r.turn}→${r.endTurn} tps ${tps == null ? '-' : tps.toFixed(1)}${r.speed ? ` at ${r.speed}x` : ' uncapped'}`;
 }
 
+/**
+ * @param {string} root
+ * @param {{ o: RerunOptions, t: Target, step: { round: number }, result: RoundResult, at: string, found: Found, harness: Target, hostBefore?: HostSnapshot | null, hostAfter?: HostSnapshot | null, batch: string, env?: NodeJS.ProcessEnv, localSave: string, resultPath: string, logPath: string, machine: string, spool?: string }} c
+ */
 export async function recordRound(root, c) {
   const dir = c.spool ?? spoolDir(c.env);
   const entry = await buildEntry(
@@ -280,6 +330,7 @@ export async function recordRound(root, c) {
   return id;
 }
 
+/** @param {string} root @param {string} dir @param {number} [waitMs] */
 export function syncSpool(root, dir, waitMs) {
   try {
     const remove = isLiveStore(root) || resolve(dir) !== resolve(spoolDir({}));
@@ -287,11 +338,12 @@ export function syncSpool(root, dir, waitMs) {
     if (report.errors.length) console.error(`ledger: ${report.errors.join('; ')}`);
     return true;
   } catch (err) {
-    console.error(`ledger: left in the spool for the sync timer: ${err.message}`);
+    console.error(`ledger: left in the spool for the sync timer: ${/** @type {Error} */ (err).message}`);
     return false;
   }
 }
 
+/** @param {string} root @param {string[]} args */
 export async function rerunCli(root, args) {
   if (!['ubuntuserver'].includes((await import('./spool.mjs')).machineName()) && !process.env.F4X_LEDGER_DIR)
     throw new Error('rerun runs on ubuntuserver, where the store is');

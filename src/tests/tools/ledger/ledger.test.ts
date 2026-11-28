@@ -151,7 +151,7 @@ describe('spool', () => {
 });
 
 describe('store', () => {
-  const entry = (id: string, files: unknown[] = []) => ({ v: 1, id, kind: 'play', machine: 'laptop', files });
+  const entry = (id: string, files: { role: string; name: string; sha256: string; bytes?: number }[] = []) => ({ v: 1, id, kind: 'play', machine: 'laptop', files });
 
   it('refuses to overwrite an entry and to store one whose files it lacks', () => {
     const id = newId('laptop', new Date('2026-11-27T00:00:00Z'));
@@ -427,7 +427,7 @@ describe('saves', () => {
     const early = join(dir, 'early.json.gz');
     writeFileSync(early, gzipSync(text.replace('31800', '31801')));
     expect(getEntry(dir, ingestSave(dir, { machine: 'laptop', path: early, at: Date.parse('2026-11-26T00:00:00Z') }).id).parent).toBeNull();
-    expect((listEntries(dir, { world: saved.worldId.slice(0, 12) }) as unknown as Entry[]).map((e) => e.id)).toContain(session!.id);
+    expect((listEntries(dir, { world: saved.worldId!.slice(0, 12) }) as unknown as Entry[]).map((e) => e.id)).toContain(session!.id);
   });
 
   it('keys a save by the canonical JSON of its world, whatever its wrapper, key order or compression', () => {
@@ -444,7 +444,7 @@ describe('saves', () => {
     expect(worldId({ v: 1, ...reordered })).toBe(first.worldId);
     writeFileSync(path, gzipSync(JSON.stringify({ v: 1, ...reordered }), { level: 9 }));
     expect(ingestSave(dir, { machine: 'laptop', path })).toMatchObject({ id: first.id, created: false });
-    const save = resolveSave(dir, first.worldId.slice(0, 10));
+    const save = resolveSave(dir, first.worldId!.slice(0, 10));
     expect(save.world).toMatchObject({ turn: 30058, seed: 7, map: '3x2', pawns: 1, mobs: 2 });
     expect(resolveSave(dir, first.id).id).toBe(first.id);
     expect(assembleSave(dir, save).length).toBeGreaterThan(0);

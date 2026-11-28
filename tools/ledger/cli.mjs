@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @ts-nocheck
 import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
@@ -10,6 +9,11 @@ import { ingestPerfLog, ingestResult, ingestSave } from './ingest.mjs';
 import { assembleSave, resolveSave } from './fetch.mjs';
 import { withInvalid } from './invalid.mjs';
 
+/** @typedef {import('./store.mjs').Entry} Entry */
+/** @typedef {import('./store.mjs').Stats} Stats */
+/** @typedef {import('./store.mjs').StretchEnd} StretchEnd */
+
+/** @type {Record<string, string>} */
 const ZONES = { laptop: 'Europe/Berlin', desktop: 'Europe/Berlin', ubuntuserver: 'Etc/UTC' };
 const [cmd, ...rest] = process.argv.slice(2);
 const root = storeDir();
@@ -19,6 +23,7 @@ function remoteHost() {
   return process.env.F4X_LEDGER_HOST || 'ubuntu';
 }
 
+/** @param {string} host @param {string[]} args @param {boolean} [binary] */
 function overSsh(host, args, binary = false) {
   const remote = process.env.F4X_LEDGER_REMOTE_CLI || '~/Documents/Projects/Fantasia4x/tools/ledger/cli.mjs';
   const quoted = args.map((a) => `'${String(a).replace(/'/g, `'\\''`)}'`).join(' ');
@@ -41,21 +46,28 @@ function overSsh(host, args, binary = false) {
   return r.stdout;
 }
 
+/** @param {unknown} s @param {number} [n] */
 const short = (s, n = 8) => (s ? String(s).slice(0, n) : '-');
+/** @param {Stats | null} s */
 const fmtStats = (s) => (s ? `${Math.round(s.median)} (p10 ${s.p10 == null ? '-' : Math.round(s.p10)}, n ${s.n ?? '-'})` : '-');
 
+/** @param {Entry} e */
 function stretchLines(e) {
   return (e.perf?.stretches ?? []).map((s) => {
     const speeds = Object.entries(s.tps ?? {})
       .map(([sp, st]) => `${sp} ${fmtStats(st)}`)
       .join(', ');
+    /** @param {StretchEnd} p */
     const at = (p) => (p.save ? short(p.save, 12) : p.capture ? `cap ${p.capture}` : '-');
     return `    T${s.from.turn ?? '?'} ${at(s.from)} → ${s.to ? `T${s.to.turn} ${at(s.to)}` : 'end'}: ${speeds || 'no running samples'}`;
   });
 }
 
+/** @param {Entry} e */
 function line(e) {
+  /** @type {Partial<import('./store.mjs').World>} */
   const w = e.world ?? {};
+  const load = e.host?.load;
   const where = e.branch ?? (e.refs ? e.refs.split(',')[0] : '-');
   const bad = e.invalid?.length ? `INVALID: ${e.invalid.join('; ')}` : '';
   const away = missingBlobs(root, e).length ? `blob on ${e.machine}` : '';
@@ -72,7 +84,7 @@ function line(e) {
     `p${w.pawns ?? '-'} m${w.mobs ?? '-'} T${w.turn ?? '-'}`,
     w.save ? `world ${short(w.save, 12)}` : '',
     tps,
-    tps && e.host?.load ? `load ${e.host.load[0]}` : '',
+    tps && load ? `load ${Array.isArray(load) ? load[0] : load}` : '',
     ck,
     away,
     bad
@@ -81,6 +93,7 @@ function line(e) {
     .join('  ');
 }
 
+/** @param {string[]} args */
 function list(args) {
   const { values } = parseArgs({
     args,
@@ -106,6 +119,7 @@ function list(args) {
   }
 }
 
+/** @param {string[]} args */
 function show([id]) {
   const e = getEntry(root, id);
   console.log(JSON.stringify(e, null, 2));
@@ -117,6 +131,7 @@ function show([id]) {
   if (children.length) console.error(`\nlinked back to this entry:\n${children.map((c) => `  ${line(c)}`).join('\n')}`);
 }
 
+/** @param {string[]} args */
 async function fetch(args) {
   const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { to: { type: 'string' } } });
   const target = positionals[0];
@@ -128,11 +143,12 @@ async function fetch(args) {
   }
   const gz = assembleSave(root, save);
   if (values.to === '-') return process.stdout.write(gz);
-  const out = values.to ?? `${save.world.save.slice(0, 12)}.json.gz`;
+  const out = values.to ?? `${(save.world.save ?? save.id).slice(0, 12)}.json.gz`;
   writeFileSync(out, gz);
   console.error(`world ${save.world.save} (entry ${save.id}, turn ${save.world.turn}) written to ${out}`);
 }
 
+/** @param {string[]} args */
 function record(args) {
   const { values } = parseArgs({
     args,
@@ -151,6 +167,7 @@ function record(args) {
   if (!values.kind) throw new Error('record needs --kind');
   const dir = spoolDir();
   const raw = values.result ?? '{}';
+  /** @type {{ world?: Partial<import('./store.mjs').World>, perf?: import('./store.mjs').Perf, host?: Partial<import('./store.mjs').Host>, [field: string]: unknown }} */
   const result = raw.trim().startsWith('{') ? JSON.parse(raw) : JSON.parse(readFileSync(raw, 'utf8'));
   const files = (values.file ?? []).map((spec) => {
     const eq = spec.indexOf('=');
@@ -184,6 +201,7 @@ function record(args) {
   console.log(id);
 }
 
+/** @param {string} dir @returns {Generator<string>} */
 function* walk(dir) {
   for (const name of readdirSync(dir).sort()) {
     const p = join(dir, name);
@@ -195,6 +213,7 @@ function* walk(dir) {
   }
 }
 
+/** @param {string[]} args */
 function importDir(args) {
   const { values, positionals } = parseArgs({
     args,
@@ -217,8 +236,10 @@ function importDir(args) {
   const machine = values.machine;
   const who = values.who;
   const note = values.note ?? '';
+  /** @type {Map<string, string[]>} */
   const logs = new Map();
   const counts = { play: 0, save: 0, result: 0, known: 0, open: 0 };
+  /** @type {string[]} */
   const skipped = [];
   for (const p of walk(dir)) {
     const name = basename(p);
@@ -307,6 +328,6 @@ try {
     process.exit(2);
   }
 } catch (err) {
-  console.error(`ledger ${cmd}: ${err.message}`);
+  console.error(`ledger ${cmd}: ${/** @type {Error} */ (err).message}`);
   process.exit(1);
 }

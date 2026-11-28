@@ -1,4 +1,3 @@
-// @ts-nocheck
 const STAMP = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})\.(\d{3}) (.*)$/;
 const TAGGED = /^\[T(\d+)\] \[(\w+)\] (.*)$/;
 const RESET = /^=== log reset at (\S+) /;
@@ -9,10 +8,19 @@ const LEDGER_SESSION = /^ledger capture=\S+ .*\bsession=(\S+)/;
 const TOKEN = /(\w+)=("(?:[^"]*)"|\S+)/g;
 const HOUR = 3600_000;
 
+/** @typedef {{ raw: string, at: number | null, stamp: string | null, turn: number | null, msg: string, type?: string }} Line */
+/** @typedef {{ start: Line, lines: Line[], last?: boolean }} Session */
+/** @typedef {{ median: number, p10: number, p90: number, n: number }} Stats */
+/** @typedef {{ save: string | null, capture: string | null, reason: string | null, turn: number | null, at: string | null, ms: number, entry: string | null, index?: number | null }} LogCheckpoint */
+/** @typedef {(capture: string) => { save: string | null, entry: string } | null} Resolve */
+/** @typedef {ReturnType<typeof sessionHeader>} Header */
+
+/** @param {string[]} fields @param {string | null | undefined} timeZone */
 export function localToUtc(fields, timeZone) {
   const [y, mo, d, h, mi, s, ms] = fields.map(Number);
   const guess = Date.UTC(y, mo - 1, d, h, mi, s, ms);
   if (!timeZone || timeZone === 'UTC' || timeZone === 'Etc/UTC') return guess;
+  /** @param {number} t */
   const offsetAt = (t) => {
     const parts = Object.fromEntries(
       new Intl.DateTimeFormat('en-US', {
@@ -35,7 +43,9 @@ export function localToUtc(fields, timeZone) {
   return guess - offsetAt(first);
 }
 
+/** @param {string} raw @param {string | null | undefined} timeZone @returns {Line} */
 export function parseLine(raw, timeZone) {
+  /** @type {Line} */
   const line = { raw, at: null, stamp: null, turn: null, msg: raw };
   const st = STAMP.exec(raw);
   let rest = raw;
@@ -63,7 +73,9 @@ export function parseLine(raw, timeZone) {
   return line;
 }
 
+/** @param {string} msg */
 export function tokens(msg) {
+  /** @type {Record<string, string>} */
   const out = {};
   for (const m of msg.matchAll(TOKEN)) {
     if (out[m[1]] !== undefined) continue;
@@ -72,8 +84,10 @@ export function tokens(msg) {
   return out;
 }
 
+/** @param {string | null | undefined} v */
 const num = (v) => (v == null || v === '-' || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
 
+/** @param {string} msg */
 export function sessionHeader(msg) {
   const t = tokens(msg);
   const at = (t.build ?? '').lastIndexOf('@');
@@ -114,11 +128,15 @@ export function sessionHeader(msg) {
   };
 }
 
+/** @param {string} text @param {string | null | undefined} timeZone @returns {Session[]} */
 export function splitSessions(text, timeZone) {
+  /** @type {Session[]} */
   const sessions = [];
+  /** @type {Session | null} */
   let cur = null;
   const lines = text.split('\n');
   if (lines[lines.length - 1] === '') lines.pop();
+  /** @type {string | null} */
   let previous = null;
   for (const raw of lines) {
     const repeated = raw === previous && cur?.lines.length === 1;
@@ -134,32 +152,40 @@ export function splitSessions(text, timeZone) {
   return sessions.map((s, i) => ({ ...s, last: i === sessions.length - 1 }));
 }
 
+/** @param {number[]} values @returns {Stats | null} */
 export function stats(values) {
   if (!values.length) return null;
   const xs = [...values].sort((a, b) => a - b);
+  /** @param {number} q */
   const at = (q) => xs[Math.min(xs.length - 1, Math.floor(q * xs.length))];
   return { median: at(0.5), p10: at(0.1), p90: at(0.9), n: xs.length };
 }
 
+/** @param {Line} line */
 function running(line) {
   const t = tokens(line.msg);
   if (t.paused === 'true') return false;
   if (t.paused === 'false') return true;
-  return line.type === 'tps' ? Number(TPS.exec(line.msg)[1]) > 0 : false;
+  return line.type === 'tps' ? Number(TPS.exec(line.msg)?.[1]) > 0 : false;
 }
 
+/** @param {{ speed: string, value: number }[]} samples @returns {Record<string, Stats | null>} */
 function bySpeed(samples) {
+  /** @type {Record<string, number[]>} */
   const groups = {};
   for (const s of samples) (groups[s.speed] ??= []).push(s.value);
   return Object.fromEntries(Object.entries(groups).map(([k, v]) => [k, stats(v)]));
 }
 
+/** @param {Record<string, Stats | null>} groups @returns {string | null} */
 function dominant(groups) {
+  /** @type {string | null} */
   let best = null;
-  for (const [speed, st] of Object.entries(groups)) if (!best || st.n > groups[best].n) best = speed;
+  for (const [speed, st] of Object.entries(groups)) if (!best || (st?.n ?? 0) > (groups[best]?.n ?? 0)) best = speed;
   return best;
 }
 
+/** @param {Pick<Session, 'lines'>} session */
 export function ledgerSession(session) {
   for (const l of session.lines) {
     const m = LEDGER_SESSION.exec(l.msg);
@@ -168,12 +194,15 @@ export function ledgerSession(session) {
   return null;
 }
 
+/** @param {Session} session */
 function failedCaptures(session) {
   return session.lines.filter((l) => l.type === 'capture' && l.msg.startsWith('ledger failed')).map((l) => ({ line: l, t: tokens(l.msg) }));
 }
 
+/** @param {Session} session @param {Resolve} resolve @returns {LogCheckpoint[]} */
 function logCheckpoints(session, resolve) {
   const failed = new Set(failedCaptures(session).map((f) => f.t.cap).filter(Boolean));
+  /** @type {LogCheckpoint[]} */
   const out = [];
   session.lines.forEach((line, index) => {
     if (line.type !== 'capture' || line.msg.startsWith('ledger failed')) return;
@@ -195,45 +224,58 @@ function logCheckpoints(session, resolve) {
   return out;
 }
 
+/** @param {Session} session @param {Resolve} [resolve] @param {LogCheckpoint[]} [fromEntries] */
 export function sessionPerf(session, resolve = () => null, fromEntries = []) {
   const header = session.start.type === 'session' ? sessionHeader(session.start.msg) : null;
   const logged = logCheckpoints(session, resolve);
   const seen = new Set(logged.map((c) => c.capture).filter(Boolean));
+  /** @type {LogCheckpoint[]} */
   const checkpoints = [...logged, ...fromEntries.filter((c) => !seen.has(c.capture)).map((c) => ({ ...c, index: null }))].sort(
     (a, b) => (Date.parse(a.at ?? '') || 0) - (Date.parse(b.at ?? '') || 0) || (a.turn ?? 0) - (b.turn ?? 0)
   );
   const timed = checkpoints.every((c) => !Number.isNaN(Date.parse(c.at ?? '')));
-  const windows = [
-    ...checkpoints.map((c) => [Date.parse(c.at ?? ''), c.ms ?? 0]),
+  /** @type {[number, number][]} */
+  const starts = [
+    ...checkpoints.map((c) => /** @type {[number, number]} */ ([Date.parse(c.at ?? ''), c.ms ?? 0])),
     ...session.lines
       .filter((l) => l.type === 'capture')
       .map((l) => tokens(l.msg))
-      .map((t) => [Date.parse(t.at ?? ''), num(t.ms) ?? 0])
-  ]
-    .filter(([a]) => !Number.isNaN(a))
-    .map(([a, ms]) => [a, a + ms]);
+      .map((t) => /** @type {[number, number]} */ ([Date.parse(t.at ?? ''), num(t.ms) ?? 0]))
+  ];
+  const windows = starts.filter(([a]) => !Number.isNaN(a)).map(([a, ms]) => [a, a + ms]);
+  /** @param {number} from @param {number} to */
   const stalled = (from, to) => windows.some(([a, b]) => a < to && b > from);
-  const stretchOf = (line, index) =>
-    timed && line.at != null
-      ? checkpoints.filter((c) => Date.parse(c.at) < line.at).length
+  /** @param {Line} line @param {number} index */
+  const stretchOf = (line, index) => {
+    const at = line.at;
+    return timed && at != null
+      ? checkpoints.filter((c) => Date.parse(c.at ?? '') < at).length
       : checkpoints.filter((c) => c.index != null && c.index < index).length;
+  };
+  /** @type {{ value: number, speed: string, turn: number | null, stretch: number }[]} */
   const tps = [];
+  /** @type {{ value: number, speed: string, running: boolean }[]} */
   const fps = [];
+  /** @type {number | null} */
   let lastTps = null;
+  /** @type {Record<string, string | null>[]} */
   const changes = [];
+  /** @type {Record<string, string | null>} */
   let power = header?.host ?? {};
   session.lines.forEach((line, index) => {
     if (line.type === 'tps') {
-      const since = lastTps ?? (line.at == null ? null : line.at - 1000);
-      if (line.at != null) lastTps = line.at;
-      if (line.at != null && stalled(since, line.at)) return;
+      const since = lastTps;
+      if (line.at != null) {
+        lastTps = line.at;
+        if (stalled(since ?? line.at - 1000, line.at)) return;
+      }
       if (!running(line)) return;
-      const [, value, speed] = TPS.exec(line.msg);
+      const [, value, speed] = TPS.exec(line.msg) ?? [];
       tps.push({ value: Number(value), speed, turn: line.turn, stretch: stretchOf(line, index) });
     } else if (line.type === 'fps') {
       const t = tokens(line.msg.split('|')[1] ?? '');
       fps.push({
-        value: Number(FPS.exec(line.msg)[1]),
+        value: Number(FPS.exec(line.msg)?.[1]),
         speed: t.speed ?? '?',
         running: t.paused === 'false'
       });
@@ -251,6 +293,7 @@ export function sessionPerf(session, resolve = () => null, fromEntries = []) {
     .concat(header?.turn ?? [])
     .filter((t) => t != null);
   const started = checkpoints.find((c) => c.reason === 'session');
+  /** @type {{ from: { save: string | null, capture: string | null, turn: number | null, at: string | null }, to: { save: string | null, capture: string | null, turn: number | null, at: string | null } | null, tps: Record<string, Stats | null> }[]} */
   const stretches = [];
   for (let k = 0; k <= checkpoints.length; k++) {
     const inside = tps.filter((s) => s.stretch === k);
@@ -295,6 +338,7 @@ export function sessionPerf(session, resolve = () => null, fromEntries = []) {
   };
 }
 
+/** @param {Pick<Session, 'start' | 'lines'>} session @param {number} [fallbackMs] */
 export function sessionTimes(session, fallbackMs) {
   const stamped = session.lines.filter((l) => l.at != null);
   return {
@@ -303,6 +347,7 @@ export function sessionTimes(session, fallbackMs) {
   };
 }
 
+/** @param {Session} session @param {number} now @param {number} [fallbackMs] */
 export function isOpen(session, now, fallbackMs) {
   if (!session.last) return false;
   const { end } = sessionTimes(session, fallbackMs);
