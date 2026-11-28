@@ -3,7 +3,7 @@
   "named": { "mutants": "tools/mutants/registry.json" },
   "rules": [
     { "paths": ["**/*.md", "LICENSE"], "legs": [] },
-    { "paths": [".claude/**", ".vscode/**", ".copilotignore"], "legs": [] },
+    { "paths": [".claude/**", ".vscode/**"], "legs": [] },
     { "paths": [".github/ISSUE_TEMPLATE/**"], "legs": [] },
     { "paths": ["build-resources/**", "electron-builder.yml"], "legs": [] },
     { "paths": ["dev.sh", "launch.sh", "build.sh", "install.sh", "audit.sh", "cliff.toml"], "legs": [] },
