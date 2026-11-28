@@ -197,7 +197,8 @@ lead branch, where the owner plays and judges it: UI, rendering, art, item and r
 generation, and any new feature. A change that is not plainly crucial is lead work.
 
 CI treats the lead branch as it treats a `test/**` branch: a run on it or on work built on it only
-warns, and its `Bound for dev` job fails. The lead reaches `dev` when the owner says so, as a
+warns, and its `Bound for dev` job fails. A push or a chain on the lead branch itself runs every
+gate against its merge base with `dev`. The lead reaches `dev` when the owner says so, as a
 `--no-ff` merge on a branch built on `dev`, which the chain measures against `dev`. A new lead
 branch is set in `tools/ci/lead.json`; every rule here follows it.
 
