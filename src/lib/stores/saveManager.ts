@@ -8,19 +8,19 @@ import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '$lib/game/core/defs/terrains';
 import { ensureWorkSkills } from '$lib/game/core/rules/body/workExperience';
 import { ensureAptitudes } from '$lib/game/core/rules/body/aptitudes';
 import { autosaveEnabled } from './uiPrefs';
-
-const DB_NAME = 'fantasia4x';
-const DB_VERSION = 1;
-const STORE = 'saves';
-
-const SAVE_PREFIX = 'save:';
-const WORLD_PREFIX = 'world:';
-const META_PREFIX = 'meta:';
-const LOG_PREFIX = 'log:';
-const saveKey = (id: string) => SAVE_PREFIX + id;
-const worldKey = (id: string) => WORLD_PREFIX + id;
-const metaKey = (id: string) => META_PREFIX + id;
-const logKey = (id: string) => LOG_PREFIX + id;
+import { askStored, sendHidden, settleHidden, type HiddenMark } from './hiddenSaves';
+import {
+  SAVE_PREFIX,
+  deleteRecords,
+  idbDelete,
+  idbGet,
+  idbKeys,
+  idbPut,
+  logKey,
+  metaKey,
+  saveKey,
+  worldKey
+} from './saveDb';
 
 function newSaveId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -67,6 +67,7 @@ export interface SaveMeta {
   kind: 'auto' | 'manual';
   seed?: number;
   savedBy?: BuildStamp;
+  hidden?: HiddenMark;
 }
 export interface SaveEntry {
   id: string;
@@ -102,26 +103,6 @@ const LS_SAVE_KEY = 'fantasia4x-save';
 const LS_SAVE_VERSION_KEY = 'fantasia4x-save-version';
 
 const DEBOUNCE_MS = 2000;
-
-let _db: IDBDatabase | null = null;
-
-function openDb(): Promise<IDBDatabase> {
-  if (_db) return Promise.resolve(_db);
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (e) => {
-      const db = (e.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE);
-      }
-    };
-    req.onsuccess = (e) => {
-      _db = (e.target as IDBOpenDBRequest).result;
-      resolve(_db);
-    };
-    req.onerror = () => reject(req.error);
-  });
-}
 
 type SavedTile = Omit<WorldTile, 'gCost' | 'hCost' | 'fCost' | 'parent' | 'ascii'>;
 
@@ -180,46 +161,6 @@ function migrateLoadedTerrain(worldMap: WorldTile[][]): void {
       }
     }
   }
-}
-
-async function idbGet<T>(key: string): Promise<T | null> {
-  const db = await openDb();
-  return new Promise((resolve) => {
-    const tx = db.transaction(STORE, 'readonly');
-    const req = tx.objectStore(STORE).get(key);
-    req.onsuccess = () => resolve((req.result as T) ?? null);
-    req.onerror = () => resolve(null);
-  });
-}
-
-async function idbPut(key: string, data: unknown): Promise<void> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).put(data, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-async function idbDelete(key: string): Promise<void> {
-  const db = await openDb();
-  return new Promise((resolve) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).delete(key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => resolve();
-  });
-}
-
-async function idbKeys(): Promise<string[]> {
-  const db = await openDb();
-  return new Promise((resolve) => {
-    const tx = db.transaction(STORE, 'readonly');
-    const req = tx.objectStore(STORE).getAllKeys();
-    req.onsuccess = () => resolve((req.result as IDBValidKey[]).map(String));
-    req.onerror = () => resolve([]);
-  });
 }
 
 function readLegacyLocalStorage(): GameState | null {
@@ -287,23 +228,45 @@ async function migrateLegacy(): Promise<void> {
   }
 }
 
-export async function listSaves(): Promise<SaveEntry[]> {
-  if (!browser) return [];
-  await migrateLegacy();
+async function metaOf(id: string): Promise<SaveMeta | null> {
+  const meta = await idbGet<SaveMeta>(metaKey(id)).catch(() => null);
+  if (meta) return meta;
+  const st = await idbGet<GameState>(saveKey(id)).catch(() => null);
+  if (!st) return null;
+  const built = buildMeta(st, 'manual', undefined);
+  idbPut(metaKey(id), built).catch(() => {});
+  return built;
+}
+
+async function allSaves(): Promise<SaveEntry[]> {
   const keys = await idbKeys();
   const ids = keys.filter((k) => k.startsWith(SAVE_PREFIX)).map((k) => k.slice(SAVE_PREFIX.length));
   const entries: SaveEntry[] = [];
   for (const id of ids) {
-    let meta = await idbGet<SaveMeta>(metaKey(id)).catch(() => null);
-    if (!meta) {
-      const st = await idbGet<GameState>(saveKey(id)).catch(() => null);
-      if (st) {
-        meta = buildMeta(st, 'manual', undefined);
-        idbPut(metaKey(id), meta).catch(() => {});
-      }
-    }
+    const meta = await metaOf(id);
     if (meta) entries.push({ id, meta });
   }
+  return entries;
+}
+
+let _settled = false;
+
+export async function listSaves(): Promise<SaveEntry[]> {
+  if (!browser) return [];
+  await migrateLegacy();
+  const all = await allSaves();
+  if (!_settled && import.meta.env.DEV) {
+    _settled = true;
+    void settleHidden(
+      all.filter((s) => s.meta.hidden),
+      {
+        stored: askStored,
+        purge: deleteRecords,
+        send: sendHidden
+      }
+    ).catch((err) => console.warn('[SaveManager] hidden saves not settled:', err));
+  }
+  const entries = all.filter((s) => !s.meta.hidden);
   entries.sort((a, b) => b.meta.savedAt - a.meta.savedAt);
   return entries;
 }
@@ -345,20 +308,19 @@ export async function hasSave(): Promise<boolean> {
   }
 }
 
-export async function deleteSaveById(id: string): Promise<void> {
+export async function hideSaveById(id: string): Promise<void> {
   if (!browser) return;
-  await Promise.all([
-    idbDelete(saveKey(id)),
-    idbDelete(worldKey(id)),
-    idbDelete(metaKey(id)),
-    idbDelete(logKey(id))
-  ]);
+  if (!import.meta.env.DEV) return deleteRecords(id);
+  const meta = await metaOf(id);
+  if (!meta) return deleteRecords(id);
+  await idbPut(metaKey(id), { ...meta, hidden: { at: Date.now() } });
+  void sendHidden(id);
 }
 
 export function retireActiveSave(): Promise<void> {
   const dying = activeSaveId;
   mintActiveSave();
-  return dying ? deleteSaveById(dying) : Promise.resolve();
+  return dying ? deleteRecords(dying) : Promise.resolve();
 }
 
 export async function deleteSave(): Promise<void> {

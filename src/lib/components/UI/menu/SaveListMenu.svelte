@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { gameState } from '$lib/stores/gameState';
-  import { listSaves, deleteSaveById, type SaveEntry } from '$lib/stores/saveManager';
+  import { listSaves, hideSaveById, type SaveEntry } from '$lib/stores/saveManager';
   import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
   import ModalWindow from '$lib/components/UI/window/ModalWindow.svelte';
   import SaveListRow from './SaveListRow.svelte';
@@ -30,7 +30,7 @@
     gameState.startGame('load', id);
   }
   async function del(id: string) {
-    await deleteSaveById(id);
+    await hideSaveById(id);
     await refresh();
   }
 
